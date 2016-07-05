@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/kr/pretty"
-	"github.com/loov/glay"
+	"github.com/loov/layout"
 )
 
 var _ = pretty.Print
@@ -39,11 +39,11 @@ func parse(graph string, onedge func(src, dst string)) {
 }
 
 func process(graphdef string) {
-	graph := glay.NewGraph()
-	byName := map[string]glay.NodeID{}
-	byID := map[glay.NodeID]string{}
+	graph := layout.NewGraph()
+	byName := map[string]layout.NodeID{}
+	byID := map[layout.NodeID]string{}
 
-	node := func(name string) glay.NodeID {
+	node := func(name string) layout.NodeID {
 		id, ok := byName[name]
 		if !ok {
 			id, _ = graph.Node()
@@ -58,9 +58,9 @@ func process(graphdef string) {
 		graph.Edge(sid, did)
 	})
 
-	glay.BackloadRanks(graph)
-	glay.CreateVirtualVertices(graph)
-	glay.OrderRanks(graph)
+	layout.BackloadRanks(graph)
+	layout.CreateVirtualVertices(graph)
+	layout.OrderRanks(graph)
 
 	for rank, nodes := range graph.ByRank {
 		fmt.Println("- RANK ", rank, "-")
