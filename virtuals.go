@@ -14,7 +14,8 @@ func CreateVirtualVertices(graph *Graph) {
 	}
 
 	for _, src := range graph.Nodes {
-		for _, did := range src.Out {
+		//TODO: optimize, avoid making copy of src.Out
+		for _, did := range src.Out.Copy() {
 			dst := graph.Nodes[did]
 			if dst.Rank-src.Rank <= 1 {
 				continue

@@ -61,6 +61,11 @@ func process(graphdef string) {
 
 	layout.BackloadRanks(graph)
 	layout.CreateVirtualVertices(graph)
+
+	if err := layout.VerifyProperDigraph(graph); err != nil {
+		panic(err)
+	}
+
 	layout.OrderRanks(graph)
 	layout.AssignPositions(graph)
 
