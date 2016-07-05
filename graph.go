@@ -6,7 +6,7 @@ type NodeIDs []NodeID
 type Graph struct {
 	Nodes     []*Node
 	ByRank    []NodeIDs
-	Positions []Position
+	Positions []Vector
 }
 
 func NewGraph() *Graph {
@@ -21,7 +21,7 @@ type Node struct {
 	Virtual bool
 }
 
-type Position struct{ X, Y float32 }
+type Vector struct{ X, Y float32 }
 
 func (graph *Graph) Node() (NodeID, *Node) {
 	n := &Node{ID: NodeID(len(graph.Nodes))}

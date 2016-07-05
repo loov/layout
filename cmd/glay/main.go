@@ -67,7 +67,7 @@ func process(graphdef string) {
 	}
 
 	layout.OrderRanks(graph)
-	layout.AssignPositions(graph)
+	layout.Position(graph)
 
 	for rank, nodes := range graph.ByRank {
 		fmt.Println("- RANK ", rank, "-")
