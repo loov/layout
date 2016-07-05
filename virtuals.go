@@ -20,7 +20,7 @@ func CreateVirtualVertices(graph *Graph) {
 				continue
 			}
 
-			src.Out.Remove(did)
+			src.Out.Remove(dst.ID)
 			dst.In.Remove(src.ID)
 
 			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
@@ -32,8 +32,8 @@ func CreateVirtualVertices(graph *Graph) {
 				dst = node
 			}
 
-			src.Out.Add(src.ID)
-			dst.In.Add(dst.ID)
+			src.Out.Add(dst.ID)
+			dst.In.Add(src.ID)
 		}
 	}
 }

@@ -1,7 +1,7 @@
 package glay
 
-// Frontload assigns node.Rank := max(node.In[i].Rank) + 1
-func Frontload(graph *Graph) {
+// FrontloadRanks assigns node.Rank := max(node.In[i].Rank) + 1
+func FrontloadRanks(graph *Graph) {
 	roots := NodeIDs{}
 	incount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
@@ -31,8 +31,8 @@ func Frontload(graph *Graph) {
 	}
 }
 
-// Backload assigns node.Rank := min(node.Out[i].Rank) - 1
-func Backload(graph *Graph) {
+// BackloadRanks assigns node.Rank := min(node.Out[i].Rank) - 1
+func BackloadRanks(graph *Graph) {
 	roots := NodeIDs{}
 	outcount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {

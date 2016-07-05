@@ -58,8 +58,9 @@ func process(graphdef string) {
 		graph.Edge(sid, did)
 	})
 
-	glay.Backload(graph)
+	glay.BackloadRanks(graph)
 	glay.CreateVirtualVertices(graph)
+	glay.OrderRanks(graph)
 
 	for rank, nodes := range graph.ByRank {
 		fmt.Println("- RANK ", rank, "-")
@@ -74,6 +75,18 @@ func process(graphdef string) {
 	}
 
 	pretty.Println(graph.ByRank)
+
+	/*
+		file, err := os.Create("~world.tgf")
+		if err != nil {
+			panic(err)
+		}
+		defer file.Close()
+		_, err = graph.WriteTGF(file)
+		if err != nil {
+			panic(err)
+		}
+	*/
 }
 
 func main() {
