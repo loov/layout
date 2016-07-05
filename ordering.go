@@ -2,7 +2,7 @@ package layout
 
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)
-	for i := 0; i < 24; i++ {
+	for i := 0; i < 100; i++ {
 		OrderRanks_Improve_Median(graph)
 		if OrderRanks_Improve_Transpose(graph) == 0 {
 			break
