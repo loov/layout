@@ -3,7 +3,7 @@ package glay
 // Frontload assigns node.Rank := max(node.In[i].Rank) + 1
 func Frontload(graph *Graph) {
 	roots := NodeIDs{}
-	incount := make([]int, graph.nextID)
+	incount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		incount[node.ID] = len(node.In)
 		if len(node.In) == 0 {
@@ -34,7 +34,7 @@ func Frontload(graph *Graph) {
 // Backload assigns node.Rank := min(node.Out[i].Rank) - 1
 func Backload(graph *Graph) {
 	roots := NodeIDs{}
-	outcount := make([]int, graph.nextID)
+	outcount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		outcount[node.ID] = len(node.Out)
 		if len(node.Out) == 0 {

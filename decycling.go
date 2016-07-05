@@ -2,7 +2,7 @@ package glay
 
 //TODO: test whether this is correct
 func DecycleDepthFirst(graph *Graph) {
-	seen := make([]bool, graph.nextID) // todo convert to bitvector
+	seen := make([]bool, len(graph.Nodes)) // todo convert to bitvector
 
 	var recurse func(did NodeID)
 	recurse = func(did NodeID) {
@@ -23,9 +23,9 @@ func DecycleDepthFirst(graph *Graph) {
 		}
 	}
 
-	for id := NodeID(0); id < graph.nextID; id++ {
-		if !seen[id] {
-			recurse(id)
+	for _, node := range graph.Nodes {
+		if !seen[node.ID] {
+			recurse(node.ID)
 		}
 	}
 }

@@ -15,15 +15,12 @@ func (nodes *NodeIDs) Remove(id NodeID) {
 }
 
 type Graph struct {
-	Nodes  map[NodeID]*Node
+	Nodes  []*Node
 	ByRank []NodeIDs
-	nextID NodeID
 }
 
 func NewGraph() *Graph {
-	return &Graph{
-		Nodes: make(map[NodeID]*Node),
-	}
+	return &Graph{}
 }
 
 type Node struct {
@@ -35,9 +32,8 @@ type Node struct {
 }
 
 func (g *Graph) Node() (NodeID, *Node) {
-	n := &Node{ID: g.nextID}
-	g.Nodes[n.ID] = n
-	g.nextID++
+	n := &Node{ID: NodeID(len(g.Nodes))}
+	g.Nodes = append(g.Nodes, n)
 	return n.ID, n
 }
 
@@ -48,91 +44,6 @@ func (g *Graph) Edge(sid, did NodeID) {
 }
 
 /*
-type Graph struct {
-	Nodes  []NodeInfo
-	Edges  []EdgeInfo
-	ByRank [][]NodeID
-}
-
-func NewGraph() *Graph {
-	return &Graph{}
-}
-
-type Vector struct{ X, Y float32 }
-
-func (a Vector) Add(b Vector) Vector    { return Vector{a.X + b.X, a.Y + b.Y} }
-func (a Vector) Scale(s float32) Vector { return Vector{a.X * s, a.Y * s} }
-
-type NodeID uint32
-type EdgeID uint32
-
-type NodeInfo struct {
-	Center   Vector
-	HalfSize Vector
-	Rank     int
-
-	Out   []NodeID
-	Dummy bool
-}
-
-type EdgeInfo struct {
-	Source      NodeID
-	Destination NodeID
-	Center      Vector
-	HalfSize    Vector
-
-	Dummy  bool
-	Ignore bool
-}
-
-func (g *Graph) Node(info NodeInfo) NodeID {
-	id := NodeID(len(g.Nodes))
-	g.Nodes = append(g.Nodes, info)
-	return id
-}
-
-func (g *Graph) Edge(source, destination NodeID) EdgeID {
-	return g.EdgeEx(EdgeInfo{Source: source, Destination: destination})
-}
-
-func (g *Graph) EdgeEx(edge EdgeInfo) EdgeID {
-	id := EdgeID(len(g.Edges))
-	g.Edges = append(g.Edges, edge)
-
-	s := &g.Nodes[edge.Source]
-	s.Out = append(s.Out, edge.Destination)
-	return id
-}
-
-func BreakCycles(graph *Graph) {
-
-}
-
-func CreateDummies(graph *Graph) {
-	dummies := []NodeInfo{}
-	nextID := NodeID(len(graph.Nodes))
-	for sid := range graph.Nodes {
-		src := &graph.Nodes[sid]
-		for i, did := range src.Out {
-			dst := &graph.Nodes[did]
-			if dst.Rank-src.Rank <= 1 {
-				continue
-			}
-			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
-				up := NodeInfo{Out: []NodeID{did}, Dummy: true}
-				graph.Edges = append(graph.Edges, EdgeInfo{Source: did, Destination: nextID})
-				did = nextID
-				nextID++
-				dummies = append(dummies, up)
-				graph.ByRank[rank] = append(graph.ByRank[rank], did)
-			}
-			graph.Edges = append(graph.Edges, EdgeInfo{Source: NodeID(sid), Destination: did})
-			src.Out[i] = did
-		}
-	}
-	graph.Nodes = append(graph.Nodes, dummies...)
-}
-
 func AssignPositions(graph *Graph) {
 	const padding = float32(10.0)
 

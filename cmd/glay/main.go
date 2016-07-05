@@ -58,13 +58,18 @@ func process(graphdef string) {
 		graph.Edge(sid, did)
 	})
 
-	//glay.Frontload(graph)
 	glay.Backload(graph)
+	glay.CreateVirtualVertices(graph)
+
 	for rank, nodes := range graph.ByRank {
-		fmt.Println("- - - - -", rank, "- - - - -")
+		fmt.Println("- RANK ", rank, "-")
 		for _, sid := range nodes {
 			src := graph.Nodes[sid]
-			fmt.Printf("%3v['%3v']: %v\n", src.ID, byID[src.ID], src.Out)
+			id := src.ID
+			if src.Virtual {
+				id = -id
+			}
+			fmt.Printf("%3v['%3v']: %v\n", id, byID[src.ID], src.Out)
 		}
 	}
 
