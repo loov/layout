@@ -1,4 +1,4 @@
-package glay
+package layout
 
 import (
 	"fmt"
@@ -7,41 +7,36 @@ import (
 
 func (graph *Graph) WriteDOT(out io.Writer) (n int, err error) {
 	write := func(format string, args ...interface{}) bool {
+		if err != nil {
+			return false
+		}
 		var x int
 		x, err = fmt.Fprintf(out, format, args...)
 		n += x
 		return err == nil
 	}
 
-	if !write("digraph G {\n") {
-		return
-	}
-
+	write("digraph G {\n")
 	for _, src := range graph.Nodes {
 		if !src.Virtual {
-			if !write("\t%v[rank = %v];\n", src.ID, src.Rank) {
-				return
-			}
+			write("\t%v[rank = %v];\n", src.ID, src.Rank)
 		} else {
-			if !write("\t%v[rank = %v; shape=circle];\n", src.ID, src.Rank) {
-				return
-			}
+			write("\t%v[rank = %v; shape=circle];\n", src.ID, src.Rank)
 		}
 		for _, did := range src.Out {
-			if !write("\t%v -> %v;\n", src.ID, did) {
-				return
-			}
+			write("\t%v -> %v;\n", src.ID, did)
 		}
 	}
-
-	if !write("}") {
-		return
-	}
+	write("}")
 	return
 }
 
 func (graph *Graph) WriteTGF(out io.Writer) (n int, err error) {
 	write := func(format string, args ...interface{}) bool {
+		if err != nil {
+			return false
+		}
+
 		var x int
 		x, err = fmt.Fprintf(out, format, args...)
 		n += x
@@ -50,27 +45,72 @@ func (graph *Graph) WriteTGF(out io.Writer) (n int, err error) {
 
 	for _, src := range graph.Nodes {
 		if !src.Virtual {
-			if !write("%v %v\n", src.ID, src.ID) {
-				return
-			}
+			write("%v %v\n", src.ID, src.ID)
 		} else {
-			if !write("%v\n", src.ID) {
-				return
-			}
+			write("%v\n", src.ID)
 		}
 	}
 
-	if !write("#\n") {
-		return
-	}
+	write("#\n")
 
 	for _, src := range graph.Nodes {
 		for _, did := range src.Out {
-			if !write("%v %v\n", src.ID, did) {
-				return
-			}
+			write("%v %v\n", src.ID, did)
 		}
 	}
+
+	return
+}
+
+func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
+	write := func(format string, args ...interface{}) bool {
+		if err != nil {
+			return false
+		}
+
+		var x int
+		x, err = fmt.Fprintf(out, format, args...)
+		n += x
+		return err == nil
+	}
+
+	write("<svg xmlns='http://www.w3.org/2000/svg'>\n")
+	defer write("</svg>\n")
+
+	write("\t<g>\n")
+	for _, src := range graph.Nodes {
+		if src.Virtual {
+			continue
+		}
+
+		for _, did := range src.Out {
+			p := graph.Positions[src.ID]
+			write("\t\t<polyline fill='none' stroke='black'")
+			write(" points='%v,%v", p.X, p.Y)
+			dst := graph.Nodes[did]
+			for dst.Virtual {
+				p = graph.Positions[dst.ID]
+				write(" %v,%v", p.X, p.Y)
+				dst = graph.Nodes[dst.Out[0]]
+			}
+			p = graph.Positions[dst.ID]
+			write(" %v,%v'", p.X, p.Y)
+			write(" />\n")
+		}
+	}
+	write("\t</g>\n")
+
+	write("\t<g>\n")
+	for _, src := range graph.Nodes {
+		if src.Virtual {
+			continue
+		}
+		p := graph.Positions[src.ID]
+		write("\t\t<circle cx='%v' cy='%v' r='%v'", p.X, p.Y, 5)
+		write(" fill='white' stroke='black'")
+		write(" />\n")
+	}
+	write("\t</g>\n")
 
 	return
 }

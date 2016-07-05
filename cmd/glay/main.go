@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/kr/pretty"
@@ -61,6 +62,7 @@ func process(graphdef string) {
 	layout.BackloadRanks(graph)
 	layout.CreateVirtualVertices(graph)
 	layout.OrderRanks(graph)
+	layout.AssignPositions(graph)
 
 	for rank, nodes := range graph.ByRank {
 		fmt.Println("- RANK ", rank, "-")
@@ -76,17 +78,16 @@ func process(graphdef string) {
 
 	pretty.Println(graph.ByRank)
 
-	/*
-		file, err := os.Create("~world.tgf")
-		if err != nil {
-			panic(err)
-		}
-		defer file.Close()
-		_, err = graph.WriteTGF(file)
-		if err != nil {
-			panic(err)
-		}
-	*/
+	file, err := os.Create("~world.svg")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	_, err = graph.WriteSVG(file)
+	if err != nil {
+		panic(err)
+	}
+
 }
 
 func main() {

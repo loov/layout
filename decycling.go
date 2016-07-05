@@ -1,4 +1,4 @@
-package glay
+package layout
 
 //TODO: test whether this is correct
 func DecycleDepthFirst(graph *Graph) {

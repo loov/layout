@@ -1,4 +1,4 @@
-package glay
+package layout
 
 // FrontloadRanks assigns node.Rank := max(node.In[i].Rank) + 1
 func FrontloadRanks(graph *Graph) {

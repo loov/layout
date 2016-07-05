@@ -1,4 +1,4 @@
-package glay
+package layout
 
 // CreateVirtualVertices creates nodes for edges spanning multiple ranks
 //

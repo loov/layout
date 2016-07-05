@@ -1,11 +1,12 @@
-package glay
+package layout
 
 type NodeID int
 type NodeIDs []NodeID
 
 type Graph struct {
-	Nodes  []*Node
-	ByRank []NodeIDs
+	Nodes     []*Node
+	ByRank    []NodeIDs
+	Positions []Position
 }
 
 func NewGraph() *Graph {
@@ -19,6 +20,8 @@ type Node struct {
 	Rank    int
 	Virtual bool
 }
+
+type Position struct{ X, Y float32 }
 
 func (graph *Graph) Node() (NodeID, *Node) {
 	n := &Node{ID: NodeID(len(graph.Nodes))}

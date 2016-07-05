@@ -1,4 +1,4 @@
-package glay
+package layout
 
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)

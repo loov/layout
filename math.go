@@ -1,4 +1,4 @@
-package glay
+package layout
 
 func assert(b bool, msg string) {
 	if !b {
