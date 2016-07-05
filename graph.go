@@ -1,28 +1,7 @@
 package glay
 
-import (
-	"fmt"
-	"io"
-)
-
 type NodeID int
 type NodeIDs []NodeID
-
-func (a NodeIDs) Copy() NodeIDs {
-	r := make(NodeIDs, len(a))
-	copy(r, a)
-	return r
-}
-func (nodes *NodeIDs) Add(b NodeID) { *nodes = append(*nodes, b) }
-func (nodes *NodeIDs) Remove(b NodeID) {
-	for i, nid := range *nodes {
-		if nid == b {
-			*nodes = append((*nodes)[:i], (*nodes)[i+1:]...)
-			return
-		}
-	}
-	panic("id not found")
-}
 
 type Graph struct {
 	Nodes  []*Node
@@ -53,72 +32,67 @@ func (graph *Graph) Edge(sid, did NodeID) {
 	dst.In.Add(sid)
 }
 
-func (graph *Graph) WriteDOT(out io.Writer) (total int, err error) {
-	write := func(format string, args ...interface{}) bool {
-		var n int
-		n, err = fmt.Fprintf(out, format, args...)
-		total += n
-		return err == nil
+func (graph *Graph) CrossingsUp(uid, vid NodeID) int {
+	u, v := graph.Nodes[uid], graph.Nodes[vid]
+	assert(u.Rank == v.Rank, "u and v are from different ranks")
+	if u.Rank == 0 {
+		return 0
 	}
 
-	if !write("digraph G {\n") {
-		return
-	}
-
-	for _, src := range graph.Nodes {
-		if !src.Virtual {
-			if !write("\t%v[rank = %v];\n", src.ID, src.Rank) {
-				return
-			}
-		} else {
-			if !write("\t%v[rank = %v; shape=circle];\n", src.ID, src.Rank) {
-				return
-			}
-		}
-		for _, did := range src.Out {
-			if !write("\t%v -> %v;\n", src.ID, did) {
-				return
+	count := 0
+	prev := graph.ByRank[u.Rank-1]
+	for _, w := range u.In {
+		for _, z := range v.In {
+			if prev.IndexOf(z) < prev.IndexOf(w) {
+				count++
 			}
 		}
 	}
-
-	if !write("}") {
-		return
-	}
-	return
+	return count
 }
 
-func (graph *Graph) WriteTGF(out io.Writer) (total int, err error) {
-	write := func(format string, args ...interface{}) bool {
-		var n int
-		n, err = fmt.Fprintf(out, format, args...)
-		total += n
-		return err == nil
+func (graph *Graph) CrossingsDown(uid, vid NodeID) int {
+	u, v := graph.Nodes[uid], graph.Nodes[vid]
+	assert(u.Rank == v.Rank, "u and v are from different ranks")
+	if u.Rank == len(graph.ByRank)-1 {
+		return 0
 	}
 
-	for _, src := range graph.Nodes {
-		if !src.Virtual {
-			if !write("%v %v\n", src.ID, src.ID) {
-				return
-			}
-		} else {
-			if !write("%v\n", src.ID) {
-				return
+	count := 0
+	next := graph.ByRank[u.Rank+1]
+	for _, w := range u.In {
+		for _, z := range v.In {
+			if next.IndexOf(z) < next.IndexOf(w) {
+				count++
 			}
 		}
 	}
+	return count
+}
 
-	if !write("#\n") {
-		return
-	}
+func (graph *Graph) Crossings(uid, vid NodeID) int {
+	return graph.CrossingsDown(uid, vid) + graph.CrossingsUp(uid, vid)
+}
 
-	for _, src := range graph.Nodes {
-		for _, did := range src.Out {
-			if !write("%v %v\n", src.ID, did) {
-				return
-			}
+func (a NodeIDs) Copy() NodeIDs {
+	r := make(NodeIDs, len(a))
+	copy(r, a)
+	return r
+}
+
+func (nodes *NodeIDs) Add(b NodeID) { *nodes = append(*nodes, b) }
+
+func (nodes *NodeIDs) Remove(b NodeID) {
+	i := nodes.IndexOf(b)
+	assert(i >= 0, "id not found")
+	*nodes = append((*nodes)[:i], (*nodes)[i+1:]...)
+}
+
+func (nodes NodeIDs) IndexOf(b NodeID) int {
+	for i, id := range nodes {
+		if id == b {
+			return i
 		}
 	}
-
-	return
+	return -1
 }

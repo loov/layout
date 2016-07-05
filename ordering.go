@@ -1,13 +1,16 @@
 package glay
 
 func OrderRanks(graph *Graph) {
-	OrderRanksDepthFirst(graph)
+	OrderRanks_Initial_DepthFirst(graph)
 	for i := 0; i < 24; i++ {
-		OrderRanksMedianImprove(graph)
+		OrderRanks_Improve_Median(graph)
+		if OrderRanks_Improve_Transpose(graph) == 0 {
+			break
+		}
 	}
 }
 
-func OrderRanksDepthFirst(graph *Graph) {
+func OrderRanks_Initial_DepthFirst(graph *Graph) {
 	if len(graph.ByRank) == 0 {
 		return
 	}
@@ -42,6 +45,27 @@ func OrderRanksDepthFirst(graph *Graph) {
 	graph.ByRank = ranking
 }
 
-func OrderRanksMedianImprove(graph *Graph) {
+func OrderRanks_Improve_Median(graph *Graph) {
 
+}
+
+func OrderRanks_Improve_Transpose(graph *Graph) (swaps int) {
+	for {
+		improved := false
+
+		for _, nodes := range graph.ByRank[1:] {
+			for i := range nodes[:len(nodes)-1] {
+				v := nodes[i]
+				w := nodes[i+1]
+				if graph.CrossingsUp(v, w) > graph.CrossingsUp(w, v) {
+					nodes[i], nodes[i+1] = nodes[i+1], nodes[i]
+					swaps++
+				}
+			}
+		}
+
+		if !improved {
+			return
+		}
+	}
 }
