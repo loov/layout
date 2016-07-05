@@ -1,5 +1,53 @@
 package glay
 
+type NodeID int
+type NodeIDs []NodeID
+
+func (nodes *NodeIDs) Add(id NodeID) { *nodes = append(*nodes, id) }
+func (nodes *NodeIDs) Remove(id NodeID) {
+	for i, nid := range *nodes {
+		if nid == id {
+			*nodes = append((*nodes)[:i], (*nodes)[i+1:]...)
+			return
+		}
+	}
+	panic("id not found")
+}
+
+type Graph struct {
+	Nodes  map[NodeID]*Node
+	ByRank []NodeIDs
+	nextID NodeID
+}
+
+func NewGraph() *Graph {
+	return &Graph{
+		Nodes: make(map[NodeID]*Node),
+	}
+}
+
+type Node struct {
+	ID      NodeID
+	In      NodeIDs
+	Out     NodeIDs
+	Rank    int
+	Virtual bool
+}
+
+func (g *Graph) Node() (NodeID, *Node) {
+	n := &Node{ID: g.nextID}
+	g.Nodes[n.ID] = n
+	g.nextID++
+	return n.ID, n
+}
+
+func (g *Graph) Edge(sid, did NodeID) {
+	src, dst := g.Nodes[sid], g.Nodes[did]
+	src.Out.Add(did)
+	dst.In.Add(sid)
+}
+
+/*
 type Graph struct {
 	Nodes  []NodeInfo
 	Edges  []EdgeInfo
@@ -60,46 +108,6 @@ func BreakCycles(graph *Graph) {
 
 }
 
-func AssignRanks(graph *Graph) {
-	incount := make([]int, len(graph.Nodes))
-	for i := range graph.Edges {
-		e := &graph.Edges[i]
-		incount[e.Destination]++
-	}
-
-	zeros := []NodeID{}
-	for id, count := range incount {
-		if count == 0 {
-			zeros = append(zeros, NodeID(id))
-		}
-	}
-
-	rank := 0
-	graph.ByRank = nil
-	for len(zeros) > 0 {
-		graph.ByRank = append(graph.ByRank, zeros)
-		next := []NodeID{}
-		for _, id := range zeros {
-			n := &graph.Nodes[id]
-			n.Rank = rank
-			for _, out := range n.Out {
-				incount[out]--
-				if incount[out] == 0 {
-					next = append(next, out)
-				}
-			}
-		}
-		zeros = next
-		rank++
-	}
-
-	for _, left := range incount {
-		if left != 0 {
-			panic("was cyclic graph")
-		}
-	}
-}
-
 func CreateDummies(graph *Graph) {
 	dummies := []NodeInfo{}
 	nextID := NodeID(len(graph.Nodes))
@@ -155,16 +163,4 @@ func AssignPositions(graph *Graph) {
 	}
 }
 
-func abs(v int) int {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
-func maxf32(a, b float32) float32 {
-	if a > b {
-		return a
-	}
-	return b
-}
+*/

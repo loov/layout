@@ -2,73 +2,75 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"strings"
 
 	"github.com/kr/pretty"
 	"github.com/loov/glay"
 )
 
-func main() {
-	graph := glay.NewGraph()
+var _ = pretty.Print
 
-	nodelabel := map[glay.NodeID]string{}
-	a := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[a] = "A"
-	b := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[b] = "B"
-	c := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[c] = "C"
-	e := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[e] = "E"
-	f := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[f] = "F"
-	h := graph.Node(glay.NodeInfo{HalfSize: glay.Vector{10, 10}})
-	nodelabel[h] = "H"
+const WorldDynamics = `
+	S8 -> 9; S24 -> 25; S24 -> 27; S1 -> 2; S1 -> 10; S35 -> 43; S35 -> 36;
+	S30 -> 31; S30 -> 33; 9 -> 42; 9 -> T1; 25 -> T1; 25 -> 26; 27 -> T24;
+	2 -> 3 16 17 T1 18; 10 -> 11 14 T1 13 12;
+	31 -> T1; 31 -> 32; 33 -> T30; 33 -> 34; 42 -> 4; 26 -> 4; 3 -> 4;
+	16 -> 15; 17 -> 19; 18 -> 29; 11 -> 4; 14 -> 15; 37 -> 39 41 38 40;
+	13 -> 19; 12 -> 29; 43 -> 38; 43 -> 40; 36 -> 19; 32 -> 23; 34 -> 29;
+	39 -> 15; 41 -> 29; 38 -> 4; 40 -> 19 4 -> 5; 19 -> 21 20 28;
+	5 -> 6 T35 23; 21 -> 22; 20 -> 15; 28 -> 29; 6 -> 7; 15 -> T1;
+	22 -> T35; 22 -> 23; 29 -> T30; 7 -> T8;
+	23 -> T24; 23 -> T1;
+`
 
-	graph.Edge(a, b)
-	graph.Edge(a, c)
-
-	graph.Edge(b, e)
-	graph.Edge(c, f)
-	graph.Edge(c, e)
-	//graph.Edge(b, f)
-
-	graph.Edge(e, h)
-	graph.Edge(f, h)
-
-	graph.Edge(a, h)
-
-	glay.BreakCycles(graph)
-	glay.AssignRanks(graph)
-	glay.CreateDummies(graph)
-	glay.AssignPositions(graph)
-
-	pretty.Println(graph)
-
-	out, _ := os.Create("~out.svg")
-	defer out.Close()
-
-	fmt.Fprintf(out, "<svg xmlns='http://www.w3.org/2000/svg'>\n")
-	defer fmt.Fprintf(out, "</svg>\n")
-
-	fmt.Fprintf(out, "<g>\n")
-	defer fmt.Fprintf(out, "</g>\n")
-
-	for nid := range graph.Nodes {
-		n := &graph.Nodes[nid]
-		fmt.Fprintf(out, "<circle cx='%f' cy='%f' r='%f' fill='white' stroke='black'>", n.Center.X, n.Center.Y, n.HalfSize.X)
-		fmt.Fprintf(out, "</circle>\n")
-	}
-
-	for eid := range graph.Edges {
-		e := &graph.Edges[eid]
-		s, d := &graph.Nodes[e.Source], &graph.Nodes[e.Destination]
-		if d.Rank-s.Rank > 1 {
+func parse(graph string, onedge func(src, dst string)) {
+	for _, edge := range strings.Split(graph, ";") {
+		edge = strings.TrimSpace(edge)
+		tokens := strings.Split(edge, "->")
+		if len(tokens) < 2 {
 			continue
 		}
-
-		fmt.Fprintf(out, "<line x1='%f' y1='%f' x2='%f' y2='%f' stroke='black'>",
-			s.Center.X, s.Center.Y, d.Center.X, d.Center.Y)
-		fmt.Fprintf(out, "</line>\n")
+		src, dsts := strings.TrimSpace(tokens[0]), strings.TrimSpace(tokens[1])
+		for _, dst := range strings.Split(dsts, " ") {
+			dst = strings.TrimSpace(dst)
+			onedge(src, dst)
+		}
 	}
+}
+
+func process(graphdef string) {
+	graph := glay.NewGraph()
+	byName := map[string]glay.NodeID{}
+	byID := map[glay.NodeID]string{}
+
+	node := func(name string) glay.NodeID {
+		id, ok := byName[name]
+		if !ok {
+			id, _ = graph.Node()
+			byName[name] = id
+			byID[id] = name
+		}
+		return id
+	}
+
+	parse(graphdef, func(src, dst string) {
+		sid, did := node(src), node(dst)
+		graph.Edge(sid, did)
+	})
+
+	//glay.Frontload(graph)
+	glay.Backload(graph)
+	for rank, nodes := range graph.ByRank {
+		fmt.Println("- - - - -", rank, "- - - - -")
+		for _, sid := range nodes {
+			src := graph.Nodes[sid]
+			fmt.Printf("%3v['%3v']: %v\n", src.ID, byID[src.ID], src.Out)
+		}
+	}
+
+	pretty.Println(graph.ByRank)
+}
+
+func main() {
+	process(WorldDynamics)
 }
