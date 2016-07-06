@@ -18,7 +18,7 @@ const WorldDynamics = `
 	31 -> T1; 31 -> 32; 33 -> T30; 33 -> 34; 42 -> 4; 26 -> 4; 3 -> 4;
 	16 -> 15; 17 -> 19; 18 -> 29; 11 -> 4; 14 -> 15; 37 -> 39 41 38 40;
 	13 -> 19; 12 -> 29; 43 -> 38; 43 -> 40; 36 -> 19; 32 -> 23; 34 -> 29;
-	39 -> 15; 41 -> 29; 38 -> 4; 40 -> 19 4 -> 5; 19 -> 21 20 28;
+	39 -> 15; 41 -> 29; 38 -> 4; 40 -> 19; 4 -> 5; 19 -> 21 20 28;
 	5 -> 6 T35 23; 21 -> 22; 20 -> 15; 28 -> 29; 6 -> 7; 15 -> T1;
 	22 -> T35; 22 -> 23; 29 -> T30; 7 -> T8;
 	23 -> T24; 23 -> T1;
@@ -37,6 +37,21 @@ func parse(graph string, onedge func(src, dst string)) {
 			onedge(src, dst)
 		}
 	}
+}
+
+func printByRank(graph *layout.Graph, byID map[layout.NodeID]string) {
+	for rank, nodes := range graph.ByRank {
+		fmt.Println("- RANK ", rank, "-")
+		for _, sid := range nodes {
+			src := graph.Nodes[sid]
+			id := src.ID
+			if src.Virtual {
+				id = -id
+			}
+			fmt.Printf("%3v['%3v']: %v\n", id, byID[src.ID], src.Out)
+		}
+	}
+	pretty.Println(graph.ByRank)
 }
 
 func process(graphdef string) {
@@ -59,7 +74,15 @@ func process(graphdef string) {
 		graph.Edge(sid, did)
 	})
 
-	layout.BackloadRanks(graph)
+	layout.Decycle(graph)
+	layout.Rank(graph)
+
+	//printByRank(graph, byID)
+	fmt.Println("ACTUAL BY RANK")
+	for _, rank := range graph.ByRank {
+		fmt.Println(len(rank))
+	}
+
 	layout.CreateVirtualVertices(graph)
 
 	if err := layout.VerifyProperDigraph(graph); err != nil {
@@ -69,19 +92,7 @@ func process(graphdef string) {
 	layout.OrderRanks(graph)
 	layout.Position(graph)
 
-	for rank, nodes := range graph.ByRank {
-		fmt.Println("- RANK ", rank, "-")
-		for _, sid := range nodes {
-			src := graph.Nodes[sid]
-			id := src.ID
-			if src.Virtual {
-				id = -id
-			}
-			fmt.Printf("%3v['%3v']: %v\n", id, byID[src.ID], src.Out)
-		}
-	}
-
-	pretty.Println(graph.ByRank)
+	printByRank(graph, byID)
 
 	file, err := os.Create("~world.svg")
 	if err != nil {

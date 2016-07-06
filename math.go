@@ -27,6 +27,13 @@ func max(a, b int) int {
 	return b
 }
 
+func absf32(v float32) float32 {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
 func minf32(a, b float32) float32 {
 	if a < b {
 		return a
