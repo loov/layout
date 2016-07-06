@@ -75,6 +75,31 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 	}
 
 	write("<svg xmlns='http://www.w3.org/2000/svg'>\n")
+	write(`
+	<style type="text/css"><![CDATA[
+		.node {
+			fill: hsla(0, 60%%, 60%%, 0.5);
+			stroke: #333;
+		}
+		.edge {
+			fill: none;
+			stroke: hsla(180,60%%,30%%,0.5);
+		}
+		.virtual-node {
+			fill: hsla(90, 60%%, 60%%, 0.5);
+			stroke: #333;
+			stroke-width: 0.1px;
+		}
+		#head {
+			fill: hsla(180,60%%,30%%,0.5);
+		}
+	]]></style>`)
+	write(`
+	<defs>
+		<marker id='head' orient='auto' markerWidth='2' markerHeight='4' refX='0.0' refY='2'>
+			<path d='M0,0 V4 L2,2 Z'/>
+		</marker>
+	</defs>`)
 	defer write("</svg>\n")
 
 	write("\t<g>\n")
@@ -85,8 +110,8 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 
 		for _, did := range src.Out {
 			p := graph.Positions[src.ID]
-			write("\t\t<polyline fill='none' stroke='black'")
-			write(" points='%v,%v", p.X, p.Y)
+			write("\t\t<polyline class='edge' marker-end='url(#head)'")
+			write(" points='%v,%v", p.X, p.Y+nodesize/2)
 			dst := graph.Nodes[did]
 			for dst.Virtual {
 				p = graph.Positions[dst.ID]
@@ -94,7 +119,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 				dst = graph.Nodes[dst.Out[0]]
 			}
 			p = graph.Positions[dst.ID]
-			write(" %v,%v'", p.X, p.Y)
+			write(" %v,%v'", p.X, p.Y-nodesize/2)
 			write(" />\n")
 		}
 	}
@@ -102,12 +127,16 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 
 	write("\t<g>\n")
 	for _, src := range graph.Nodes {
-		if src.Virtual {
-			continue
-		}
 		p := graph.Positions[src.ID]
-		write("\t\t<circle cx='%v' cy='%v' r='%v'", p.X, p.Y, 5)
-		write(" fill='white' stroke='black'")
+		write("\t\t<circle cx='%v' cy='%v'", p.X, p.Y)
+
+		if !src.Virtual {
+			write(" r='%v'", nodesize/2)
+			write(" class='node'")
+		} else {
+			write(" r='%v'", 1)
+			write(" class='virtual-node'")
+		}
 		write(" />\n")
 	}
 	write("\t</g>\n")

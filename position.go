@@ -3,7 +3,7 @@ package layout
 const (
 	nodesize   = 10
 	padding    = 10
-	rowpadding = 10
+	rowpadding = 30
 )
 
 func Position(graph *Graph) {
@@ -30,11 +30,11 @@ func Position_Initial_LeftToRight(graph *Graph) {
 func Position_Improve_Median(graph *Graph, down bool) {
 	if down {
 		for _, nodes := range graph.ByRank {
-			prev := Vector{}
+			left := Vector{}
 			for _, nid := range nodes {
 				node := graph.Nodes[nid]
 				if len(node.In) == 0 {
-					prev.X = graph.Positions[nid].X
+					left.X = graph.Positions[nid].X
 					continue
 				}
 
@@ -43,21 +43,21 @@ func Position_Improve_Median(graph *Graph, down bool) {
 					total.X += graph.Positions[oid].X
 				}
 				total.X /= float32(len(node.In))
-				if total.X < prev.X+nodesize+padding {
-					prev.X = graph.Positions[nid].X
+				if total.X < left.X+nodesize+padding {
+					left.X = graph.Positions[nid].X
 					continue
 				}
 				graph.Positions[nid].X = total.X
-				prev.X = graph.Positions[nid].X
+				left.X = graph.Positions[nid].X
 			}
 		}
 	} else {
 		for _, nodes := range graph.ByRank {
-			prev := Vector{}
+			left := Vector{}
 			for _, nid := range nodes {
 				node := graph.Nodes[nid]
 				if len(node.Out) == 0 {
-					prev.X = graph.Positions[nid].X
+					left.X = graph.Positions[nid].X
 					continue
 				}
 
@@ -66,12 +66,12 @@ func Position_Improve_Median(graph *Graph, down bool) {
 					total.X += graph.Positions[oid].X
 				}
 				total.X /= float32(len(node.Out))
-				if total.X < prev.X+nodesize+padding {
-					prev.X = graph.Positions[nid].X
+				if total.X < left.X+nodesize+padding {
+					left.X = graph.Positions[nid].X
 					continue
 				}
 				graph.Positions[nid].X = total.X
-				prev.X = graph.Positions[nid].X
+				left.X = graph.Positions[nid].X
 			}
 		}
 	}
