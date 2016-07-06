@@ -3,7 +3,7 @@ package layout
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)
 	for i := 0; i < 100; i++ {
-		OrderRanks_Improve_Median(graph)
+		OrderRanks_Improve_WeightedMedian(graph, i%2 == 0)
 		if OrderRanks_Improve_Transpose(graph) == 0 {
 			break
 		}
@@ -45,8 +45,61 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 	graph.ByRank = ranking
 }
 
-func OrderRanks_Improve_Median(graph *Graph) {
+func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
+	OrderRanks_Improve_WeightedMedian_AssignCoef(graph, down)
+	for _, nodes := range graph.ByRank {
+		graph.Sort(nodes, func(a, b *Node) bool {
+			if a.Coef == -1.0 {
+				if b.Coef == -1.0 {
+					return a.GridX < b.GridX
+				} else {
+					return a.GridX < b.Coef
+				}
+			} else {
+				if b.Coef == -1.0 {
+					return a.Coef < b.GridX
+				} else {
+					return a.Coef < b.Coef
+				}
+			}
+		})
+	}
+}
 
+func OrderRanks_Improve_WeightedMedian_AssignCoef(graph *Graph, down bool) {
+	gridx := func(id NodeID) float32 {
+		return graph.Nodes[id].GridX
+	}
+
+	for _, nodes := range graph.ByRank {
+		for gridx, nid := range nodes {
+			graph.Nodes[nid].GridX = float32(gridx)
+		}
+	}
+
+	for _, n := range graph.Nodes {
+		var adj NodeIDs
+		if down {
+			adj = n.Out
+		} else {
+			adj = n.In
+		}
+
+		if len(adj) == 0 {
+			n.Coef = -1
+		} else if len(adj)&1 == 1 {
+			n.Coef = gridx(adj[len(adj)>>1])
+		} else if len(adj) == 2 {
+			n.Coef = (gridx(adj[0]) + gridx(adj[1])) / 2.0
+		} else {
+			leftx := gridx(adj[len(adj)>>1-1])
+			rightx := gridx(adj[len(adj)>>1])
+
+			left := leftx - gridx(adj[0])
+			right := gridx(adj[len(adj)-1]) - rightx
+			n.Coef = (leftx*right + rightx*left) / (left + right)
+		}
+	}
 }
 
 func OrderRanks_Improve_Transpose(graph *Graph) (swaps int) {

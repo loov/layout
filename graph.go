@@ -17,6 +17,8 @@ type Node struct {
 	ID      NodeID
 	In      NodeIDs
 	Out     NodeIDs
+	Coef    float32
+	GridX   float32
 	Rank    int
 	Virtual bool
 }
