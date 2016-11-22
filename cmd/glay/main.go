@@ -1,7 +1,9 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 
@@ -107,5 +109,11 @@ func process(graphdef string) {
 }
 
 func main() {
-	process(WorldDynamics)
+	flag.Parse()
+	if flag.Arg(0) == "" {
+		process(WorldDynamics)
+	} else {
+		src, _ := ioutil.ReadFile(flag.Arg(0))
+		process(string(src))
+	}
 }

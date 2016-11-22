@@ -67,3 +67,6 @@ https://github.com/cpettitt/dig.js/tree/master/src/dig/dot
 https://github.com/cpettitt/dagre/tree/master/lib/rank
 https://github.com/d3/d3/issues/349
 https://github.com/cpettitt/dagre/wiki#recommended-reading
+
+http://marvl.infotech.monash.edu/~dwyer/
+http://www.csse.monash.edu.au/~tdwyer/Dwyer2009FastConstraints.pdf
