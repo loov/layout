@@ -13,7 +13,7 @@ import (
 
 var _ = pretty.Print
 
-const WorldDynamics = `
+const xWorldDynamics = `
 	S8 -> 9; S24 -> 25; S24 -> 27; S1 -> 2; S1 -> 10; S35 -> 43; S35 -> 36;
 	S30 -> 31; S30 -> 33; 9 -> 42; 9 -> T1; 25 -> T1; 25 -> 26; 27 -> T24;
 	2 -> 3 16 17 T1 18; 10 -> 11 14 T1 13 12;
@@ -24,6 +24,11 @@ const WorldDynamics = `
 	5 -> 6 T35 23; 21 -> 22; 20 -> 15; 28 -> 29; 6 -> 7; 15 -> T1;
 	22 -> T35; 22 -> 23; 29 -> T30; 7 -> T8;
 	23 -> T24; 23 -> T1;
+`
+
+const WorldDynamics = `
+	S8 -> 9; S24 -> 25; S24 -> 27; S1 -> 2; S1 -> 10; S35 -> 43; S35 -> 36;
+	S30 -> 31; S30 -> 33; 9 -> 42; 9 -> T1; 25 -> T1; 25 -> 26; 27 -> T24;
 `
 
 func parse(graph string, onedge func(src, dst string)) {
