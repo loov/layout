@@ -47,3 +47,12 @@ func maxf32(a, b float32) float32 {
 	}
 	return b
 }
+
+func clampf32(v, min, max float32) float32 {
+	if v < min {
+		return min
+	} else if v > max {
+		return max
+	}
+	return v
+}

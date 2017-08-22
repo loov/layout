@@ -25,6 +25,11 @@ const WorldDynamics = `
 	22 -> T35; 22 -> 23; 29 -> T30; 7 -> T8;
 	23 -> T24; 23 -> T1;
 `
+const BasicWorldDynamics = `
+	S -> X; S -> Y; S -> Z;
+	Z -> A; Z -> B; Z -> C;
+	X -> R; A -> R; B -> R; Y -> R;
+`
 
 const xWorldDynamics = `
 	S8 -> 9; S24 -> 25; S24 -> 27; S1 -> 2; S1 -> 10; S35 -> 43; S35 -> 36;
