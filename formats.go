@@ -140,7 +140,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 		for _, did := range src.Out {
 			p := graph.Positions[src.ID]
 			write("\t\t<polyline class='edge' marker-end='url(#head)'")
-			write(" points='%v,%v", p.X, p.Y+nodesize/2)
+			write(" points='%v,%v", p.X, p.Y+nodeWidth/2)
 			dst := graph.Nodes[did]
 			for dst.Virtual {
 				p = graph.Positions[dst.ID]
@@ -148,7 +148,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 				dst = graph.Nodes[dst.Out[0]]
 			}
 			p = graph.Positions[dst.ID]
-			write(" %v,%v'", p.X, p.Y-nodesize/2)
+			write(" %v,%v'", p.X, p.Y-nodeWidth/2)
 			write(" />\n")
 		}
 	}
@@ -159,7 +159,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 		p := graph.Positions[src.ID]
 		write("\t\t<circle cx='%v' cy='%v'", p.X, p.Y)
 		if !src.Virtual {
-			write(" r='%v'", nodesize/2)
+			write(" r='%v'", nodeWidth/2)
 			write(" class='node'")
 		} else {
 			write(" r='%v'", 1)
@@ -174,7 +174,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 		p := graph.Positions[src.ID]
 		if !src.Virtual {
 			write("\t\t<text text-anchor='middle' x='%v' y='%v'", p.X, p.Y)
-			write(" font-size='%v'", nodesize/2)
+			write(" font-size='%v'", nodeWidth/2)
 			write(">%v</text>\n", src.Label)
 		}
 	}
