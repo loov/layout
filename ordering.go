@@ -1,5 +1,7 @@
 package layout
 
+import "sort"
+
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)
 	for i := 0; i < 100; i++ {
@@ -36,8 +38,8 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 			first.Add(node.ID)
 		}
 	}
+	sortNodesByOutdegree(graph, first)
 
-	graph.Sort(first, func(a, b *Node) bool { return len(a.Out) > len(b.Out) })
 	for _, id := range first {
 		recurse(id)
 	}
@@ -48,7 +50,10 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
 	OrderRanks_Improve_WeightedMedian_AssignCoef(graph, down)
 	for _, nodes := range graph.ByRank {
-		graph.Sort(nodes, func(a, b *Node) bool {
+		sort.Slice(nodes, func(i, k int) bool {
+			aid, bid := nodes[i], nodes[k]
+			a, b := graph.Nodes[aid], graph.Nodes[bid]
+
 			if a.Coef == -1.0 {
 				if b.Coef == -1.0 {
 					return a.GridX < b.GridX

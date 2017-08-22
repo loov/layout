@@ -5,6 +5,35 @@ import (
 	"io"
 )
 
+func (graph *Graph) EdgeTableString() string {
+	n := len(graph.Nodes)
+	stride := 2*n + 4
+	table := make([]byte, n*stride)
+	for i := range table {
+		table[i] = ' '
+	}
+
+	for id, node := range graph.Nodes {
+		row := table[id*stride : (id+1)*stride]
+		row[0] = '|'
+		row[n+1] = '|'
+		row[len(row)-2] = '|'
+		row[len(row)-1] = '\n'
+
+		out := row[1 : 1+n]
+		for _, dst := range node.Out {
+			out[dst] = 'X'
+		}
+
+		in := row[1+n+1 : 1+n+1+n]
+		for _, src := range node.In {
+			in[src] = 'X'
+		}
+	}
+
+	return string(table)
+}
+
 func (graph *Graph) WriteDOT(out io.Writer) (n int, err error) {
 	write := func(format string, args ...interface{}) bool {
 		if err != nil {

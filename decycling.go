@@ -1,87 +1,149 @@
 package layout
 
-func NodesByOutdegree(graph *Graph) NodeIDs {
-	nodes := make(NodeIDs, 0, len(graph.Nodes))
-	for id := range nodes {
-		nodes[id] = NodeID(id)
-	}
-	graph.Sort(nodes, func(a, b *Node) bool {
+import "sort"
+
+func Decycle(graph *Graph) {
+	DecycleDepthFirst(graph)
+}
+
+func sortNodesByOutdegree(graph *Graph, nodes NodeIDs) {
+	sort.Slice(nodes, func(i, k int) bool {
+		aid, bid := nodes[i], nodes[k]
+		a, b := graph.Nodes[aid], graph.Nodes[bid]
+
 		if len(a.Out) == len(b.Out) {
 			return len(a.In) < len(b.In)
 		}
 		return len(a.Out) > len(b.Out)
 	})
+}
+
+func nodesByOutdegree(graph *Graph) NodeIDs {
+	nodes := make(NodeIDs, 0, len(graph.Nodes))
+	for id := range nodes {
+		nodes[id] = NodeID(id)
+	}
+
+	sortNodesByOutdegree(graph, nodes)
+
 	return nodes
 }
 
-func Decycle(graph *Graph) { Decycle_Outdegree(graph) }
-
-func Decycle_Outdegree(graph *Graph) {
-	seen := make([]bool, len(graph.Nodes))
-
-	var flipIn func(did NodeID)
-	flipIn = func(did NodeID) {
-		seen[did] = true
-		dst := graph.Nodes[did]
-		for _, sid := range dst.In.Copy() {
-			if !seen[sid] {
-				src := graph.Nodes[sid]
-
-				// flips the edge
-				dst.In.Remove(sid)
-				dst.Out.Add(sid)
-				src.In.Add(did)
-				src.Out.Remove(did)
-			}
-		}
-	}
-
-	// sort by outdegree
-	nodes := make(NodeIDs, 0, len(graph.Nodes))
-	for id := range nodes {
-		nodes[id] = NodeID(id)
-	}
-	graph.Sort(nodes, func(a, b *Node) bool {
-		if len(a.Out) == len(b.Out) {
-			return len(a.In) < len(b.In)
-		}
-		return len(a.Out) > len(b.Out)
-	})
-
-	// remove cycles
-	for _, nid := range NodesByOutdegree(graph) {
-		if !seen[nid] {
-			flipIn(nid)
-		}
+func RemoveSelfLoops(graph *Graph) {
+	for i, node := range graph.Nodes {
+		id := NodeID(i)
+		node.In.Remove(id)
+		node.Out.Remove(id)
 	}
 }
 
-func Decycle_DepthFirst(graph *Graph) {
-	seen := make([]bool, len(graph.Nodes))
+func DecycleOrder(graph *Graph) {
+	RemoveSelfLoops(graph)
 
-	var flipIn func(did NodeID)
-	flipIn = func(did NodeID) {
-		seen[did] = true
+	edges, processed := make(dagEdgeTable), make([]bool, len(graph.Nodes))
+
+	var process func(did NodeID)
+	process = func(did NodeID) {
+		if processed[did] {
+			return
+		}
+		processed[did] = true
+
 		dst := graph.Nodes[did]
-		for _, sid := range dst.In.Copy() {
-			if !seen[sid] {
-				src := graph.Nodes[sid]
-
-				// flips the edge
-				dst.In.Remove(sid)
-				dst.Out.Add(sid)
-				src.In.Add(did)
-				src.Out.Remove(did)
-
-				flipIn(sid)
+		for _, sid := range dst.In {
+			if processed[sid] {
+				edges.Include(sid, did)
+			} else {
+				edges.Include(did, sid)
 			}
 		}
 	}
 
-	// remove cycles
-	for _, nid := range NodesByOutdegree(graph) {
-		if !seen[nid] {
-			flipIn(nid)
+	for i := range graph.Nodes {
+		process(NodeID(i))
+	}
+
+	graph.setEdges(edges)
+}
+
+func DecycleOutdegree(graph *Graph) {
+	RemoveSelfLoops(graph)
+
+	edges, processed := make(dagEdgeTable), make([]bool, len(graph.Nodes))
+
+	var process func(did NodeID)
+	process = func(did NodeID) {
+		if processed[did] {
+			return
 		}
+		processed[did] = true
+
+		dst := graph.Nodes[did]
+		for _, sid := range dst.In {
+			if processed[sid] {
+				edges.Include(sid, did)
+			} else {
+				edges.Include(did, sid)
+			}
+		}
+	}
+
+	// TODO: after each process, re-sort based on outdegree
+	for _, nid := range nodesByOutdegree(graph) {
+		process(nid)
+	}
+
+	graph.setEdges(edges)
+}
+
+func DecycleDepthFirst(graph *Graph) {
+	RemoveSelfLoops(graph)
+
+	edges, processed := make(dagEdgeTable), make([]bool, len(graph.Nodes))
+
+	var process func(did NodeID)
+	process = func(did NodeID) {
+		if processed[did] {
+			return
+		}
+		processed[did] = true
+
+		dst := graph.Nodes[did]
+		for _, sid := range dst.In {
+			if processed[sid] {
+				edges.Include(sid, did)
+			} else {
+				edges.Include(did, sid)
+				process(sid)
+			}
+		}
+	}
+
+	// TODO: after each process, re-sort based on outdegree
+	for _, nid := range nodesByOutdegree(graph) {
+		process(nid)
+	}
+
+	graph.setEdges(edges)
+}
+
+type dagEdgeTable map[[2]NodeID]struct{}
+
+func (et dagEdgeTable) Include(src, dst NodeID) {
+	if _, exists := et[[2]NodeID{dst, src}]; exists {
+		return
+	}
+	et[[2]NodeID{src, dst}] = struct{}{}
+}
+
+func (graph *Graph) setEdges(edges dagEdgeTable) {
+	// recreate inbound links from outbound
+	for _, node := range graph.Nodes {
+		node.In.Clear()
+		node.Out.Clear()
+	}
+
+	for edge := range edges {
+		graph.Edge(edge[0], edge[1])
 	}
 }

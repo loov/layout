@@ -70,3 +70,5 @@ https://github.com/cpettitt/dagre/wiki#recommended-reading
 
 http://marvl.infotech.monash.edu/~dwyer/
 http://www.csse.monash.edu.au/~tdwyer/Dwyer2009FastConstraints.pdf
+
+http://docs.yworks.com/yfiles/doc/api/y/layout/hierarchic/IncrementalHierarchicLayouter.html
