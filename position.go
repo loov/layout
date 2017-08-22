@@ -4,7 +4,7 @@ const (
 	nodeWidth  = float32(15)
 	nodeLeft   = nodeWidth * 0.5
 	nodeRight  = nodeWidth * 0.5
-	padding    = float32(10)
+	padding    = float32(15)
 	rowpadding = float32(30)
 )
 
@@ -12,19 +12,13 @@ func Position(graph *Graph) {
 	graph.Positions = make([]Vector, len(graph.Nodes))
 	Position_Initial_LeftToRight(graph)
 
-	power := float32(1.0)
 	for i := 0; i < 10000; i++ {
-		Position_Improve_Median_Incoming(graph, power)
-		Position_Improve_Median_Outgoing(graph, power)
-		Position_Improve_Median_Average(graph, power)
-
-		power *= 0.999
-		if power < 0.01 {
-			break
-		}
-
-		Position_Flush_Left(graph)
+		Position_Improve_Median_Average(graph)
+		Position_Improve_Median_Outgoing(graph)
+		Position_Improve_Median_Incoming(graph)
 	}
+
+	Position_Improve_Median_Incoming(graph)
 }
 
 func Position_Initial_LeftToRight(graph *Graph) {
@@ -40,7 +34,7 @@ func Position_Initial_LeftToRight(graph *Graph) {
 	}
 }
 
-func Position_Improve_Median_Incoming(graph *Graph, power float32) {
+func Position_Improve_Median_Incoming(graph *Graph) {
 	for _, layer := range graph.ByRank {
 		for i, nid := range layer {
 			node := graph.Nodes[nid]
@@ -52,7 +46,7 @@ func Position_Improve_Median_Incoming(graph *Graph, power float32) {
 			if i+1 < len(layer) {
 				wallRight = graph.Positions[layer[i+1]].X - nodeLeft - padding
 			} else {
-				wallRight = float32(len(graph.Nodes)) * nodeWidth * 4
+				wallRight = wallLeft + float32(len(graph.Nodes))*(nodeWidth+padding)
 			}
 
 			// ensure we are not overlapping with the previous
@@ -72,16 +66,20 @@ func Position_Improve_Median_Incoming(graph *Graph, power float32) {
 			}
 			center /= float32(len(node.In))
 
-			// is between sides
-			if wallLeft+nodeLeft < center && center < wallRight-nodeRight {
-				graph.Positions[nid].X = graph.Positions[nid].X*(1-power) + center*power
-				continue
+			if center < wallLeft {
+				center = wallLeft
 			}
+			if wallRight < center {
+				center = wallRight
+			}
+
+			// is between sides
+			graph.Positions[nid].X = center
 		}
 	}
 }
 
-func Position_Improve_Median_Outgoing(graph *Graph, power float32) {
+func Position_Improve_Median_Outgoing(graph *Graph) {
 	for k := len(graph.ByRank) - 1; k >= 0; k-- {
 		layer := graph.ByRank[k]
 
@@ -95,7 +93,7 @@ func Position_Improve_Median_Outgoing(graph *Graph, power float32) {
 			if i+1 < len(layer) {
 				wallRight = graph.Positions[layer[i+1]].X - nodeLeft - padding
 			} else {
-				wallRight = float32(len(graph.Nodes)) * nodeWidth * 4
+				wallRight = wallLeft + float32(len(graph.Nodes))*(nodeWidth+padding)
 			}
 
 			// ensure we are not overlapping with the previous
@@ -115,16 +113,20 @@ func Position_Improve_Median_Outgoing(graph *Graph, power float32) {
 			}
 			center /= float32(len(node.Out))
 
-			// is between sides
-			if wallLeft+nodeLeft < center && center < wallRight-nodeRight {
-				graph.Positions[nid].X = graph.Positions[nid].X*(1-power) + center*power
-				continue
+			if center < wallLeft {
+				center = wallLeft
 			}
+			if wallRight < center {
+				center = wallRight
+			}
+
+			// is between sides
+			graph.Positions[nid].X = center
 		}
 	}
 }
 
-func Position_Improve_Median_Average(graph *Graph, power float32) {
+func Position_Improve_Median_Average(graph *Graph) {
 	for _, layer := range graph.ByRank {
 		for i, nid := range layer {
 			node := graph.Nodes[nid]
@@ -136,7 +138,7 @@ func Position_Improve_Median_Average(graph *Graph, power float32) {
 			if i+1 < len(layer) {
 				wallRight = graph.Positions[layer[i+1]].X - nodeLeft - padding
 			} else {
-				wallRight = float32(len(graph.Nodes)) * nodeWidth * 4
+				wallRight = wallLeft + float32(len(graph.Nodes))*(nodeWidth+padding)
 			}
 
 			// ensure we are not overlapping with the previous
@@ -159,16 +161,20 @@ func Position_Improve_Median_Average(graph *Graph, power float32) {
 			}
 			center /= float32(len(node.In) + len(node.Out))
 
-			// is between sides
-			if wallLeft+nodeLeft < center && center < wallRight-nodeRight {
-				graph.Positions[nid].X = graph.Positions[nid].X*(1-power) + center*power
-				continue
+			if center < wallLeft {
+				center = wallLeft
 			}
+			if wallRight < center {
+				center = wallRight
+			}
+
+			// is between sides
+			graph.Positions[nid].X = center
 		}
 	}
 }
 
-func Position_Flush_Left(graph *Graph) {
+func flushLeft(graph *Graph) {
 	minleft := graph.Positions[0].X - nodeLeft
 	for _, node := range graph.Nodes {
 		if graph.Positions[node.ID].X-nodeLeft < minleft {
