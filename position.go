@@ -1,7 +1,7 @@
 package layout
 
 const (
-	nodesize   = 10
+	nodesize   = 15
 	padding    = 10
 	rowpadding = 30
 )

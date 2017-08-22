@@ -158,7 +158,6 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 	for _, src := range graph.Nodes {
 		p := graph.Positions[src.ID]
 		write("\t\t<circle cx='%v' cy='%v'", p.X, p.Y)
-
 		if !src.Virtual {
 			write(" r='%v'", nodesize/2)
 			write(" class='node'")
@@ -167,6 +166,17 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 			write(" class='virtual-node'")
 		}
 		write(" />\n")
+	}
+	write("\t</g>\n")
+
+	write("\t<g>\n")
+	for _, src := range graph.Nodes {
+		p := graph.Positions[src.ID]
+		if !src.Virtual {
+			write("\t\t<text text-anchor='middle' x='%v' y='%v'", p.X, p.Y)
+			write(" font-size='%v'", nodesize/2)
+			write(">%v</text>\n", src.Label)
+		}
 	}
 	write("\t</g>\n")
 

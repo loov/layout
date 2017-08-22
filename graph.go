@@ -39,6 +39,7 @@ type Node struct {
 	GridX   float32
 	Rank    int
 	Virtual bool
+	Label   string // TODO: remove
 }
 
 type Vector struct{ X, Y float32 }

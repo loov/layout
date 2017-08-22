@@ -1,6 +1,8 @@
 package layout
 
-import "sort"
+import (
+	"sort"
+)
 
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)

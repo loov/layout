@@ -64,7 +64,9 @@ func process(graphdef string) {
 	node := func(name string) layout.NodeID {
 		id, ok := byName[name]
 		if !ok {
-			id, _ = graph.Node()
+			var n *layout.Node
+			id, n = graph.Node()
+			n.Label = name
 			byName[name] = id
 			byID[id] = name
 		}

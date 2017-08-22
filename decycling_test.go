@@ -10,8 +10,22 @@ func TestDecycleOutdegree(t *testing.T)  { testDecycle(t, DecycleOutdegree) }
 func TestDecycleDepthFirst(t *testing.T) { testDecycle(t, DecycleDepthFirst) }
 func TestDecycleOrder(t *testing.T)      { testDecycle(t, DecycleOrder) }
 
+func countLinks(graph *Graph) int {
+	edges := make(dagEdgeTable)
+	for _, node := range graph.Nodes {
+		for _, out := range node.Out {
+			if out != node.ID {
+				edges.Include(node.ID, out)
+			}
+		}
+	}
+	return len(edges)
+}
+
 func tryDecycle(t *testing.T, graph *Graph, decycle func(*Graph)) {
 	t.Helper()
+
+	beforeCount := countLinks(graph)
 	decycle(graph)
 
 	printEdges := false
@@ -23,6 +37,13 @@ func tryDecycle(t *testing.T, graph *Graph, decycle func(*Graph)) {
 		t.Errorf("got cycles")
 		printEdges = true
 	}
+
+	afterCount := countLinks(graph)
+	if beforeCount != afterCount {
+		t.Errorf("too many edges removed %v -> %v", beforeCount, afterCount)
+		printEdges = true
+	}
+
 	if printEdges {
 		t.Log("edge table: \n" + graph.EdgeTableString())
 	}
