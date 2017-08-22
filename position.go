@@ -12,13 +12,11 @@ func Position(graph *Graph) {
 	graph.Positions = make([]Vector, len(graph.Nodes))
 	Position_Initial_LeftToRight(graph)
 
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		Position_Improve_Median_Average(graph)
 		Position_Improve_Median_Outgoing(graph)
 		Position_Improve_Median_Incoming(graph)
 	}
-
-	Position_Improve_Median_Incoming(graph)
 }
 
 func Position_Initial_LeftToRight(graph *Graph) {
