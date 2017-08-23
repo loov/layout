@@ -1,7 +1,6 @@
 package layout
 
 import (
-	"strconv"
 	"testing"
 	"testing/quick"
 )
@@ -22,42 +21,32 @@ func countLinks(graph *Graph) int {
 	return len(edges)
 }
 
-func tryDecycle(t *testing.T, graph *Graph, decycle func(*Graph)) {
-	t.Helper()
-
-	beforeCount := countLinks(graph)
-	decycle(graph)
-
-	printEdges := false
-	if err := graph.CheckErrors(); err != nil {
-		t.Errorf("got errors: %v", err)
-		printEdges = true
-	}
-	if graph.IsCyclic() {
-		t.Errorf("got cycles")
-		printEdges = true
-	}
-
-	afterCount := countLinks(graph)
-	if beforeCount != afterCount {
-		t.Errorf("too many edges removed %v -> %v", beforeCount, afterCount)
-		printEdges = true
-	}
-
-	if printEdges {
-		t.Log("edge table: \n" + graph.EdgeMatrixString())
-	}
-}
-
 func testDecycle(t *testing.T, decycle func(*Graph)) {
-	for i, graph := range DataAcyclicGraphs() {
-		t.Run("A"+strconv.Itoa(i), func(t *testing.T) {
-			tryDecycle(t, graph, decycle)
-		})
-	}
-	for i, graph := range DataCyclicGraphs() {
-		t.Run("B"+strconv.Itoa(i), func(t *testing.T) {
-			tryDecycle(t, graph, decycle)
+	for _, testgraph := range TestGraphs {
+		graph := testgraph.Make()
+		t.Run(testgraph.Name, func(t *testing.T) {
+			beforeCount := countLinks(graph)
+			decycle(graph)
+
+			printEdges := false
+			if err := graph.CheckErrors(); err != nil {
+				t.Errorf("got errors: %v", err)
+				printEdges = true
+			}
+			if graph.IsCyclic() {
+				t.Errorf("got cycles")
+				printEdges = true
+			}
+
+			afterCount := countLinks(graph)
+			if beforeCount != afterCount {
+				t.Errorf("too many edges removed %v -> %v", beforeCount, afterCount)
+				printEdges = true
+			}
+
+			if printEdges {
+				t.Log("edge table: \n" + graph.EdgeMatrixString())
+			}
 		})
 	}
 }

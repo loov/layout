@@ -33,33 +33,52 @@ type Node struct {
 	Radius   Vector
 }
 
+// String returns node label
 func (node *Node) String() string { return node.Label }
 
-func (node *Node) InDegree() int  { return len(node.In) }
+// InDegree returns count of inbound edges
+func (node *Node) InDegree() int { return len(node.In) }
+
+// OutDegree returns count of outbound edges
 func (node *Node) OutDegree() int { return len(node.Out) }
 
+// Vector represents a 2D vector
 type Vector struct {
 	X, Y float32
 }
 
-func NewGraph() *Graph {
-	return &Graph{}
-}
+// NewGraph creates an empty graph
+func NewGraph() *Graph { return &Graph{} }
 
+// NewGraphFromEdgeList creates a graph from edge list
+//
+// Example:
+//     graph := NewGraphFromEdgeList([][]int{
+//         0: []int{1,2},
+//         1: []int{2,0},
+//     })
+//
+//  Creates an graph with edges 0 -> 1, 0 -> 2, 1 -> 2, 1 -> 0.
+//
 func NewGraphFromEdgeList(edgeList [][]int) *Graph {
 	graph := NewGraph()
 
-	for range edgeList {
-		graph.AddNode()
-	}
-
 	for from, out := range edgeList {
 		for _, to := range out {
+			graph.ensureNode(from)
+			graph.ensureNode(to)
 			graph.AddEdge(graph.Nodes[from], graph.Nodes[to])
 		}
 	}
 
 	return graph
+}
+
+// ensureNode adds nodes until we have reached id
+func (graph *Graph) ensureNode(id int) {
+	for id >= len(graph.Nodes) {
+		graph.AddNode()
+	}
 }
 
 // NodeCount returns count of nodes

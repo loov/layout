@@ -1,154 +1,149 @@
 package layout
 
-import (
-	"math"
-	"math/rand"
-	"reflect"
-	"testing"
-)
-
-func TestIsCyclic(t *testing.T) {
-	for i, graph := range DataAcyclicGraphs() {
-		if graph.IsCyclic() {
-			t.Errorf("A%d: expected IsCyclic = false", i)
-		}
-		if err := graph.CheckErrors(); err != nil {
-			t.Errorf("A%d: %v", i, err)
-		}
-	}
-
-	for i, graph := range DataCyclicGraphs() {
-		if !graph.IsCyclic() {
-			t.Errorf("B%d: expected IsCyclic = true", i)
-		}
-		if err := graph.CheckErrors(); err != nil {
-			t.Errorf("A%d: %v", i, err)
-		}
-	}
+type TestGraph struct {
+	Name   string
+	Cyclic bool
+	Edges  [][]int
 }
 
-func (_ *Graph) Generate(rand *rand.Rand, size int) reflect.Value {
-	graph := NewGraph()
-	if size == 0 {
-		return reflect.ValueOf(graph)
-	}
+func (testgraph *TestGraph) Make() *Graph { return NewGraphFromEdgeList(testgraph.Edges) }
 
-	nodeCount := int(math.Sqrt(float64(size)))
-	if nodeCount < 0 {
-		nodeCount = 1
-	}
-	for i := 0; i < nodeCount; i++ {
-		graph.AddNode()
-	}
+var TestGraphs = []TestGraph{
+	// acyclic graphs
+	{"null", false, [][]int{}},
+	{"node", false, [][]int{
+		0: []int{},
+	}},
+	{"link", false, [][]int{
+		0: []int{1},
+		1: []int{},
+	}},
+	{"link-reverse", false, [][]int{
+		0: []int{},
+		1: []int{0},
+	}},
+	{"chain", false, [][]int{
+		0: []int{1},
+		1: []int{2},
+		2: []int{3},
+		3: []int{},
+	}},
+	{"chain-reverse", false, [][]int{
+		0: []int{},
+		1: []int{0},
+		2: []int{1},
+		3: []int{2},
+	}},
+	{"split", false, [][]int{
+		0: []int{1},
+		1: []int{2, 3},
+		2: []int{4},
+		3: []int{5},
+		4: []int{},
+		5: []int{},
+	}},
+	{"merge", false, [][]int{
+		0: []int{1},
+		1: []int{2, 3},
+		2: []int{4},
+		3: []int{4},
+		4: []int{},
+	}},
+	// acyclic graphs with 2 components
+	{"2-node", false, [][]int{
+		0: []int{},
+		1: []int{},
+	}},
+	{"2-link", false, [][]int{
+		0: []int{1},
+		1: []int{},
 
-	edgeCount := size - nodeCount
-	if edgeCount <= nodeCount {
-		edgeCount = nodeCount
-	}
+		2: []int{},
+		3: []int{2},
+	}},
+	{"2-split", false, [][]int{
+		0: []int{1, 2},
+		1: []int{},
+		2: []int{},
 
-	// p := float32(edgeCount) / float32(nodeCount) * float32(nodeCount)
-	p := float32(0.5)
-	for i := 0; i < nodeCount; i++ {
-		src := ID(i)
-		for k := 0; k < nodeCount; k++ {
-			dst := ID(k)
-			if rand.Float32() < p {
-				graph.AddEdge(graph.Nodes[src], graph.Nodes[dst])
-			}
-		}
-	}
+		4: []int{},
+		5: []int{},
+		6: []int{5, 4},
+	}},
+	{"2-merge", false, [][]int{
+		0: []int{1, 2},
+		1: []int{3},
+		2: []int{3},
+		3: []int{},
 
-	return reflect.ValueOf(graph)
-}
+		4: []int{},
+		5: []int{4},
+		6: []int{4},
+		7: []int{6, 5},
+	}},
 
-func DataAcyclicGraphs() []*Graph {
-	return []*Graph{
-		0: NewGraph(),
-		1: NewGraphFromEdgeList([][]int{
-			0: []int{},
-		}),
-		2: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{},
-		}),
-		3: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{2},
-			2: []int{3},
-			3: []int{},
-		}),
-		4: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{2, 3},
-			2: []int{4},
-			3: []int{4},
-			4: []int{},
-		}),
-	}
-}
+	// cyclic graphs
+	{"loop", true, [][]int{
+		0: []int{0},
+	}},
+	{"2-circle", true, [][]int{
+		0: []int{1},
+		1: []int{0},
+	}},
+	{"4-circle", true, [][]int{
+		0: []int{1},
+		1: []int{2},
+		2: []int{3},
+		3: []int{0},
+	}},
+	{"5-split-cycle", true, [][]int{
+		0: []int{1},
+		1: []int{2, 3},
+		2: []int{4},
+		3: []int{4},
+		4: []int{0},
+	}},
+	{"5-split-2-cycle", true, [][]int{
+		0: []int{1},
+		1: []int{2, 3, 0},
+		2: []int{4},
+		3: []int{4, 2},
+		4: []int{2},
+	}},
+	{"5-complete", true, [][]int{
+		0: []int{0, 1, 2, 3, 4},
+		1: []int{0, 1, 2, 3, 4},
+		2: []int{0, 1, 2, 3, 4},
+		3: []int{0, 1, 2, 3, 4},
+		4: []int{0, 1, 2, 3, 4},
+	}},
 
-func DataCyclicGraphs() []*Graph {
-	return []*Graph{
-		0: NewGraphFromEdgeList([][]int{
-			0: []int{0},
-		}),
-		1: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{0},
-		}),
-		2: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{2},
-			2: []int{3},
-			3: []int{0},
-		}),
-		3: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{2, 3},
-			2: []int{4},
-			3: []int{4},
-			4: []int{0},
-		}),
-		4: NewGraphFromEdgeList([][]int{
-			0: []int{1},
-			1: []int{2, 3, 0},
-			2: []int{4},
-			3: []int{4, 2},
-			4: []int{2},
-		}),
-		5: NewGraphFromEdgeList([][]int{
-			0: []int{0, 1, 2, 3, 4},
-			1: []int{0, 1, 2, 3, 4},
-			2: []int{0, 1, 2, 3, 4},
-			3: []int{0, 1, 2, 3, 4},
-			4: []int{0, 1, 2, 3, 4},
-		}),
-		6: NewGraphFromEdgeList([][]int{
-			0: []int{0, 1, 2, 4, 5},
-			1: []int{0, 2, 3},
-			2: []int{0, 1, 4, 5, 6},
-			3: []int{0, 3, 4},
-			4: []int{0, 1, 2, 3, 4, 5},
-			5: []int{0, 1, 2},
-			6: []int{0, 6},
-		}),
-		7: NewGraphFromEdgeList([][]int{
-			0: []int{1, 2, 3, 4},
-			1: []int{1, 5},
-			2: []int{1},
-			3: []int{0, 1, 2, 3},
-			4: []int{0, 2},
-			5: []int{0, 1, 2, 6},
-			6: []int{1, 3, 4},
-		}),
-		8: NewGraphFromEdgeList([][]int{
-			0: []int{1, 2, 3, 4, 5, 6},
-			1: []int{0, 1, 2, 3, 4, 5, 6},
-			2: []int{1},
-			3: []int{0, 3, 4, 5, 6},
-			4: []int{0, 1, 2, 3, 4, 5, 6},
-			5: []int{0, 1, 2, 5, 6},
-			6: []int{0, 1, 2, 3, 4, 5, 6},
-		}),
-	}
+	// regressions
+	{"regression-0", true, [][]int{
+		0: []int{0, 1, 2, 4, 5},
+		1: []int{0, 2, 3},
+		2: []int{0, 1, 4, 5, 6},
+		3: []int{0, 3, 4},
+		4: []int{0, 1, 2, 3, 4, 5},
+		5: []int{0, 1, 2},
+		6: []int{0, 6},
+	}},
+	{"regression-1", true, [][]int{
+		0: []int{1, 2, 3, 4},
+		1: []int{1, 5},
+		2: []int{1},
+		3: []int{0, 1, 2, 3},
+		4: []int{0, 2},
+		5: []int{0, 1, 2, 6},
+		6: []int{1, 3, 4},
+	}},
+	{"regression-2", true, [][]int{
+		0: []int{1, 2, 3, 4, 5, 6},
+		1: []int{0, 1, 2, 3, 4, 5, 6},
+		2: []int{1},
+		3: []int{0, 3, 4, 5, 6},
+		4: []int{0, 1, 2, 3, 4, 5, 6},
+		5: []int{0, 1, 2, 5, 6},
+		6: []int{0, 1, 2, 3, 4, 5, 6},
+	}},
 }
