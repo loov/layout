@@ -12,8 +12,7 @@ func Decycle(graph *Graph) {
 func DecycleOrder(graph *Graph) {
 	edges, processed := NewEdgeSet(), NewNodeSet(graph.NodeCount())
 
-	var process func(node *Node)
-	process = func(dst *Node) {
+	process := func(dst *Node) {
 		if !processed.Include(dst) {
 			return
 		}
@@ -40,8 +39,7 @@ func DecycleOrder(graph *Graph) {
 func DecycleOutdegree(graph *Graph) {
 	edges, processed := NewEdgeSet(), NewNodeSet(graph.NodeCount())
 
-	var process func(node *Node)
-	process = func(dst *Node) {
+	process := func(dst *Node) {
 		if !processed.Include(dst) {
 			return
 		}

@@ -1,11 +1,5 @@
 package layout
 
-func assert(b bool, msg string) {
-	if !b {
-		panic(msg)
-	}
-}
-
 func abs(v int) int {
 	if v < 0 {
 		return -v
