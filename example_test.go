@@ -2,7 +2,7 @@ package layout_test
 
 import "github.com/loov/layout"
 
-func ExampleLayout() {
+func Example() {
 	// create a new graph
 	graph := layout.NewGraph()
 	a, b, c, d := graph.AddNode(), graph.AddNode(), graph.AddNode(), graph.AddNode()
