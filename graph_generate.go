@@ -30,11 +30,16 @@ func GenerateRegularGraph(n, connections int) *Graph {
 		graph.AddNode()
 	}
 
-	for i := 0; i < n; i++ {
-		for k := i + 1; k < i+connections+1; k++ {
-			graph.AddEdge(graph.Nodes[i], graph.Nodes[k%n])
+	for i, node := range graph.Nodes {
+		for k := i + 1; k <= i+connections; k++ {
+			t := k
+			for t >= n {
+				t -= n
+			}
+			graph.AddEdge(node, graph.Nodes[t])
 		}
 	}
+
 	return graph
 }
 
