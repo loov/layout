@@ -1,7 +1,5 @@
 package layout
 
-import "sort"
-
 // NodeSet is a dense node set
 type NodeSet []bool
 
@@ -66,9 +64,12 @@ func (nodes *Nodes) Delete(i int) { *nodes = append((*nodes)[:i], (*nodes)[i+1:]
 
 // Normalize sorts and removes duplicates from the list
 func (nodes *Nodes) Normalize() {
-	sort.Slice(*nodes, func(i, k int) bool {
-		return (*nodes)[i].ID < (*nodes)[k].ID
+	nodes.SortBy(func(a, b *Node) bool {
+		return a.ID < b.ID
 	})
+	// sort.Slice(*nodes, func(i, k int) bool {
+	// 	return (*nodes)[i].ID < (*nodes)[k].ID
+	// })
 
 	{ // remove duplicates from sorted array
 		var p *Node
@@ -85,12 +86,11 @@ func (nodes *Nodes) Normalize() {
 
 // SortDescending sorts nodes in descending order of outdegree
 func (nodes Nodes) SortDescending() Nodes {
-	sort.Slice(nodes, func(i, k int) bool {
-		a, b := nodes[i], nodes[k]
-		if len(a.Out) == len(b.Out) {
-			return len(a.In) < len(b.In)
+	nodes.SortBy(func(a, b *Node) bool {
+		if a.OutDegree() == b.OutDegree() {
+			return a.InDegree() < b.InDegree()
 		}
-		return len(a.Out) > len(b.Out)
+		return a.OutDegree() > b.OutDegree()
 	})
 
 	return nodes

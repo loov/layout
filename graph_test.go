@@ -6,7 +6,9 @@ type TestGraph struct {
 	Edges  [][]int
 }
 
-func (testgraph *TestGraph) Make() *Graph { return NewGraphFromEdgeList(testgraph.Edges) }
+func (testgraph *TestGraph) Make() *Graph {
+	return NewGraphFromEdgeList(testgraph.Edges)
+}
 
 var TestGraphs = []TestGraph{
 	// acyclic graphs

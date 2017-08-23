@@ -21,7 +21,7 @@ func TestDecycle(t *testing.T) {
 			for _, testgraph := range TestGraphs {
 				t.Run(testgraph.Name, func(t *testing.T) {
 					graph := testgraph.Make()
-					beforeCount := countLinks(graph)
+					beforeCount := graph.CountUndirectedLinks()
 
 					decycle := NewDecycle(graph)
 					decycle.Recurse = decyclerCase.recurse
@@ -38,7 +38,7 @@ func TestDecycle(t *testing.T) {
 						printEdges = true
 					}
 
-					afterCount := countLinks(graph)
+					afterCount := graph.CountUndirectedLinks()
 					if beforeCount != afterCount {
 						t.Errorf("too many edges removed %v -> %v", beforeCount, afterCount)
 						printEdges = true
@@ -51,18 +51,6 @@ func TestDecycle(t *testing.T) {
 			}
 		})
 	}
-}
-
-func countLinks(graph *Graph) int {
-	edges := NewEdgeSet()
-	for _, node := range graph.Nodes {
-		for _, out := range node.Out {
-			if out != node {
-				edges.Include(node, out)
-			}
-		}
-	}
-	return len(edges)
 }
 
 func TestDecycleRandom(t *testing.T) {

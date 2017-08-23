@@ -83,3 +83,24 @@ func (graph *Graph) Roots() Nodes {
 	}
 	return nodes
 }
+
+// CountUndirectedLinks counts unique edges in the graph excluding loops
+func (graph *Graph) CountUndirectedLinks() int {
+	counted := map[[2]ID]struct{}{}
+
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			if src == dst {
+				continue
+			}
+
+			a, b := src.ID, dst.ID
+			if a > b {
+				a, b = b, a
+			}
+
+			counted[[2]ID{a, b}] = struct{}{}
+		}
+	}
+	return len(counted)
+}

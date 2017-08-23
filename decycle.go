@@ -1,7 +1,6 @@
 package layout
 
-import "sort"
-
+// DecycleDefault runs recommended decycling algorithm
 func DecycleDefault(graph *Graph) {
 	decycle := NewDecycle(graph)
 	decycle.Recurse = true
@@ -19,7 +18,7 @@ type Decycle struct {
 	SkipUpdate bool
 
 	info  []DecycleNodeInfo
-	edges EdgeSet
+	edges [][2]ID
 }
 
 func NewDecycle(graph *Graph) *Decycle {
@@ -41,7 +40,6 @@ func (graph *Decycle) Run() {
 		return
 	}
 
-	graph.edges = NewEdgeSet()
 	graph.info = make([]DecycleNodeInfo, graph.NodeCount())
 	for _, node := range graph.Nodes {
 		graph.info[node.ID].In = node.InDegree()
@@ -51,7 +49,7 @@ func (graph *Decycle) Run() {
 	graph.processNodes(*graph.Nodes.Clone())
 
 	if !graph.SkipUpdate {
-		graph.edges.SetTo(graph.Graph)
+		graph.updateEdges()
 	}
 }
 
@@ -98,22 +96,38 @@ func (graph *Decycle) process(dst *Node) {
 }
 
 func (graph *Decycle) addEdge(src, dst *Node) {
-	graph.edges.Include(src, dst)
+	graph.edges = append(graph.edges, [2]ID{src.ID, dst.ID})
 }
 
 func (graph *Decycle) addFlippedEdge(src, dst *Node) {
-	graph.edges.Include(dst, src)
-
 	graph.info[src.ID].Out--
 	graph.info[src.ID].In++
 
 	graph.info[dst.ID].In--
 	graph.info[dst.ID].Out++
+
+	graph.addEdge(dst, src)
 }
 
-func (graph *Decycle) SortAscending(nodes []*Node) {
-	sort.Slice(nodes, func(i, k int) bool {
-		a, b := nodes[i], nodes[k]
+func (graph *Decycle) updateEdges() {
+	// recreate inbound links from outbound
+	for _, node := range graph.Nodes {
+		node.In.Clear()
+		node.Out.Clear()
+	}
+
+	for _, edge := range graph.edges {
+		graph.AddEdge(graph.Nodes[edge[0]], graph.Nodes[edge[1]])
+	}
+
+	for _, node := range graph.Nodes {
+		node.In.Normalize()
+		node.Out.Normalize()
+	}
+}
+
+func (graph *Decycle) SortAscending(nodes Nodes) {
+	nodes.SortBy(func(a, b *Node) bool {
 		ai, bi := graph.info[a.ID], graph.info[b.ID]
 		if ai.Out == bi.Out {
 			return ai.In > bi.In
