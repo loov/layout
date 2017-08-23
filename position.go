@@ -4,8 +4,6 @@ import "fmt"
 
 const (
 	nodeWidth  = float32(20)
-	nodeLeft   = nodeWidth * 0.5
-	nodeRight  = nodeWidth * 0.5
 	maxNudge   = nodeWidth * 0.5
 	padding    = float32(10)
 	rowpadding = float32(30)
@@ -20,7 +18,7 @@ func Position(graph *Graph) {
 	Position_Initial_LeftToRight(graph)
 
 	// TODO: fold nudge into Node parameter
-	nudge := maxNudge
+	nudge := nodeWidth
 	for i := 0; i < 100; i++ {
 		Position_Outgoing(graph, false, nudge)
 		Position_Incoming(graph, false, nudge)
@@ -82,13 +80,13 @@ func iterateLayers(graph *Graph, leftToRight bool, dy int,
 
 func NodeWalls(graph *Graph, layer Nodes, i int, node *Node, leftToRight bool) (wallLeft, wallRight float32) {
 	if i > 0 {
-		wallLeft = layer[i-1].Position.X + nodeRight
+		wallLeft = layer[i-1].Position.X + layer[i-1].Radius.X
 	}
 
 	if i+1 < len(layer) {
-		wallRight = layer[i+1].Position.X - nodeLeft
+		wallRight = layer[i+1].Position.X - layer[i+1].Radius.X
 	} else {
-		wallRight = float32(len(graph.Nodes)) * (padding + nodeLeft + nodeRight)
+		wallRight = float32(len(graph.Nodes)) * (padding + node.Radius.X + node.Radius.Y)
 	}
 
 	wallLeft += padding
@@ -96,22 +94,22 @@ func NodeWalls(graph *Graph, layer Nodes, i int, node *Node, leftToRight bool) (
 
 	// ensure we can fit at least one
 	if leftToRight {
-		if wallRight-nodeRight < wallLeft+nodeLeft {
-			wallRight = wallLeft + (nodeLeft + nodeRight)
+		if wallRight-node.Radius.X < wallLeft+node.Radius.X {
+			wallRight = wallLeft + 2*node.Radius.X
 		}
 	} else {
-		if wallRight-nodeRight < wallLeft+nodeLeft {
-			wallLeft = wallRight - (nodeLeft + nodeRight)
+		if wallRight-node.Radius.X < wallLeft+node.Radius.X {
+			wallLeft = wallRight - 2*node.Radius.X
 		}
 	}
 
 	if leftToRight {
-		if node.Position.X < wallLeft+nodeLeft {
-			node.Position.X = wallLeft + nodeLeft
+		if node.Position.X < wallLeft+node.Radius.X {
+			node.Position.X = wallLeft + node.Radius.X
 		}
 	} else {
-		if node.Position.X > wallRight-nodeRight {
-			node.Position.X = wallRight - nodeRight
+		if node.Position.X > wallRight-node.Radius.X {
+			node.Position.X = wallRight - node.Radius.X
 		}
 	}
 
@@ -133,7 +131,7 @@ func Position_Incoming(graph *Graph, leftToRight bool, nudge float32) {
 			}
 			center /= float32(len(node.In))
 
-			center = clampf32(center, wallLeft+nodeLeft-nudge, wallRight-nodeRight+nudge)
+			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.Y+nudge)
 
 			// is between sides
 			node.Position.X = center
@@ -155,7 +153,7 @@ func Position_Outgoing(graph *Graph, leftToRight bool, nudge float32) {
 			}
 			center /= float32(len(node.Out))
 
-			center = clampf32(center, wallLeft+nodeLeft-nudge, wallRight-nodeRight+nudge)
+			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
 
 			// is between sides
 			node.Position.X = center
@@ -170,13 +168,13 @@ func sanityCheckLayer(graph *Graph, layer Nodes) {
 	fail := false
 	wallLeft := float32(padding)
 	for _, node := range layer {
-		delta := (node.Position.X - nodeLeft) - wallLeft
+		delta := (node.Position.X - node.Radius.X) - wallLeft
 		if delta < 0 {
 			fail = true
 		}
 		deltas = append(deltas, delta)
 		positions = append(positions, node.Position.X)
-		wallLeft = node.Position.X + nodeRight + padding
+		wallLeft = node.Position.X + node.Radius.X + padding
 	}
 
 	if fail {
@@ -187,10 +185,11 @@ func sanityCheckLayer(graph *Graph, layer Nodes) {
 }
 
 func flushLeft(graph *Graph) {
-	minleft := graph.Nodes[0].Position.X - nodeLeft
-	for _, node := range graph.Nodes {
-		if node.Position.X-nodeLeft < minleft {
-			minleft = node.Position.X - nodeLeft
+	node := graph.Nodes[0]
+	minleft := node.Position.X - node.Radius.X
+	for _, node := range graph.Nodes[1:] {
+		if node.Position.X-node.Radius.X < minleft {
+			minleft = node.Position.X - node.Radius.X
 		}
 	}
 
