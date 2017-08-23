@@ -5,35 +5,6 @@ import (
 	"io"
 )
 
-func (graph *Graph) EdgeTableString() string {
-	n := len(graph.Nodes)
-	stride := 2*n + 4
-	table := make([]byte, n*stride)
-	for i := range table {
-		table[i] = ' '
-	}
-
-	for id, node := range graph.Nodes {
-		row := table[id*stride : (id+1)*stride]
-		row[0] = '|'
-		row[n+1] = '|'
-		row[len(row)-2] = '|'
-		row[len(row)-1] = '\n'
-
-		out := row[1 : 1+n]
-		for _, dst := range node.Out {
-			out[dst] = 'X'
-		}
-
-		in := row[1+n+1 : 1+n+1+n]
-		for _, src := range node.In {
-			in[src] = 'X'
-		}
-	}
-
-	return string(table)
-}
-
 func (graph *Graph) WriteDOT(out io.Writer) (n int, err error) {
 	write := func(format string, args ...interface{}) bool {
 		if err != nil {
@@ -52,8 +23,8 @@ func (graph *Graph) WriteDOT(out io.Writer) (n int, err error) {
 		} else {
 			write("\t%v[rank = %v; shape=circle];\n", src.ID, src.Rank)
 		}
-		for _, did := range src.Out {
-			write("\t%v -> %v;\n", src.ID, did)
+		for _, dst := range src.Out {
+			write("\t%v -> %v;\n", src.ID, dst.ID)
 		}
 	}
 	write("}")
@@ -83,8 +54,8 @@ func (graph *Graph) WriteTGF(out io.Writer) (n int, err error) {
 	write("#\n")
 
 	for _, src := range graph.Nodes {
-		for _, did := range src.Out {
-			write("%v %v\n", src.ID, did)
+		for _, dst := range src.Out {
+			write("%v %v\n", src.ID, dst.ID)
 		}
 	}
 
@@ -137,18 +108,17 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 			continue
 		}
 
-		for _, did := range src.Out {
-			p := graph.Positions[src.ID]
+		for _, dst := range src.Out {
 			write("\t\t<polyline class='edge' marker-end='url(#head)'")
-			write(" points='%v,%v", p.X, p.Y+nodeWidth/2)
-			dst := graph.Nodes[did]
-			for dst.Virtual {
-				p = graph.Positions[dst.ID]
-				write(" %v,%v", p.X, p.Y)
-				dst = graph.Nodes[dst.Out[0]]
+			write(" points='%v,%v", src.Position.X, src.Position.Y+src.Radius.Y)
+
+			virtual := dst
+			for virtual.Virtual {
+				write(" %v,%v", virtual.Position.X, virtual.Position.Y)
+				virtual = virtual.Out[0]
 			}
-			p = graph.Positions[dst.ID]
-			write(" %v,%v'", p.X, p.Y-nodeWidth/2)
+
+			write(" %v,%v'", dst.Position.X, dst.Position.Y-dst.Radius.Y)
 			write(" />\n")
 		}
 	}
@@ -156,8 +126,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 
 	write("\t<g>\n")
 	for _, src := range graph.Nodes {
-		p := graph.Positions[src.ID]
-		write("\t\t<circle cx='%v' cy='%v'", p.X, p.Y)
+		write("\t\t<circle cx='%v' cy='%v'", src.Position.X, src.Position.Y)
 		if !src.Virtual {
 			write(" r='%v'", nodeWidth/2)
 			write(" class='node'")
@@ -171,9 +140,8 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 
 	write("\t<g>\n")
 	for _, src := range graph.Nodes {
-		p := graph.Positions[src.ID]
 		if !src.Virtual {
-			write("\t\t<text text-anchor='middle' x='%v' y='%v'", p.X, p.Y)
+			write("\t\t<text text-anchor='middle' x='%v' y='%v'", src.Position.X, src.Position.Y)
 			write(" font-size='%v'", nodeWidth/2)
 			write(">%v</text>\n", src.Label)
 		}

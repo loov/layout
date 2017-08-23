@@ -1,6 +1,6 @@
 package layout
 
-// CreateVirtualVertices creates nodes for edges spanning multiple ranks
+// AddVirtualVertices creates nodes for edges spanning multiple ranks
 //
 //     Rank  input    output
 //      0      A        A
@@ -8,35 +8,31 @@ package layout
 //      1    B |  =>  B   V
 //            \|       \ /
 //      2      C        C
-func CreateVirtualVertices(graph *Graph) {
+func AddVirtualVertices(graph *Graph) {
 	if len(graph.ByRank) == 0 {
 		return
 	}
 
 	for _, src := range graph.Nodes {
-		for di, did := range src.Out {
-			if did == src.ID {
-				continue
-			}
-			dst := graph.Nodes[did]
+		for di, dst := range src.Out {
 			if dst.Rank-src.Rank <= 1 {
 				continue
 			}
 
-			src.Out[di] = -1
-			dst.In.Remove(src.ID)
+			src.Out[di] = nil
+			dst.In.Remove(src)
 
 			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
-				_, node := graph.Node()
+				node := graph.AddNode()
 				node.Rank = rank
 				node.Virtual = true
-				graph.ByRank[node.Rank].Add(node.ID)
-				graph.Edge(node.ID, dst.ID)
+				graph.ByRank[node.Rank].Append(node)
+				graph.AddEdge(node, dst)
 				dst = node
 			}
 
-			src.Out[di] = dst.ID
-			dst.In.Add(src.ID)
+			src.Out[di] = dst
+			dst.In.Append(src)
 		}
 	}
 }

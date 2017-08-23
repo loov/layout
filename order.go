@@ -19,31 +19,26 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 		return
 	}
 
-	seen := make([]bool, len(graph.Nodes))
-	ranking := make([]NodeIDs, len(graph.ByRank))
+	seen := NewNodeSet(graph.NodeCount())
+	ranking := make([]Nodes, len(graph.ByRank))
 
-	var recurse func(id NodeID)
-	recurse = func(id NodeID) {
-		src := graph.Nodes[id]
-		seen[id] = true
-		ranking[src.Rank].Add(id)
-		for _, did := range src.Out {
-			if !seen[did] {
-				recurse(did)
-			}
+	var process func(node *Node)
+	process = func(src *Node) {
+		if !seen.Include(src) {
+			return
+		}
+
+		ranking[src.Rank].Append(src)
+		for _, dst := range src.Out {
+			process(dst)
 		}
 	}
 
-	first := NodeIDs{}
-	for _, node := range graph.Nodes {
-		if len(node.In) == 0 {
-			first.Add(node.ID)
-		}
-	}
-	sortNodesByOutdegree(graph, first)
+	roots := graph.Roots()
+	roots.SortDescending()
 
-	for _, id := range first {
-		recurse(id)
+	for _, id := range roots {
+		process(id)
 	}
 
 	graph.ByRank = ranking
@@ -51,10 +46,10 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 
 func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
 	OrderRanks_Improve_WeightedMedian_AssignCoef(graph, down)
+
 	for _, nodes := range graph.ByRank {
 		sort.Slice(nodes, func(i, k int) bool {
-			aid, bid := nodes[i], nodes[k]
-			a, b := graph.Nodes[aid], graph.Nodes[bid]
+			a, b := nodes[i], nodes[k]
 
 			if a.Coef == -1.0 {
 				if b.Coef == -1.0 {
@@ -74,37 +69,33 @@ func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
 }
 
 func OrderRanks_Improve_WeightedMedian_AssignCoef(graph *Graph, down bool) {
-	gridx := func(id NodeID) float32 {
-		return graph.Nodes[id].GridX
-	}
-
 	for _, nodes := range graph.ByRank {
-		for gridx, nid := range nodes {
-			graph.Nodes[nid].GridX = float32(gridx)
+		for i, node := range nodes {
+			node.GridX = float32(i)
 		}
 	}
 
-	for _, n := range graph.Nodes {
-		var adj NodeIDs
+	for _, node := range graph.Nodes {
+		var adj Nodes
 		if down {
-			adj = n.Out
+			adj = node.Out
 		} else {
-			adj = n.In
+			adj = node.In
 		}
 
 		if len(adj) == 0 {
-			n.Coef = -1
+			node.Coef = -1
 		} else if len(adj)&1 == 1 {
-			n.Coef = gridx(adj[len(adj)>>1])
+			node.Coef = adj[len(adj)>>1].GridX
 		} else if len(adj) == 2 {
-			n.Coef = (gridx(adj[0]) + gridx(adj[1])) / 2.0
+			node.Coef = (adj[0].GridX + adj[1].GridX) / 2.0
 		} else {
-			leftx := gridx(adj[len(adj)>>1-1])
-			rightx := gridx(adj[len(adj)>>1])
+			leftx := adj[len(adj)>>1-1].GridX
+			rightx := adj[len(adj)>>1].GridX
 
-			left := leftx - gridx(adj[0])
-			right := gridx(adj[len(adj)-1]) - rightx
-			n.Coef = (leftx*right + rightx*left) / (left + right)
+			left := leftx - adj[0].GridX
+			right := adj[len(adj)-1].GridX - rightx
+			node.Coef = (leftx*right + rightx*left) / (left + right)
 		}
 	}
 }
@@ -114,13 +105,14 @@ func OrderRanks_Improve_Transpose(graph *Graph) (swaps int) {
 		improved := false
 
 		for _, nodes := range graph.ByRank[1:] {
-			for i := range nodes[:len(nodes)-1] {
-				v := nodes[i]
-				w := nodes[i+1]
-				if graph.CrossingsUp(v, w) > graph.CrossingsUp(w, v) {
-					nodes[i], nodes[i+1] = nodes[i+1], nodes[i]
+			left := nodes[0]
+			for i, right := range nodes[1:] {
+				if graph.CrossingsUp(left, right) > graph.CrossingsUp(right, left) {
+					nodes[i], nodes[i+1] = right, left
+					right, left = left, right
 					swaps++
 				}
+				left = right
 			}
 		}
 

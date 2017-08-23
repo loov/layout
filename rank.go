@@ -17,35 +17,32 @@ func Rank(graph *Graph) {
 	graph.ByRank = nil
 	for _, node := range graph.Nodes {
 		if node.Rank >= len(graph.ByRank) {
-			byRank := make([]NodeIDs, node.Rank+1)
+			byRank := make([]Nodes, node.Rank+1)
 			copy(byRank, graph.ByRank)
 			graph.ByRank = byRank
 		}
-		graph.ByRank[node.Rank].Add(node.ID)
+		graph.ByRank[node.Rank].Append(node)
 	}
 }
 
 // Rank_Frontload assigns node.Rank := max(node.In[i].Rank) + 1
 func Rank_Frontload(graph *Graph) {
-	roots := NodeIDs{}
+	roots := graph.Roots()
+
 	incount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		incount[node.ID] = len(node.In)
-		if len(node.In) == 0 {
-			roots.Add(node.ID)
-		}
 	}
 
 	rank := 0
 	for len(roots) > 0 {
-		next := NodeIDs{}
-		for _, sid := range roots {
-			src := graph.Nodes[sid]
+		next := Nodes{}
+		for _, src := range roots {
 			src.Rank = rank
-			for _, did := range src.Out {
-				incount[did]--
-				if incount[did] == 0 {
-					next.Add(did)
+			for _, dst := range src.Out {
+				incount[dst.ID]--
+				if incount[dst.ID] == 0 {
+					next.Append(dst)
 				}
 			}
 		}
@@ -56,12 +53,12 @@ func Rank_Frontload(graph *Graph) {
 
 // Rank_Backload assigns node.Rank := min(node.Out[i].Rank) - 1
 func Rank_Backload(graph *Graph) {
-	roots := NodeIDs{}
+	roots := Nodes{}
 	outcount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		outcount[node.ID] = len(node.Out)
 		if len(node.Out) == 0 {
-			roots.Add(node.ID)
+			roots.Append(node)
 		}
 	}
 
@@ -69,14 +66,13 @@ func Rank_Backload(graph *Graph) {
 	graph.ByRank = nil
 	for len(roots) > 0 {
 		graph.ByRank = append(graph.ByRank, roots)
-		next := NodeIDs{}
-		for _, did := range roots {
-			dst := graph.Nodes[did]
-			dst.Rank = rank
-			for _, sid := range dst.In {
-				outcount[sid]--
-				if outcount[sid] == 0 {
-					next.Add(sid)
+		next := Nodes{}
+		for _, root := range roots {
+			root.Rank = rank
+			for _, src := range root.In {
+				outcount[src.ID]--
+				if outcount[src.ID] == 0 {
+					next.Append(src)
 				}
 			}
 		}
@@ -90,8 +86,8 @@ func Rank_Backload(graph *Graph) {
 	}
 
 	for rank, nodes := range graph.ByRank {
-		for _, id := range nodes {
-			graph.Nodes[id].Rank = rank
+		for _, node := range nodes {
+			node.Rank = rank
 		}
 	}
 }
@@ -104,8 +100,8 @@ func Rank_Improve_MinimizeEdges(graph *Graph, down bool) (changed bool) {
 			if len(node.In) <= len(node.Out) {
 				// there are more edges below, try to move node downwards
 				minrank := len(graph.Nodes)
-				for _, did := range node.Out {
-					minrank = min(graph.Nodes[did].Rank, minrank)
+				for _, dst := range node.Out {
+					minrank = min(dst.Rank, minrank)
 				}
 				if node.Rank <= minrank-1 {
 					if len(node.In) == len(node.Out) {
@@ -124,8 +120,8 @@ func Rank_Improve_MinimizeEdges(graph *Graph, down bool) (changed bool) {
 			if len(node.In) >= len(node.Out) {
 				// there are more edges above, try to move node upwards
 				maxrank := 0
-				for _, sid := range node.In {
-					maxrank = max(graph.Nodes[sid].Rank, maxrank)
+				for _, src := range node.In {
+					maxrank = max(src.Rank, maxrank)
 				}
 				if node.Rank >= maxrank+1 {
 					if len(node.In) == len(node.Out) {

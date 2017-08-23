@@ -53,16 +53,15 @@ func parse(graph string, onedge func(src, dst string)) {
 	}
 }
 
-func printByRank(graph *layout.Graph, byID map[layout.NodeID]string) {
+func printByRank(graph *layout.Graph, byID map[*layout.Node]string) {
 	for rank, nodes := range graph.ByRank {
 		fmt.Println("- RANK ", rank, "-")
-		for _, sid := range nodes {
-			src := graph.Nodes[sid]
+		for _, src := range nodes {
 			id := src.ID
 			if src.Virtual {
-				id = -id
+				id = -src.ID
 			}
-			fmt.Printf("%3v['%3v']: %v\n", id, byID[src.ID], src.Out)
+			fmt.Printf("%3v['%3v']: %v\n", id, src.Label, src.Out)
 		}
 	}
 	pretty.Println(graph.ByRank)
@@ -70,24 +69,23 @@ func printByRank(graph *layout.Graph, byID map[layout.NodeID]string) {
 
 func process(graphdef string) {
 	graph := layout.NewGraph()
-	byName := map[string]layout.NodeID{}
-	byID := map[layout.NodeID]string{}
+	byName := map[string]*layout.Node{}
+	byID := map[*layout.Node]string{}
 
-	node := func(name string) layout.NodeID {
-		id, ok := byName[name]
+	node := func(name string) *layout.Node {
+		node, ok := byName[name]
 		if !ok {
-			var n *layout.Node
-			id, n = graph.Node()
-			n.Label = name
-			byName[name] = id
-			byID[id] = name
+			node = graph.AddNode()
+			node.Label = name
+			byName[name] = node
+			byID[node] = name
 		}
-		return id
+		return node
 	}
 
-	parse(graphdef, func(src, dst string) {
-		sid, did := node(src), node(dst)
-		graph.Edge(sid, did)
+	parse(graphdef, func(srcName, dstName string) {
+		src, dst := node(srcName), node(dstName)
+		graph.AddEdge(src, dst)
 	})
 
 	layout.Decycle(graph)
@@ -99,12 +97,7 @@ func process(graphdef string) {
 		fmt.Println(len(rank))
 	}
 
-	layout.CreateVirtualVertices(graph)
-
-	if err := layout.VerifyProperDigraph(graph); err != nil {
-		panic(err)
-	}
-
+	layout.AddVirtualVertices(graph)
 	layout.OrderRanks(graph)
 	layout.Position(graph)
 
