@@ -21,6 +21,7 @@ type Decycle struct {
 	edges [][2]ID
 }
 
+// NewDecycle creates new decycle process
 func NewDecycle(graph *Graph) *Decycle {
 	dg := &Decycle{}
 	dg.Graph = graph
@@ -35,6 +36,7 @@ type DecycleNodeInfo struct {
 	In, Out   int
 }
 
+// Run runs the default decycling process
 func (graph *Decycle) Run() {
 	if !graph.IsCyclic() {
 		return
@@ -53,6 +55,7 @@ func (graph *Decycle) Run() {
 	}
 }
 
+// processNodes processes list of nodes
 func (graph *Decycle) processNodes(nodes Nodes) {
 	if !graph.Reorder {
 		for _, node := range nodes {
@@ -61,13 +64,14 @@ func (graph *Decycle) processNodes(nodes Nodes) {
 	} else {
 		var node *Node
 		for len(nodes) > 0 {
-			graph.SortAscending(nodes)
+			graph.sortAscending(nodes)
 			node, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]
 			graph.process(node)
 		}
 	}
 }
 
+// process flips unprocessed incoming edges in dst
 func (graph *Decycle) process(dst *Node) {
 	if graph.info[dst.ID].Processed {
 		return
@@ -95,10 +99,12 @@ func (graph *Decycle) process(dst *Node) {
 	}
 }
 
+// addEdge adds edge from src to dest
 func (graph *Decycle) addEdge(src, dst *Node) {
 	graph.edges = append(graph.edges, [2]ID{src.ID, dst.ID})
 }
 
+// addFlippedEdge adds edge and flips it
 func (graph *Decycle) addFlippedEdge(src, dst *Node) {
 	graph.info[src.ID].Out--
 	graph.info[src.ID].In++
@@ -109,6 +115,7 @@ func (graph *Decycle) addFlippedEdge(src, dst *Node) {
 	graph.addEdge(dst, src)
 }
 
+// updateEdges, updates graph with new edge information
 func (graph *Decycle) updateEdges() {
 	// recreate inbound links from outbound
 	for _, node := range graph.Nodes {
@@ -126,7 +133,8 @@ func (graph *Decycle) updateEdges() {
 	}
 }
 
-func (graph *Decycle) SortAscending(nodes Nodes) {
+// sortAscending sorts nodes such that the last node is most beneficial to process
+func (graph *Decycle) sortAscending(nodes Nodes) {
 	nodes.SortBy(func(a, b *Node) bool {
 		ai, bi := graph.info[a.ID], graph.info[b.ID]
 		if ai.Out == bi.Out {
