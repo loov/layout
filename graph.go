@@ -33,6 +33,8 @@ type Node struct {
 	Radius   Vector
 }
 
+func (node *Node) String() string { return node.Label }
+
 func (node *Node) InDegree() int  { return len(node.In) }
 func (node *Node) OutDegree() int { return len(node.Out) }
 

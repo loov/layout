@@ -112,10 +112,9 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 			write("\t\t<polyline class='edge' marker-end='url(#head)'")
 			write(" points='%v,%v", src.Position.X, src.Position.Y+src.Radius.Y)
 
-			virtual := dst
-			for virtual.Virtual {
-				write(" %v,%v", virtual.Position.X, virtual.Position.Y)
-				virtual = virtual.Out[0]
+			for dst.Virtual {
+				write(" %v,%v", dst.Position.X, dst.Position.Y)
+				dst = dst.Out[0]
 			}
 
 			write(" %v,%v'", dst.Position.X, dst.Position.Y-dst.Radius.Y)

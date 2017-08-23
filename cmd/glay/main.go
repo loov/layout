@@ -64,7 +64,7 @@ func printByRank(graph *layout.Graph, byID map[*layout.Node]string) {
 			fmt.Printf("%3v['%3v']: %v\n", id, src.Label, src.Out)
 		}
 	}
-	pretty.Println(graph.ByRank)
+	//pretty.Println(graph.ByRank)
 }
 
 func process(graphdef string) {
