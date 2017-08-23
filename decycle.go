@@ -2,129 +2,117 @@ package layout
 
 import "sort"
 
-func Decycle(graph *Graph) {
+func DecycleDefault(graph *Graph) {
+	decycle := NewDecycle(graph)
+	decycle.Recurse = true
+	decycle.Reorder = true
+	decycle.Run()
+}
+
+// Decycle implements process for removing cycles from a Graph
+type Decycle struct {
+	*Graph
+
+	Recurse bool
+	Reorder bool
+
+	info  []DecycleNodeInfo
+	edges EdgeSet
+}
+
+func NewDecycle(graph *Graph) *Decycle {
+	dg := &Decycle{}
+	dg.Graph = graph
+	dg.Recurse = false
+	dg.Reorder = true
+	return dg
+}
+
+// DecycleNodeInfo contains running info necessary in decycling
+type DecycleNodeInfo struct {
+	Processed bool
+	In, Out   int
+}
+
+func (graph *Decycle) Run() {
 	if !graph.IsCyclic() {
 		return
 	}
-	DecycleDepthFirst(graph)
-}
 
-func DecycleOrder(graph *Graph) {
-	edges, processed := NewEdgeSet(), NewNodeSet(graph.NodeCount())
-
-	process := func(dst *Node) {
-		if !processed.Include(dst) {
-			return
-		}
-
-		for _, src := range dst.In {
-			if src == dst {
-				continue
-			}
-			if processed.Contains(src) {
-				edges.Include(src, dst)
-			} else {
-				edges.Include(dst, src)
-			}
-		}
-	}
-
+	graph.edges = NewEdgeSet()
+	graph.info = make([]DecycleNodeInfo, graph.NodeCount())
 	for _, node := range graph.Nodes {
-		process(node)
+		graph.info[node.ID].In = node.InDegree()
+		graph.info[node.ID].Out = node.OutDegree()
 	}
 
-	edges.SetTo(graph)
+	graph.processNodes(*graph.Nodes.Clone())
+	graph.edges.SetTo(graph.Graph)
 }
 
-func DecycleOutdegree(graph *Graph) {
-	edges, processed := NewEdgeSet(), NewNodeSet(graph.NodeCount())
-
-	process := func(dst *Node) {
-		if !processed.Include(dst) {
-			return
+func (graph *Decycle) processNodes(nodes Nodes) {
+	if !graph.Reorder {
+		for _, node := range nodes {
+			graph.process(node)
 		}
-
-		for _, src := range dst.In {
-			if src == dst {
-				continue
-			}
-			if processed.Contains(src) {
-				edges.Include(src, dst)
-			} else {
-				edges.Include(dst, src)
-			}
+	} else {
+		var node *Node
+		for len(nodes) > 0 {
+			graph.SortAscending(nodes)
+			node, nodes = nodes[len(nodes)-1], nodes[:len(nodes)-1]
+			graph.process(node)
 		}
 	}
-
-	// TODO: after each process, re-sort based on outdegree
-	for _, node := range graph.Nodes.Clone().SortDescending() {
-		process(node)
-	}
-	edges.SetTo(graph)
 }
 
-func DecycleDepthFirst(graph *Graph) {
-	edges, processed := NewEdgeSet(), NewNodeSet(graph.NodeCount())
-
-	indegree := make([]int, graph.NodeCount())
-	outdegree := make([]int, graph.NodeCount())
-	for _, node := range graph.Nodes {
-		indegree[node.ID] = node.InDegree()
-		outdegree[node.ID] = node.OutDegree()
+func (graph *Decycle) process(dst *Node) {
+	if graph.info[dst.ID].Processed {
+		return
 	}
+	graph.info[dst.ID].Processed = true
 
-	sortByOutdegree := func(nodes Nodes) {
-		sort.Slice(nodes, func(i, k int) bool {
-			a, b := nodes[i], nodes[k]
-			if outdegree[a.ID] == outdegree[b.ID] {
-				return indegree[a.ID] < indegree[b.ID]
-			}
-			return outdegree[a.ID] > outdegree[b.ID]
-		})
-	}
-
-	var process func(node *Node)
-	process = func(dst *Node) {
-		if !processed.Include(dst) {
-			return
-		}
-
-		toRecurse := Nodes{}
-		for _, src := range dst.In {
-			if src == dst {
-				continue
-			}
-
-			if processed.Contains(src) {
-				edges.Include(src, dst)
-			} else {
-				indegree[dst.ID]--
-				indegree[src.ID]++
-				outdegree[src.ID]--
-				outdegree[dst.ID]++
-
-				edges.Include(dst, src)
-				toRecurse.Append(src)
-			}
-		}
-
-		for _, src := range toRecurse {
-			process(src)
-		}
-	}
-
-	roots := *graph.Nodes.Clone()
-	var root *Node
-	sortByOutdegree(roots)
-	for len(roots) > 0 {
-		root, roots = roots[0], roots[1:]
-		if processed.Contains(root) {
+	var recurse Nodes
+	for _, src := range dst.In {
+		if src == dst {
 			continue
 		}
 
-		process(root)
-		sortByOutdegree(roots)
+		if graph.info[src.ID].Processed {
+			graph.addEdge(src, dst)
+		} else {
+			graph.addFlippedEdge(src, dst)
+			if graph.Recurse {
+				recurse.Append(src)
+			}
+		}
 	}
 
-	edges.SetTo(graph)
+	if graph.Recurse {
+		graph.processNodes(recurse)
+	}
+}
+
+func (graph *Decycle) addEdge(src, dst *Node) {
+	graph.edges.Include(src, dst)
+}
+
+func (graph *Decycle) addFlippedEdge(src, dst *Node) {
+	graph.edges.Include(dst, src)
+
+	graph.info[src.ID].Out--
+	graph.info[src.ID].In++
+
+	graph.info[dst.ID].In--
+	graph.info[dst.ID].Out++
+}
+
+func (graph *Decycle) SortAscending(nodes []*Node) {
+	sort.Slice(nodes, func(i, k int) bool {
+		a, b := nodes[i], nodes[k]
+		ai, bi := graph.info[a.ID], graph.info[b.ID]
+		if ai.Out == bi.Out {
+			return ai.In > bi.In
+		}
+		return ai.Out < bi.Out
+	})
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strings"
 
@@ -88,7 +89,9 @@ func process(graphdef string) {
 		graph.AddEdge(src, dst)
 	})
 
-	layout.Decycle(graph)
+	log.Println("DECYCLING")
+	layout.NewDecycle(graph).Run()
+
 	layout.Rank(graph)
 
 	//printByRank(graph, byID)
