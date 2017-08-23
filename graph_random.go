@@ -29,6 +29,7 @@ func GenerateRegularGraph(n, connections int) *Graph {
 	for i := 0; i < n; i++ {
 		graph.AddNode()
 	}
+
 	for i := 0; i < n; i++ {
 		for k := i + 1; k < i+connections+1; k++ {
 			graph.AddEdge(graph.Nodes[i], graph.Nodes[k%n])

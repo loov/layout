@@ -69,6 +69,7 @@ func (nodes *Nodes) Normalize() {
 	sort.Slice(*nodes, func(i, k int) bool {
 		return (*nodes)[i].ID < (*nodes)[k].ID
 	})
+
 	{ // remove duplicates from sorted array
 		var p *Node
 		unique := (*nodes)[:0]

@@ -50,30 +50,6 @@ type Vector struct {
 // NewGraph creates an empty graph
 func NewGraph() *Graph { return &Graph{} }
 
-// NewGraphFromEdgeList creates a graph from edge list
-//
-// Example:
-//     graph := NewGraphFromEdgeList([][]int{
-//         0: []int{1,2},
-//         1: []int{2,0},
-//     })
-//
-//  Creates an graph with edges 0 -> 1, 0 -> 2, 1 -> 2, 1 -> 0.
-//
-func NewGraphFromEdgeList(edgeList [][]int) *Graph {
-	graph := NewGraph()
-
-	for from, out := range edgeList {
-		for _, to := range out {
-			graph.ensureNode(from)
-			graph.ensureNode(to)
-			graph.AddEdge(graph.Nodes[from], graph.Nodes[to])
-		}
-	}
-
-	return graph
-}
-
 // ensureNode adds nodes until we have reached id
 func (graph *Graph) ensureNode(id int) {
 	for id >= len(graph.Nodes) {

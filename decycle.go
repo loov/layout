@@ -16,6 +16,8 @@ type Decycle struct {
 	Recurse bool
 	Reorder bool
 
+	SkipUpdate bool
+
 	info  []DecycleNodeInfo
 	edges EdgeSet
 }
@@ -47,7 +49,10 @@ func (graph *Decycle) Run() {
 	}
 
 	graph.processNodes(*graph.Nodes.Clone())
-	graph.edges.SetTo(graph.Graph)
+
+	if !graph.SkipUpdate {
+		graph.edges.SetTo(graph.Graph)
+	}
 }
 
 func (graph *Decycle) processNodes(nodes Nodes) {

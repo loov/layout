@@ -92,3 +92,23 @@ func TestDecycleRandom(t *testing.T) {
 		})
 	}
 }
+
+func BenchmarkDecycle(b *testing.B) {
+	for _, decyclerCase := range decyclerCases {
+		b.Run(decyclerCase.name, func(b *testing.B) {
+			for _, size := range BenchmarkGraphSizes {
+				b.Run(size.Name, func(b *testing.B) {
+					graph := GenerateRegularGraph(size.Nodes, size.Connections)
+
+					for i := 0; i < b.N; i++ {
+						decycle := NewDecycle(graph)
+						decycle.Recurse = decyclerCase.recurse
+						decycle.Reorder = decyclerCase.reorder
+						decycle.SkipUpdate = true
+						decycle.Run()
+					}
+				})
+			}
+		})
+	}
+}
