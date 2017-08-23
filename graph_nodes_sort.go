@@ -17,7 +17,7 @@ func (nodes *Nodes) SortBy(less func(*Node, *Node) bool) {
 	nodes._quickSortNodeSlice(less, 0, n, maxDepth)
 }
 
-// Sort implementation based on http://golang.org/pkg/sort/#Sort, see top of this file
+// Sort implementation based on http://golang.org/pkg/sort/#Sort
 
 func (rcv Nodes) _swapNodeSlice(a, b int) {
 	rcv[a], rcv[b] = rcv[b], rcv[a]

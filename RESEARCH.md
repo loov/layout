@@ -26,25 +26,21 @@ We describe a four-pass algorithm for drawing directed graphs. The first pass fi
 
 ## References
 
-* http://hci.stanford.edu/courses/cs448b/w09/lectures/20090204-GraphsAndTrees.pdf
-* https://en.wikipedia.org/wiki/Graph_drawing
 * http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.38.3837&rep=rep1&type=pdf
-* http://www.graphviz.org/pdf/dotguide.pdf
-* http://stackoverflow.com/questions/19245350/graphviz-dot-algorithm
-* http://www.graphviz.org/Documentation/TSE93.pdf
-* http://hci.stanford.edu/courses/cs448b/w09/lectures/20090204-GraphsAndTrees.pdf
-* http://www.graphviz.org/Theory.php
-* http://research.microsoft.com/en-us/um/people/holroyd/papers/bundle.pdf
-* https://www.microsoft.com/en-us/research/publication/drawing-graphs-with-glee/
-* http://mgarland.org/files/papers/layoutgpu.pdf
-* https://github.com/d3/d3/issues/349
-* https://github.com/cpettitt/dagre/wiki#recommended-reading
-* http://www.csse.monash.edu.au/~tdwyer/Dwyer2009FastConstraints.pdf
-
-## Other graph layouting implementations
-
-* https://github.com/ellson/graphviz/tree/master/lib/dotgen2
-* https://github.com/cpettitt/dig.js/tree/master/src/dig/dot
-* https://github.com/cpettitt/dagre/tree/master/lib/rank
 * http://docs.yworks.com/yfiles/doc/api/y/layout/hierarchic/IncrementalHierarchicLayouter.html
+* http://hci.stanford.edu/courses/cs448b/w09/lectures/20090204-GraphsAndTrees.pdf
 * http://marvl.infotech.monash.edu/~dwyer/
+* http://mgarland.org/files/papers/layoutgpu.pdf
+* http://research.microsoft.com/en-us/um/people/holroyd/papers/bundle.pdf
+* http://stackoverflow.com/questions/19245350/graphviz-dot-algorithm
+* http://www.csse.monash.edu.au/~tdwyer/Dwyer2009FastConstraints.pdf
+* http://www.graphviz.org/Theory.php
+* http://www.graphviz.org/Documentation/TSE93.pdf
+* http://www.graphviz.org/pdf/dotguide.pdf
+* https://en.wikipedia.org/wiki/Graph_drawing
+* https://github.com/cpettitt/dagre/tree/master/lib/rank
+* https://github.com/cpettitt/dagre/wiki#recommended-reading
+* https://github.com/cpettitt/dig.js/tree/master/src/dig/dot
+* https://github.com/d3/d3/issues/349
+* https://github.com/ellson/graphviz/tree/master/lib/dotgen2
+* https://www.microsoft.com/en-us/research/publication/drawing-graphs-with-glee/
