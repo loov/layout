@@ -6,7 +6,6 @@ func Decycle(graph *Graph) {
 	if !graph.IsCyclic() {
 		return
 	}
-
 	DecycleDepthFirst(graph)
 }
 

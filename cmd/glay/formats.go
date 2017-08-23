@@ -1,11 +1,44 @@
-package layout
+package main
 
 import (
 	"fmt"
 	"io"
+
+	"github.com/loov/layout"
 )
 
-func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
+func WriteTGF(graph *layout.Graph, out io.Writer) (n int, err error) {
+	write := func(format string, args ...interface{}) bool {
+		if err != nil {
+			return false
+		}
+
+		var x int
+		x, err = fmt.Fprintf(out, format, args...)
+		n += x
+		return err == nil
+	}
+
+	for _, src := range graph.Nodes {
+		if !src.Virtual {
+			write("%v %v\n", src.ID, src.ID)
+		} else {
+			write("%v\n", src.ID)
+		}
+	}
+
+	write("#\n")
+
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			write("%v %v\n", src.ID, dst.ID)
+		}
+	}
+
+	return
+}
+
+func WriteSVG(graph *layout.Graph, out io.Writer) (n int, err error) {
 	write := func(format string, args ...interface{}) bool {
 		if err != nil {
 			return false
@@ -70,7 +103,7 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 	for _, src := range graph.Nodes {
 		write("\t\t<circle cx='%v' cy='%v'", src.Position.X, src.Position.Y)
 		if !src.Virtual {
-			write(" r='%v'", nodeWidth/2)
+			write(" r='%v'", src.Radius.Y)
 			write(" class='node'")
 		} else {
 			write(" r='%v'", 1)
@@ -84,11 +117,37 @@ func (graph *Graph) WriteSVG(out io.Writer) (n int, err error) {
 	for _, src := range graph.Nodes {
 		if !src.Virtual {
 			write("\t\t<text text-anchor='middle' x='%v' y='%v'", src.Position.X, src.Position.Y)
-			write(" font-size='%v'", nodeWidth/2)
+			write(" font-size='%v'", src.Radius.Y)
 			write(">%v</text>\n", src.Label)
 		}
 	}
 	write("\t</g>\n")
 
+	return
+}
+
+func WriteDOT(graph *layout.Graph, out io.Writer) (n int, err error) {
+	write := func(format string, args ...interface{}) bool {
+		if err != nil {
+			return false
+		}
+		var x int
+		x, err = fmt.Fprintf(out, format, args...)
+		n += x
+		return err == nil
+	}
+
+	write("digraph G {\n")
+	for _, src := range graph.Nodes {
+		if !src.Virtual {
+			write("\t%v[rank = %v];\n", src.ID, src.Rank)
+		} else {
+			write("\t%v[rank = %v; shape=circle];\n", src.ID, src.Rank)
+		}
+		for _, dst := range src.Out {
+			write("\t%v -> %v;\n", src.ID, dst.ID)
+		}
+	}
+	write("}")
 	return
 }

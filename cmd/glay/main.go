@@ -108,7 +108,7 @@ func process(graphdef string) {
 		panic(err)
 	}
 	defer file.Close()
-	_, err = graph.WriteSVG(file)
+	_, err = WriteSVG(graph, file)
 	if err != nil {
 		panic(err)
 	}
