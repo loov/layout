@@ -2,26 +2,24 @@ package layout
 
 // IsCyclic checks whether graph is cyclic
 func (graph *Graph) IsCyclic() bool {
-	visited := make([]bool, graph.NodeCount())
-	recursing := make([]bool, graph.NodeCount())
+	visited := NewNodeSet(graph.NodeCount())
+	recursing := NewNodeSet(graph.NodeCount())
 
 	var isCyclic func(node *Node) bool
 	isCyclic = func(node *Node) bool {
-		if visited[node.ID] {
+		if !visited.Include(node) {
 			return false
 		}
 
-		visited[node.ID] = true
-		recursing[node.ID] = true
+		recursing.Add(node)
 		for _, child := range node.Out {
-			if !visited[child.ID] && isCyclic(child) {
+			if isCyclic(child) {
 				return true
-			}
-			if recursing[child.ID] {
+			} else if recursing.Contains(child) {
 				return true
 			}
 		}
-		recursing[node.ID] = false
+		recursing.Remove(node)
 
 		return false
 	}

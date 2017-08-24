@@ -1,5 +1,7 @@
 package layout
 
+import "strconv"
+
 // Graph is the basic graph
 type Graph struct {
 	Nodes Nodes
@@ -34,7 +36,15 @@ type Node struct {
 }
 
 // String returns node label
-func (node *Node) String() string { return node.Label }
+func (node *Node) String() string {
+	if node.Label == "" && node.Virtual {
+		return "v" + strconv.Itoa(int(node.ID))
+	}
+	if node.Label == "" {
+		return "#" + strconv.Itoa(int(node.ID))
+	}
+	return node.Label
+}
 
 // InDegree returns count of inbound edges
 func (node *Node) InDegree() int { return len(node.In) }
@@ -82,6 +92,26 @@ func (graph *Graph) Roots() Nodes {
 		}
 	}
 	return nodes
+}
+
+// CountRoots returns count of roots
+func (graph *Graph) CountRoots() int {
+	total := 0
+	for _, node := range graph.Nodes {
+		if node.InDegree() == 0 {
+			total++
+		}
+	}
+	return total
+}
+
+// CountEdges counts all edges, including duplicates
+func (graph *Graph) CountEdges() int {
+	total := 0
+	for _, src := range graph.Nodes {
+		total += len(src.Out)
+	}
+	return total
 }
 
 // CountUndirectedLinks counts unique edges in the graph excluding loops
