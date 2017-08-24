@@ -122,6 +122,9 @@ func main() {
 		nodedef.LayoutNode = graph.AddNode()
 		nodedef.LayoutNode.Label = nodedef.ID
 	}
+	graph.Nodes.SortBy(func(a *layout.Node, b *layout.Node) bool {
+		return a.ID < b.ID
+	})
 
 	for _, edge := range graphdef.Edges {
 		graph.AddEdge(edge.From.LayoutNode, edge.To.LayoutNode)

@@ -11,8 +11,13 @@ func Position(graph *Graph) {
 	const nodeWidth = float32(20)
 
 	for _, node := range graph.Nodes {
-		node.Radius.X = nodeWidth * 0.5
-		node.Radius.Y = nodeWidth * 0.5
+		if node.Virtual {
+			node.Radius.X = nodeWidth * 0.5
+			node.Radius.Y = nodeWidth * 0.5
+		} else {
+			node.Radius.X = nodeWidth * 0.5
+			node.Radius.Y = nodeWidth * 0.5
+		}
 	}
 
 	Position_Initial_LeftToRight(graph)
