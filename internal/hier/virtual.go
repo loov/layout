@@ -1,11 +1,12 @@
 package hier
 
+// DefaultAddVirtuals adds basic virtual nodes
 func DefaultAddVirtuals(graph *Graph) *Graph {
-	AddVirtualVertices(graph)
+	AddVirtuals(graph)
 	return graph
 }
 
-// AddVirtualVertices creates nodes for edges spanning multiple ranks
+// AddVirtuals creates nodes for edges spanning multiple ranks
 //
 //     Rank  input    output
 //      0      A        A
@@ -13,7 +14,7 @@ func DefaultAddVirtuals(graph *Graph) *Graph {
 //      1    B |  =>  B   V
 //            \|       \ /
 //      2      C        C
-func AddVirtualVertices(graph *Graph) {
+func AddVirtuals(graph *Graph) {
 	if len(graph.ByRank) == 0 {
 		return
 	}

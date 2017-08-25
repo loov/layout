@@ -1,22 +1,17 @@
 package hier
 
-import (
-	"math/rand"
-	"time"
-)
-
+// DefaultRank does recommended ranking algorithm
 func DefaultRank(graph *Graph) *Graph {
 	Rank(graph)
 	return graph
 }
 
+// Rank implements basic ranking algorithm
 func Rank(graph *Graph) {
-	rand.Seed(time.Now().UnixNano())
-
-	Rank_Frontload(graph)
+	RankFrontload(graph)
 
 	for i := 0; i < 7; i++ {
-		Rank_Improve_MinimizeEdges(graph, i%2 == 0)
+		RankMinimizeEdgeStep(graph, i%2 == 0)
 	}
 
 	graph.ByRank = nil
@@ -30,8 +25,8 @@ func Rank(graph *Graph) {
 	}
 }
 
-// Rank_Frontload assigns node.Rank := max(node.In[i].Rank) + 1
-func Rank_Frontload(graph *Graph) {
+// RankFrontload assigns node.Rank := max(node.In[i].Rank) + 1
+func RankFrontload(graph *Graph) {
 	roots := graph.Roots()
 
 	incount := make([]int, len(graph.Nodes))
@@ -56,8 +51,8 @@ func Rank_Frontload(graph *Graph) {
 	}
 }
 
-// Rank_Backload assigns node.Rank := min(node.Out[i].Rank) - 1
-func Rank_Backload(graph *Graph) {
+// RankBackload assigns node.Rank := min(node.Out[i].Rank) - 1
+func RankBackload(graph *Graph) {
 	roots := Nodes{}
 	outcount := make([]int, len(graph.Nodes))
 	for _, node := range graph.Nodes {
@@ -97,8 +92,8 @@ func Rank_Backload(graph *Graph) {
 	}
 }
 
-// Rank_Improve_MinimizeEdges moves nodes up/down to more equally distribute
-func Rank_Improve_MinimizeEdges(graph *Graph, down bool) (changed bool) {
+// RankMinimizeEdgeStep moves nodes up/down to more equally distribute
+func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 	if down {
 		// try to move nodes down
 		for _, node := range graph.Nodes {

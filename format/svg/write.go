@@ -78,16 +78,25 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		svg.write(" d='")
 		p0 := edge.Path[0]
-		svg.write("M %v %v ", p0.X, p0.Y)
-		for _, p := range edge.Path[1:] {
-			py := p.Y - graph.RowPadding
-			if p0.Y > p.Y {
-				py = p.Y + graph.RowPadding
-			}
-			px := p0.X*0.2 + p.X*0.8
-			svg.write("S %v %v %v %v ", px, py, p.X, p.Y)
-			p0 = p
+		p1 := edge.Path[1]
+		dir := layout.Length(1)
+		if p0.Y > p1.Y {
+			dir *= -1
 		}
+		var sx, sy layout.Length
+		svg.write("M %v %v ", p0.X, p0.Y)
+		for _, p2 := range edge.Path[2:] {
+			sx = p0.X*0.2 + p1.X*0.8
+			if (p0.X < p1.X) != (p1.X < p2.X) {
+				sx = p1.X
+			}
+			sy = p1.Y - dir*graph.RowPadding
+			svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
+			p0, p1 = p1, p2
+		}
+		sx = p1.X
+		sy = p1.Y - 2*dir*graph.RowPadding
+		svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
 		svg.write("'>")
 
 		if edge.Tooltip != "" {

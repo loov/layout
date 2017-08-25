@@ -4,22 +4,25 @@ import (
 	"sort"
 )
 
+// DefaultOrderRanks does recommended rank ordering
 func DefaultOrderRanks(graph *Graph) *Graph {
 	OrderRanks(graph)
 	return graph
 }
 
+// OrderRanks tries to minimize crossign edges
 func OrderRanks(graph *Graph) {
-	OrderRanks_Initial_DepthFirst(graph)
+	OrderRanksDepthFirst(graph)
 	for i := 0; i < 100; i++ {
-		OrderRanks_Improve_WeightedMedian(graph, i%2 == 0)
-		if OrderRanks_Improve_Transpose(graph) == 0 {
+		OrderRanksByCoef(graph, i%2 == 0)
+		if OrderRanksTranspose(graph) == 0 {
 			break
 		}
 	}
 }
 
-func OrderRanks_Initial_DepthFirst(graph *Graph) {
+// OrderRanksDepthFirst reorders based on depth first traverse
+func OrderRanksDepthFirst(graph *Graph) {
 	if len(graph.ByRank) == 0 {
 		return
 	}
@@ -49,8 +52,9 @@ func OrderRanks_Initial_DepthFirst(graph *Graph) {
 	graph.ByRank = ranking
 }
 
-func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
-	OrderRanks_Improve_WeightedMedian_AssignCoef(graph, down)
+// OrderRanksByCoef reorders based on target grid and coef
+func OrderRanksByCoef(graph *Graph, down bool) {
+	OrderRanksAssignMetrics(graph, down)
 
 	for _, nodes := range graph.ByRank {
 		sort.Slice(nodes, func(i, k int) bool {
@@ -73,7 +77,8 @@ func OrderRanks_Improve_WeightedMedian(graph *Graph, down bool) {
 	}
 }
 
-func OrderRanks_Improve_WeightedMedian_AssignCoef(graph *Graph, down bool) {
+// OrderRanksAssignMetrics recalculates metrics for ordering
+func OrderRanksAssignMetrics(graph *Graph, down bool) {
 	for _, nodes := range graph.ByRank {
 		for i, node := range nodes {
 			node.GridX = float32(i)
@@ -105,8 +110,9 @@ func OrderRanks_Improve_WeightedMedian_AssignCoef(graph *Graph, down bool) {
 	}
 }
 
-func OrderRanks_Improve_Transpose(graph *Graph) (swaps int) {
-	for {
+// OrderRanksTranspose swaps nodes which are side by side and will use less crossings
+func OrderRanksTranspose(graph *Graph) (swaps int) {
+	for limit := 0; limit < 20; limit++ {
 		improved := false
 
 		for _, nodes := range graph.ByRank[1:] {
@@ -125,4 +131,6 @@ func OrderRanks_Improve_Transpose(graph *Graph) (swaps int) {
 			return
 		}
 	}
+
+	return 0
 }

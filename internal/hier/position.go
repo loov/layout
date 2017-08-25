@@ -2,35 +2,37 @@ package hier
 
 import "fmt"
 
+// DefaultPosition does recommended positioning algorithm
 func DefaultPosition(graph *Graph) *Graph {
 	Position(graph)
 	return graph
 }
 
+// Position does basic node positioning
 func Position(graph *Graph) {
-	Position_Initial_LeftToRight(graph)
+	PositionInitial(graph)
 
 	// TODO: fold nudge into Node parameter
 	nudge := float32(10.0)
 	for i := 0; i < 100; i++ {
-		Position_Outgoing(graph, false, nudge)
-		Position_Incoming(graph, false, nudge)
-		Position_Outgoing(graph, true, nudge)
-		Position_Incoming(graph, true, nudge)
+		PositionOutgoing(graph, false, nudge)
+		PositionIncoming(graph, false, nudge)
+		PositionOutgoing(graph, true, nudge)
+		PositionIncoming(graph, true, nudge)
 		nudge = nudge * 0.9
 		flushLeft(graph)
 	}
 
 	for i := 0; i < 10; i++ {
-		Position_Incoming(graph, true, 0)
-		Position_Outgoing(graph, true, 0)
+		PositionIncoming(graph, true, 0)
+		PositionOutgoing(graph, true, 0)
 
 		flushLeft(graph)
 	}
-
 }
 
-func Position_Initial_LeftToRight(graph *Graph) {
+// PositionInitial assigns location based on size
+func PositionInitial(graph *Graph) {
 	top := float32(0)
 	for _, nodes := range graph.ByRank {
 		left := float32(0)
@@ -46,11 +48,11 @@ func Position_Initial_LeftToRight(graph *Graph) {
 			node.Center.Y = top
 			left += node.Center.X + node.Radius.X
 		}
-		sanityCheckLayer(graph, nodes)
 		top += halfrow
 	}
 }
 
+// iterateLayers can traverse layers/nodes in different directions
 func iterateLayers(graph *Graph, leftToRight bool, dy int, fn func(layer Nodes, i int, node *Node)) {
 	var starty int
 	if dy < 0 {
@@ -74,6 +76,7 @@ func iterateLayers(graph *Graph, leftToRight bool, dy int, fn func(layer Nodes, 
 	}
 }
 
+// NodeWalls calculates bounds where node can be moved
 func NodeWalls(graph *Graph, layer Nodes, i int, node *Node, leftToRight bool) (wallLeft, wallRight float32) {
 	if i > 0 {
 		wallLeft = layer[i-1].Center.X + layer[i-1].Radius.X
@@ -109,7 +112,8 @@ func NodeWalls(graph *Graph, layer Nodes, i int, node *Node, leftToRight bool) (
 	return wallLeft, wallRight
 }
 
-func Position_Incoming(graph *Graph, leftToRight bool, nudge float32) {
+// PositionIncoming positions node based on incoming edges
+func PositionIncoming(graph *Graph, leftToRight bool, nudge float32) {
 	iterateLayers(graph, leftToRight, 1,
 		func(layer Nodes, i int, node *Node) {
 			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
@@ -131,7 +135,8 @@ func Position_Incoming(graph *Graph, leftToRight bool, nudge float32) {
 		})
 }
 
-func Position_Outgoing(graph *Graph, leftToRight bool, nudge float32) {
+// PositionOutgoing positions node based on outgoing edges
+func PositionOutgoing(graph *Graph, leftToRight bool, nudge float32) {
 	iterateLayers(graph, leftToRight, -1,
 		func(layer Nodes, i int, node *Node) {
 			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
@@ -153,9 +158,8 @@ func Position_Outgoing(graph *Graph, leftToRight bool, nudge float32) {
 		})
 }
 
+// sanityCheckLayer checks whether any nodes are overlapping
 func sanityCheckLayer(graph *Graph, layer Nodes) {
-	return
-
 	deltas := []float32{}
 	positions := []float32{}
 	fail := false
@@ -177,6 +181,7 @@ func sanityCheckLayer(graph *Graph, layer Nodes) {
 	}
 }
 
+// flushLeft corrects for graph drift due to moving nodes around
 func flushLeft(graph *Graph) {
 	node := graph.Nodes[0]
 	minleft := node.Center.X - node.Radius.X
