@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+	      <path d="M0,0 L0,6 L9,3 z" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M 64 48 S 38.400000000000006 48 32 80 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M 64 48 S 89.60000000000001 48 96 80 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M 32 112 S 57.6 112 64 144 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M 96 112 S 70.4 112 64 144 '></path><circle cx='64' cy='32' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='64' y='32' font-size='14' color='#000000'>A</text>
+<circle cx='32' cy='96' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' color='#000000'>B</text>
+<circle cx='96' cy='96' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' color='#000000'>C</text>
+<circle cx='64' cy='160' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='64' y='160' font-size='14' color='#000000'>D</text>
+</g></svg>
