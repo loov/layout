@@ -34,21 +34,24 @@ func Position_Initial_LeftToRight(graph *Graph) {
 	top := float32(0)
 	for _, nodes := range graph.ByRank {
 		left := float32(0)
-		bottom := float32(0)
-		for _, node := range nodes {
-			node.Center.X = left + node.Radius.X + node.Center.X
-			node.Center.Y = top + node.Radius.Y + node.Center.Y
 
+		halfrow := float32(0)
+		for _, node := range nodes {
+			halfrow = maxf32(halfrow, node.Radius.Y)
+		}
+
+		top += halfrow
+		for _, node := range nodes {
+			node.Center.X = left + node.Radius.X
+			node.Center.Y = top
 			left += node.Center.X + node.Radius.X
-			bottom = maxf32(node.Center.Y+node.Radius.Y, bottom)
 		}
 		sanityCheckLayer(graph, nodes)
-		top = bottom
+		top += halfrow
 	}
 }
 
-func iterateLayers(graph *Graph, leftToRight bool, dy int,
-	fn func(layer Nodes, i int, node *Node)) {
+func iterateLayers(graph *Graph, leftToRight bool, dy int, fn func(layer Nodes, i int, node *Node)) {
 	var starty int
 	if dy < 0 {
 		starty = len(graph.ByRank) - 1

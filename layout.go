@@ -7,6 +7,19 @@ import (
 const epsilon = 1e-6
 
 func (graph *Graph) AssignMissingValues() {
+	if graph.FontSize <= 0 {
+		graph.FontSize = graph.LineHeight * 14 / 16
+	}
+	if graph.NodePadding <= 0 {
+		graph.NodePadding = graph.LineHeight
+	}
+	if graph.RowPadding <= 0 {
+		graph.RowPadding = graph.LineHeight
+	}
+	if graph.EdgePadding <= 0 {
+		graph.EdgePadding = 6 * Point
+	}
+
 	for _, node := range graph.Nodes {
 		if node.Shape == "" {
 			node.Shape = graph.Shape
@@ -74,13 +87,17 @@ func Hierarchical(graphdef *Graph) {
 
 	// assign node sizes
 	for id, node := range orderedGraph.Nodes {
-		nodedef, ok := reverse[hier.ID(id)]
-		if !ok {
-			node.Radius.X = float32(graphdef.FontSize + graphdef.NodePadding)
-			node.Radius.Y = float32(graphdef.FontSize + graphdef.RowPadding)
+		if node.Virtual {
+			node.Radius.X = float32(graphdef.EdgePadding)
+			node.Radius.Y = float32(graphdef.EdgePadding)
 			continue
 		}
 
+		nodedef, ok := reverse[hier.ID(id)]
+		if !ok {
+			// TODO: handle missing node
+			continue
+		}
 		node.Radius.X = float32(nodedef.Radius.X + graphdef.NodePadding)
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}

@@ -11,6 +11,7 @@ type Graph struct {
 
 	NodePadding Length
 	RowPadding  Length
+	EdgePadding Length
 
 	NodeByID map[string]*Node
 	Nodes    []*Node
@@ -20,12 +21,8 @@ type Graph struct {
 func NewGraph() *Graph {
 	graph := &Graph{}
 
-	graph.FontSize = 14 * Point
 	graph.LineHeight = 16 * Point
 	graph.Shape = Auto
-
-	graph.NodePadding = graph.LineHeight
-	graph.RowPadding = graph.LineHeight * 2
 
 	graph.NodeByID = make(map[string]*Node)
 	return graph
