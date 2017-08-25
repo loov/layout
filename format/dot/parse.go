@@ -152,9 +152,9 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		case "fontsize":
 			setLength(&node.FontSize, attr.Val, layout.Point)
 		case "pencolor":
-			setColor(&node.PenColor, attr.Val)
+			setColor(&node.LineColor, attr.Val)
 		case "penwidth":
-			setLength(&node.PenWidth, attr.Val, layout.Point)
+			setLength(&node.LineWidth, attr.Val, layout.Point)
 		case "fillcolor":
 			setColor(&node.FillColor, attr.Val)
 		case "width":
@@ -179,9 +179,9 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		case "fontsize":
 			setLength(&edge.FontSize, attr.Val, layout.Point)
 		case "pencolor":
-			setColor(&edge.PenColor, attr.Val)
+			setColor(&edge.LineColor, attr.Val)
 		case "penwidth":
-			setLength(&edge.PenWidth, attr.Val, layout.Point)
+			setLength(&edge.LineWidth, attr.Val, layout.Point)
 		case "tooltip":
 			setString(&edge.Tooltip, attr.Val)
 		}

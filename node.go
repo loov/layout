@@ -14,8 +14,8 @@ type Node struct {
 	FontSize  Length
 	FontColor Color
 
-	PenWidth Length
-	PenColor Color
+	LineWidth Length
+	LineColor Color
 
 	Shape     Shape
 	FillColor Color
@@ -30,7 +30,7 @@ func NewNode(id string) *Node {
 	node.ID = id
 	node.Label = id
 	node.Weight = 1.0
-	node.PenWidth = 1.0
+	node.LineWidth = Point
 	return node
 }
 

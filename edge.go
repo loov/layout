@@ -11,8 +11,8 @@ type Edge struct {
 	FontSize  Length
 	FontColor Color
 
-	PenWidth Length
-	PenColor Color
+	LineWidth Length
+	LineColor Color
 
 	// computed in layouting
 	Path []Vector
@@ -23,7 +23,7 @@ func NewEdge(from, to *Node) *Edge {
 	edge.From = from
 	edge.To = to
 	edge.Weight = 1.0
-	edge.PenWidth = 1.0
+	edge.LineWidth = Point
 	return edge
 }
 

@@ -38,6 +38,9 @@ func (graph *Graph) AssignMissingValues() {
 			node.Radius.Y = graph.LineHeight
 
 			labelRadius := node.approxLabelRadius(graph.LineHeight)
+			labelRadius.X += node.FontSize * 0.5
+			labelRadius.Y += node.FontSize * 0.25
+
 			if node.Radius.X < labelRadius.X {
 				node.Radius.X = labelRadius.X
 			}
