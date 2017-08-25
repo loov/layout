@@ -100,7 +100,7 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 		targets := context.ensureVertex(to.Vertex)
 		for _, source := range sources {
 			for _, target := range targets {
-				edge := &layout.Edge{}
+				edge := layout.NewEdge(source, target)
 
 				edge.Directed = to.Directed
 				edge.From = source

@@ -34,17 +34,7 @@ func (svg *writer) finish() {
 func (svg *writer) writeStyle() {
 	svg.write(`
 	<style type="text/css"><![CDATA[
-		.node {
-			fill: #fff;
-			stroke: #000;
-		}
-		.edge {
-			fill: none;
-			stroke: #000;
-		}
-		#arrowhead {
-			fill: #000;
-		}
+		.edge { fill: none; }
 	]]></style>`)
 }
 
@@ -58,6 +48,34 @@ func (svg *writer) writeDefs() {
 	      <path d="M0,0 L0,6 L9,3 z" />
 	    </marker>
 	</defs>`)
+}
+
+func colortext(color layout.Color) string {
+	const hex = "0123456789ABCDEF"
+	r, g, b, a := color.RGBA8()
+	if a == 0 {
+		return "none"
+	}
+	return string([]byte{'#',
+		hex[r>>4], hex[r&7],
+		hex[g>>4], hex[g&7],
+		hex[b>>4], hex[b&7],
+		//hex[a>>4], hex[a&7],
+	})
+}
+
+func dkcolor(color layout.Color) string {
+	if color == nil {
+		return "#000000"
+	}
+	return colortext(color)
+}
+
+func ltcolor(color layout.Color) string {
+	if color == nil {
+		return "#FFFFFF"
+	}
+	return colortext(color)
 }
 
 func Write(w io.Writer, graph *layout.Graph) error {
@@ -75,6 +93,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		} else {
 			svg.write("<path class='edge'")
 		}
+
+		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
+		svg.write(" stroke-width='%v'", edge.LineWidth)
 
 		svg.write(" d='")
 		p0 := edge.Path[0]
@@ -94,7 +115,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
 			p0, p1 = p1, p2
 		}
-		sx = p1.X
+		sx = p0.X*0.2 + p1.X*0.8
 		sy = p1.Y - 2*dir*graph.RowPadding
 		svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
 		svg.write("'>")
@@ -134,6 +155,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 				2*r, 2*r)
 		}
 		svg.write(" class='node'")
+
+		svg.write(" fill='%v'", ltcolor(node.FillColor))
+		svg.write(" stroke='%v'", dkcolor(node.LineColor))
+		svg.write(" stroke-width='%v'", node.LineWidth)
+
 		svg.write(">")
 		if node.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(node.Tooltip))
@@ -147,6 +173,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			for _, line := range lines {
 				svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
 				svg.write(" font-size='%v'", node.FontSize)
+				svg.write(" color='%v'", dkcolor(node.FontColor))
 				svg.write(">%v</text>\n", escapeString(line))
 				top += graph.LineHeight
 			}

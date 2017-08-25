@@ -38,7 +38,9 @@ func main() {
 		ac.LineColor = col
 	}
 
-	graph.Edge("B", "D")
+	bd := graph.Edge("B", "D")
+	bd.LineColor = layout.RGB{0xA0, 0xFF, 0xA0}
+
 	graph.Edge("C", "D")
 	graph.Edge("D", "A")
 
