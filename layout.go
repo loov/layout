@@ -8,6 +8,10 @@ const epsilon = 1e-6
 
 func (graph *Graph) AssignMissingValues() {
 	for _, node := range graph.Nodes {
+		if node.Shape == "" {
+			node.Shape = graph.Shape
+		}
+
 		if node.Weight < epsilon {
 			node.Weight = epsilon
 		}

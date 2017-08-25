@@ -4,8 +4,10 @@ type Graph struct {
 	ID       string
 	Directed bool
 
+	// Defaults
 	LineHeight Length
 	FontSize   Length
+	Shape      Shape
 
 	NodePadding Length
 	RowPadding  Length
@@ -20,11 +22,18 @@ func NewGraph() *Graph {
 
 	graph.FontSize = 14 * Point
 	graph.LineHeight = 16 * Point
+	graph.Shape = Auto
 
 	graph.NodePadding = graph.LineHeight
 	graph.RowPadding = graph.LineHeight * 2
 
 	graph.NodeByID = make(map[string]*Node)
+	return graph
+}
+
+func NewDigraph() *Graph {
+	graph := NewGraph()
+	graph.Directed = true
 	return graph
 }
 
@@ -52,6 +61,7 @@ func (graph *Graph) Edge(from, to string) *Edge {
 	}
 
 	edge := NewEdge(source, target)
+	edge.Directed = graph.Directed
 	graph.AddEdge(edge)
 	return edge
 }

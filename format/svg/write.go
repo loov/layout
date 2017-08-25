@@ -100,7 +100,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		case layout.Circle, layout.Auto:
 			svgtag = "circle"
 			r := (node.Radius.X + node.Radius.Y) * 0.5
-			svg.write("<circle cx='%v' cy='%v', r='%v'", node.Center.X, node.Center.Y, r)
+			svg.write("<circle cx='%v' cy='%v' r='%v'", node.Center.X, node.Center.Y, r)
 		case layout.Ellipse:
 			svgtag = "ellipse"
 			svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'",
