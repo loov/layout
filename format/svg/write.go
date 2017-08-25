@@ -24,8 +24,8 @@ func (svg *writer) write(format string, args ...interface{}) {
 	_, svg.err = fmt.Fprintf(svg.w, format, args...)
 }
 
-func (svg *writer) start() {
-	svg.write("<svg xmlns='http://www.w3.org/2000/svg'>")
+func (svg *writer) start(width, height layout.Length) {
+	svg.write("<svg xmlns='http://www.w3.org/2000/svg' width='%v' height='%v'>", width, height)
 }
 func (svg *writer) finish() {
 	svg.write("</svg>\n")
@@ -82,7 +82,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
 
-	svg.start()
+	_, bottomRight := graph.Bounds()
+	svg.start(bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
 	svg.writeStyle()
 	svg.writeDefs()
 
