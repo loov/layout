@@ -13,7 +13,6 @@ import (
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
-	"github.com/loov/layout/format/svg"
 	"github.com/loov/layout/internal/hier"
 )
 
@@ -221,17 +220,6 @@ func main() {
 		}
 		defer file.Close()
 		out = file
-	}
-
-	switch *outformat {
-	case "svg":
-		err = svg.WriteLayout(out, graph)
-	case "dot":
-		err = dot.WriteLayout(out, graph)
-	default:
-		info("unknown output format %q", *outformat)
-		os.Exit(1)
-		return
 	}
 
 	if err != nil {

@@ -1,5 +1,7 @@
 package hier
 
+import "fmt"
+
 func Example() {
 	// create a new graph
 	graph := NewGraph()
@@ -12,13 +14,26 @@ func Example() {
 	graph.AddEdge(d, a)
 
 	// remove cycles from the graph
-	DecycleDefault(graph)
+	decycledGraph := DefaultDecycle(graph)
 
-	// assign ranks to nodes
+	// assign nodes to ranks
+	rankedGraph := DefaultRank(decycledGraph)
 
-	// order nodes in each rank
+	// create virtual nodes
+	filledGraph := DefaultAddVirtuals(rankedGraph)
 
-	// position nodes on a canvas
+	// order nodes in ranks
+	orderedGraph := DefaultOrderRanks(filledGraph)
 
-	// output graph
+	for _, node := range orderedGraph.Nodes {
+		node.Radius.X = 10
+		node.Radius.Y = 10
+	}
+
+	// position nodes
+	positionedGraph := DefaultPosition(orderedGraph)
+
+	for _, node := range positionedGraph.Nodes {
+		fmt.Println(node.ID, node.Center.X, node.Center.Y)
+	}
 }

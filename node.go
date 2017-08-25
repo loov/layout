@@ -51,7 +51,7 @@ func (node *Node) approxLabelRadius(lineHeight Length) Vector {
 	for _, line := range strings.Split(node.Label, "\n") {
 		width := Length(len(line)) * node.FontSize * HeightWidthRatio
 		if width > size.X {
-			width = size.X
+			size.X = width
 		}
 		size.Y += lineHeight
 	}
