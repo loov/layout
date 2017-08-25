@@ -79,7 +79,12 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		p0 := edge.Path[0]
 		svg.write("M %v %v ", p0.X, p0.Y)
 		for _, p := range edge.Path[1:] {
-			svg.write("S %v %v %v %v ", (p0.X+p.X)*0.5, (p0.Y+p.Y)*0.5, p.X, p.Y)
+			py := p.Y - graph.RowPadding
+			if p0.Y > p.Y {
+				py = p.Y + graph.RowPadding
+			}
+			px := p0.X*0.2 + p.X*0.8
+			svg.write("S %v %v %v %v ", px, py, p.X, p.Y)
 			p0 = p
 		}
 		svg.write("'>")
