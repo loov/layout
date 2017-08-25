@@ -1,4 +1,4 @@
-package layout
+package hier
 
 func abs(v int) int {
 	if v < 0 {

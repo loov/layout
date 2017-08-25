@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/loov/layout"
+	"github.com/loov/layout/internal/hier"
 )
 
-func WriteLayout(out io.Writer, graph *layout.Graph) error {
+func WriteLayout(out io.Writer, graph *hier.Graph) error {
 	var err error
 
 	write := func(format string, args ...interface{}) bool {

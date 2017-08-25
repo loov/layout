@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // NodeSet is a dense node set
 type NodeSet []bool

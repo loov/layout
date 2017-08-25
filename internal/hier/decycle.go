@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // DecycleDefault runs recommended decycling algorithm
 func DecycleDefault(graph *Graph) {

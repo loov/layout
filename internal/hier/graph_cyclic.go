@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // IsCyclic checks whether graph is cyclic
 func (graph *Graph) IsCyclic() bool {

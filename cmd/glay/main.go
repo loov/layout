@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loov/layout"
 	"github.com/loov/layout/cmd/glay/dot"
 	"github.com/loov/layout/cmd/glay/graph"
 	"github.com/loov/layout/cmd/glay/svg"
+	"github.com/loov/layout/internal/hier"
 )
 
 var (
@@ -117,12 +117,12 @@ func main() {
 
 	info("\nCONVERTING")
 
-	graph := &layout.Graph{}
+	graph := &hier.Graph{}
 	for _, nodedef := range graphdef.Nodes {
 		nodedef.LayoutNode = graph.AddNode()
 		nodedef.LayoutNode.Label = nodedef.ID
 	}
-	graph.Nodes.SortBy(func(a *layout.Node, b *layout.Node) bool {
+	graph.Nodes.SortBy(func(a *hier.Node, b *hier.Node) bool {
 		return a.ID < b.ID
 	})
 
@@ -138,7 +138,7 @@ func main() {
 
 	info("\nDECYCLING")
 	start = time.Now()
-	decycle := layout.NewDecycle(graph)
+	decycle := hier.NewDecycle(graph)
 	decycle.Run()
 	stop = time.Now()
 
@@ -150,7 +150,7 @@ func main() {
 
 	info("\nRANKING")
 	start = time.Now()
-	layout.Rank(graph)
+	hier.Rank(graph)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
@@ -164,7 +164,7 @@ func main() {
 
 	info("\nADDING VIRTUALS")
 	start = time.Now()
-	layout.AddVirtualVertices(graph)
+	hier.AddVirtualVertices(graph)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
@@ -181,7 +181,7 @@ func main() {
 
 	info("\nORDERING")
 	start = time.Now()
-	layout.OrderRanks(graph)
+	hier.OrderRanks(graph)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
@@ -198,7 +198,7 @@ func main() {
 
 	info("\nPOSITIONING")
 	start = time.Now()
-	layout.Position(graph)
+	hier.Position(graph)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
@@ -246,11 +246,11 @@ func main() {
 	}
 }
 
-func rankWidthAverage(graph *layout.Graph) float64 {
+func rankWidthAverage(graph *hier.Graph) float64 {
 	return float64(len(graph.Nodes)) / float64(len(graph.ByRank))
 }
 
-func rankWidthVariance(graph *layout.Graph) float64 {
+func rankWidthVariance(graph *hier.Graph) float64 {
 	if graph.NodeCount() < 2 {
 		return 0
 	}

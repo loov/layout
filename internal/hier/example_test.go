@@ -1,10 +1,8 @@
-package layout_test
-
-import "github.com/loov/layout"
+package hier
 
 func Example() {
 	// create a new graph
-	graph := layout.NewGraph()
+	graph := NewGraph()
 	a, b, c, d := graph.AddNode(), graph.AddNode(), graph.AddNode(), graph.AddNode()
 
 	graph.AddEdge(a, b)
@@ -14,7 +12,7 @@ func Example() {
 	graph.AddEdge(d, a)
 
 	// remove cycles from the graph
-	layout.DecycleDefault(graph)
+	DecycleDefault(graph)
 
 	// assign ranks to nodes
 

@@ -1,4 +1,4 @@
-package layout
+package hier
 
 type TestGraph struct {
 	Name   string

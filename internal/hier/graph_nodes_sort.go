@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // Sort implementation is a modification of http://golang.org/pkg/sort/#Sort
 // Copyright 2009 The Go Authors. All rights reserved.

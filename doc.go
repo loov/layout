@@ -1,4 +1,4 @@
 /*
-Package layout implements functions for hierarchical graph layouting.
+Package layout implements different graph layouting functions
 */
 package layout

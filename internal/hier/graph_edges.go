@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // NewGraphFromEdgeList creates a graph from edge list
 //

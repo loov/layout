@@ -3,7 +3,7 @@ package graph
 import (
 	"strconv"
 
-	"github.com/loov/layout"
+	"github.com/loov/layout/internal/hier"
 )
 
 type Graph struct {
@@ -37,8 +37,8 @@ type Node struct {
 	ID string
 	Visual
 
-	LayoutID   layout.ID
-	LayoutNode *layout.Node
+	LayoutID   hier.ID
+	LayoutNode *hier.Node
 }
 
 func (node *Node) String() string {

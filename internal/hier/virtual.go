@@ -1,4 +1,4 @@
-package layout
+package hier
 
 // AddVirtualVertices creates nodes for edges spanning multiple ranks
 //

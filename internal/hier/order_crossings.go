@@ -1,4 +1,4 @@
-package layout
+package hier
 
 func (graph *Graph) CrossingsUp(u, v *Node) int {
 	if u.Rank == 0 {
