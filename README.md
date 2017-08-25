@@ -45,7 +45,7 @@ func main() {
 }
 ```
 
-<img src="example/minimal.svg">
+![Output](./example/minimal.png)
 
 See other examples in `example` folder.
 
