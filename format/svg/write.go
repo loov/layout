@@ -93,14 +93,37 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 	for _, node := range graph.Nodes {
 		// TODO: add other shapes
-		svg.write("<circle cx='%v' cy='%v'", node.Center.X, node.Center.Y)
-		svg.write(" r='%v'", (node.Radius.X+node.Radius.Y)*0.5)
+		svgtag := "circle"
+		switch node.Shape {
+		default:
+			fallthrough
+		case layout.Circle, layout.Auto:
+			svgtag = "circle"
+			r := (node.Radius.X + node.Radius.Y) * 0.5
+			svg.write("<circle cx='%v' cy='%v', r='%v'", node.Center.X, node.Center.Y, r)
+		case layout.Ellipse:
+			svgtag = "ellipse"
+			svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'",
+				node.Center.X, node.Center.Y,
+				node.Radius.X, node.Radius.Y)
+		case layout.Box:
+			svgtag = "rect"
+			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
+				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
+				2*node.Radius.X, 2*node.Radius.Y)
+		case layout.Square:
+			svgtag = "rect"
+			r := (node.Radius.X + node.Radius.Y) * 0.5
+			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
+				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
+				2*r, 2*r)
+		}
 		svg.write(" class='node'")
 		svg.write(">")
 		if node.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(node.Tooltip))
 		}
-		svg.write("</circle>")
+		svg.write("</%v>", svgtag)
 
 		if node.Label != "" {
 			svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, node.Center.Y)
