@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/loov/layout/cmd/glay/dot"
-	"github.com/loov/layout/cmd/glay/graph"
-	"github.com/loov/layout/cmd/glay/svg"
+	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
+	"github.com/loov/layout/format/svg"
 	"github.com/loov/layout/internal/hier"
 )
 
@@ -78,7 +78,7 @@ func main() {
 		return
 	}
 
-	var graphs []*graph.Graph
+	var graphs []*layout.Graph
 	var err error
 
 	info("parsing %q", input)
@@ -117,17 +117,17 @@ func main() {
 
 	info("\nCONVERTING")
 
+	nodeID := map[*layout.Node]hier.ID{}
+
 	graph := &hier.Graph{}
 	for _, nodedef := range graphdef.Nodes {
-		nodedef.LayoutNode = graph.AddNode()
-		nodedef.LayoutNode.Label = nodedef.ID
+		node := graph.AddNode()
+		nodeID[nodedef] = node.ID
+		node.Label = nodedef.ID
 	}
-	graph.Nodes.SortBy(func(a *hier.Node, b *hier.Node) bool {
-		return a.ID < b.ID
-	})
-
 	for _, edge := range graphdef.Edges {
-		graph.AddEdge(edge.From.LayoutNode, edge.To.LayoutNode)
+		from, to := nodeID[edge.From], nodeID[edge.To]
+		graph.AddEdge(graph.Nodes[from], graph.Nodes[to])
 	}
 
 	if *verbose {

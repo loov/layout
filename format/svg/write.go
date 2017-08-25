@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/loov/layout/cmd/glay/graph"
+	"github.com/loov/layout"
 	"github.com/loov/layout/internal/hier"
 )
 
-func Write(w io.Writer, graph *graph.Graph) error {
+func Write(w io.Writer, graph *layout.Graph) error {
 	return nil
 }
 
