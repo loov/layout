@@ -20,7 +20,7 @@ go get -u github.com/loov/layout
 
 ## Usage
 
-Basic usage:
+Minimal usage:
 
 ```
 package main
@@ -34,21 +34,20 @@ import (
 
 func main() {
     graph := layout.NewDigraph()
-    graph.Node("A")
-    graph.Node("B")
-    graph.Node("C")
-    graph.Node("D")
     graph.Edge("A", "B")
     graph.Edge("A", "C")
     graph.Edge("B", "D")
     graph.Edge("C", "D")
-    graph.Edge("D", "A")
 
     layout.Hierarchical(graph)
 
     svg.Write(os.Stdout, graph)
 }
 ```
+
+<img src="example/minimal.svg">
+
+See other examples in `example` folder.
 
 ## Quality
 
