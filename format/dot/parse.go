@@ -4,6 +4,7 @@ package dot
 import (
 	"io"
 	"strconv"
+	"strings"
 
 	"github.com/loov/layout"
 
@@ -253,5 +254,8 @@ func setShape(t *layout.Shape, value string) {
 }
 
 func setString(t *string, value string) {
-	*t = value
+	if len(value) > 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		value = value[1 : len(value)-1]
+	}
+	*t = strings.Replace(value, "\\n", "\n", -1)
 }

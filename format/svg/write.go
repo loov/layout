@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"strings"
 
 	"github.com/loov/layout"
 )
@@ -104,7 +105,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			fallthrough
 		case layout.Circle, layout.Auto:
 			svgtag = "circle"
-			r := (node.Radius.X + node.Radius.Y) * 0.5
+			r := max(node.Radius.X, node.Radius.Y)
 			svg.write("<circle cx='%v' cy='%v' r='%v'", node.Center.X, node.Center.Y, r)
 		case layout.Ellipse:
 			svgtag = "ellipse"
@@ -118,7 +119,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 				2*node.Radius.X, 2*node.Radius.Y)
 		case layout.Square:
 			svgtag = "rect"
-			r := (node.Radius.X + node.Radius.Y) * 0.5
+			r := max(node.Radius.X, node.Radius.Y)
 			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
 				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
 				2*r, 2*r)
@@ -131,15 +132,28 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write("</%v>", svgtag)
 
 		if node.Label != "" {
-			svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, node.Center.Y)
-			svg.write(" font-size='%v'", node.FontSize)
-			svg.write(">%v</text>\n", escapeString(node.Label))
+			lines := strings.Split(node.Label, "\n")
+			top := node.Center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
+			top += graph.LineHeight * 0.5
+			for _, line := range lines {
+				svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
+				svg.write(" font-size='%v'", node.FontSize)
+				svg.write(">%v</text>\n", escapeString(line))
+				top += graph.LineHeight
+			}
 		}
 	}
 	svg.finishG()
 	svg.finish()
 
 	return svg.err
+}
+
+func max(a, b layout.Length) layout.Length {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func escapeString(s string) string {

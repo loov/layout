@@ -6,6 +6,9 @@ http://www.graphviz.org/Gallery/directed/world.html
 digraph world {
 	size="7,7";
 
+	S8 [label="S8\nXX\nYY"];
+	39 [label="39\nXX\nYY"];
+
 	{rank=same; S8 S24 S1 S35 S30;}
 	{rank=same; T8 T24 T1 T35 T30;}
 	{rank=same; 43 37 36 10 2;}
