@@ -4,6 +4,12 @@ type Graph struct {
 	ID       string
 	Directed bool
 
+	LineHeight Length
+	FontSize   Length
+
+	NodePadding Length
+	RowPadding  Length
+
 	NodeByID map[string]*Node
 	Nodes    []*Node
 	Edges    []*Edge
@@ -11,6 +17,13 @@ type Graph struct {
 
 func NewGraph() *Graph {
 	graph := &Graph{}
+
+	graph.FontSize = 14 * Point
+	graph.LineHeight = 16 * Point
+
+	graph.NodePadding = graph.LineHeight
+	graph.RowPadding = graph.LineHeight * 2
+
 	graph.NodeByID = make(map[string]*Node)
 	return graph
 }
@@ -23,8 +36,7 @@ func (graph *Graph) Node(id string) *Node {
 
 	node, found := graph.NodeByID[id]
 	if !found {
-		node = &Node{}
-		node.ID = id
+		node = NewNode(id)
 		graph.AddNode(node)
 	}
 	return node
@@ -39,10 +51,8 @@ func (graph *Graph) Edge(from, to string) *Edge {
 		}
 	}
 
-	edge := &Edge{}
-	edge.From = source
-	edge.To = target
-
+	edge := NewEdge(source, target)
+	graph.AddEdge(edge)
 	return edge
 }
 
@@ -64,4 +74,41 @@ func (graph *Graph) AddNode(node *Node) bool {
 
 func (graph *Graph) AddEdge(edge *Edge) {
 	graph.Edges = append(graph.Edges, edge)
+}
+
+func minvector(a *Vector, b Vector) {
+	if b.X < a.X {
+		a.X = b.X
+	}
+	if b.Y < a.Y {
+		a.Y = b.Y
+	}
+}
+
+func maxvector(a *Vector, b Vector) {
+	if b.X > a.X {
+		a.X = b.X
+	}
+	if b.Y > a.Y {
+		a.Y = b.Y
+	}
+}
+
+func (graph *Graph) Bounds() (min, max Vector) {
+	for _, node := range graph.Nodes {
+		minvector(&min, node.TopLeft())
+		maxvector(&max, node.BottomRight())
+	}
+
+	for _, edge := range graph.Edges {
+		for _, p := range edge.Path {
+			minvector(&min, p)
+			maxvector(&max, p)
+		}
+	}
+
+	minvector(&min, max)
+	maxvector(&max, min)
+
+	return
 }

@@ -1,5 +1,10 @@
 package hier
 
+func DefaultAddVirtuals(graph *Graph) *Graph {
+	AddVirtualVertices(graph)
+	return graph
+}
+
 // AddVirtualVertices creates nodes for edges spanning multiple ranks
 //
 //     Rank  input    output

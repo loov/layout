@@ -157,9 +157,9 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		case "fillcolor":
 			setColor(&node.FillColor, attr.Val)
 		case "width":
-			setLength(&node.Size.X, attr.Val, layout.Inch)
+			setLength(&node.Radius.X, attr.Val, layout.Inch*0.5)
 		case "height":
-			setLength(&node.Size.Y, attr.Val, layout.Inch)
+			setLength(&node.Radius.Y, attr.Val, layout.Inch*0.5)
 		case "tooltip":
 			setString(&node.Tooltip, attr.Val)
 		}

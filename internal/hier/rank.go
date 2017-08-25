@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+func DefaultRank(graph *Graph) *Graph {
+	Rank(graph)
+	return graph
+}
+
 func Rank(graph *Graph) {
 	rand.Seed(time.Now().UnixNano())
 

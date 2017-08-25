@@ -2,99 +2,115 @@ package svg
 
 import (
 	"fmt"
+	"html"
 	"io"
 
 	"github.com/loov/layout"
-	"github.com/loov/layout/internal/hier"
 )
 
-func Write(w io.Writer, graph *layout.Graph) error {
-	return nil
+type writer struct {
+	w   io.Writer
+	err error
 }
 
-func WriteLayout(out io.Writer, graph *hier.Graph) error {
-	var err error
-	write := func(format string, args ...interface{}) bool {
-		if err != nil {
-			return false
-		}
+func (svg *writer) erred() bool  { return svg.err != nil }
+func (svg *writer) Error() error { return svg.err }
 
-		_, err = fmt.Fprintf(out, format, args...)
-		return err == nil
+func (svg *writer) write(format string, args ...interface{}) {
+	if svg.erred() {
+		return
 	}
+	_, svg.err = fmt.Fprintf(svg.w, format, args...)
+}
 
-	write("<svg xmlns='http://www.w3.org/2000/svg'>\n")
-	write(`
+func (svg *writer) start() {
+	svg.write("<svg xmlns='http://www.w3.org/2000/svg'>")
+}
+func (svg *writer) finish() {
+	svg.write("</svg>\n")
+}
+
+func (svg *writer) writeStyle() {
+	svg.write(`
 	<style type="text/css"><![CDATA[
 		.node {
-			fill: hsla(0, 60%%, 60%%, 0.5);
-			stroke: #333;
+			fill: #fff;
+			stroke: #000;
 		}
 		.edge {
 			fill: none;
-			stroke: hsla(180,60%%,30%%,0.5);
-		}
-		.virtual-node {
-			fill: hsla(90, 60%%, 60%%, 0.5);
-			stroke: #333;
-			stroke-width: 0.1px;
+			stroke: #000;
 		}
 		#head {
-			fill: hsla(180,60%%,30%%,0.5);
+			fill: #000;
 		}
 	]]></style>`)
-	write(`
+}
+
+func (svg *writer) startG()  { svg.write("<g>") }
+func (svg *writer) finishG() { svg.write("</g>") }
+
+func (svg *writer) writeDefs() {
+	svg.write(`
 	<defs>
 		<marker id='head' orient='auto' markerWidth='2' markerHeight='4' refX='0.0' refY='2'>
 			<path d='M0,0 V4 L2,2 Z'/>
 		</marker>
 	</defs>`)
-	defer write("</svg>\n")
+}
 
-	write("\t<g>\n")
-	for _, src := range graph.Nodes {
-		if src.Virtual {
-			continue
-		}
+func Write(w io.Writer, graph *layout.Graph) error {
+	svg := &writer{}
+	svg.w = w
 
-		for _, dst := range src.Out {
-			write("\t\t<polyline class='edge' marker-end='url(#head)'")
-			write(" points='%v,%v", src.Position.X, src.Position.Y+src.Radius.Y)
+	svg.start()
+	svg.writeStyle()
+	svg.writeDefs()
 
-			for dst.Virtual {
-				write(" %v,%v", dst.Position.X, dst.Position.Y)
-				dst = dst.Out[0]
-			}
-
-			write(" %v,%v'", dst.Position.X, dst.Position.Y-dst.Radius.Y)
-			write(" />\n")
-		}
-	}
-	write("\t</g>\n")
-
-	write("\t<g>\n")
-	for _, src := range graph.Nodes {
-		write("\t\t<circle cx='%v' cy='%v'", src.Position.X, src.Position.Y)
-		if !src.Virtual {
-			write(" r='%v'", src.Radius.Y)
-			write(" class='node'")
+	svg.startG()
+	for _, edge := range graph.Edges {
+		if edge.Directed {
+			svg.write("<polyline class='edge' marker-end='url(#head)'")
 		} else {
-			write(" r='%v'", 1)
-			write(" class='virtual-node'")
+			svg.write("<polyline class='edge'")
 		}
-		write(" />\n")
-	}
-	write("\t</g>\n")
 
-	write("\t<g>\n")
-	for _, src := range graph.Nodes {
-		if !src.Virtual {
-			write("\t\t<text text-anchor='middle' x='%v' y='%v'", src.Position.X, src.Position.Y)
-			write(" font-size='%v'", src.Radius.Y)
-			write(">%v</text>\n", src.Label)
+		svg.write(" points='")
+		for _, p := range edge.Path {
+			svg.write("%v,%v ", p.X, p.Y)
+		}
+		svg.write("'>")
+
+		if edge.Tooltip != "" {
+			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
+		}
+
+		svg.write("</polyline>")
+	}
+
+	for _, node := range graph.Nodes {
+		// TODO: add other shapes
+		svg.write("<circle cx='%v' cy='%v'", node.Center.X, node.Center.Y)
+		svg.write(" r='%v'", (node.Radius.X+node.Radius.Y)*0.5)
+		svg.write(" class='node'")
+		svg.write(">")
+		if node.Tooltip != "" {
+			svg.write("<title>%v</title>", escapeString(node.Tooltip))
+		}
+		svg.write("</circle>")
+
+		if node.Label != "" {
+			svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, node.Center.Y)
+			svg.write(" font-size='%v'", node.FontSize)
+			svg.write(">%v</text>\n", escapeString(node.Label))
 		}
 	}
-	write("\t</g>\n")
+	svg.finishG()
+	svg.finish()
 
-	return err
+	return svg.err
+}
+
+func escapeString(s string) string {
+	return html.EscapeString(s)
 }

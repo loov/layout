@@ -18,6 +18,15 @@ type Edge struct {
 	Path []Vector
 }
 
+func NewEdge(from, to *Node) *Edge {
+	edge := &Edge{}
+	edge.From = from
+	edge.To = to
+	edge.Weight = 1.0
+	edge.PenWidth = 1.0
+	return edge
+}
+
 func (edge *Edge) String() string {
 	return edge.From.String() + "->" + edge.To.String()
 }

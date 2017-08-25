@@ -1,11 +1,12 @@
 package hier
 
 // DecycleDefault runs recommended decycling algorithm
-func DecycleDefault(graph *Graph) {
+func DefaultDecycle(graph *Graph) *Graph {
 	decycle := NewDecycle(graph)
 	decycle.Recurse = true
 	decycle.Reorder = true
 	decycle.Run()
+	return graph
 }
 
 // Decycle implements process for removing cycles from a Graph

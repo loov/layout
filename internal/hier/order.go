@@ -4,6 +4,11 @@ import (
 	"sort"
 )
 
+func DefaultOrderRanks(graph *Graph) *Graph {
+	OrderRanks(graph)
+	return graph
+}
+
 func OrderRanks(graph *Graph) {
 	OrderRanks_Initial_DepthFirst(graph)
 	for i := 0; i < 100; i++ {

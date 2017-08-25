@@ -31,8 +31,8 @@ type Node struct {
 	GridX float32
 
 	// Visuals
-	Position Vector
-	Radius   Vector
+	Center Vector
+	Radius Vector
 }
 
 // String returns node label
