@@ -7,7 +7,7 @@ import (
 	"github.com/loov/layout/internal/hier"
 )
 
-func WriteLayout(out io.Writer, graph *hier.Graph) error {
+func writeLayout(out io.Writer, graph *hier.Graph) error {
 	var err error
 
 	write := func(format string, args ...interface{}) bool {

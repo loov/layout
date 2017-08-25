@@ -41,7 +41,7 @@ func (svg *writer) writeStyle() {
 			fill: none;
 			stroke: #000;
 		}
-		#head {
+		#arrowhead {
 			fill: #000;
 		}
 	]]></style>`)
@@ -53,9 +53,9 @@ func (svg *writer) finishG() { svg.write("</g>") }
 func (svg *writer) writeDefs() {
 	svg.write(`
 	<defs>
-		<marker id='head' orient='auto' markerWidth='2' markerHeight='4' refX='0.0' refY='2'>
-			<path d='M0,0 V4 L2,2 Z'/>
-		</marker>
+		<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+	      <path d="M0,0 L0,6 L9,3 z" />
+	    </marker>
 	</defs>`)
 }
 
@@ -70,14 +70,17 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg.startG()
 	for _, edge := range graph.Edges {
 		if edge.Directed {
-			svg.write("<polyline class='edge' marker-end='url(#head)'")
+			svg.write("<path class='edge' marker-end='url(#arrowhead)'")
 		} else {
-			svg.write("<polyline class='edge'")
+			svg.write("<path class='edge'")
 		}
 
-		svg.write(" points='")
-		for _, p := range edge.Path {
-			svg.write("%v,%v ", p.X, p.Y)
+		svg.write(" d='")
+		p0 := edge.Path[0]
+		svg.write("M %v %v ", p0.X, p0.Y)
+		for _, p := range edge.Path[1:] {
+			svg.write("S %v %v %v %v ", (p0.X+p.X)*0.5, (p0.Y+p.Y)*0.5, p.X, p.Y)
+			p0 = p
 		}
 		svg.write("'>")
 
@@ -85,7 +88,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
 		}
 
-		svg.write("</polyline>")
+		svg.write("</path>")
 	}
 
 	for _, node := range graph.Nodes {
