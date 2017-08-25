@@ -45,3 +45,7 @@ func main() {
     svg.Write(os.Stdout, graph)
 }
 ```
+
+## Quality
+
+Currently the `layout.Hierarchy` algorithm output is significantly worse than graphviz. It is recommended to use `graphviz dot`, if possible.
