@@ -82,7 +82,7 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 		return node
 	}
 
-	node := context.Graph.Node(id)
+	node := context.Graph.Node(fixstring(id))
 	applyNodeAttrs(node, context.nodeAttrs)
 	return node
 }
@@ -254,8 +254,12 @@ func setShape(t *layout.Shape, value string) {
 }
 
 func setString(t *string, value string) {
-	if len(value) > 2 && value[0] == '"' && value[len(value)-1] == '"' {
-		value = value[1 : len(value)-1]
+	*t = fixstring(value)
+}
+
+func fixstring(s string) string {
+	if len(s) > 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		s = s[1 : len(s)-1]
 	}
-	*t = strings.Replace(value, "\\n", "\n", -1)
+	return strings.Replace(s, "\\n", "\n", -1)
 }

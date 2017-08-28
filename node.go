@@ -28,7 +28,6 @@ type Node struct {
 func NewNode(id string) *Node {
 	node := &Node{}
 	node.ID = id
-	node.Label = id
 	node.Weight = 1.0
 	node.LineWidth = Point
 	return node
@@ -37,6 +36,16 @@ func NewNode(id string) *Node {
 func (node *Node) String() string {
 	if node == nil {
 		return "?"
+	}
+	if node.ID != "" {
+		return node.ID
+	}
+	return node.Label
+}
+
+func (node *Node) DefaultLabel() string {
+	if node.Label != "" {
+		return node.Label
 	}
 	return node.ID
 }
@@ -48,7 +57,7 @@ func (node *Node) approxLabelRadius(lineHeight Length) Vector {
 	}
 
 	size := Vector{}
-	lines := strings.Split(node.Label, "\n")
+	lines := strings.Split(node.DefaultLabel(), "\n")
 	for _, line := range lines {
 		width := Length(len(line)) * node.FontSize * HeightWidthRatio
 		if width > size.X {
