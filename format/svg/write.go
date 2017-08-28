@@ -167,8 +167,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 		svg.write("</%v>", svgtag)
 
-		if node.Label != "" {
-			lines := strings.Split(node.Label, "\n")
+		if label := node.DefaultLabel(); label != "" {
+			lines := strings.Split(label, "\n")
 			top := node.Center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
 			top += graph.LineHeight * 0.5
 			for _, line := range lines {
