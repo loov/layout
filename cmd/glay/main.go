@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	informat  = flag.String("S", "", "input format")
-	outformat = flag.String("T", "svg", "output format")
+	informat  = flag.String("s", "", "input format")
+	outformat = flag.String("t", "svg", "output format")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )

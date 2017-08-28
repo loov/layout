@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/loov/layout"
@@ -78,6 +79,85 @@ func ltcolor(color layout.Color) string {
 	return colortext(color)
 }
 
+func vec(x, y layout.Length) string {
+	return strconv.FormatFloat(float64(x), 'f', -1, 32) + "," +
+		strconv.FormatFloat(float64(y), 'f', -1, 32) + " "
+}
+
+func straightPath(graph *layout.Graph, path []layout.Vector) string {
+	line := ""
+
+	p0 := path[0]
+	line += "M" + vec(p0.X, p0.Y)
+	for _, p := range path[1:] {
+		line += "L" + vec(p.X, p.Y)
+	}
+
+	return line
+}
+
+func bezierPath(graph *layout.Graph, path []layout.Vector) string {
+	line := ""
+
+	p0 := path[0]
+	dir := layout.Length(1)
+	if p0.Y > path[1].Y {
+		dir *= -1
+	}
+	cpoff := dir * graph.RowPadding * 2
+	line += "M" + vec(p0.X, p0.Y)
+	for _, p1 := range path[1:] {
+		line += "C" +
+			vec(p0.X, p0.Y+cpoff) +
+			vec(p1.X, p1.Y-cpoff) +
+			vec(p1.X, p1.Y)
+		p0 = p1
+	}
+
+	return line
+}
+
+func smartPath(graph *layout.Graph, path []layout.Vector) string {
+	line := ""
+
+	p0 := path[0]
+	p1 := path[1]
+	dir := layout.Length(1)
+	if p0.Y > p1.Y {
+		dir *= -1
+	}
+
+	if len(path) == 2 && p0.X == p1.X {
+		return "M" + vec(p0.X, p0.Y) + "L " + vec(p1.X, p1.Y)
+	}
+
+	var sx, sy layout.Length
+	line += "M" + vec(p0.X, p0.Y)
+	for i, p2 := range path[2:] {
+		sx = p0.X*0.2 + p1.X*0.8
+		if (p0.X < p1.X) != (p1.X < p2.X) {
+			sx = p1.X
+		}
+		sy = p1.Y - dir*graph.RowPadding
+		if i == 0 {
+			line += "C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y)
+		} else {
+			line += "S" + vec(sx, sy) + vec(p1.X, p1.Y)
+		}
+
+		p0, p1 = p1, p2
+	}
+	sx = p0.X*0.2 + p1.X*0.8
+	sy = p1.Y - 2*dir*graph.RowPadding
+
+	if len(path) == 2 {
+		line += "C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y)
+	} else {
+		line += "S" + vec(sx, sy) + vec(p1.X, p1.Y)
+	}
+
+	return line
+}
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
@@ -97,29 +177,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
 		svg.write(" stroke-width='%v'", edge.LineWidth)
-
-		svg.write(" d='")
-		p0 := edge.Path[0]
-		p1 := edge.Path[1]
-		dir := layout.Length(1)
-		if p0.Y > p1.Y {
-			dir *= -1
-		}
-		var sx, sy layout.Length
-		svg.write("M %v %v ", p0.X, p0.Y)
-		for _, p2 := range edge.Path[2:] {
-			sx = p0.X*0.2 + p1.X*0.8
-			if (p0.X < p1.X) != (p1.X < p2.X) {
-				sx = p1.X
-			}
-			sy = p1.Y - dir*graph.RowPadding
-			svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
-			p0, p1 = p1, p2
-		}
-		sx = p0.X*0.2 + p1.X*0.8
-		sy = p1.Y - 2*dir*graph.RowPadding
-		svg.write("S %v %v %v %v ", sx, sy, p1.X, p1.Y)
-		svg.write("'>")
+		svg.write(" d='%v'>", smartPath(graph, edge.Path))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
