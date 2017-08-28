@@ -134,11 +134,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		switch node.Shape {
 		default:
 			fallthrough
-		case layout.Circle, layout.Auto:
+		case layout.Circle:
 			svgtag = "circle"
 			r := max(node.Radius.X, node.Radius.Y)
 			svg.write("<circle cx='%v' cy='%v' r='%v'", node.Center.X, node.Center.Y, r)
-		case layout.Ellipse:
+		case layout.Ellipse, layout.Auto:
 			svgtag = "ellipse"
 			svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'",
 				node.Center.X, node.Center.Y,
