@@ -45,9 +45,9 @@ func main() {
 }
 ```
 
-![Output](./example/minimal.png)
+![Output](./examples/minimal.png)
 
-See other examples in `example` folder.
+See other examples in `examples` folder.
 
 ## Quality
 
