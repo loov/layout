@@ -158,6 +158,7 @@ func smartPath(graph *layout.Graph, path []layout.Vector) string {
 
 	return line
 }
+
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
@@ -169,6 +170,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 	svg.startG()
 	for _, edge := range graph.Edges {
+		if len(edge.Path) == 0 {
+			// TODO: log invalid path
+			continue
+		}
+
 		if edge.Directed {
 			svg.write("<path class='edge' marker-end='url(#arrowhead)'")
 		} else {

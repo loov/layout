@@ -156,6 +156,15 @@ func Hierarchical(graphdef *Graph) {
 		sourceid := nodes[edge.From]
 		targetid := nodes[edge.To]
 
+		if sourceid == targetid {
+			// TODO: improve loops
+			edge.Path = []Vector{
+				edge.From.BottomCenter(),
+				edge.From.TopCenter(),
+			}
+			continue
+		}
+
 		path, ok := edgePaths[[2]hier.ID{sourceid, targetid}]
 		if ok {
 			edge.Path = path
@@ -168,8 +177,6 @@ func Hierarchical(graphdef *Graph) {
 			edge.Path = reversePath(revpath)
 			continue
 		}
-
-		// ??? shouldn't happen
 	}
 }
 
