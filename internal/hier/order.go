@@ -116,6 +116,9 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 		improved := false
 
 		for _, nodes := range graph.ByRank[1:] {
+			if len(nodes) == 0 {
+				continue
+			}
 			left := nodes[0]
 			for i, right := range nodes[1:] {
 				if graph.CrossingsUp(left, right) > graph.CrossingsUp(right, left) {
