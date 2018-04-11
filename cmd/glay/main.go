@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 
 	"github.com/loov/layout"
@@ -15,6 +17,9 @@ import (
 )
 
 var (
+	cpuprofile = flag.String("cpuprofile", "", "profile cpu usage")
+	memprofile = flag.String("memprofile", "", "profile memory usage")
+
 	informat  = flag.String("s", "", "input format")
 	outformat = flag.String("t", "svg", "output format")
 
@@ -77,6 +82,37 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 		return
+	}
+
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			errorf("unable to create cpu-profile %q: %v", *cpuprofile, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		if err := pprof.StartCPUProfile(f); err != nil {
+			errorf("unable to start cpu-profile: %v", err)
+			os.Exit(1)
+		}
+		defer pprof.StopCPUProfile()
+	}
+
+	if *memprofile != "" {
+		defer func() {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				errorf("unable to create mem-profile %q: %v", *memprofile, err)
+				os.Exit(1)
+			}
+			defer f.Close()
+
+			runtime.GC()
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				errorf("unable to start mem-profile: %v", err)
+				os.Exit(1)
+			}
+		}()
 	}
 
 	var graphs []*layout.Graph
