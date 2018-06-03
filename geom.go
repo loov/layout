@@ -4,6 +4,7 @@ type Shape string
 
 const (
 	Auto    Shape = ""
+	None          = "none"
 	Box           = "box"
 	Square        = "square"
 	Circle        = "circle"

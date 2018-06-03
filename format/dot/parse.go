@@ -33,7 +33,8 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 }
 
 type parserContext struct {
-	Graph *layout.Graph
+	Graph   *layout.Graph
+	Cluster string
 
 	allAttrs  []*ast.Attr
 	nodeAttrs []*ast.Attr
@@ -248,6 +249,8 @@ func setShape(t *layout.Shape, value string) {
 		*t = layout.Circle
 	case "ellipse", "oval":
 		*t = layout.Ellipse
+	case "none":
+		*t = layout.None
 	default:
 		*t = layout.Auto
 	}

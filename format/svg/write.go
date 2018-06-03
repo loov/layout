@@ -2,12 +2,13 @@ package svg
 
 import (
 	"fmt"
-	"html"
+	stdhtml "html"
 	"io"
 	"strconv"
 	"strings"
 
 	"github.com/loov/layout"
+	"golang.org/x/net/html"
 )
 
 type writer struct {
@@ -212,6 +213,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
 				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
 				2*node.Radius.X, 2*node.Radius.Y)
+		case layout.None:
+			svgtag = "g"
+			svg.write("<g x='%v' y='%v' width='%v' height='%v'",
+				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
+				2*node.Radius.X, 2*node.Radius.Y)
 		case layout.Square:
 			svgtag = "rect"
 			r := max(node.Radius.X, node.Radius.Y)
@@ -232,15 +238,21 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write("</%v>", svgtag)
 
 		if label := node.DefaultLabel(); label != "" {
-			lines := strings.Split(label, "\n")
-			top := node.Center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
-			top += graph.LineHeight * 0.5
-			for _, line := range lines {
-				svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
-				svg.write(" font-size='%v'", node.FontSize)
-				svg.write(" color='%v'", dkcolor(node.FontColor))
-				svg.write(">%v</text>\n", escapeString(line))
-				top += graph.LineHeight
+			if label[0] == '<' && label[len(label)-1] == '>' {
+				svg.write("<foreignObject x='%v' y='%v' width='100%%' height='100%%'>", node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y)
+				svg.write(`<body xmlns="http://www.w3.org/1999/xhtml">%v</body>`, lowercaseTags(label[1:len(label)-1]))
+				svg.write("</foreignObject>")
+			} else {
+				lines := strings.Split(label, "\n")
+				top := node.Center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
+				top += graph.LineHeight * 0.5
+				for _, line := range lines {
+					svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
+					svg.write(" font-size='%v'", node.FontSize)
+					svg.write(" color='%v'", dkcolor(node.FontColor))
+					svg.write(">%v</text>\n", escapeString(line))
+					top += graph.LineHeight
+				}
 			}
 		}
 	}
@@ -248,6 +260,23 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg.finish()
 
 	return svg.err
+}
+
+func lowercaseTags(s string) string {
+	root := &html.Node{Type: html.ElementNode}
+	nodes, err := html.ParseFragment(strings.NewReader(s), root)
+	if err != nil {
+		return s
+	}
+
+	var out strings.Builder
+	for _, node := range nodes {
+		err := html.Render(&out, node)
+		if err != nil {
+			return s
+		}
+	}
+	return out.String()
 }
 
 func max(a, b layout.Length) layout.Length {
@@ -258,5 +287,5 @@ func max(a, b layout.Length) layout.Length {
 }
 
 func escapeString(s string) string {
-	return html.EscapeString(s)
+	return stdhtml.EscapeString(s)
 }
