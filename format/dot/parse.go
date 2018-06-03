@@ -150,6 +150,8 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 			setString(&node.Label, attr.Val)
 		case "color":
 			setColor(&node.FontColor, attr.Val)
+		case "fontname":
+			setString(&node.FontName, attr.Val)
 		case "fontsize":
 			setLength(&node.FontSize, attr.Val, layout.Point)
 		case "pencolor":
@@ -177,6 +179,8 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 			setString(&edge.Label, attr.Val)
 		case "color":
 			setColor(&edge.FontColor, attr.Val)
+		case "fontname":
+			setString(&edge.FontName, attr.Val)
 		case "fontsize":
 			setLength(&edge.FontSize, attr.Val, layout.Point)
 		case "pencolor":

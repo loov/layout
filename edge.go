@@ -8,6 +8,7 @@ type Edge struct {
 	Tooltip string
 
 	Label     string
+	FontName  string
 	FontSize  Length
 	FontColor Color
 

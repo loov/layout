@@ -11,6 +11,7 @@ type Node struct {
 	Weight float64
 
 	Tooltip   string
+	FontName  string
 	FontSize  Length
 	FontColor Color
 
