@@ -239,8 +239,15 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		if label := node.DefaultLabel(); label != "" {
 			if label[0] == '<' && label[len(label)-1] == '>' {
-				svg.write("<foreignObject x='%v' y='%v' width='100%%' height='100%%'>", node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y)
-				svg.write(`<body xmlns="http://www.w3.org/1999/xhtml">%v</body>`, lowercaseTags(label[1:len(label)-1]))
+				svg.write("<foreignObject x='%v' y='%v' width='100%%' height='100%%' ", node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y)
+				if node.FontSize != 0 {
+					svg.write(" font-size='%v'", node.FontSize)
+				}
+				if node.FontName != "" {
+					svg.write(" font-family='%v'", node.FontName)
+				}
+				svg.write(" color='%v'", dkcolor(node.FontColor))
+				svg.write(`><body xmlns="http://www.w3.org/1999/xhtml">%v</body>`, lowercaseTags(label[1:len(label)-1]))
 				svg.write("</foreignObject>")
 			} else {
 				lines := strings.Split(label, "\n")
@@ -248,7 +255,12 @@ func Write(w io.Writer, graph *layout.Graph) error {
 				top += graph.LineHeight * 0.5
 				for _, line := range lines {
 					svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
-					svg.write(" font-size='%v'", node.FontSize)
+					if node.FontSize != 0 {
+						svg.write(" font-size='%v'", node.FontSize)
+					}
+					if node.FontName != "" {
+						svg.write(" font-family='%v'", node.FontName)
+					}
 					svg.write(" color='%v'", dkcolor(node.FontColor))
 					svg.write(">%v</text>\n", escapeString(line))
 					top += graph.LineHeight
