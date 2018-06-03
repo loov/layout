@@ -37,7 +37,8 @@ func main() {
 
 	graphs, err := dot.Parse(in)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "failed to parse input")
+		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, "failed to parse input")
 		os.Exit(1)
 		return
 	}
