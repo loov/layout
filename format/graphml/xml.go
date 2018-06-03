@@ -6,8 +6,10 @@ type File struct {
 	XMLName           xml.Name `xml:"graphml"`
 	XMLNS             string   `xml:"xmlns,attr"`
 	XMLNSXSI          string   `xml:"xmlns:xsi,attr"`
+	XMLNSY            string   `xml:"xmlns:y,attr"`
 	XSISchemaLocation string   `xml:"xsi:schemalocation,attr"`
 
+	Key    []Key    `xml:"key"`
 	Graphs []*Graph `xml:"graph"`
 }
 
@@ -15,6 +17,7 @@ func NewFile() *File {
 	file := &File{}
 	file.XMLNS = "http://graphml.graphdrawing.org/xmlns"
 	file.XMLNSXSI = "http://www.w3.org/2001/XMLSchema-instance"
+	file.XMLNSY = "http://www.yworks.com/xml/graphml"
 	file.XSISchemaLocation = "http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"
 	return file
 }
@@ -27,8 +30,17 @@ type Graph struct {
 	Node      []Node      `xml:"node"`
 	Edge      []Edge      `xml:"edge"`
 	Hyperedge []Hyperedge `xml:"hyperedge"`
-
 	// TODO: parse info
+}
+
+type Key struct {
+	ID  string `xml:"id,attr"`
+	For string `xml:"for,attr"`
+
+	AttrName string `xml:"attr.name,attr,omitempty"`
+	AttrType string `xml:"attr.type,attr,omitempty"`
+
+	YFilesType string `xml:"yfiles.type,attr,omitempty"`
 }
 
 type Node struct {

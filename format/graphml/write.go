@@ -14,6 +14,15 @@ func Write(out io.Writer, graphs ...*layout.Graph) error {
 		file.Graphs = append(file.Graphs, Convert(graph))
 	}
 
+	file.Key = []Key{
+		Key{For: "node", ID: "label", AttrName: "label", AttrType: "string"},
+		Key{For: "node", ID: "shape", AttrName: "shape", AttrType: "string"},
+		Key{For: "edge", ID: "label", AttrName: "label", AttrType: "string"},
+
+		Key{For: "node", ID: "ynodelabel", YFilesType: "nodegraphics"},
+		Key{For: "edge", ID: "yedgelabel", YFilesType: "edgegraphics"},
+	}
+
 	enc := xml.NewEncoder(out)
 	enc.Indent("", "\t")
 	return enc.Encode(file)
@@ -34,6 +43,7 @@ func Convert(graph *layout.Graph) *Graph {
 		addAttr(&outnode.Attrs, "label", node.DefaultLabel())
 		addAttr(&outnode.Attrs, "shape", string(node.Shape))
 		addAttr(&outnode.Attrs, "tooltip", node.Tooltip)
+		addYedLabelAttr(&outnode.Attrs, "ynodelabel", node.DefaultLabel())
 		out.Node = append(out.Node, outnode)
 	}
 
@@ -43,6 +53,7 @@ func Convert(graph *layout.Graph) *Graph {
 		outedge.Target = edge.To.ID
 		addAttr(&outedge.Attrs, "label", edge.Label)
 		addAttr(&outedge.Attrs, "tooltip", edge.Tooltip)
+		addYedLabelAttr(&outedge.Attrs, "yedgelabel", edge.Label)
 		out.Edge = append(out.Edge, outedge)
 	}
 
@@ -56,14 +67,27 @@ func addAttr(attrs *[]Attr, key, value string) {
 	*attrs = append(*attrs, Attr{key, escapeText(value)})
 }
 
+func addYedLabelAttr(attrs *[]Attr, key, value string) {
+	if value == "" {
+		return
+	}
+	var buf bytes.Buffer
+	buf.WriteString(`<y:ShapeNode><y:NodeLabel>`)
+	if err := xml.EscapeText(&buf, []byte(value)); err != nil {
+		// this shouldn't ever happen
+		panic(err)
+	}
+	buf.WriteString(`</y:NodeLabel></y:ShapeNode>`)
+	*attrs = append(*attrs, Attr{key, buf.Bytes()})
+}
+
 func escapeText(s string) []byte {
 	if s == "" {
 		return []byte{}
 	}
 
 	var buf bytes.Buffer
-	err := xml.EscapeText(&buf, []byte(s))
-	if err != nil {
+	if err := xml.EscapeText(&buf, []byte(s)); err != nil {
 		// this shouldn't ever happen
 		panic(err)
 	}
