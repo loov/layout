@@ -222,7 +222,7 @@ func main() {
 		out = file
 	}
 
-	// ponytail: no hier -> svg writer exists; dump the edge matrix
+	// there is no hier -> svg writer, dump the edge matrix
 	_, err = io.WriteString(out, graph.EdgeMatrixString())
 	if err != nil {
 		info("writing %q failed: %v", output, err)

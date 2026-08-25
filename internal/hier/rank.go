@@ -13,7 +13,7 @@ func Rank(graph *Graph) {
 	RankFrontload(graph)
 	RankSameRank(graph)
 
-	// ponytail: greedy tightening, network simplex if edge spans still look long
+	// greedy tightening; network simplex would give optimal edge spans
 	for i := 0; i < 100 && RankMinimizeEdgeStep(graph, i%2 == 0); i++ {
 	}
 	RankCompact(graph)

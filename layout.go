@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"math"
 	"slices"
 
 	"github.com/loov/layout/internal/hier"
@@ -125,6 +126,14 @@ func Hierarchical(graphdef *Graph) {
 		nodedef.Center.Y = Length(node.Center.Y)
 	}
 
+	// real nodes per rank, obstacles for edge routing
+	byRank := make([][]*Node, len(positionedGraph.ByRank))
+	for _, node := range positionedGraph.Nodes {
+		if !node.Virtual {
+			byRank[node.Rank] = append(byRank[node.Rank], reverse[node.ID])
+		}
+	}
+
 	// calculate edges
 	edgePaths := map[[2]hier.ID][]Vector{}
 	for _, source := range positionedGraph.Nodes {
@@ -161,6 +170,8 @@ func Hierarchical(graphdef *Graph) {
 			// clip ends to node outlines so fan-ins don't converge on one point
 			path[0] = sourcedef.Boundary(path[1])
 			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+
+			path = routeAround(path, byRank, source.Rank, sourcedef, targetdef, graphdef.EdgePadding)
 
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
@@ -200,4 +211,77 @@ func reversePath(path []Vector) []Vector {
 		rs = append(rs, p)
 	}
 	return rs
+}
+
+// routeAround inserts waypoints so that no segment of path passes through a
+// node. Segment i connects rank firstRank+i to firstRank+i+1; only nodes on
+// those two ranks can be hit. Obstacles on the lower rank are passed above,
+// on the upper rank below.
+func routeAround(path []Vector, byRank [][]*Node, firstRank int, from, to *Node, pad Length) []Vector {
+	for i := 0; i+1 < len(path); i++ {
+		a, b := path[i], path[i+1]
+		var hit *Node
+		hitDist := Length(math.Inf(1))
+		for rank := firstRank + i; rank <= firstRank+i+1 && rank < len(byRank); rank++ {
+			for _, node := range byRank[rank] {
+				if node == from || node == to || !segmentHitsBox(a, b, node, pad) {
+					continue
+				}
+				// nearest obstacle along the segment first
+				if d := absLength(node.Center.X - a.X); d < hitDist {
+					hit, hitDist = node, d
+				}
+			}
+		}
+		if hit == nil {
+			continue
+		}
+		way := Vector{X: hit.Center.X, Y: hit.Bottom() + pad}
+		if hit.Center.Y > (a.Y+b.Y)/2 {
+			way.Y = hit.Top() - pad
+		}
+		path = slices.Insert(path, i+1, way)
+		// the new waypoint may itself need routing, so segment i is re-checked;
+		// cap the number of detours per edge
+		if len(path) > 64 {
+			break
+		}
+		i-- // re-check segment a→way
+	}
+	return path
+}
+
+func absLength(v Length) Length {
+	if v < 0 {
+		return -v
+	}
+	return v
+}
+
+// segmentHitsBox reports whether segment ab intersects node's box grown by pad
+func segmentHitsBox(a, b Vector, node *Node, pad Length) bool {
+	x0, y0 := float64(node.Left()-pad), float64(node.Top()-pad)
+	x1, y1 := float64(node.Right()+pad), float64(node.Bottom()+pad)
+	dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
+	t0, t1 := 0.0, 1.0
+	clip := func(p, q float64) bool {
+		if p == 0 {
+			return q >= 0
+		}
+		r := q / p
+		if p < 0 {
+			if r > t1 {
+				return false
+			}
+			t0 = math.Max(t0, r)
+		} else {
+			if r < t0 {
+				return false
+			}
+			t1 = math.Min(t1, r)
+		}
+		return true
+	}
+	ax, ay := float64(a.X), float64(a.Y)
+	return clip(-dx, ax-x0) && clip(dx, x1-ax) && clip(-dy, ay-y0) && clip(dy, y1-ay) && t0 <= t1
 }
