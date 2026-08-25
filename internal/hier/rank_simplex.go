@@ -222,11 +222,94 @@ func (s *simplex) exchange(leave, enter int32, side []int32, sideIsTail bool) {
 	}
 	s.cut[enter] = -cutLeave
 	s.cut[leave] = 0
+
+	// the subtree below leave moves under enter's outside endpoint
+	child, _ := s.subtreeSide(leave)
 	s.tree[leave] = false
 	s.tree[enter] = true
+	s.moveSubtree(child, enter)
+}
 
-	// renumber the lca subtree; its number range does not change
-	s.renumber(lca, s.low[lca])
+// moveSubtree fixes the postorder numbering after the subtree of child
+// (numbers [a, a+k-1]) has been re-attached through edge enter. The smaller
+// of the two parts is walked again; the larger keeps its numbering, fixed
+// arithmetically by cutting a range out and inserting it before the new
+// parent. Postorder numbers of a component are contiguous, and other
+// components are only shifted, so they stay consistent.
+func (s *simplex) moveSubtree(child, enter int32) {
+	a, k := s.low[child], s.lim[child]-s.low[child]+1
+	last := a + k - 1
+	inside, outside := s.tail[enter], s.head[enter]
+	if !s.inSubtree(inside, child) {
+		inside, outside = outside, inside
+	}
+
+	// the component of the exchange; its root keeps the largest number
+	root := child
+	for s.parent[root] >= 0 {
+		root = s.other(s.parent[root], root)
+	}
+	compSize := s.lim[root] - s.low[root] + 1
+
+	if 2*k <= compSize {
+		// move the child subtree under outside; everything else keeps its
+		// relative order
+		p := s.lim[outside] // insertion point, right before the new parent
+		if p > last {
+			p -= k
+		}
+		for v := range s.n {
+			lim := s.lim[v]
+			if a <= lim && lim <= last {
+				continue // moved subtree, renumbered below
+			}
+			if lim > last {
+				lim -= k
+			}
+			if lim >= p {
+				lim += k
+			}
+			s.lim[v] = lim
+			low := s.low[v]
+			if low > last {
+				low -= k
+			}
+			if low > p { // == p: the new parent (or its ancestors) now starts at the subtree
+				low += k
+			}
+			s.low[v] = low
+		}
+		s.parent[inside] = enter
+		s.renumber(inside, p)
+		return
+	}
+
+	// the child subtree is the larger part: make child the component's root,
+	// keep the subtree's numbering compressed to the start of the component
+	// and renumber the rest of the component, rooted at outside, before
+	// inside's number
+	c0 := s.low[root]
+	m := compSize - k
+	p := s.lim[inside] - (a - c0)
+	for v := range s.n {
+		lim := s.lim[v]
+		if lim < a || lim > last {
+			continue // rest of the component, renumbered below; or another component
+		}
+		lim -= a - c0
+		if lim >= p {
+			lim += m
+		}
+		s.lim[v] = lim
+		low := s.low[v] - (a - c0)
+		if low > p {
+			low += m
+		}
+		s.low[v] = low
+	}
+	s.parent[child] = -1
+	s.parent[outside] = enter
+	s.renumber(outside, p)
 }
 
 // treeUpdate walks from v towards the root until w is inside v's subtree,
