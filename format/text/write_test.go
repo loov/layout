@@ -10,11 +10,11 @@ import (
 
 func TestWrite(t *testing.T) {
 	graph := layout.NewDigraph()
-	graph.Splines = layout.SplinesOrtho
 	graph.Edge("A", "B").Label = "yes"
 	graph.Edge("A", "C")
 	graph.Edge("B", "D")
 	graph.Edge("C", "D")
+	Prepare(graph)
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}

@@ -202,6 +202,9 @@ func main() {
 	}
 
 	// layout
+	if *outformat == "txt" || *outformat == "text" {
+		text.Prepare(graph)
+	}
 	var opts layout.Options
 	switch *quality {
 	case "":

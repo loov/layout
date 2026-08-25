@@ -221,7 +221,7 @@ func TestExamplesText(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
 			graph := build()
-			graph.Splines = layout.SplinesOrtho
+			text.Prepare(graph)
 			if err := layout.Hierarchical(graph); err != nil {
 				t.Fatal(err)
 			}

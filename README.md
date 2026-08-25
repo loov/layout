@@ -57,7 +57,7 @@ Other layouts and outputs:
 * `layout.Force(graph)` — force-directed layout for undirected or cyclic graphs.
 * `layout.HierarchicalWith(graph, layout.Fast)` or `layout.Quality` — trade crossings for time.
 * `format/json` — plain coordinates for drawing the graph elsewhere.
-* `format/text` — Unicode box-drawing output for terminals (best with `graph.Splines = layout.SplinesOrtho`).
+* `format/text` — Unicode box-drawing output for terminals; call `text.Prepare(graph)` before laying out.
 
 The same is available from the command line: `glay -l force -q fast -t txt|json|svg|dot input.dot`.
 

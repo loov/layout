@@ -1,15 +1,43 @@
 // Package text draws laid out graphs with Unicode box-drawing characters
 // for terminals. Edges are rasterized onto a character grid as horizontal
 // and vertical runs, so ortho splines look best; diagonal segments become
-// staircases.
+// staircases. Call Prepare before laying out for output with room for
+// the runs; the extra room is carved away again when writing.
 package text
 
 import (
 	"io"
+	"math"
+	"slices"
 	"strings"
 
 	"github.com/loov/layout"
 )
+
+// Prepare sets ortho edges and spacing that leaves rows between ranks
+// for horizontal runs and arrowheads: more fan-out needs more rows.
+func Prepare(graph *layout.Graph) {
+	graph.Splines = layout.SplinesOrtho
+	if graph.LineHeight <= 0 {
+		graph.LineHeight = 16
+	}
+	fan := map[*layout.Node]int{}
+	labels := false
+	for _, edge := range graph.Edges {
+		fan[edge.From]++
+		fan[edge.To]++
+		labels = labels || edge.Label != ""
+	}
+	rows := 2.0
+	for _, n := range fan {
+		rows = max(rows, 2+math.Sqrt(float64(n)))
+	}
+	if labels {
+		rows += 2
+	}
+	graph.RowPadding = graph.LineHeight * layout.Length(math.Min(rows, 8))
+	graph.NodePadding = graph.LineHeight * 2
+}
 
 // line direction bits of a cell
 const (
@@ -32,11 +60,11 @@ var box = [16]rune{
 var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
 
 type canvas struct {
-	w, h         int
-	cells        []rune
-	lines        []int  // direction mask per cell, for joining edge runs
-	solid        []bool // cells covered by a node; edges do not draw there
-	lastX, lastY int    // last cell an edge run drew into
+	w, h   int
+	cells  []rune
+	lines  []int  // direction mask per cell, for joining edge runs
+	solid  []bool // cells covered by a node; edges do not draw there
+	dashed bool   // straight runs drawn from now on are dashed
 }
 
 func (c *canvas) set(x, y int, r rune) {
@@ -53,6 +81,31 @@ func (c *canvas) line(x, y int, mask int) {
 	i := y*c.w + x
 	c.lines[i] |= mask
 	c.cells[i] = box[c.lines[i]]
+	if c.dashed {
+		switch c.lines[i] {
+		case up, down, up | down:
+			c.cells[i] = '┊'
+		case left, right, left | right:
+			c.cells[i] = '┈'
+		}
+	}
+}
+
+// frame draws a rectangle outline through the line merge, so that edges
+// crossing it join instead of overwriting it
+func (c *canvas) frame(x0, y0, x1, y1 int) {
+	for x := x0; x < x1; x++ {
+		c.line(x, y0, right)
+		c.line(x+1, y0, left)
+		c.line(x, y1, right)
+		c.line(x+1, y1, left)
+	}
+	for y := y0; y < y1; y++ {
+		c.line(x0, y, down)
+		c.line(x0, y+1, up)
+		c.line(x1, y, down)
+		c.line(x1, y+1, up)
+	}
 }
 
 func (c *canvas) text(x, y int, s string) {
@@ -84,7 +137,7 @@ func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row 
 		x0, y0 := col(origin.X+rec.TopLeft.X), row(origin.Y+rec.TopLeft.Y)
 		x1, y1 := col(origin.X+rec.BottomRight.X), row(origin.Y+rec.BottomRight.Y)
 		r := []rune(rec.Text)
-		c.text((x0+x1+1)/2-len(r)/2, (y0+y1)/2, rec.Text)
+		c.text((x0+x1+1-len(r))/2, (y0+y1)/2, rec.Text)
 		return
 	}
 	// dividers first, so that field texts win when rows are too coarse
@@ -139,8 +192,9 @@ func absLength(v layout.Length) layout.Length {
 	return v
 }
 
-func dx(dir int) int { return map[int]int{left: -1, right: 1}[dir] }
-func dy(dir int) int { return map[int]int{up: -1, down: 1}[dir] }
+func opposite(dir int) int { return map[int]int{up: down, down: up, left: right, right: left}[dir] }
+func dx(dir int) int       { return map[int]int{left: -1, right: 1}[dir] }
+func dy(dir int) int       { return map[int]int{up: -1, down: 1}[dir] }
 func sign(v int) int {
 	if v < 0 {
 		return -1
@@ -172,9 +226,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	c.lines = make([]int, c.w*c.h)
 	c.solid = make([]bool, c.w*c.h)
 
+	c.dashed = true
 	for _, cluster := range graph.Clusters {
-		c.rect(col(cluster.TopLeft.X), row(cluster.TopLeft.Y), col(cluster.BottomRight.X), row(cluster.BottomRight.Y), "┌┐└┘┄┆")
+		c.frame(col(cluster.TopLeft.X), row(cluster.TopLeft.Y), col(cluster.BottomRight.X), row(cluster.BottomRight.Y))
 	}
+	c.dashed = false
 
 	for _, node := range graph.Nodes {
 		x0, y0 := col(node.Left()), row(node.Top())
@@ -211,7 +267,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 		for i, line := range lines {
 			r := []rune(line)
-			c.text((x0+x1+1)/2-len(r)/2, (y0+y1)/2-len(lines)/2+i, line)
+			c.text((x0+x1+1-len(r))/2, (y0+y1)/2-len(lines)/2+i, line)
 		}
 	}
 
@@ -224,11 +280,15 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		for i, p := range path {
 			cells[i] = [2]int{col(p.X), row(p.Y)}
 		}
+		c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
 		for i := 0; i+1 < len(cells); i++ {
 			c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
 		}
+		c.dashed = false
 		if edge.Directed && edge.ArrowHead != layout.ArrowNone {
-			// the arrowhead sits on the node border, pointing along the last segment
+			// the arrowhead points along the last segment; it sits in the
+			// gap before the node when the run there is straight, else on
+			// the node border
 			a, b := path[len(path)-2], path[len(path)-1]
 			dir := down
 			switch dx, dy := b.X-a.X, b.Y-a.Y; {
@@ -240,6 +300,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 				dir = left
 			}
 			end := cells[len(cells)-1]
+			if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
+				end = [2]int{px, py}
+			}
 			c.set(end[0], end[1], arrow[dir])
 		}
 	}
@@ -254,11 +317,58 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 	}
 
+	grid := make([][]rune, c.h)
+	for y := range grid {
+		grid[y] = c.cells[y*c.w : (y+1)*c.w]
+	}
+	grid = carve(grid, " │┊┆", 1)
+	grid = transpose(carve(transpose(grid), " ─┈┄", 2))
+
 	var out strings.Builder
-	for y := 0; y < c.h; y++ {
-		out.WriteString(strings.TrimRight(string(c.cells[y*c.w:(y+1)*c.w]), " "))
+	for _, line := range grid {
+		out.WriteString(strings.TrimRight(string(line), " "))
 		out.WriteByte('\n')
 	}
 	_, err := io.WriteString(w, out.String())
 	return err
+}
+
+// carve removes rows that only continue straight lines or blanks and
+// repeat the row before them, keeping at most keep of every such run.
+// Removing them keeps the drawing connected, just tighter.
+func carve(grid [][]rune, straight string, keep int) [][]rune {
+	out := grid[:0:0]
+	run := 0
+	for i, row := range grid {
+		plain := true
+		for _, r := range row {
+			if !strings.ContainsRune(straight, r) {
+				plain = false
+				break
+			}
+		}
+		if plain && i > 0 && slices.Equal(row, grid[i-1]) {
+			run++
+		} else {
+			run = 0
+		}
+		if run < keep {
+			out = append(out, row)
+		}
+	}
+	return out
+}
+
+func transpose(grid [][]rune) [][]rune {
+	if len(grid) == 0 {
+		return nil
+	}
+	out := make([][]rune, len(grid[0]))
+	for x := range out {
+		out[x] = make([]rune, len(grid))
+		for y := range grid {
+			out[x][y] = grid[y][x]
+		}
+	}
+	return out
 }
