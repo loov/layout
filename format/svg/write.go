@@ -4,6 +4,7 @@ import (
 	"fmt"
 	stdhtml "html"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 
@@ -85,7 +86,9 @@ func vec(x, y layout.Length) string {
 		strconv.FormatFloat(float64(y), 'f', -1, 32) + " "
 }
 
-// splinePath draws a Catmull-Rom spline through the path points as cubic beziers.
+// splinePath draws a smooth curve through the path points as cubic beziers.
+// Tangents follow the neighboring points, scaled to each segment's own length
+// so that a long segment doesn't distort a short one next to it.
 func splinePath(path []layout.Vector) string {
 	var line strings.Builder
 	line.WriteString("M" + vec(path[0].X, path[0].Y))
@@ -94,19 +97,23 @@ func splinePath(path []layout.Vector) string {
 		return line.String()
 	}
 
-	at := func(i int) layout.Vector {
-		if i < 0 {
-			i = 0
+	// unit tangent at each point
+	tangent := make([]layout.Vector, len(path))
+	for i := range path {
+		a, b := path[max(0, i-1)], path[min(len(path)-1, i+1)]
+		d := layout.Vector{X: b.X - a.X, Y: b.Y - a.Y}
+		if l := math.Hypot(float64(d.X), float64(d.Y)); l > 0 {
+			d.X /= layout.Length(l)
+			d.Y /= layout.Length(l)
 		}
-		if i >= len(path) {
-			i = len(path) - 1
-		}
-		return path[i]
+		tangent[i] = d
 	}
+
 	for i := 0; i+1 < len(path); i++ {
-		p0, p1, p2, p3 := at(i-1), at(i), at(i+1), at(i+2)
-		c1 := layout.Vector{X: p1.X + (p2.X-p0.X)/6, Y: p1.Y + (p2.Y-p0.Y)/6}
-		c2 := layout.Vector{X: p2.X - (p3.X-p1.X)/6, Y: p2.Y - (p3.Y-p1.Y)/6}
+		p1, p2 := path[i], path[i+1]
+		k := layout.Length(math.Hypot(float64(p2.X-p1.X), float64(p2.Y-p1.Y))) / 3
+		c1 := layout.Vector{X: p1.X + tangent[i].X*k, Y: p1.Y + tangent[i].Y*k}
+		c2 := layout.Vector{X: p2.X - tangent[i+1].X*k, Y: p2.Y - tangent[i+1].Y*k}
 		line.WriteString("C" + vec(c1.X, c1.Y) + vec(c2.X, c2.Y) + vec(p2.X, p2.Y))
 	}
 	return line.String()
@@ -241,13 +248,6 @@ func lowercaseTags(s string) string {
 		}
 	}
 	return out.String()
-}
-
-func max(a, b layout.Length) layout.Length {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 func escapeString(s string) string {
