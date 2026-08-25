@@ -11,6 +11,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
 	"github.com/loov/layout/format/graphml"
 )
@@ -59,13 +60,19 @@ func main() {
 		return
 	}
 
-	if *eraseLabels {
-		for _, graph := range graphs {
-			for _, node := range graph.Nodes {
+	for _, graph := range graphs {
+		for _, node := range graph.Nodes {
+			if *eraseLabels {
 				node.Label = ""
+			}
+			if *setShape != "" {
+				node.Shape = layout.Shape(*setShape)
 			}
 		}
 	}
 
-	graphml.Write(out, graphs...)
+	if err := graphml.Write(out, graphs...); err != nil {
+		fmt.Fprintln(os.Stderr, "failed to write output:", err)
+		os.Exit(1)
+	}
 }

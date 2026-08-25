@@ -33,7 +33,7 @@ var (
 	memprofile = flag.String("memprofile", "", "profile memory usage")
 
 	informat  = flag.String("s", "", "input format")
-	outformat = flag.String("t", "svg", "output format")
+	outformat = flag.String("t", "", "output format (default from the output file extension, else svg)")
 	outfile   = flag.String("o", "", "output file (default stdout)")
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
@@ -85,9 +85,6 @@ func main() {
 		}
 	}
 
-	if output != "" {
-		*outformat = ""
-	}
 	if *outformat == "" {
 		// try to detect output format
 		switch strings.ToLower(filepath.Ext(output)) {

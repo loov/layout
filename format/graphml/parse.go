@@ -2,6 +2,7 @@ package graphml
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -33,7 +34,9 @@ func Parse(r io.Reader) ([]*layout.Graph, error) {
 		graph := layout.NewGraph()
 		graph.ID = src.ID
 		graph.Directed = src.EdgeDefault == Directed
-		convertGraph(graph, src, keyName)
+		if err := convertGraph(graph, src, keyName); err != nil {
+			return nil, err
+		}
 		graphs = append(graphs, graph)
 	}
 	return graphs, nil
@@ -49,8 +52,11 @@ func ParseFile(path string) ([]*layout.Graph, error) {
 	return Parse(file)
 }
 
-func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) {
-	for _, srcnode := range src.Node {
+func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) error {
+	for i, srcnode := range src.Node {
+		if srcnode.ID == "" {
+			return fmt.Errorf("graph %q: node %d has no id", src.ID, i)
+		}
 		node := graph.Node(srcnode.ID)
 		for _, attr := range srcnode.Attrs {
 			value := attrText(attr)
@@ -64,10 +70,15 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) {
 			}
 		}
 		for _, sub := range srcnode.Graph {
-			convertGraph(graph, sub, keyName)
+			if err := convertGraph(graph, sub, keyName); err != nil {
+				return err
+			}
 		}
 	}
-	for _, srcedge := range src.Edge {
+	for i, srcedge := range src.Edge {
+		if srcedge.Source == "" || srcedge.Target == "" {
+			return fmt.Errorf("graph %q: edge %d has an empty endpoint", src.ID, i)
+		}
 		edge := layout.NewEdge(graph.Node(srcedge.Source), graph.Node(srcedge.Target))
 		edge.Directed = graph.Directed
 		if srcedge.Directed != nil {
@@ -84,6 +95,7 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) {
 		}
 		graph.AddEdge(edge)
 	}
+	return nil
 }
 
 // attrText returns the plain text of a data element, unescaping the inner xml

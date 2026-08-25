@@ -5,6 +5,7 @@ package graphml
 import (
 	"bytes"
 	"encoding/xml"
+	"fmt"
 	"io"
 
 	"github.com/loov/layout"
@@ -18,12 +19,14 @@ func Write(out io.Writer, graphs ...*layout.Graph) error {
 	}
 
 	file.Key = []Key{
-		Key{For: "node", ID: "label", AttrName: "label", AttrType: "string"},
-		Key{For: "node", ID: "shape", AttrName: "shape", AttrType: "string"},
-		Key{For: "edge", ID: "label", AttrName: "label", AttrType: "string"},
+		{For: "node", ID: "d0", AttrName: "label", AttrType: "string"},
+		{For: "node", ID: "d1", AttrName: "shape", AttrType: "string"},
+		{For: "node", ID: "d2", AttrName: "tooltip", AttrType: "string"},
+		{For: "edge", ID: "d3", AttrName: "label", AttrType: "string"},
+		{For: "edge", ID: "d4", AttrName: "tooltip", AttrType: "string"},
 
-		Key{For: "node", ID: "ynodelabel", YFilesType: "nodegraphics"},
-		Key{For: "edge", ID: "yedgelabel", YFilesType: "edgegraphics"},
+		{For: "node", ID: "d5", YFilesType: "nodegraphics"},
+		{For: "edge", ID: "d6", YFilesType: "edgegraphics"},
 	}
 
 	enc := xml.NewEncoder(out)
@@ -44,10 +47,10 @@ func Convert(graph *layout.Graph) *Graph {
 	for _, node := range graph.Nodes {
 		outnode := Node{}
 		outnode.ID = node.ID
-		addAttr(&outnode.Attrs, "label", node.DefaultLabel())
-		addAttr(&outnode.Attrs, "shape", string(node.Shape))
-		addAttr(&outnode.Attrs, "tooltip", node.Tooltip)
-		addYedLabelAttr(&outnode.Attrs, "ynodelabel", node.DefaultLabel())
+		addAttr(&outnode.Attrs, "d0", node.DefaultLabel())
+		addAttr(&outnode.Attrs, "d1", string(node.Shape))
+		addAttr(&outnode.Attrs, "d2", node.Tooltip)
+		addYedAttr(&outnode.Attrs, "d5", "y:ShapeNode", "y:NodeLabel", node.DefaultLabel())
 		out.Node = append(out.Node, outnode)
 	}
 
@@ -55,9 +58,13 @@ func Convert(graph *layout.Graph) *Graph {
 		outedge := Edge{}
 		outedge.Source = edge.From.ID
 		outedge.Target = edge.To.ID
-		addAttr(&outedge.Attrs, "label", edge.Label)
-		addAttr(&outedge.Attrs, "tooltip", edge.Tooltip)
-		addYedLabelAttr(&outedge.Attrs, "yedgelabel", edge.Label)
+		if edge.Directed != graph.Directed {
+			directed := edge.Directed
+			outedge.Directed = &directed
+		}
+		addAttr(&outedge.Attrs, "d3", edge.Label)
+		addAttr(&outedge.Attrs, "d4", edge.Tooltip)
+		addYedAttr(&outedge.Attrs, "d6", "y:PolyLineEdge", "y:EdgeLabel", edge.Label)
 		out.Edge = append(out.Edge, outedge)
 	}
 
@@ -71,17 +78,17 @@ func addAttr(attrs *[]Attr, key, value string) {
 	*attrs = append(*attrs, Attr{key, escapeText(value)})
 }
 
-func addYedLabelAttr(attrs *[]Attr, key, value string) {
+func addYedAttr(attrs *[]Attr, key, shape, label, value string) {
 	if value == "" {
 		return
 	}
 	var buf bytes.Buffer
-	buf.WriteString(`<y:ShapeNode><y:NodeLabel>`)
+	fmt.Fprintf(&buf, "<%s><%s>", shape, label)
 	if err := xml.EscapeText(&buf, []byte(value)); err != nil {
 		// this shouldn't ever happen
 		panic(err)
 	}
-	buf.WriteString(`</y:NodeLabel></y:ShapeNode>`)
+	fmt.Fprintf(&buf, "</%s></%s>", label, shape)
 	*attrs = append(*attrs, Attr{key, buf.Bytes()})
 }
 
