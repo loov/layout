@@ -418,6 +418,23 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
 
+	// reserve a label strip at the top of every labeled cluster by making
+	// its first border nodes taller than the rank; outer clusters first so
+	// nested labels stack
+	for _, clusterdef := range graphdef.Clusters {
+		if clusterdef.Label == "" {
+			continue
+		}
+		cluster := clusters[clusterdef]
+		half := float32(0)
+		for _, node := range orderedGraph.ByRank[cluster.MinRank] {
+			half = max(half, node.Radius.Y)
+		}
+		height := float32(2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y)
+		cluster.Left[0].Radius.Y = half + height
+		cluster.Right[0].Radius.Y = half + height
+	}
+
 	// position nodes
 	positionedGraph := hier.DefaultPosition(orderedGraph)
 
