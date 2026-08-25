@@ -3,6 +3,8 @@ package layout
 import (
 	"fmt"
 	"math"
+	"slices"
+	"strings"
 )
 
 // Diagnostics counts layout defects that are otherwise only visible by eye.
@@ -316,20 +318,26 @@ func Diagnose(graph *Graph) Diagnostics {
 		labels = append(labels, box{edge.LabelPos.Add(Vector{-edge.LabelRadius.X, -edge.LabelRadius.Y}), edge.LabelPos.Add(edge.LabelRadius)})
 	}
 	for i, l := range labels {
-		hit := false
+		var hits []string
 		for _, node := range graph.Nodes {
 			tl, br := boxes(node)
-			hit = hit || overlap(l.tl, l.br, tl, br)
+			if overlap(l.tl, l.br, tl, br) {
+				hits = append(hits, "node "+node.String())
+			}
 		}
 		for _, s := range segments {
-			hit = hit || segmentHitsRect(s.a, s.b, l.tl.Add(Vector{eps, eps}), l.br.Add(Vector{-eps, -eps}))
+			if segmentHitsRect(s.a, s.b, l.tl.Add(Vector{eps, eps}), l.br.Add(Vector{-eps, -eps})) {
+				hits = append(hits, "edge "+s.edge.String())
+			}
 		}
-		for _, o := range labels[:i] {
-			hit = hit || overlap(l.tl, l.br, o.tl, o.br)
+		for k, o := range labels[:i] {
+			if overlap(l.tl, l.br, o.tl, o.br) {
+				hits = append(hits, "label "+labelEdges[k].Label)
+			}
 		}
-		if hit {
+		if len(hits) > 0 {
 			m.LabelOverlaps++
-			m.Details = append(m.Details, fmt.Sprintf("label %q overlaps", labelEdges[i].Label))
+			m.Details = append(m.Details, fmt.Sprintf("label %q of %v overlaps %s", labelEdges[i].Label, labelEdges[i], strings.Join(slices.Compact(hits), ", ")))
 		}
 	}
 	return m

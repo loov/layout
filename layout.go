@@ -308,12 +308,17 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	nodes := map[*Node]hier.ID{}
 	reverse := map[hier.ID]*Node{}
 
-	// nodes with self-loops need room on their right for the loop
+	// nodes with self-loops need room on their right for the loop and
+	// its label
 	loopWidth := 2 * graphdef.NodePadding
-	hasLoop := map[*Node]bool{}
+	loopExtra := map[*Node]Length{}
 	for _, edge := range graphdef.Edges {
 		if edge.From == edge.To {
-			hasLoop[edge.From] = true
+			extra := loopWidth
+			if edge.Label != "" {
+				extra += graphdef.EdgePadding + 2*edge.LabelRadius.X
+			}
+			loopExtra[edge.From] = max(loopExtra[edge.From], extra)
 		}
 	}
 
@@ -439,8 +444,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 		nodedef := reverse[hier.ID(id)]
 		node.Radius.X = float32(nodedef.Radius.X + graphdef.NodePadding)
-		if hasLoop[nodedef] {
-			node.Radius.X += float32(loopWidth / 2)
+		if extra := loopExtra[nodedef]; extra > 0 {
+			node.Radius.X += float32(extra / 2)
 		}
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
@@ -472,8 +477,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		node := positionedGraph.Nodes[id]
 		nodedef.Center.X = Length(node.Center.X)
 		nodedef.Center.Y = Length(node.Center.Y)
-		if hasLoop[nodedef] {
-			nodedef.Center.X -= loopWidth / 2
+		if extra := loopExtra[nodedef]; extra > 0 {
+			nodedef.Center.X -= extra / 2
 		}
 	}
 
@@ -547,7 +552,12 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 				if edges, ok := labelNode[target]; ok {
 					point.X = Length(target.Center.X + target.Anchor)
 					// labels sit right beside the line, stacked vertically
-					y := point.Y - Length(target.Radius.Y) + graphdef.EdgePadding
+					// around the node's center
+					var height Length
+					for _, edge := range edges {
+						height += 2 * edge.LabelRadius.Y
+					}
+					y := point.Y - height/2
 					for _, edge := range edges {
 						edge.LabelPos = Vector{X: point.X + graphdef.EdgePadding + edge.LabelRadius.X, Y: y + edge.LabelRadius.Y}
 						y += 2 * edge.LabelRadius.Y
@@ -688,7 +698,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			}
 		}
 	}
-	nudgeLabels(graphdef.Edges, graphdef.EdgePadding, 2*graphdef.RowPadding)
+	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.EdgePadding, 2*graphdef.RowPadding)
 }
 
 // flattenPath approximates the rounded corners drawn by the writers
@@ -865,20 +875,28 @@ func layoutPinned(graph *Graph) {
 
 // nudgeLabels slides edge labels sideways along their rank until they
 // clear every edge path and the labels placed before them.
-func nudgeLabels(edges []*Edge, pad, radius Length) {
+func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length) {
 	paths := make([][]Vector, len(edges))
 	for i, edge := range edges {
 		paths[i] = flattenPath(edge.Path, radius, pad)
 	}
 	var placed []*Edge
 	clear := func(edge *Edge, at Vector) bool {
-		tl := at.Add(Vector{-edge.LabelRadius.X - pad, -edge.LabelRadius.Y})
-		br := at.Add(Vector{edge.LabelRadius.X + pad, edge.LabelRadius.Y})
+		// a hair inside the padding, so that a line at exactly pad
+		// distance (the label's own edge) does not count as a hit
+		tl := at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y})
+		br := at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})
 		for _, path := range paths {
 			for i := 0; i+1 < len(path); i++ {
 				if segmentHitsRect(path[i], path[i+1], tl, br) {
 					return false
 				}
+			}
+		}
+		// nodes only need to stay clear of the text itself
+		for _, node := range nodes {
+			if node.Left() < br.X-pad && tl.X+pad < node.Right() && node.Top() < br.Y && tl.Y < node.Bottom() {
+				return false
 			}
 		}
 		for _, other := range placed {
@@ -893,15 +911,19 @@ func nudgeLabels(edges []*Edge, pad, radius Length) {
 		if edge.Label == "" || len(edge.Path) < 2 {
 			continue
 		}
-		// alternate right and left in growing steps
-		for step := 0; step <= 8; step++ {
-			dx := Length((step+1)/2) * 2 * pad
-			if step%2 == 0 {
-				dx = -dx
-			}
-			if at := edge.LabelPos.Add(Vector{dx, 0}); clear(edge, at) {
-				edge.LabelPos = at
-				break
+		// candidates in growing rings: along the rank first, then across
+		// it, then diagonally
+		found := false
+		for ring := 0; ring <= 4 && !found; ring++ {
+			d := Length(ring) * 2 * pad
+			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
+				if at := edge.LabelPos.Add(Vector{dir.X * d, dir.Y * d}); clear(edge, at) {
+					edge.LabelPos, found = at, true
+					break
+				}
+				if ring == 0 {
+					break
+				}
 			}
 		}
 		placed = append(placed, edge)
