@@ -27,6 +27,9 @@ const (
 // Vector is a point or size in the plane.
 type Vector struct{ X, Y Length }
 
+// Add returns the component-wise sum of v and o.
+func (v Vector) Add(o Vector) Vector { return Vector{X: v.X + o.X, Y: v.Y + o.Y} }
+
 // Length is a distance in points.
 type Length float64
 

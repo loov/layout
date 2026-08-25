@@ -105,6 +105,16 @@ var examples = map[string]func() *layout.Graph{
 		graph.MaxRank = []*layout.Node{graph.Node("Y")}
 		return graph
 	},
+	"components": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("A", "B")
+		graph.Edge("A", "C")
+		graph.Edge("X", "Y")
+		graph.Edge("Y", "Z")
+		graph.Edge("Z", "X")
+		graph.Node("Lonely")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

@@ -106,6 +106,94 @@ func Hierarchical(graphdef *Graph) {
 		}
 	}()
 
+	left := Length(0)
+	for _, component := range components(graphdef) {
+		hierarchicalComponent(component)
+		_, size := component.Bounds()
+		shift := Vector{X: left}
+		for _, node := range component.Nodes {
+			node.Center = node.Center.Add(shift)
+		}
+		for _, edge := range component.Edges {
+			for i, p := range edge.Path {
+				edge.Path[i] = p.Add(shift)
+			}
+		}
+		left += size.X + 2*graphdef.NodePadding
+	}
+}
+
+// components splits the graph into connected components, each a Graph
+// sharing the original nodes, edges and settings. Components are laid out
+// independently and then placed side by side.
+func components(graphdef *Graph) []*Graph {
+	parent := map[*Node]*Node{}
+	var find func(n *Node) *Node
+	find = func(n *Node) *Node {
+		for parent[n] != nil && parent[n] != n {
+			n = parent[n]
+		}
+		return n
+	}
+	union := func(a, b *Node) { parent[find(a)] = find(b) }
+	for _, node := range graphdef.Nodes {
+		parent[node] = node
+	}
+	for _, edge := range graphdef.Edges {
+		union(edge.From, edge.To)
+	}
+	for _, group := range graphdef.SameRank {
+		for _, node := range group[1:] {
+			union(group[0], node)
+		}
+	}
+	// min/max pinned nodes share a rank, treat them as connected
+	for _, pinned := range [][]*Node{graphdef.MinRank, graphdef.MaxRank} {
+		for _, node := range pinned {
+			union(pinned[0], node)
+		}
+	}
+
+	byRoot := map[*Node]*Graph{}
+	var result []*Graph
+	sub := func(node *Node) *Graph {
+		root := find(node)
+		graph := byRoot[root]
+		if graph == nil {
+			copy := *graphdef
+			copy.Nodes, copy.Edges, copy.SameRank, copy.MinRank, copy.MaxRank = nil, nil, nil, nil, nil
+			graph = &copy
+			byRoot[root] = graph
+			result = append(result, graph)
+		}
+		return graph
+	}
+	for _, node := range graphdef.Nodes {
+		g := sub(node)
+		g.Nodes = append(g.Nodes, node)
+	}
+	for _, edge := range graphdef.Edges {
+		g := sub(edge.From)
+		g.Edges = append(g.Edges, edge)
+	}
+	for _, group := range graphdef.SameRank {
+		g := sub(group[0])
+		g.SameRank = append(g.SameRank, group)
+	}
+	for _, node := range graphdef.MinRank {
+		g := sub(node)
+		g.MinRank = append(g.MinRank, node)
+	}
+	for _, node := range graphdef.MaxRank {
+		g := sub(node)
+		g.MaxRank = append(g.MaxRank, node)
+	}
+	return result
+}
+
+// hierarchicalComponent lays out one connected graph top to bottom,
+// placing it to the right of whatever the previous components occupy.
+func hierarchicalComponent(graphdef *Graph) {
 	nodes := map[*Node]hier.ID{}
 	reverse := map[hier.ID]*Node{}
 
