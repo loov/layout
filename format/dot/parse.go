@@ -278,8 +278,6 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		switch attr.Key {
 		case "style":
 			filled = strings.Contains(attr.Val, "filled")
-		case "weight":
-			setFloat(&node.Weight, attr.Val)
 		case "shape":
 			setShape(&node.Shape, attr.Val)
 		case "label":

@@ -5,12 +5,6 @@ import (
 	"slices"
 )
 
-// DefaultPosition does recommended positioning algorithm
-func DefaultPosition(graph *Graph) *Graph {
-	Position(graph)
-	return graph
-}
-
 // Position assigns node centers: rows by rank height, columns by Brandes-Köpf.
 func Position(graph *Graph) {
 	PositionInitial(graph)

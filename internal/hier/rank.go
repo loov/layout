@@ -2,12 +2,6 @@ package hier
 
 import "slices"
 
-// DefaultRank does recommended ranking algorithm
-func DefaultRank(graph *Graph) *Graph {
-	Rank(graph)
-	return graph
-}
-
 // Rank assigns ranks with the network simplex method, evens out rank
 // widths and fills in ByRank.
 func Rank(graph *Graph) { RankWith(graph, true) }

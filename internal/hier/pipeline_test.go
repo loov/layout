@@ -7,11 +7,11 @@ import (
 
 func checkPipeline(t *testing.T, name string, graph *Graph) {
 	t.Helper()
-	DefaultDecycle(graph)
+	Decycle(graph)
 	if graph.IsCyclic() {
 		t.Errorf("%s: still cyclic after decycle", name)
 	}
-	DefaultRank(graph)
+	Rank(graph)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
 			if dst.Rank <= src.Rank {
@@ -24,7 +24,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 			t.Errorf("%s: empty rank %d", name, i)
 		}
 	}
-	DefaultAddVirtuals(graph)
+	AddVirtuals(graph)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
 			if dst.Rank-src.Rank != 1 {
@@ -37,7 +37,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 	}
 	OrderRanksDepthFirst(graph)
 	before := graph.TotalCrossings()
-	DefaultOrderRanks(graph)
+	OrderRanks(graph)
 	after := graph.TotalCrossings()
 	if after > before {
 		t.Errorf("%s: ordering made crossings worse %v -> %v", name, before, after)
@@ -45,7 +45,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 	for _, node := range graph.Nodes {
 		node.Radius = Vector{X: 20, Y: 5}
 	}
-	DefaultPosition(graph)
+	Position(graph)
 	for _, layer := range graph.ByRank {
 		for i := 1; i < len(layer); i++ {
 			a, b := layer[i-1], layer[i]

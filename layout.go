@@ -32,10 +32,6 @@ func (graph *Graph) AssignMissingValues() {
 			node.Shape = graph.Shape
 		}
 
-		if node.Weight < epsilon {
-			node.Weight = epsilon
-		}
-
 		if node.FontSize <= 0 {
 			node.FontSize = graph.FontSize
 		}
@@ -324,7 +320,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// remove cycles
-	decycledGraph := hier.DefaultDecycle(graph)
+	decycledGraph := graph
+	hier.Decycle(decycledGraph)
 
 	// assign nodes to ranks
 	rankedGraph := decycledGraph
@@ -350,7 +347,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// create virtual nodes
-	filledGraph := hier.DefaultAddVirtuals(rankedGraph)
+	filledGraph := rankedGraph
+	hier.AddVirtuals(filledGraph)
 
 	// cluster borders
 	clusters := map[*Cluster]*hier.Cluster{}
@@ -436,7 +434,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// position nodes
-	positionedGraph := hier.DefaultPosition(orderedGraph)
+	positionedGraph := orderedGraph
+	hier.Position(positionedGraph)
 
 	// assign final positions; loop nodes were widened symmetrically,
 	// shift them left so the extra room is on the right

@@ -9,5 +9,5 @@
 //  4. OrderRanks orders nodes within ranks to reduce edge crossings.
 //  5. Position assigns coordinates using the Brandes-Köpf algorithm.
 //
-// Each stage has a Default* entry point; the package layout drives them.
+// The package layout drives the stages in that order.
 package hier

@@ -14,16 +14,17 @@ func Example() {
 	graph.AddEdge(d, a)
 
 	// remove cycles from the graph
-	decycledGraph := DefaultDecycle(graph)
+	Decycle(graph)
 
 	// assign nodes to ranks
-	rankedGraph := DefaultRank(decycledGraph)
+	Rank(graph)
 
 	// create virtual nodes
-	filledGraph := DefaultAddVirtuals(rankedGraph)
+	AddVirtuals(graph)
 
 	// order nodes in ranks
-	orderedGraph := DefaultOrderRanks(filledGraph)
+	OrderRanks(graph)
+	orderedGraph := graph
 
 	for _, node := range orderedGraph.Nodes {
 		node.Radius.X = 10
@@ -31,7 +32,8 @@ func Example() {
 	}
 
 	// position nodes
-	positionedGraph := DefaultPosition(orderedGraph)
+	Position(orderedGraph)
+	positionedGraph := orderedGraph
 
 	for _, node := range positionedGraph.Nodes {
 		fmt.Println(node.ID, node.Center.X, node.Center.Y)

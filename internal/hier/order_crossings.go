@@ -5,40 +5,6 @@ import "slices"
 // Crossing counts require up-to-date Node.Pos, see assignPos.
 // Each crossing counts the product of the two edge weights.
 
-// CrossingsUp counts crossings between edges into u and v from the rank above,
-// assuming u is placed left of v.
-func (graph *Graph) CrossingsUp(u, v *Node) float32 {
-	total := float32(0)
-	for _, w := range u.In {
-		for _, z := range v.In {
-			if z.Pos < w.Pos {
-				total += graph.Weight(w, u) * graph.Weight(z, v)
-			}
-		}
-	}
-	return total
-}
-
-// CrossingsDown counts crossings between edges out of u and v to the rank below,
-// assuming u is placed left of v.
-func (graph *Graph) CrossingsDown(u, v *Node) float32 {
-	total := float32(0)
-	for _, w := range u.Out {
-		for _, z := range v.Out {
-			if z.Pos < w.Pos {
-				total += graph.Weight(u, w) * graph.Weight(v, z)
-			}
-		}
-	}
-	return total
-}
-
-// Crossings counts crossings on both sides assuming u is left of v
-func (graph *Graph) Crossings(u, v *Node) float32 {
-	uv, _ := graph.crossingsBothWays(u, v)
-	return uv
-}
-
 // crossingsBothWays returns the crossings of u and v with u left of v, and
 // with v left of u, visiting each neighbor pair once
 func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {

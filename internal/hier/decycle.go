@@ -5,12 +5,6 @@ import (
 	"slices"
 )
 
-// DefaultDecycle runs the recommended decycling algorithm
-func DefaultDecycle(graph *Graph) *Graph {
-	Decycle(graph)
-	return graph
-}
-
 // Decycle makes the graph acyclic by reversing the back edges of a depth
 // first search. Self-loops are removed and duplicate edges merged; edge
 // weights follow the reversed edges.

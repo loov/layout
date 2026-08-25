@@ -11,8 +11,7 @@ import (
 type Node struct {
 	ID string
 
-	Label  string
-	Weight float64
+	Label string
 
 	Tooltip   string
 	FontName  string
@@ -34,7 +33,6 @@ type Node struct {
 func NewNode(id string) *Node {
 	node := &Node{}
 	node.ID = id
-	node.Weight = 1.0
 	node.LineWidth = Point
 	return node
 }

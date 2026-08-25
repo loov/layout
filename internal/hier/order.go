@@ -5,12 +5,6 @@ import (
 	"slices"
 )
 
-// DefaultOrderRanks does recommended rank ordering
-func DefaultOrderRanks(graph *Graph) *Graph {
-	OrderRanks(graph)
-	return graph
-}
-
 // DefaultOrderIterations is the number of ordering sweeps OrderRanks runs
 const DefaultOrderIterations = 24
 

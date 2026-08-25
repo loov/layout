@@ -1,11 +1,5 @@
 package hier
 
-// DefaultAddVirtuals adds basic virtual nodes
-func DefaultAddVirtuals(graph *Graph) *Graph {
-	AddVirtuals(graph)
-	return graph
-}
-
 // AddVirtuals creates nodes for edges spanning multiple ranks
 //
 //	Rank  input    output
