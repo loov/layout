@@ -3,9 +3,11 @@ package layout_test
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -356,4 +358,34 @@ func TestPinned(t *testing.T) {
 			t.Errorf("edge %v label moved from %v to %v", edge, edge.LabelPos, got.LabelPos)
 		}
 	}
+}
+
+// TestDiagnostics records layout.Diagnose for every example and fixture in
+// testdata/diagnostics.txt, so that changes in quality show up in diffs.
+func TestDiagnostics(t *testing.T) {
+	var out bytes.Buffer
+	names := make([]string, 0, len(examples))
+	for name := range examples {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		graph := examples[name]()
+		if err := layout.Hierarchical(graph); err != nil {
+			t.Fatal(err)
+		}
+		fmt.Fprintf(&out, "%-12s %v\n", name, layout.Diagnose(graph))
+	}
+	files, _ := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
+	for _, file := range files {
+		graphs, err := dot.ParseFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := layout.Hierarchical(graphs[0]); err != nil {
+			t.Fatal(err)
+		}
+		fmt.Fprintf(&out, "%-12s %v\n", strings.TrimSuffix(filepath.Base(file), ".gv"), layout.Diagnose(graphs[0]))
+	}
+	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
 }
