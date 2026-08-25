@@ -26,6 +26,18 @@ type Diagnostics struct {
 	JaggedEdges int
 	// BendyEdges counts edges with more than three bends.
 	BendyEdges int
+	// EdgeNearNode counts edges passing within EdgePadding of a node
+	// they don't end at, once per edge and node.
+	EdgeNearNode int
+	// ShallowCrossings counts crossings at less than 30 degrees, which read
+	// as merging lines.
+	ShallowCrossings int
+	// BackEdges counts edges drawn against the rank direction.
+	BackEdges int
+	// EdgeLength is the total length of all edge paths, in points.
+	EdgeLength Length
+	// Area is the width times height of the drawing, in points.
+	Area Length
 	// LabelOverlaps counts labels that intersect a node, an edge segment or
 	// another label.
 	LabelOverlaps int
@@ -36,8 +48,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (m Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d crossings=%d overlaps=%d ends=%d jagged=%d bends=%d labels=%d",
-		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeCrossings, m.EdgeOverlaps, m.EndOverlaps, m.JaggedEdges, m.BendyEdges, m.LabelOverlaps)
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d ends=%d jagged=%d bends=%d back=%d labels=%d length=%.0f area=%.0f",
+		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeNearNode, m.EdgeCrossings, m.ShallowCrossings, m.EdgeOverlaps, m.EndOverlaps,
+		m.JaggedEdges, m.BendyEdges, m.BackEdges, m.LabelOverlaps, m.EdgeLength, m.Area)
 }
 
 // Diagnose computes Diagnostics for a laid out graph.
@@ -83,15 +96,21 @@ func Diagnose(graph *Graph) Diagnostics {
 		node *Node
 	}
 	through := map[edgeNode]bool{}
+	near := map[edgeNode]bool{}
 	for _, s := range segments {
 		for _, node := range graph.Nodes {
-			if node == s.edge.From || node == s.edge.To || through[edgeNode{s.edge, node}] {
+			if node == s.edge.From || node == s.edge.To {
 				continue
 			}
-			if segmentHitsNode(s.a, s.b, node, -eps) {
-				through[edgeNode{s.edge, node}] = true
+			key := edgeNode{s.edge, node}
+			if !through[key] && segmentHitsNode(s.a, s.b, node, -eps) {
+				through[key] = true
 				m.EdgeThroughNode++
 				m.Details = append(m.Details, fmt.Sprintf("edge %v through node %v at %v-%v", s.edge, node, s.a, s.b))
+			} else if !through[key] && !near[key] && segmentHitsNode(s.a, s.b, node, graph.EdgePadding) {
+				near[key] = true
+				m.EdgeNearNode++
+				m.Details = append(m.Details, fmt.Sprintf("edge %v near node %v at %v-%v", s.edge, node, s.a, s.b))
 			}
 		}
 	}
@@ -130,6 +149,15 @@ func Diagnose(graph *Graph) Diagnostics {
 			crosses, collinear := cross(p, q)
 			if crosses {
 				m.EdgeCrossings++
+				// angle between the segments
+				ux, uy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
+				vx, vy := float64(q.b.X-q.a.X), float64(q.b.Y-q.a.Y)
+				angle := math.Abs(math.Atan2(ux*vy-uy*vx, ux*vx+uy*vy))
+				angle = math.Min(angle, math.Pi-angle)
+				if angle < 30*math.Pi/180 {
+					m.ShallowCrossings++
+					m.Details = append(m.Details, fmt.Sprintf("edges %v and %v cross at %.0f degrees", p.edge, q.edge, angle*180/math.Pi))
+				}
 			}
 			if collinear && !overlaps[edgePair{p.edge, q.edge}] {
 				overlaps[edgePair{p.edge, q.edge}] = true
@@ -159,9 +187,27 @@ func Diagnose(graph *Graph) Diagnostics {
 		}
 	}
 
+	// rank direction as a unit vector
+	flow := Vector{0, 1}
+	switch graph.RankDir {
+	case LeftToRight:
+		flow = Vector{1, 0}
+	case RightToLeft:
+		flow = Vector{-1, 0}
+	case BottomToTop:
+		flow = Vector{0, -1}
+	}
 	for _, edge := range graph.Edges {
+		for i := 0; i+1 < len(edge.Path); i++ {
+			d := edge.Path[i+1].Sub(edge.Path[i])
+			m.EdgeLength += Length(math.Hypot(float64(d.X), float64(d.Y)))
+		}
 		if edge.From == edge.To {
 			continue
+		}
+		if d := edge.To.Center.Sub(edge.From.Center); d.X*flow.X+d.Y*flow.Y < 0 {
+			m.BackEdges++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v points against the rank direction", edge))
 		}
 		turn, bends := 0.0, 0
 		path := edge.Path
@@ -185,6 +231,9 @@ func Diagnose(graph *Graph) Diagnostics {
 			m.Details = append(m.Details, fmt.Sprintf("edge %v has %d bends", edge, bends))
 		}
 	}
+
+	tl, br := graph.Bounds()
+	m.Area = (br.X - tl.X) * (br.Y - tl.Y)
 
 	type box struct{ tl, br Vector }
 	var labels []box
