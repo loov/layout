@@ -78,6 +78,14 @@ func Hierarchical(graphdef *Graph) {
 		graph.AddEdge(graph.Nodes[from], graph.Nodes[to])
 	}
 
+	for _, group := range graphdef.SameRank {
+		var members hier.Nodes
+		for _, nodedef := range group {
+			members = append(members, graph.Nodes[nodes[nodedef]])
+		}
+		graph.SameRank = append(graph.SameRank, members)
+	}
+
 	// remove cycles
 	decycledGraph := hier.DefaultDecycle(graph)
 

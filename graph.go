@@ -16,6 +16,8 @@ type Graph struct {
 	NodeByID map[string]*Node
 	Nodes    []*Node
 	Edges    []*Edge
+	// SameRank groups nodes that must be placed on the same rank
+	SameRank [][]*Node
 }
 
 func NewGraph() *Graph {

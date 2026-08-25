@@ -11,6 +11,7 @@ func DefaultRank(graph *Graph) *Graph {
 // Rank implements basic ranking algorithm
 func Rank(graph *Graph) {
 	RankFrontload(graph)
+	RankSameRank(graph)
 
 	// ponytail: greedy tightening, network simplex if edge spans still look long
 	for i := 0; i < 100 && RankMinimizeEdgeStep(graph, i%2 == 0); i++ {
@@ -99,10 +100,11 @@ func RankBackload(graph *Graph) {
 
 // RankMinimizeEdgeStep moves nodes up/down to more equally distribute
 func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
+	pinned := graph.pinnedNodes()
 	if down {
 		// try to move nodes down
 		for _, node := range graph.Nodes {
-			if len(node.Out) == 0 {
+			if len(node.Out) == 0 || pinned.Contains(node) {
 				continue
 			}
 			if len(node.In) <= len(node.Out) {
@@ -119,7 +121,7 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 		}
 	} else {
 		for _, node := range graph.Nodes {
-			if len(node.In) == 0 {
+			if len(node.In) == 0 || pinned.Contains(node) {
 				continue
 			}
 			if len(node.In) >= len(node.Out) {
@@ -166,8 +168,9 @@ func RankBalance(graph *Graph) {
 		width[node.Rank]++
 	}
 
+	pinned := graph.pinnedNodes()
 	for _, node := range graph.Nodes {
-		if len(node.In) != len(node.Out) || len(node.In) == 0 {
+		if len(node.In) != len(node.Out) || len(node.In) == 0 || pinned.Contains(node) {
 			continue
 		}
 		lo, hi := 0, len(graph.Nodes)
@@ -186,5 +189,46 @@ func RankBalance(graph *Graph) {
 		width[node.Rank]--
 		width[best]++
 		node.Rank = best
+	}
+}
+
+func (graph *Graph) pinnedNodes() NodeSet {
+	pinned := NewNodeSet(graph.NodeCount())
+	for _, group := range graph.SameRank {
+		for _, node := range group {
+			pinned.Add(node)
+		}
+	}
+	return pinned
+}
+
+// RankSameRank raises each SameRank group to its highest member rank and
+// re-propagates the rank constraints along edges until stable.
+func RankSameRank(graph *Graph) {
+	if len(graph.SameRank) == 0 {
+		return
+	}
+	for changed := true; changed; {
+		changed = false
+		for _, group := range graph.SameRank {
+			top := 0
+			for _, node := range group {
+				top = max(top, node.Rank)
+			}
+			for _, node := range group {
+				if node.Rank != top {
+					node.Rank = top
+					changed = true
+				}
+			}
+		}
+		for _, src := range graph.Nodes {
+			for _, dst := range src.Out {
+				if dst.Rank <= src.Rank {
+					dst.Rank = src.Rank + 1
+					changed = true
+				}
+			}
+		}
 	}
 }

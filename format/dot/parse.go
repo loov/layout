@@ -3,6 +3,7 @@ package dot
 
 import (
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -39,6 +40,8 @@ type parserContext struct {
 	allAttrs  []*ast.Attr
 	nodeAttrs []*ast.Attr
 	edgeAttrs []*ast.Attr
+
+	touched []*layout.Node // nodes referenced in this (sub)graph
 }
 
 func (context *parserContext) parse(src *ast.Graph) {
@@ -74,18 +77,32 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
 			subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
 			subcontext.parseStmts(stmt.Stmts)
+			if hasAttr(stmt.Stmts, "rank", "same") && len(subcontext.touched) > 1 {
+				context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
+			}
 		}
 	}
 }
 
 func (context *parserContext) ensureNode(id string) *layout.Node {
-	if node, exists := context.Graph.NodeByID[id]; exists {
-		return node
+	node, exists := context.Graph.NodeByID[id]
+	if !exists {
+		node = context.Graph.Node(fixstring(id))
+		applyNodeAttrs(node, context.nodeAttrs)
 	}
-
-	node := context.Graph.Node(fixstring(id))
-	applyNodeAttrs(node, context.nodeAttrs)
+	if !slices.Contains(context.touched, node) {
+		context.touched = append(context.touched, node)
+	}
 	return node
+}
+
+func hasAttr(stmts []ast.Stmt, key, val string) bool {
+	for _, stmt := range stmts {
+		if attr, ok := stmt.(*ast.Attr); ok && attr.Key == key && attr.Val == val {
+			return true
+		}
+	}
+	return false
 }
 
 func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {

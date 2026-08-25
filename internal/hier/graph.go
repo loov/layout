@@ -5,6 +5,8 @@ import "strconv"
 // Graph is the basic graph
 type Graph struct {
 	Nodes Nodes
+	// SameRank groups nodes that must share a rank
+	SameRank []Nodes
 	// Ranking
 	ByRank []Nodes
 }
