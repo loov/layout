@@ -16,7 +16,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 			continue
 		}
 		c := make([]float32, n*n)
-		for i := 0; i < n; i++ {
+		for i := range n {
 			for k := i + 1; k < n; k++ {
 				c[i*n+k], c[k*n+i] = graph.crossingsBothWays(layer[i], layer[k])
 			}
@@ -30,7 +30,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 		others := make([]int, 0, n)
 		for range 4 {
 			improved := false
-			for i := 0; i < n; i++ {
+			for i := range n {
 				v := order[i]
 				others = append(others[:0], order[:i]...)
 				others = append(others, order[i+1:]...)

@@ -3,6 +3,7 @@ package layout_test
 import (
 	"fmt"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/loov/layout"
@@ -115,10 +116,8 @@ func contains(outer, inner *layout.Cluster) bool {
 
 func overlaps(a, b *layout.Cluster) bool {
 	for _, x := range a.Nodes {
-		for _, y := range b.Nodes {
-			if x == y {
-				return true
-			}
+		if slices.Contains(b.Nodes, x) {
+			return true
 		}
 	}
 	return false

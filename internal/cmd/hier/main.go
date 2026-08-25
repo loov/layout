@@ -26,7 +26,7 @@ var (
 	veryVerbose = flag.Bool("vv", false, "very-verbose output")
 )
 
-func info(format string, args ...interface{}) {
+func info(format string, args ...any) {
 	if *verbose {
 		fmt.Fprintf(os.Stderr, format, args...)
 		if !strings.HasSuffix("\n", format) {

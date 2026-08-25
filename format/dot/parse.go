@@ -130,7 +130,7 @@ func parsePoint(s string) (layout.Vector, bool) {
 func parseSpline(s string) []layout.Vector {
 	var start, end *layout.Vector
 	var points []layout.Vector
-	for _, field := range strings.Fields(fixstring(s)) {
+	for field := range strings.FieldsSeq(fixstring(s)) {
 		prefix := ""
 		if len(field) > 2 && field[1] == ',' && (field[0] == 's' || field[0] == 'e') {
 			prefix, field = field[:1], field[2:]
@@ -531,7 +531,7 @@ func setLength(t *layout.Length, value string, unit layout.Length) {
 
 // setLineStyle picks the stroke style out of a comma separated style list
 func setLineStyle(t *layout.LineStyle, value string) {
-	for _, s := range strings.Split(value, ",") {
+	for s := range strings.SplitSeq(value, ",") {
 		switch strings.TrimSpace(s) {
 		case "dashed":
 			*t = layout.Dashed
