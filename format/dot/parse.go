@@ -35,6 +35,8 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 
 	graphs := []*layout.Graph{}
 	for _, graphStmt := range file.Graphs {
+		graphStmt.ID = unquote(graphStmt.ID)
+		unquoteStmts(graphStmt.Stmts)
 		parser := &parserContext{positioned: map[*layout.Node]bool{}}
 		parser.Graph = layout.NewGraph()
 		parser.parse(graphStmt)
@@ -42,6 +44,54 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 	}
 
 	return graphs, nil
+}
+
+// unquoteStmts strips dot quotes from every identifier and attribute
+// value, so "a" and a name the same node and shape="box" reads as box.
+func unquoteStmts(stmts []ast.Stmt) {
+	for _, stmt := range stmts {
+		switch stmt := stmt.(type) {
+		case *ast.NodeStmt:
+			stmt.Node.ID = unquote(stmt.Node.ID)
+			unquoteAttrs(stmt.Attrs)
+		case *ast.EdgeStmt:
+			unquoteVertex(stmt.From)
+			for to := stmt.To; to != nil; to = to.To {
+				unquoteVertex(to.Vertex)
+			}
+			unquoteAttrs(stmt.Attrs)
+		case *ast.AttrStmt:
+			unquoteAttrs(stmt.Attrs)
+		case *ast.Attr:
+			stmt.Val = unquote(stmt.Val)
+		case *ast.Subgraph:
+			stmt.ID = unquote(stmt.ID)
+			unquoteStmts(stmt.Stmts)
+		}
+	}
+}
+
+func unquoteVertex(v ast.Vertex) {
+	switch v := v.(type) {
+	case *ast.Node:
+		v.ID = unquote(v.ID)
+	case *ast.Subgraph:
+		v.ID = unquote(v.ID)
+		unquoteStmts(v.Stmts)
+	}
+}
+
+func unquoteAttrs(attrs []*ast.Attr) {
+	for _, attr := range attrs {
+		attr.Val = unquote(attr.Val)
+	}
+}
+
+func unquote(s string) string {
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
+		return s[1 : len(s)-1]
+	}
+	return s
 }
 
 // parserContext holds the attribute defaults in effect for a (sub)graph
@@ -210,66 +260,74 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 		case *ast.Attr:
 			context.allAttrs = append(context.allAttrs, stmt)
 		case *ast.Subgraph:
-			subcontext := &parserContext{positioned: context.positioned}
-			subcontext.Graph = context.Graph
-			subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
-			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
-			subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
-			start := len(context.Graph.Clusters)
-			subcontext.parseStmts(stmt.Stmts)
-			for _, node := range subcontext.touched {
-				if !slices.Contains(context.touched, node) {
-					context.touched = append(context.touched, node)
-				}
-			}
-			if strings.HasPrefix(stmt.ID, "cluster") && len(subcontext.touched) > 0 {
-				cluster := &layout.Cluster{ID: stmt.ID, Nodes: subcontext.touched}
-				// outer before inner, so inner clusters are drawn on top
-				for _, inner := range context.Graph.Clusters[start:] {
-					if inner.Parent == nil {
-						inner.Parent = cluster
-					}
-				}
-				context.Graph.Clusters = slices.Insert(context.Graph.Clusters, start, cluster)
-				var color layout.Color
-				filled := false
-				for _, attr := range subgraphAttrs(stmt.Stmts) {
-					switch attr.Key {
-					case "label":
-						setString(&cluster.Label, attr.Val)
-					case "color":
-						setColor(&color, attr.Val)
-						setColor(&cluster.LineColor, attr.Val)
-					case "pencolor":
-						setColor(&cluster.LineColor, attr.Val)
-					case "fillcolor", "bgcolor":
-						setColor(&cluster.FillColor, attr.Val)
-					case "style":
-						filled = strings.Contains(attr.Val, "filled")
-					}
-				}
-				if filled && cluster.FillColor == nil {
-					cluster.FillColor = color
-				}
-			}
-			switch {
-			case hasAttr(stmt.Stmts, "rank", "same"):
-				if len(subcontext.touched) > 1 {
-					context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
-				}
-			case hasAttr(stmt.Stmts, "rank", "min"), hasAttr(stmt.Stmts, "rank", "source"):
-				context.Graph.MinRank = append(context.Graph.MinRank, subcontext.touched...)
-			case hasAttr(stmt.Stmts, "rank", "max"), hasAttr(stmt.Stmts, "rank", "sink"):
-				context.Graph.MaxRank = append(context.Graph.MaxRank, subcontext.touched...)
-			}
+			context.parseSubgraph(stmt)
 		}
 	}
+}
+
+// parseSubgraph parses a subgraph in a context that inherits the current
+// attribute defaults, recording clusters and rank constraints. Its nodes
+// count as touched in this context too.
+func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
+	start := len(context.Graph.Clusters)
+	subcontext := &parserContext{positioned: context.positioned}
+	subcontext.Graph = context.Graph
+	subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
+	subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
+	subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
+	subcontext.parseStmts(src.Stmts)
+	for _, node := range subcontext.touched {
+		if !slices.Contains(context.touched, node) {
+			context.touched = append(context.touched, node)
+		}
+	}
+	if strings.HasPrefix(src.ID, "cluster") && len(subcontext.touched) > 0 {
+		cluster := &layout.Cluster{ID: src.ID, Nodes: subcontext.touched}
+		// outer before inner, so inner clusters are drawn on top
+		for _, inner := range context.Graph.Clusters[start:] {
+			if inner.Parent == nil {
+				inner.Parent = cluster
+			}
+		}
+		context.Graph.Clusters = slices.Insert(context.Graph.Clusters, start, cluster)
+		var color layout.Color
+		filled := false
+		for _, attr := range subgraphAttrs(src.Stmts) {
+			switch attr.Key {
+			case "label":
+				setString(&cluster.Label, attr.Val)
+			case "color":
+				setColor(&color, attr.Val)
+				setColor(&cluster.LineColor, attr.Val)
+			case "pencolor":
+				setColor(&cluster.LineColor, attr.Val)
+			case "fillcolor", "bgcolor":
+				setColor(&cluster.FillColor, attr.Val)
+			case "style":
+				filled = strings.Contains(attr.Val, "filled")
+			}
+		}
+		if filled && cluster.FillColor == nil {
+			cluster.FillColor = color
+		}
+	}
+	switch {
+	case hasAttr(src.Stmts, "rank", "same"):
+		if len(subcontext.touched) > 1 {
+			context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
+		}
+	case hasAttr(src.Stmts, "rank", "min"), hasAttr(src.Stmts, "rank", "source"):
+		context.Graph.MinRank = append(context.Graph.MinRank, subcontext.touched...)
+	case hasAttr(src.Stmts, "rank", "max"), hasAttr(src.Stmts, "rank", "sink"):
+		context.Graph.MaxRank = append(context.Graph.MaxRank, subcontext.touched...)
+	}
+	return subcontext
 }
 
 func (context *parserContext) ensureNode(id string) *layout.Node {
 	node, exists := context.Graph.NodeByID[id]
 	if !exists {
-		node = context.Graph.Node(fixstring(id))
+		node = context.Graph.Node(id)
 		node.Label = node.ID // dot's default label is the id, label="" is empty
 		applyNodeAttrs(node, context.nodeAttrs)
 		context.notePos(node, context.nodeAttrs)
@@ -357,18 +415,9 @@ func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
 	case *ast.Node:
 		return []*layout.Node{context.ensureNode(src.ID)}
 	case *ast.Subgraph:
-		nodes := []*layout.Node{}
-		for _, stmt := range src.Stmts {
-			switch stmt := stmt.(type) {
-			case *ast.NodeStmt:
-				nodes = append(nodes, context.parseNode(stmt))
-			default:
-				panic("unsupported stmt inside subgraph")
-			}
-		}
-		return nodes
+		return context.parseSubgraph(src).touched
 	default:
-		panic("vertex not supported")
+		return nil
 	}
 }
 
@@ -567,8 +616,5 @@ func setString(t *string, value string) {
 }
 
 func fixstring(s string) string {
-	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-		s = s[1 : len(s)-1]
-	}
-	return strings.Replace(s, "\\n", "\n", -1)
+	return strings.ReplaceAll(s, "\\n", "\n")
 }
