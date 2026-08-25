@@ -113,6 +113,10 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		opts.OrderIterations = hier.DefaultOrderIterations
 	}
 	graphdef.AssignMissingValues()
+	if graphdef.Pinned {
+		layoutPinned(graphdef)
+		return nil
+	}
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
 	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
@@ -672,6 +676,28 @@ func flattenPath(path []Vector, radius Length) []Vector {
 		out = append(out, in, mid, exit)
 	}
 	return append(out, path[len(path)-1])
+}
+
+// layoutPinned keeps node positions and gives edges without a path a
+// straight line, labels without a position the middle of their path.
+func layoutPinned(graph *Graph) {
+	for _, edge := range graph.Edges {
+		if len(edge.Path) < 2 {
+			if edge.From == edge.To {
+				edge.Path = loopPath(edge.From, edge.From.Radius.X)
+			} else {
+				edge.Path = []Vector{edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)}
+			}
+		}
+		if edge.Label != "" && edge.LabelPos == (Vector{}) {
+			mid := edge.Path[len(edge.Path)/2]
+			if len(edge.Path)%2 == 0 {
+				a, b := edge.Path[len(edge.Path)/2-1], edge.Path[len(edge.Path)/2]
+				mid = Vector{(a.X + b.X) / 2, (a.Y + b.Y) / 2}
+			}
+			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X, 0})
+		}
+	}
 }
 
 // nudgeLabels slides edge labels sideways along their rank until they

@@ -43,6 +43,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	if graph.RankDir != layout.TopToBottom {
 		write("\trankdir=%s;\n", graph.RankDir)
 	}
+	write("\tbb=\"0,0,%s\";\n", pt(layout.Vector{X: size.X, Y: 0}))
 	for _, node := range graph.Nodes {
 		attrs := []string{
 			"pos=" + quote(pt(node.Center)),

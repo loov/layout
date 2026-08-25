@@ -25,6 +25,11 @@ type Graph struct {
 	RowPadding  Length
 	EdgePadding Length
 
+	// Pinned means every node already has a Center (for example from a
+	// dot "pos" attribute); layouting then keeps them and only computes
+	// missing edge paths, like dot -n.
+	Pinned bool
+
 	NodeByID map[string]*Node
 	Nodes    []*Node
 	Edges    []*Edge

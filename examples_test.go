@@ -3,6 +3,7 @@ package layout_test
 import (
 	"bytes"
 	"flag"
+	"math"
 	"os"
 	"path/filepath"
 	"strings"
@@ -308,6 +309,51 @@ func TestHierarchicalWith(t *testing.T) {
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			t.Errorf("edge %v has no path", edge)
+		}
+	}
+}
+
+// TestPinned round-trips a layout through dot: positions written by
+// dot.Write are read back as pos and kept by Hierarchical.
+func TestPinned(t *testing.T) {
+	graphs, err := dot.ParseFile(filepath.Join("testdata", "graphviz", "fsm.gv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := graphs[0]
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := dot.Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	parsed, err := dot.Parse(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pinned := parsed[0]
+	if !pinned.Pinned {
+		t.Fatal("expected graph to be pinned")
+	}
+	if err := layout.Hierarchical(pinned); err != nil {
+		t.Fatal(err)
+	}
+	near := func(a, b layout.Vector) bool {
+		return math.Abs(float64(a.X-b.X)) < 0.05 && math.Abs(float64(a.Y-b.Y)) < 0.05
+	}
+	for _, node := range graph.Nodes {
+		if got := pinned.NodeByID[node.ID]; !near(got.Center, node.Center) {
+			t.Errorf("node %v moved from %v to %v", node.ID, node.Center, got.Center)
+		}
+	}
+	for i, edge := range graph.Edges {
+		got := pinned.Edges[i]
+		if len(got.Path) != len(edge.Path) || !near(got.Path[0], edge.Path[0]) || !near(got.Path[len(got.Path)-1], edge.Path[len(edge.Path)-1]) {
+			t.Errorf("edge %v path changed: %v -> %v", edge, edge.Path, got.Path)
+		}
+		if edge.Label != "" && !near(got.LabelPos, edge.LabelPos) {
+			t.Errorf("edge %v label moved from %v to %v", edge, edge.LabelPos, got.LabelPos)
 		}
 	}
 }

@@ -7,6 +7,7 @@ package dot
 
 import (
 	"io"
+	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 
 	graphs := []*layout.Graph{}
 	for _, graphStmt := range file.Graphs {
-		parser := &parserContext{}
+		parser := &parserContext{positioned: map[*layout.Node]bool{}}
 		parser.Graph = layout.NewGraph()
 		parser.parse(graphStmt)
 		graphs = append(graphs, parser.Graph)
@@ -53,6 +54,8 @@ type parserContext struct {
 	edgeAttrs []*ast.Attr
 
 	touched []*layout.Node // nodes referenced in this (sub)graph
+
+	positioned map[*layout.Node]bool // nodes with a pos attribute
 }
 
 func (context *parserContext) parse(src *ast.Graph) {
@@ -60,6 +63,98 @@ func (context *parserContext) parse(src *ast.Graph) {
 	context.Graph.Directed = src.Directed
 	context.parseStmts(src.Stmts)
 	applyGraphAttrs(context.Graph, context.allAttrs)
+	context.pin()
+}
+
+// pin marks the graph as positioned when every node has a pos and flips
+// the y axis from dot's upwards to ours.
+func (context *parserContext) pin() {
+	graph := context.Graph
+	if len(graph.Nodes) == 0 {
+		return
+	}
+	top := layout.Length(math.Inf(-1))
+	for _, node := range graph.Nodes {
+		if !context.positioned[node] {
+			return
+		}
+		top = max(top, node.Center.Y+node.Radius.Y)
+	}
+	// the bounding box, when present, gives the exact height
+	for _, attr := range context.allAttrs {
+		if attr.Key == "bb" {
+			if corners := strings.Split(fixstring(attr.Val), ","); len(corners) == 4 {
+				if h, err := strconv.ParseFloat(corners[3], 64); err == nil {
+					top = layout.Length(h) * layout.Point
+				}
+			}
+		}
+	}
+	graph.Pinned = true
+	flip := func(v *layout.Vector) { v.Y = top - v.Y }
+	for _, node := range graph.Nodes {
+		flip(&node.Center)
+	}
+	for _, edge := range graph.Edges {
+		for i := range edge.Path {
+			flip(&edge.Path[i])
+		}
+		if edge.LabelPos != (layout.Vector{}) {
+			flip(&edge.LabelPos)
+		}
+	}
+}
+
+// notePos remembers nodes that got a pos attribute
+func (context *parserContext) notePos(node *layout.Node, attrs []*ast.Attr) {
+	for _, attr := range attrs {
+		if attr.Key == "pos" {
+			context.positioned[node] = true
+		}
+	}
+}
+
+// parsePoint reads "x,y" in points, ignoring a trailing "!"
+func parsePoint(s string) (layout.Vector, bool) {
+	x, y, ok := strings.Cut(strings.TrimSuffix(fixstring(s), "!"), ",")
+	if !ok {
+		return layout.Vector{}, false
+	}
+	fx, errx := strconv.ParseFloat(x, 64)
+	fy, erry := strconv.ParseFloat(y, 64)
+	return layout.Vector{X: layout.Length(fx) * layout.Point, Y: layout.Length(fy) * layout.Point}, errx == nil && erry == nil
+}
+
+// parseSpline reads an edge pos: points separated by spaces, where "s,x,y"
+// and "e,x,y" are the start and end points
+func parseSpline(s string) []layout.Vector {
+	var start, end *layout.Vector
+	var points []layout.Vector
+	for _, field := range strings.Fields(fixstring(s)) {
+		prefix := ""
+		if len(field) > 2 && field[1] == ',' && (field[0] == 's' || field[0] == 'e') {
+			prefix, field = field[:1], field[2:]
+		}
+		p, ok := parsePoint(field)
+		if !ok {
+			continue
+		}
+		switch prefix {
+		case "s":
+			start = &p
+		case "e":
+			end = &p
+		default:
+			points = append(points, p)
+		}
+	}
+	if start != nil {
+		points = append([]layout.Vector{*start}, points...)
+	}
+	if end != nil {
+		points = append(points, *end)
+	}
+	return points
 }
 
 // applyGraphAttrs applies graph level attributes
@@ -106,7 +201,7 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 		case *ast.Attr:
 			context.allAttrs = append(context.allAttrs, stmt)
 		case *ast.Subgraph:
-			subcontext := &parserContext{}
+			subcontext := &parserContext{positioned: context.positioned}
 			subcontext.Graph = context.Graph
 			subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
 			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
@@ -168,6 +263,7 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 		node = context.Graph.Node(fixstring(id))
 		node.Label = node.ID // dot's default label is the id, label="" is empty
 		applyNodeAttrs(node, context.nodeAttrs)
+		context.notePos(node, context.nodeAttrs)
 	}
 	if !slices.Contains(context.touched, node) {
 		context.touched = append(context.touched, node)
@@ -203,6 +299,7 @@ func hasAttr(stmts []ast.Stmt, key, val string) bool {
 func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
 	node := context.ensureNode(src.Node.ID)
 	applyNodeAttrs(node, src.Attrs)
+	context.notePos(node, src.Attrs)
 	return node
 }
 
@@ -313,6 +410,10 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 			setLength(&node.Radius.Y, attr.Val, layout.Inch*0.5)
 		case "tooltip":
 			setString(&node.Tooltip, attr.Val)
+		case "pos":
+			if p, ok := parsePoint(attr.Val); ok {
+				node.Center = p
+			}
 		}
 	}
 }
@@ -324,6 +425,12 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 			setFloat(&edge.Weight, attr.Val)
 		case "style":
 			setLineStyle(&edge.LineStyle, attr.Val)
+		case "pos":
+			edge.Path = parseSpline(attr.Val)
+		case "lp":
+			if p, ok := parsePoint(attr.Val); ok {
+				edge.LabelPos = p
+			}
 		case "label":
 			setString(&edge.Label, attr.Val)
 		case "color":
