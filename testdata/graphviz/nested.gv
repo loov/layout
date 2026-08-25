@@ -1,0 +1,18 @@
+digraph G {
+	subgraph cluster_outer {
+		label = "outer";
+		color = blue;
+		a -> b;
+		subgraph cluster_inner {
+			label = "inner";
+			style = filled;
+			color = lightgrey;
+			b -> c -> d;
+		}
+		d -> e;
+	}
+	start -> a;
+	start -> c;
+	e -> end;
+	d -> end;
+}

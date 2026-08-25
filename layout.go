@@ -362,6 +362,9 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		clusters[clusterdef] = cluster
 		filledGraph.Clusters = append(filledGraph.Clusters, cluster)
 	}
+	for clusterdef, cluster := range clusters {
+		cluster.Parent = clusters[clusterdef.Parent]
+	}
 	hier.AddClusterBorders(filledGraph)
 
 	// order nodes in ranks
@@ -430,8 +433,16 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// cluster boxes span their borders horizontally and their members
-	// vertically, with room for the label on top
-	for clusterdef, cluster := range clusters {
+	// vertically, with room for the label on top; inner boxes are
+	// finished first so that outer boxes can enclose them
+	byDepth := slices.Clone(graphdef.Clusters)
+	slices.SortStableFunc(byDepth, func(a, b *Cluster) int { return b.depth() - a.depth() })
+	for _, clusterdef := range byDepth {
+		clusterdef.TopLeft = Vector{Length(math.Inf(1)), Length(math.Inf(1))}
+		clusterdef.BottomRight = Vector{Length(math.Inf(-1)), Length(math.Inf(-1))}
+	}
+	for _, clusterdef := range byDepth {
+		cluster := clusters[clusterdef]
 		left, right := Length(math.Inf(1)), Length(math.Inf(-1))
 		for i := range cluster.Left {
 			left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X))
@@ -444,11 +455,19 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		}
 		top -= graphdef.RowPadding / 2
 		bottom += graphdef.RowPadding / 2
+		// enclose nested boxes
+		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
+		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
 		if clusterdef.Label != "" {
 			top -= 2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y
 		}
 		clusterdef.TopLeft = Vector{left, top}
 		clusterdef.BottomRight = Vector{right, bottom}
+		if parent := clusterdef.Parent; parent != nil {
+			pad := graphdef.RowPadding / 2
+			parent.TopLeft = Vector{min(parent.TopLeft.X, left), min(parent.TopLeft.Y, top-pad)}
+			parent.BottomRight = Vector{max(parent.BottomRight.X, right), max(parent.BottomRight.Y, bottom+pad)}
+		}
 	}
 
 	// real nodes per rank, obstacles for edge routing

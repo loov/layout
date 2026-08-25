@@ -2,12 +2,15 @@ package hier
 
 import (
 	"math"
+	"slices"
 	"sort"
 )
 
 // Cluster is a group of nodes drawn inside a common box.
 type Cluster struct {
 	Members Nodes
+	// Parent is the enclosing cluster, if any
+	Parent *Cluster
 	// Left and Right are virtual border nodes, one per rank the cluster
 	// spans starting at MinRank; ordering keeps all members between them
 	// and positioning aligns them vertically.
@@ -23,30 +26,36 @@ func AddClusterBorders(graph *Graph) {
 		return
 	}
 
+	// nodes belong to their innermost cluster
 	for _, cluster := range graph.Clusters {
-		member := NewNodeSet(graph.NodeCount())
 		for _, node := range cluster.Members {
-			member.Add(node)
-			node.Cluster = cluster
+			if node.Cluster == nil || node.Cluster.depth() < cluster.depth() {
+				node.Cluster = cluster
+			}
 		}
-		// virtual chains between members belong to the cluster
-		for _, src := range cluster.Members {
-			for _, out := range src.Out {
-				var chain Nodes
-				dst := out
-				for dst.Virtual {
-					chain.Append(dst)
-					dst = dst.Out[0]
-				}
-				if member.Contains(dst) {
-					for _, v := range chain {
-						v.Cluster = cluster
-						cluster.Members.Append(v)
-					}
+	}
+	// virtual chains belong to the innermost cluster containing both ends
+	for _, src := range graph.Nodes {
+		if src.Virtual || src.Cluster == nil {
+			continue
+		}
+		for _, out := range src.Out {
+			var chain Nodes
+			dst := out
+			for dst.Virtual {
+				chain.Append(dst)
+				dst = dst.Out[0]
+			}
+			if cluster := src.Cluster.commonAncestor(dst.Cluster); cluster != nil {
+				for _, v := range chain {
+					v.Cluster = cluster
+					cluster.Members.Append(v)
 				}
 			}
 		}
+	}
 
+	for _, cluster := range graph.Clusters {
 		cluster.MinRank, cluster.MaxRank = math.MaxInt, -1
 		for _, node := range cluster.Members {
 			cluster.MinRank = min(cluster.MinRank, node.Rank)
@@ -73,6 +82,29 @@ func AddClusterBorders(graph *Graph) {
 			prevLeft, prevRight = left, right
 		}
 	}
+}
+
+func (cluster *Cluster) depth() int {
+	d := 0
+	for c := cluster; c != nil; c = c.Parent {
+		d++
+	}
+	return d
+}
+
+// commonAncestor returns the innermost cluster containing both, or nil
+func (cluster *Cluster) commonAncestor(other *Cluster) *Cluster {
+	a, b := cluster, other
+	for a.depth() > b.depth() {
+		a = a.Parent
+	}
+	for b != nil && b.depth() > a.depth() {
+		b = b.Parent
+	}
+	for a != b {
+		a, b = a.Parent, b.Parent
+	}
+	return a
 }
 
 // borderWeight makes border chains expensive to cross and keeps them straight
@@ -115,27 +147,46 @@ func orderClusters(graph *Graph) {
 	}
 	graph.assignPos()
 	for _, layer := range graph.ByRank {
-		// cluster key: mean position of its nodes in this layer
+		// cluster key: mean position of its nodes in this layer, for
+		// the cluster and each enclosing cluster
 		sum := map[*Cluster]float64{}
 		count := map[*Cluster]int{}
 		for _, node := range layer {
-			if node.Cluster != nil {
-				sum[node.Cluster] += float64(node.Pos)
-				count[node.Cluster]++
+			for c := node.Cluster; c != nil; c = c.Parent {
+				sum[c] += float64(node.Pos)
+				count[c]++
 			}
 		}
-		key := func(node *Node) float64 {
-			if node.Cluster != nil {
-				return sum[node.Cluster] / float64(count[node.Cluster])
+		// node key: means from the outermost cluster inward, then the
+		// node's own position; borders sort to the ends of their cluster
+		keys := make([][]float64, len(layer))
+		for i, node := range layer {
+			var key []float64
+			for c := node.Cluster; c != nil; c = c.Parent {
+				key = append(key, sum[c]/float64(count[c]))
 			}
-			return float64(node.Pos)
+			slices.Reverse(key)
+			last := float64(node.Pos)
+			if side := borderSide(node); side != 0 {
+				last = math.Inf(side)
+			}
+			keys[i] = append(key, last)
 		}
+		index := make(map[*Node]int, len(layer))
+		for i, node := range layer {
+			index[node] = i
+		}
+		// keys compare on their common prefix; a tie keeps the current order
 		sort.SliceStable(layer, func(i, k int) bool {
-			a, b := layer[i], layer[k]
-			if ka, kb := key(a), key(b); ka != kb {
-				return ka < kb
+			a, b := index[layer[i]], index[layer[k]]
+			n := min(len(keys[a]), len(keys[b]))
+			if c := slices.Compare(keys[a][:n], keys[b][:n]); c != 0 {
+				return c < 0
 			}
-			return borderSide(a) < borderSide(b)
+			if sa, sb := borderSide(layer[i]), borderSide(layer[k]); sa != sb {
+				return sa < sb
+			}
+			return a < b
 		})
 		layer.assignPos()
 	}

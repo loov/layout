@@ -111,9 +111,22 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 			subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
 			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
 			subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
+			start := len(context.Graph.Clusters)
 			subcontext.parseStmts(stmt.Stmts)
+			for _, node := range subcontext.touched {
+				if !slices.Contains(context.touched, node) {
+					context.touched = append(context.touched, node)
+				}
+			}
 			if strings.HasPrefix(stmt.ID, "cluster") && len(subcontext.touched) > 0 {
 				cluster := &layout.Cluster{ID: stmt.ID, Nodes: subcontext.touched}
+				// outer before inner, so inner clusters are drawn on top
+				for _, inner := range context.Graph.Clusters[start:] {
+					if inner.Parent == nil {
+						inner.Parent = cluster
+					}
+				}
+				context.Graph.Clusters = slices.Insert(context.Graph.Clusters, start, cluster)
 				var color layout.Color
 				filled := false
 				for _, attr := range subgraphAttrs(stmt.Stmts) {
@@ -134,7 +147,6 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 				if filled && cluster.FillColor == nil {
 					cluster.FillColor = color
 				}
-				context.Graph.Clusters = append(context.Graph.Clusters, cluster)
 			}
 			switch {
 			case hasAttr(stmt.Stmts, "rank", "same"):
