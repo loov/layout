@@ -85,78 +85,30 @@ func vec(x, y layout.Length) string {
 		strconv.FormatFloat(float64(y), 'f', -1, 32) + " "
 }
 
-func straightPath(graph *layout.Graph, path []layout.Vector) string {
+// splinePath draws a Catmull-Rom spline through the path points as cubic beziers.
+func splinePath(path []layout.Vector) string {
 	var line strings.Builder
-
-	p0 := path[0]
-	line.WriteString("M" + vec(p0.X, p0.Y))
-	for _, p := range path[1:] {
-		line.WriteString("L" + vec(p.X, p.Y))
-	}
-
-	return line.String()
-}
-
-func bezierPath(graph *layout.Graph, path []layout.Vector) string {
-	var line strings.Builder
-
-	p0 := path[0]
-	dir := layout.Length(1)
-	if p0.Y > path[1].Y {
-		dir *= -1
-	}
-	cpoff := dir * graph.RowPadding * 2
-	line.WriteString("M" + vec(p0.X, p0.Y))
-	for _, p1 := range path[1:] {
-		line.WriteString("C" +
-			vec(p0.X, p0.Y+cpoff) +
-			vec(p1.X, p1.Y-cpoff) +
-			vec(p1.X, p1.Y))
-		p0 = p1
-	}
-
-	return line.String()
-}
-
-func smartPath(graph *layout.Graph, path []layout.Vector) string {
-	var line strings.Builder
-
-	p0 := path[0]
-	p1 := path[1]
-	dir := layout.Length(1)
-	if p0.Y > p1.Y {
-		dir *= -1
-	}
-
-	if len(path) == 2 && p0.X == p1.X {
-		return "M" + vec(p0.X, p0.Y) + "L " + vec(p1.X, p1.Y)
-	}
-
-	var sx, sy layout.Length
-	line.WriteString("M" + vec(p0.X, p0.Y))
-	for i, p2 := range path[2:] {
-		sx = p0.X*0.2 + p1.X*0.8
-		if (p0.X < p1.X) != (p1.X < p2.X) {
-			sx = p1.X
-		}
-		sy = p1.Y - dir*graph.RowPadding
-		if i == 0 {
-			line.WriteString("C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y))
-		} else {
-			line.WriteString("S" + vec(sx, sy) + vec(p1.X, p1.Y))
-		}
-
-		p0, p1 = p1, p2
-	}
-	sx = p0.X*0.2 + p1.X*0.8
-	sy = p1.Y - 2*dir*graph.RowPadding
-
+	line.WriteString("M" + vec(path[0].X, path[0].Y))
 	if len(path) == 2 {
-		line.WriteString("C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y))
-	} else {
-		line.WriteString("S" + vec(sx, sy) + vec(p1.X, p1.Y))
+		line.WriteString("L" + vec(path[1].X, path[1].Y))
+		return line.String()
 	}
 
+	at := func(i int) layout.Vector {
+		if i < 0 {
+			i = 0
+		}
+		if i >= len(path) {
+			i = len(path) - 1
+		}
+		return path[i]
+	}
+	for i := 0; i+1 < len(path); i++ {
+		p0, p1, p2, p3 := at(i-1), at(i), at(i+1), at(i+2)
+		c1 := layout.Vector{X: p1.X + (p2.X-p0.X)/6, Y: p1.Y + (p2.Y-p0.Y)/6}
+		c2 := layout.Vector{X: p2.X - (p3.X-p1.X)/6, Y: p2.Y - (p3.Y-p1.Y)/6}
+		line.WriteString("C" + vec(c1.X, c1.Y) + vec(c2.X, c2.Y) + vec(p2.X, p2.Y))
+	}
 	return line.String()
 }
 
@@ -184,7 +136,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
 		svg.write(" stroke-width='%v'", edge.LineWidth)
-		svg.write(" d='%v'>", smartPath(graph, edge.Path))
+		svg.write(" d='%v'>", splinePath(edge.Path))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
