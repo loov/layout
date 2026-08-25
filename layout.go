@@ -110,6 +110,13 @@ type Options struct {
 	NoRankBalance bool
 }
 
+// Presets for Options: Fast trades crossings for speed on large graphs,
+// Quality spends more sweeps looking for a better order.
+var (
+	Fast    = Options{OrderIterations: 4}
+	Quality = Options{OrderIterations: 96}
+)
+
 // HierarchicalWith is Hierarchical with explicit options.
 func HierarchicalWith(graphdef *Graph, opts Options) error {
 	if err := graphdef.validate(); err != nil {

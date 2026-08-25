@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg] [-o output] [-g name] [input]
+//	glay [-s dot] [-t svg] [-o output] [-g name] [-q fast|quality] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -34,6 +34,7 @@ var (
 	outformat = flag.String("t", "svg", "output format")
 	outfile   = flag.String("o", "", "output file (default stdout)")
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
+	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )
@@ -194,7 +195,18 @@ func main() {
 	}
 
 	// layout
-	if err := layout.Hierarchical(graph); err != nil {
+	var opts layout.Options
+	switch *quality {
+	case "":
+	case "fast":
+		opts = layout.Fast
+	case "quality":
+		opts = layout.Quality
+	default:
+		errorf("unknown preset %q", *quality)
+		os.Exit(1)
+	}
+	if err := layout.HierarchicalWith(graph, opts); err != nil {
 		errorf("layout failed: %v", err)
 		os.Exit(1)
 		return
