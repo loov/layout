@@ -15,6 +15,7 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		edge   *Edge
 		index  int // index of the segment start in edge.Path
 		x0, x1 Length
+		xin    Length // x where the edge enters the channel from above
 		y      Length
 	}
 	channels := make([][]*jog, len(rows))
@@ -72,18 +73,30 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 			if k < 0 || rows[k+1][0] > bottom.Y+0.5 {
 				continue // not a rank-to-rank segment
 			}
-			channels[k] = append(channels[k], &jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X)})
+			channels[k] = append(channels[k], &jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X})
 		}
 		edge.Path = path
 	}
 
-	// tracks per channel: overlapping jogs get distinct tracks, in order
-	// of their left end
+	// tracks per channel: overlapping jogs get distinct tracks. Top to
+	// bottom: jogs heading right by entry x descending, then jogs heading
+	// left by entry x ascending, so continuations don't cut through the
+	// jogs below them
 	for k, jogs := range channels {
 		if len(jogs) == 0 {
 			continue
 		}
-		sort.SliceStable(jogs, func(i, j int) bool { return jogs[i].x0 < jogs[j].x0 })
+		sort.SliceStable(jogs, func(i, j int) bool {
+			a, b := jogs[i], jogs[j]
+			ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
+			if ra != rb {
+				return ra
+			}
+			if ra {
+				return a.xin > b.xin
+			}
+			return a.xin < b.xin
+		})
 		var trackEnd []Length // right end of the last jog on each track
 		track := make([]int, len(jogs))
 		for i, j := range jogs {
