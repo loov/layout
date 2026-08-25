@@ -1,8 +1,9 @@
 package hier
 
-import "slices"
-
-import "fmt"
+import (
+	"math"
+	"slices"
+)
 
 // DefaultPosition does recommended positioning algorithm
 func DefaultPosition(graph *Graph) *Graph {
@@ -10,30 +11,49 @@ func DefaultPosition(graph *Graph) *Graph {
 	return graph
 }
 
-// Position does basic node positioning
+// Position assigns node centers: rows by rank height, columns by Brandes-Köpf.
 func Position(graph *Graph) {
 	PositionInitial(graph)
-
-	// TODO: fold nudge into Node parameter
-	nudge := float32(10.0)
-	for range 100 {
-		PositionOutgoing(graph, false, nudge)
-		PositionIncoming(graph, false, nudge)
-		PositionOutgoing(graph, true, nudge)
-		PositionIncoming(graph, true, nudge)
-		nudge = nudge * 0.9
-		flushLeft(graph)
+	if len(graph.Nodes) == 0 {
+		return
 	}
 
-	for range 10 {
-		PositionIncoming(graph, true, 0)
-		PositionOutgoing(graph, true, 0)
-
-		flushLeft(graph)
+	// four alignments: up/down x left/right
+	var xs [4][]float32
+	for i := range xs {
+		up, left := i < 2, i%2 == 0
+		xs[i] = brandesKoepf(graph, up, left)
 	}
+
+	// align layouts to the narrowest one, then take the average of the two medians
+	width := func(x []float32) float32 { return slices.Max(x) - slices.Min(x) }
+	narrow := 0
+	for i := range xs {
+		if width(xs[i]) < width(xs[narrow]) {
+			narrow = i
+		}
+	}
+	for i := range xs {
+		var shift float32
+		if i%2 == 0 {
+			shift = slices.Min(xs[narrow]) - slices.Min(xs[i])
+		} else {
+			shift = slices.Max(xs[narrow]) - slices.Max(xs[i])
+		}
+		for k := range xs[i] {
+			xs[i][k] += shift
+		}
+	}
+
+	for _, node := range graph.Nodes {
+		v := []float32{xs[0][node.ID], xs[1][node.ID], xs[2][node.ID], xs[3][node.ID]}
+		slices.Sort(v)
+		node.Center.X = (v[1] + v[2]) / 2
+	}
+	flushLeft(graph)
 }
 
-// PositionInitial assigns location based on size
+// PositionInitial assigns rows and packs nodes left to right
 func PositionInitial(graph *Graph) {
 	top := float32(0)
 	for _, nodes := range graph.ByRank {
@@ -41,7 +61,7 @@ func PositionInitial(graph *Graph) {
 
 		halfrow := float32(0)
 		for _, node := range nodes {
-			halfrow = maxf32(halfrow, node.Radius.Y)
+			halfrow = max(halfrow, node.Radius.Y)
 		}
 
 		top += halfrow
@@ -54,158 +74,148 @@ func PositionInitial(graph *Graph) {
 	}
 }
 
-// iterateLayers can traverse layers/nodes in different directions
-func iterateLayers(graph *Graph, leftToRight bool, dy int, fn func(layer Nodes, i int, node *Node)) {
-	var starty int
-	if dy < 0 {
-		starty = len(graph.ByRank) - 1
+// brandesKoepf computes x coordinates for one of the four alignment directions.
+// up: align to neighbors in the rank above (otherwise below);
+// left: compact towards the left (otherwise right).
+func brandesKoepf(graph *Graph, up, left bool) []float32 {
+	n := graph.NodeCount()
+
+	// orient the problem so that we always align "up" and compact "left"
+	layers := make([]Nodes, len(graph.ByRank))
+	for i, layer := range graph.ByRank {
+		layers[i] = slices.Clone(layer)
+		if !left {
+			slices.Reverse(layers[i])
+		}
+	}
+	if !up {
+		slices.Reverse(layers)
+	}
+	upper := func(node *Node) Nodes {
+		if up {
+			return node.In
+		}
+		return node.Out
 	}
 
-	if leftToRight {
-		for y := starty; 0 <= y && y < len(graph.ByRank); y += dy {
-			layer := graph.ByRank[y]
-			for i, node := range layer {
-				fn(layer, i, node)
+	pos := make([]int, n)
+	layerOf := make([]Nodes, n)
+	for _, layer := range layers {
+		for i, node := range layer {
+			pos[node.ID] = i
+			layerOf[node.ID] = layer
+		}
+	}
+	// upper neighbors sorted by position
+	nbrs := make([]Nodes, n)
+	for _, node := range graph.Nodes {
+		nbrs[node.ID] = slices.Clone(upper(node))
+		slices.SortFunc(nbrs[node.ID], func(a, b *Node) int { return pos[a.ID] - pos[b.ID] })
+	}
+
+	// type 1 conflicts: non-inner segments crossing inner (virtual-virtual) segments
+	conflict := map[[2]ID]bool{}
+	inner := func(v *Node) *Node {
+		if v.Virtual && len(nbrs[v.ID]) == 1 && nbrs[v.ID][0].Virtual {
+			return nbrs[v.ID][0]
+		}
+		return nil
+	}
+	for i := 1; i < len(layers); i++ {
+		layer, above := layers[i], layers[i-1]
+		k0, l := 0, 0
+		for l1, v := range layer {
+			u := inner(v)
+			if l1 != len(layer)-1 && u == nil {
+				continue
+			}
+			k1 := len(above) - 1
+			if u != nil {
+				k1 = pos[u.ID]
+			}
+			for ; l <= l1; l++ {
+				for _, w := range nbrs[layer[l].ID] {
+					if k := pos[w.ID]; k < k0 || k > k1 {
+						conflict[[2]ID{w.ID, layer[l].ID}] = true
+					}
+				}
+			}
+			k0 = k1
+		}
+	}
+
+	// vertical alignment
+	root := make([]*Node, n)
+	align := make([]*Node, n)
+	for _, node := range graph.Nodes {
+		root[node.ID], align[node.ID] = node, node
+	}
+	for i := 1; i < len(layers); i++ {
+		r := -1
+		for _, v := range layers[i] {
+			d := len(nbrs[v.ID])
+			if d == 0 {
+				continue
+			}
+			for m := (d - 1) / 2; m <= d/2; m++ {
+				if align[v.ID] != v {
+					break
+				}
+				u := nbrs[v.ID][m]
+				if !conflict[[2]ID{u.ID, v.ID}] && r < pos[u.ID] {
+					align[u.ID] = v
+					root[v.ID] = root[u.ID]
+					align[v.ID] = root[v.ID]
+					r = pos[u.ID]
+				}
 			}
 		}
-	} else {
-		for y := starty; 0 <= y && y < len(graph.ByRank); y += dy {
-			layer := graph.ByRank[y]
-			for i, l := range slices.Backward(layer) {
-				fn(layer, i, l)
+	}
+
+	// horizontal compaction: longest path over the block graph
+	// (blocks = roots, edges between horizontally adjacent blocks)
+	x := make([]float32, n)
+	placed := make([]bool, n)
+	var place func(v *Node)
+	place = func(v *Node) {
+		if placed[v.ID] {
+			return
+		}
+		placed[v.ID] = true
+		for w := v; ; w = align[w.ID] {
+			if p := pos[w.ID]; p > 0 {
+				prev := layerOf[w.ID][p-1]
+				u := root[prev.ID]
+				place(u)
+				x[v.ID] = max(x[v.ID], x[u.ID]+prev.Radius.X+w.Radius.X)
+			}
+			if align[w.ID] == v {
+				break
 			}
 		}
 	}
-}
-
-// NodeWalls calculates bounds where node can be moved
-func NodeWalls(graph *Graph, layer Nodes, i int, node *Node, leftToRight bool) (wallLeft, wallRight float32) {
-	if i > 0 {
-		wallLeft = layer[i-1].Center.X + layer[i-1].Radius.X
+	for _, node := range graph.Nodes {
+		place(root[node.ID])
 	}
-
-	if i+1 < len(layer) {
-		wallRight = layer[i+1].Center.X - layer[i+1].Radius.X
-	} else {
-		wallRight = float32(len(graph.Nodes)) * (2 * node.Radius.X)
-	}
-
-	// ensure we can fit at least one
-	if leftToRight {
-		if wallRight-node.Radius.X < wallLeft+node.Radius.X {
-			wallRight = wallLeft + 2*node.Radius.X
-		}
-	} else {
-		if wallRight-node.Radius.X < wallLeft+node.Radius.X {
-			wallLeft = wallRight - 2*node.Radius.X
+	final := make([]float32, n)
+	for _, node := range graph.Nodes {
+		final[node.ID] = x[root[node.ID].ID]
+		if !left {
+			final[node.ID] = -final[node.ID]
 		}
 	}
-
-	if leftToRight {
-		if node.Center.X < wallLeft+node.Radius.X {
-			node.Center.X = wallLeft + node.Radius.X
-		}
-	} else {
-		if node.Center.X > wallRight-node.Radius.X {
-			node.Center.X = wallRight - node.Radius.X
-		}
-	}
-
-	return wallLeft, wallRight
+	return final
 }
 
-// PositionIncoming positions node based on incoming edges
-func PositionIncoming(graph *Graph, leftToRight bool, nudge float32) {
-	iterateLayers(graph, leftToRight, 1,
-		func(layer Nodes, i int, node *Node) {
-			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
-
-			center, ok := targetX(node, node.In)
-			if !ok {
-				return
-			}
-			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
-
-			// is between sides
-			node.Center.X = center
-		})
-}
-
-// PositionOutgoing positions node based on outgoing edges
-func PositionOutgoing(graph *Graph, leftToRight bool, nudge float32) {
-	iterateLayers(graph, leftToRight, -1,
-		func(layer Nodes, i int, node *Node) {
-			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
-
-			center, ok := targetX(node, node.Out)
-			if !ok {
-				return
-			}
-			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
-
-			// is between sides
-			node.Center.X = center
-		})
-}
-
-// targetX returns the preferred x for node given its adjacent nodes on one side.
-// Virtual nodes aim for a straight line through their single in/out neighbors;
-// real nodes weight virtual neighbors higher so long edges stay straight.
-func targetX(node *Node, adj Nodes) (float32, bool) {
-	if node.Virtual && len(node.In) == 1 && len(node.Out) == 1 {
-		return (node.In[0].Center.X + node.Out[0].Center.X) / 2, true
-	}
-	if len(adj) == 0 {
-		return 0, false
-	}
-	sum, weight := float32(0), float32(0)
-	for _, n := range adj {
-		w := float32(1)
-		if n.Virtual {
-			w = 2
-		}
-		sum += w * n.Center.X
-		weight += w
-	}
-	return sum / weight, true
-}
-
-// sanityCheckLayer checks whether any nodes are overlapping
-func sanityCheckLayer(graph *Graph, layer Nodes) {
-	deltas := []float32{}
-	positions := []float32{}
-	fail := false
-	wallLeft := float32(0)
-	for _, node := range layer {
-		delta := (node.Center.X - node.Radius.X) - wallLeft
-		if delta < 0 {
-			fail = true
-		}
-		deltas = append(deltas, delta)
-		positions = append(positions, node.Center.X)
-		wallLeft = node.Center.X + node.Radius.X
-	}
-
-	if fail {
-		fmt.Println("=")
-		fmt.Println(deltas)
-		fmt.Println(positions)
-	}
-}
-
-// flushLeft corrects for graph drift due to moving nodes around
+// flushLeft moves the graph so that the leftmost node touches x = 0
 func flushLeft(graph *Graph) {
 	if len(graph.Nodes) == 0 {
 		return
 	}
-	node := graph.Nodes[0]
-	minleft := node.Center.X - node.Radius.X
-	for _, node := range graph.Nodes[1:] {
-		if node.Center.X-node.Radius.X < minleft {
-			minleft = node.Center.X - node.Radius.X
-		}
+	minleft := float32(math.Inf(1))
+	for _, node := range graph.Nodes {
+		minleft = min(minleft, node.Center.X-node.Radius.X)
 	}
-
 	for _, node := range graph.Nodes {
 		node.Center.X -= minleft
 	}

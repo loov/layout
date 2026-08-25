@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='159' height='299'>
+<svg xmlns='http://www.w3.org/2000/svg' width='162' height='299'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -6,10 +6,10 @@
 		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
 	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='4' d='M36.473904,85 C31.395218,97.666664 5.33657,135.59932 6.0017853,161 C6.667001,186.40068 34.721294,224.67009 40.4652,237.4041 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#0000F7' stroke-width='4' d='M56.66714,85 C60.889584,97.666664 71.58394,135.66667 82.001785,161 C92.41963,186.33333 112.97882,224.33333 119.174225,237 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#A0F7A0' stroke-width='1' d='M46.918644,237.00273 L44.737473,176.98308 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M112.96993,237 L55.802036,171.80528 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M44.50654,145.00797 L46.400562,85 '></path><rect x='16' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='47.5' y='41.5' font-size='14' color='#000000'>Lorem</text>
-<text text-anchor='middle' alignment-baseline='middle' x='47.5' y='57.5' font-size='14' color='#000000'>Ipsum</text>
-<text text-anchor='middle' alignment-baseline='middle' x='47.5' y='73.5' font-size='14' color='#000000'>Dolorem</text>
+	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='4' d='M71.6401,85 C64.45008,97.666664 33.071068,135.65211 28.5,161 C23.92893,186.34789 41.594738,224.4061 44.213684,237.08731 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#0000F7' stroke-width='4' d='M102.8599,85 C110.04992,97.666664 141.42592,135.66667 146,161 C150.57408,186.33333 132.92029,224.33333 130.30435,237 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#A0F7A0' stroke-width='1' d='M54.00462,237.34483 L79.8346,175.17787 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M120.352104,237 L94.6654,175.17787 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M87.25,145 L87.25,85 '></path><rect x='55.75' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='87.25' y='41.5' font-size='14' color='#000000'>Lorem</text>
+<text text-anchor='middle' alignment-baseline='middle' x='87.25' y='57.5' font-size='14' color='#000000'>Ipsum</text>
+<text text-anchor='middle' alignment-baseline='middle' x='87.25' y='73.5' font-size='14' color='#000000'>Dolorem</text>
 <ellipse cx='47.5' cy='253' rx='31.5' ry='16' class='node' fill='#E07474' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='47.5' y='253' font-size='14' color='#000000'>Ignitus</text>
 <rect x='111' y='237' width='32' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='253' font-size='12' color='#202020'>C</text>
-<ellipse cx='44.00178527832031' cy='161' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='44.00178527832031' y='161' font-size='14' color='#000000'>D</text>
+<ellipse cx='87.25' cy='161' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='87.25' y='161' font-size='14' color='#000000'>D</text>
 </g></svg>
