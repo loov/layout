@@ -457,21 +457,28 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
 
-	// reserve a label strip at the top of every labeled cluster by making
-	// its first border nodes taller than the rank; outer clusters first so
-	// nested labels stack
-	for _, clusterdef := range graphdef.Clusters {
-		if clusterdef.Label == "" {
-			continue
-		}
-		cluster := clusters[clusterdef]
+	// reserve room for the cluster box lines and the label strip by making
+	// the cluster's first and last border nodes taller than their ranks;
+	// outer clusters first so nested boxes stack
+	grow := func(nodes []*hier.Node, rank int, extra float32) {
 		half := float32(0)
-		for _, node := range orderedGraph.ByRank[cluster.MinRank] {
+		for _, node := range orderedGraph.ByRank[rank] {
 			half = max(half, node.Radius.Y)
 		}
-		height := float32(2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y)
-		cluster.Left[0].Radius.Y = half + height
-		cluster.Right[0].Radius.Y = half + height
+		for _, node := range nodes {
+			node.Radius.Y = half + extra
+		}
+	}
+	for _, clusterdef := range graphdef.Clusters {
+		cluster := clusters[clusterdef]
+		pad := float32(graphdef.RowPadding / 2)
+		top := pad
+		if clusterdef.Label != "" {
+			top += float32(2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y)
+		}
+		last := len(cluster.Left) - 1
+		grow([]*hier.Node{cluster.Left[0], cluster.Right[0]}, cluster.MinRank, top)
+		grow([]*hier.Node{cluster.Left[last], cluster.Right[last]}, cluster.MaxRank, pad)
 	}
 
 	// position nodes
