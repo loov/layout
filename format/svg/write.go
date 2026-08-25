@@ -192,6 +192,25 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 	}
 }
 
+// writeLabel writes plain text centered at center, or an HTML-like label
+// as a foreignObject filling the box of the given half size.
+func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
+	if !layout.IsHTMLLabel(label) {
+		svg.writeText(graph, label, center, fontSize, fontName, color)
+		return
+	}
+	svg.write("<foreignObject x='%v' y='%v' width='%v' height='%v'", center.X-radius.X, center.Y-radius.Y, 2*radius.X, 2*radius.Y)
+	if fontSize != 0 {
+		svg.write(" font-size='%v'", fontSize)
+	}
+	if fontName != "" {
+		svg.write(" font-family='%v'", fontName)
+	}
+	svg.write(" color='%v'", dkcolor(color))
+	svg.write(`><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%%">%v</body>`, lowercaseTags(label[1:len(label)-1]))
+	svg.write("</foreignObject>")
+}
+
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
@@ -244,7 +263,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write("</path>")
 
 		if edge.Label != "" {
-			svg.writeText(graph, edge.Label, edge.LabelPos, edge.FontSize, edge.FontName, edge.FontColor)
+			svg.writeLabel(graph, edge.Label, edge.LabelPos, edge.LabelRadius, edge.FontSize, edge.FontName, edge.FontColor)
 		}
 	}
 
@@ -282,20 +301,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			continue
 		}
 		if label := node.DefaultLabel(); label != "" {
-			if label[0] == '<' && label[len(label)-1] == '>' {
-				svg.write("<foreignObject x='%v' y='%v' width='100%%' height='100%%' ", node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y)
-				if node.FontSize != 0 {
-					svg.write(" font-size='%v'", node.FontSize)
-				}
-				if node.FontName != "" {
-					svg.write(" font-family='%v'", node.FontName)
-				}
-				svg.write(" color='%v'", dkcolor(node.FontColor))
-				svg.write(`><body xmlns="http://www.w3.org/1999/xhtml">%v</body>`, lowercaseTags(label[1:len(label)-1]))
-				svg.write("</foreignObject>")
-			} else {
-				svg.writeText(graph, label, node.Center, node.FontSize, node.FontName, node.FontColor)
-			}
+			svg.writeLabel(graph, label, node.Center, node.Radius, node.FontSize, node.FontName, node.FontColor)
 		}
 	}
 	svg.finishG()

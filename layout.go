@@ -47,6 +47,9 @@ func (graph *Graph) AssignMissingValues() {
 		}
 		if !node.FixedSize {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
+			if IsHTMLLabel(node.DefaultLabel()) {
+				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
+			}
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
 			if node.Shape == Record {
@@ -73,7 +76,9 @@ func (graph *Graph) AssignMissingValues() {
 		if edge.FontSize <= 0 {
 			edge.FontSize = graph.FontSize
 		}
-		if edge.Label != "" {
+		if IsHTMLLabel(edge.Label) {
+			edge.LabelRadius = graph.htmlLabelRadius(edge.Label, edge.FontName, edge.FontSize)
+		} else if edge.Label != "" {
 			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)
 		}
 	}
