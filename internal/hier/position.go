@@ -44,8 +44,43 @@ func Position(graph *Graph) {
 		slices.Sort(v)
 		node.Center.X = (v[1] + v[2]) / 2
 	}
+	StraightenChains(graph)
 	flushLeft(graph)
 	AlignClusterBorders(graph)
+}
+
+// StraightenChains moves virtual nodes towards the midpoint of their
+// neighbors along the edge, as far as the room between the nodes beside
+// them allows, so that long edges run diagonally instead of hooking at
+// the end. Order within the ranks is kept, so crossings don't change.
+func StraightenChains(graph *Graph) {
+	graph.assignPos()
+	for range 10 {
+		moved := false
+		for _, layer := range graph.ByRank {
+			for i, node := range layer {
+				if !node.Virtual || node.BorderLeft || node.BorderRight || len(node.In) != 1 || len(node.Out) != 1 {
+					continue
+				}
+				want := (node.In[0].Center.X + node.Out[0].Center.X) / 2
+				if i > 0 {
+					left := layer[i-1]
+					want = max(want, left.Center.X+left.Radius.X+node.Radius.X)
+				}
+				if i+1 < len(layer) {
+					right := layer[i+1]
+					want = min(want, right.Center.X-right.Radius.X-node.Radius.X)
+				}
+				if d := want - node.Center.X; d > 0.5 || d < -0.5 {
+					node.Center.X = want
+					moved = true
+				}
+			}
+		}
+		if !moved {
+			break
+		}
+	}
 }
 
 // PositionInitial assigns rows and packs nodes left to right
