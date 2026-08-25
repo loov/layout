@@ -121,11 +121,21 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		if len(jogs) == 0 {
 			continue
 		}
+		// a rightward jog exiting at the same x where a leftward jog
+		// enters would run down its stub; then the leftward group goes on top
+		rightOnTop := true
+		for _, r := range jogs {
+			for _, l := range jogs {
+				if r.xin == r.x0 && l.xin == l.x1 && r.x1 == l.x1 {
+					rightOnTop = false
+				}
+			}
+		}
 		sort.SliceStable(jogs, func(i, j int) bool {
 			a, b := jogs[i], jogs[j]
 			ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 			if ra != rb {
-				return ra
+				return ra == rightOnTop
 			}
 			if ra {
 				return a.xin > b.xin
@@ -135,9 +145,16 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		var trackEnd []Length // right end of the last jog on each track
 		track := make([]int, len(jogs))
 		for i, j := range jogs {
+			// below every overlapping jog placed before, then first fit
+			first := 0
+			for o := range i {
+				if jogs[o].x0 < j.x1+pad && j.x0 < jogs[o].x1+pad {
+					first = max(first, track[o]+1)
+				}
+			}
 			track[i] = -1
-			for t, end := range trackEnd {
-				if end+pad <= j.x0 {
+			for t := first; t < len(trackEnd); t++ {
+				if trackEnd[t]+pad <= j.x0 {
 					track[i], trackEnd[t] = t, j.x1
 					break
 				}
