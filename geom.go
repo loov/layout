@@ -85,6 +85,9 @@ type Vector struct{ X, Y Length }
 // Add returns the component-wise sum of v and o.
 func (v Vector) Add(o Vector) Vector { return Vector{X: v.X + o.X, Y: v.Y + o.Y} }
 
+// Sub returns v - o.
+func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y} }
+
 // Length is a distance in points.
 type Length float64
 

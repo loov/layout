@@ -21,6 +21,11 @@ type Diagnostics struct {
 	// EndOverlaps counts pairs of edge ends (starts or ends) closer than an
 	// arrowhead, where arrowheads draw on top of each other.
 	EndOverlaps int
+	// JaggedEdges counts edges whose path winds by more than 90 degrees
+	// net: hooks and U-turns (an S-bend nets out to zero, see BendyEdges).
+	JaggedEdges int
+	// BendyEdges counts edges with more than three bends.
+	BendyEdges int
 	// LabelOverlaps counts labels that intersect a node, an edge segment or
 	// another label.
 	LabelOverlaps int
@@ -31,8 +36,8 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (m Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d crossings=%d overlaps=%d ends=%d labels=%d",
-		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeCrossings, m.EdgeOverlaps, m.EndOverlaps, m.LabelOverlaps)
+	return fmt.Sprintf("nodes=%d through=%d crossings=%d overlaps=%d ends=%d jagged=%d bends=%d labels=%d",
+		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeCrossings, m.EdgeOverlaps, m.EndOverlaps, m.JaggedEdges, m.BendyEdges, m.LabelOverlaps)
 }
 
 // Diagnose computes Diagnostics for a laid out graph.
@@ -151,6 +156,33 @@ func Diagnose(graph *Graph) Diagnostics {
 				m.EndOverlaps++
 				m.Details = append(m.Details, fmt.Sprintf("ends of %v and %v overlap at %v", a.edge, b.edge, a.p))
 			}
+		}
+	}
+
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To {
+			continue
+		}
+		turn, bends := 0.0, 0
+		path := edge.Path
+		for i := 1; i+1 < len(path); i++ {
+			a, b := path[i].Sub(path[i-1]), path[i+1].Sub(path[i])
+			if a == (Vector{}) || b == (Vector{}) {
+				continue
+			}
+			angle := math.Atan2(float64(a.X*b.Y-a.Y*b.X), float64(a.X*b.X+a.Y*b.Y))
+			turn += angle
+			if math.Abs(angle) > 5*math.Pi/180 {
+				bends++
+			}
+		}
+		if math.Abs(turn) > math.Pi/2 {
+			m.JaggedEdges++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v winds %.0f degrees", edge, math.Abs(turn)*180/math.Pi))
+		}
+		if bends > 3 {
+			m.BendyEdges++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v has %d bends", edge, bends))
 		}
 	}
 
