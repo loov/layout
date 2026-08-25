@@ -21,7 +21,7 @@ type Graph struct {
 }
 
 // ID is an unique identifier to a Node
-type ID int
+type ID uint32
 
 // Node is the basic information about a node
 type Node struct {
@@ -109,6 +109,9 @@ func (graph *Graph) AddWeightedEdge(src, dst *Node, weight float32) {
 
 // Weight returns the weight of edge src -> dst
 func (graph *Graph) Weight(src, dst *Node) float32 {
+	if len(graph.weights) == 0 {
+		return 1
+	}
 	if w, ok := graph.weights[[2]ID{src.ID, dst.ID}]; ok {
 		return w
 	}
@@ -117,6 +120,10 @@ func (graph *Graph) Weight(src, dst *Node) float32 {
 
 // SetWeight sets the weight of edge src -> dst
 func (graph *Graph) SetWeight(src, dst *Node, weight float32) {
+	if weight == 1 {
+		delete(graph.weights, [2]ID{src.ID, dst.ID})
+		return
+	}
 	if graph.weights == nil {
 		graph.weights = map[[2]ID]float32{}
 	}

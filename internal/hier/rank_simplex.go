@@ -103,6 +103,12 @@ type simplex struct {
 	edges []simplexEdge
 	rank  []int
 	adj   [][]int // edge indexes by vertex, both directions
+
+	// spanning forest numbering, see number; buffers reused across pivots
+	low, lim, parent, cursor []int
+	order                    []int
+	agg, cut                 []float32
+	stack                    []int
 }
 
 func (s *simplex) run() {
@@ -115,6 +121,15 @@ func (s *simplex) run() {
 	s.initRank()
 	s.feasibleTree()
 
+	s.low = make([]int, s.n)
+	s.lim = make([]int, s.n)
+	s.parent = make([]int, s.n)
+	s.cursor = make([]int, s.n)
+	s.order = make([]int, s.n)
+	s.agg = make([]float32, s.n)
+	s.cut = make([]float32, len(s.edges))
+	s.stack = make([]int, 0, s.n)
+
 	for iter := 0; iter < 8*len(s.edges)+8; iter++ {
 		leave := s.negativeCutEdge()
 		if leave < 0 {
@@ -124,9 +139,22 @@ func (s *simplex) run() {
 		if enter < 0 {
 			break // should not happen: cut value negative implies a candidate
 		}
+		// make the entering edge tight by shifting the subtree cut off by
+		// the leaving edge; every other tree edge stays tight
+		child, _ := s.subtreeSide(leave)
+		delta := s.slack(enter)
+		if s.inSubtree(s.edges[enter].head, child) {
+			delta = -delta
+		}
+		if delta != 0 {
+			for v := range s.n {
+				if s.inSubtree(v, child) {
+					s.rank[v] += delta
+				}
+			}
+		}
 		s.edges[leave].tree = false
 		s.edges[enter].tree = true
-		s.rerank()
 	}
 	s.normalize()
 }
@@ -242,55 +270,108 @@ func (s *simplex) treeNodes(root int) []int {
 	return nodes
 }
 
-// tailComponent returns membership of the tail side after removing tree edge i
-func (s *simplex) tailComponent(i int) []bool {
-	side := make([]bool, s.n)
-	e := s.edges[i]
-	side[e.tail] = true
-	stack := []int{e.tail}
-	for len(stack) > 0 {
-		v := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		for _, k := range s.adj[v] {
-			if k == i || !s.edges[k].tree {
-				continue
+// number assigns a postorder number (lim) and the smallest number in the
+// subtree (low) to every vertex of the spanning forest; parent[v] is the
+// tree edge to v's parent. Iterative, with a cursor per vertex so each
+// adjacency list is scanned once.
+func (s *simplex) number() {
+	for i := range s.parent {
+		s.parent[i] = -1
+		s.low[i] = 0
+		s.cursor[i] = 0
+	}
+	next := 1
+	for root := range s.n {
+		if s.low[root] != 0 {
+			continue
+		}
+		s.stack = append(s.stack[:0], root)
+		s.low[root] = next
+		for len(s.stack) > 0 {
+			v := s.stack[len(s.stack)-1]
+			adj := s.adj[v]
+			descended := false
+			for s.cursor[v] < len(adj) {
+				e := s.edges[adj[s.cursor[v]]]
+				s.cursor[v]++
+				if !e.tree {
+					continue
+				}
+				w := e.tail + e.head - v
+				if s.low[w] == 0 {
+					s.low[w] = next
+					s.parent[w] = adj[s.cursor[v]-1]
+					s.stack = append(s.stack, w)
+					descended = true
+					break
+				}
 			}
-			f := s.edges[k]
-			w := f.tail + f.head - v
-			if !side[w] {
-				side[w] = true
-				stack = append(stack, w)
+			if !descended {
+				s.lim[v] = next
+				next++
+				s.stack = s.stack[:len(s.stack)-1]
 			}
 		}
 	}
-	return side
 }
 
-// cutValue of tree edge i: weight of edges from the tail side to the head
-// side minus the weight of edges the other way.
-func (s *simplex) cutValue(i int) float32 {
-	tail := s.tailComponent(i)
-	cut := float32(0)
-	for _, e := range s.edges {
-		switch {
-		case tail[e.tail] && !tail[e.head]:
-			cut += e.weight
-		case !tail[e.tail] && tail[e.head]:
-			cut -= e.weight
+// inSubtree reports whether w is in the subtree rooted at v
+func (s *simplex) inSubtree(w, v int) bool { return s.low[v] <= s.lim[w] && s.lim[w] <= s.lim[v] }
+
+// subtreeSide returns the child vertex of tree edge i, whose subtree is one
+// side of the cut, and whether that child is the edge's tail.
+func (s *simplex) subtreeSide(i int) (child int, childIsTail bool) {
+	e := s.edges[i]
+	if s.parent[e.head] == i {
+		return e.head, false
+	}
+	return e.tail, true
+}
+
+// cutValues computes the cut value of every tree edge: weight of edges
+// from the tail side to the head side minus the reverse. Summing ±weight
+// of all edges incident to a subtree cancels edges inside it, so one
+// postorder pass over the forest gives every value in O(V+E).
+func (s *simplex) cutValues() []float32 {
+	s.number()
+	order, agg, cut := s.order, s.agg, s.cut
+	for v := range s.n {
+		order[s.lim[v]-1] = v // postorder: children before parents
+		agg[v] = 0
+	}
+	for i := range cut {
+		cut[i] = 0
+	}
+	for _, v := range order {
+		for _, i := range s.adj[v] {
+			e := s.edges[i]
+			if e.tail == v {
+				agg[v] += e.weight
+			} else {
+				agg[v] -= e.weight
+			}
+		}
+		if p := s.parent[v]; p >= 0 {
+			e := s.edges[p]
+			parent := e.tail + e.head - v
+			agg[parent] += agg[v]
+			if e.tail == v {
+				cut[p] = agg[v] // subtree is the tail side
+			} else {
+				cut[p] = -agg[v]
+			}
 		}
 	}
 	return cut
 }
 
-// negativeCutEdge returns a tree edge with negative cut value, or -1
+// negativeCutEdge returns the tree edge with the most negative cut value, or -1
 func (s *simplex) negativeCutEdge() int {
+	cut := s.cutValues()
 	best, bestCut := -1, float32(0)
-	for i, e := range s.edges {
-		if !e.tree {
-			continue
-		}
-		if cut := s.cutValue(i); cut < bestCut {
-			best, bestCut = i, cut
+	for i, c := range cut {
+		if c < bestCut {
+			best, bestCut = i, c
 		}
 	}
 	return best
@@ -299,10 +380,18 @@ func (s *simplex) negativeCutEdge() int {
 // enteringEdge returns the non-tree edge from the head side to the tail side
 // of tree edge leave with minimal slack
 func (s *simplex) enteringEdge(leave int) int {
-	tail := s.tailComponent(leave)
+	child, childIsTail := s.subtreeSide(leave)
 	best, bestSlack := -1, math.MaxInt
 	for i, e := range s.edges {
-		if e.tree || !(tail[e.head] && !tail[e.tail]) {
+		if e.tree {
+			continue
+		}
+		tailIn, headIn := s.inSubtree(e.tail, child), s.inSubtree(e.head, child)
+		if tailIn == headIn {
+			continue
+		}
+		// the tail must be on leave's head side
+		if tailIn == childIsTail {
 			continue
 		}
 		if sl := s.slack(i); sl < bestSlack {
@@ -310,39 +399,6 @@ func (s *simplex) enteringEdge(leave int) int {
 		}
 	}
 	return best
-}
-
-// rerank recomputes ranks from the spanning forest so tree edges are tight
-func (s *simplex) rerank() {
-	seen := make([]bool, s.n)
-	for root := range s.n {
-		if seen[root] {
-			continue
-		}
-		seen[root] = true
-		queue := []int{root}
-		for len(queue) > 0 {
-			v := queue[0]
-			queue = queue[1:]
-			for _, i := range s.adj[v] {
-				e := s.edges[i]
-				if !e.tree {
-					continue
-				}
-				w := e.tail + e.head - v
-				if seen[w] {
-					continue
-				}
-				seen[w] = true
-				if e.tail == v {
-					s.rank[w] = s.rank[v] + 1
-				} else {
-					s.rank[w] = s.rank[v] - 1
-				}
-				queue = append(queue, w)
-			}
-		}
-	}
 }
 
 // normalize shifts every component so that its minimum rank is 0

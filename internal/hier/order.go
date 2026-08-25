@@ -1,8 +1,8 @@
 package hier
 
 import (
+	"cmp"
 	"slices"
-	"sort"
 )
 
 // DefaultOrderRanks does recommended rank ordering
@@ -25,7 +25,8 @@ func OrderRanksN(graph *Graph, iterations int) {
 
 	best := saveOrder(graph)
 	bestCrossings, bestLength := graph.TotalCrossings(), graph.TotalEdgeLength()
-	for i := range iterations {
+	stale := 0
+	for i := 0; i < iterations && stale < 4; i++ {
 		OrderRanksByMedian(graph, i%2 == 0)
 		OrderRanksTranspose(graph)
 		orderFlatEdges(graph)
@@ -34,6 +35,9 @@ func OrderRanksN(graph *Graph, iterations int) {
 		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
 		if crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
 			best, bestCrossings, bestLength = saveOrder(graph), crossings, length
+			stale = 0
+		} else {
+			stale++
 		}
 	}
 	graph.ByRank = best
@@ -104,12 +108,11 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 			node.Coef = medianGridX(adj, node.GridX)
 		}
 		clusterCoef(layer)
-		sort.SliceStable(layer, func(i, k int) bool {
-			a, b := layer[i], layer[k]
+		slices.SortStableFunc(layer, func(a, b *Node) int {
 			if a.Coef != b.Coef {
-				return a.Coef < b.Coef
+				return cmp.Compare(a.Coef, b.Coef)
 			}
-			return borderSide(a) < borderSide(b)
+			return cmp.Compare(borderSide(a), borderSide(b))
 		})
 		for i, node := range layer {
 			node.GridX = float32(i)
@@ -184,23 +187,36 @@ func (nodes Nodes) moveNode(from, to int) {
 // shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
 	graph.assignPos()
+	// a layer only needs another look when it or a neighbor changed
+	dirty := make([]bool, len(graph.ByRank))
+	for i := range dirty {
+		dirty[i] = true
+	}
 	for range 20 {
 		improved := false
-		for _, nodes := range graph.ByRank {
+		changed := make([]bool, len(graph.ByRank))
+		for r, nodes := range graph.ByRank {
+			if !dirty[r] {
+				continue
+			}
 			for i := 0; i+1 < len(nodes); i++ {
 				left, right := nodes[i], nodes[i+1]
-				before, after := graph.Crossings(left, right), graph.Crossings(right, left)
+				before, after := graph.crossingsBothWays(left, right)
 				if before == after {
 					before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
 					after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)
 				}
 				if before > after {
 					nodes[i], nodes[i+1] = right, left
-					nodes.assignPos()
+					left.Pos, right.Pos = i+1, i
 					swaps++
 					improved = true
+					changed[r] = true
 				}
 			}
+		}
+		for r := range dirty {
+			dirty[r] = changed[r] || (r > 0 && changed[r-1]) || (r+1 < len(changed) && changed[r+1])
 		}
 		if !improved {
 			return swaps
