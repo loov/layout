@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|txt] [-o output] [-g name] [-q fast|quality] [input]
+//	glay [-s dot] [-t svg|dot|json|txt] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -37,6 +37,7 @@ var (
 	outfile   = flag.String("o", "", "output file (default stdout)")
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
+	algorithm = flag.String("l", "hierarchical", "layout algorithm: hierarchical, force")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )
@@ -212,7 +213,15 @@ func main() {
 		errorf("unknown preset %q", *quality)
 		os.Exit(1)
 	}
-	if err := layout.HierarchicalWith(graph, opts); err != nil {
+	switch *algorithm {
+	case "hierarchical":
+		err = layout.HierarchicalWith(graph, opts)
+	case "force":
+		err = layout.Force(graph)
+	default:
+		err = fmt.Errorf("unknown algorithm %q", *algorithm)
+	}
+	if err != nil {
 		errorf("layout failed: %v", err)
 		os.Exit(1)
 		return
