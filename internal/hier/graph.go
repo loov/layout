@@ -46,6 +46,8 @@ type Node struct {
 	Coef  float32
 	GridX float32
 	Pos   int // index within its rank, see assignPos
+	// neighbor positions cached for the transpose step, see OrderRanksTranspose
+	inPos, outPos []int32
 
 	// Visuals
 	Center Vector

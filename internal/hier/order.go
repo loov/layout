@@ -157,6 +157,31 @@ func medianGridX(adj Nodes, fallback float32) float32 {
 	}
 }
 
+// crossingsByPos counts unweighted crossings of u left of v and v left of u
+// from the cached neighbor position arrays
+func crossingsByPos(u, v *Node) (uv, vu float32) {
+	var a, b int32
+	for _, w := range u.inPos {
+		for _, z := range v.inPos {
+			if z < w {
+				a++
+			} else if z > w {
+				b++
+			}
+		}
+	}
+	for _, w := range u.outPos {
+		for _, z := range v.outPos {
+			if z < w {
+				a++
+			} else if z > w {
+				b++
+			}
+		}
+	}
+	return float32(a), float32(b)
+}
+
 // orderFlatEdges ensures the source of every flat edge is left of its target
 // by moving the target right after the source.
 func orderFlatEdges(graph *Graph) {
@@ -187,6 +212,7 @@ func (nodes Nodes) moveNode(from, to int) {
 // shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
 	graph.assignPos()
+	weighted := len(graph.weights) > 0
 	// a layer only needs another look when it or a neighbor changed
 	dirty := make([]bool, len(graph.ByRank))
 	for i := range dirty {
@@ -199,9 +225,28 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 			if !dirty[r] {
 				continue
 			}
+			// neighbor positions don't change while this layer is processed;
+			// cache them as flat arrays so the pair loop below streams
+			if !weighted {
+				for _, node := range nodes {
+					node.inPos = node.inPos[:0]
+					for _, src := range node.In {
+						node.inPos = append(node.inPos, int32(src.Pos))
+					}
+					node.outPos = node.outPos[:0]
+					for _, dst := range node.Out {
+						node.outPos = append(node.outPos, int32(dst.Pos))
+					}
+				}
+			}
 			for i := 0; i+1 < len(nodes); i++ {
 				left, right := nodes[i], nodes[i+1]
-				before, after := graph.crossingsBothWays(left, right)
+				var before, after float32
+				if weighted {
+					before, after = graph.crossingsBothWays(left, right)
+				} else {
+					before, after = crossingsByPos(left, right)
+				}
 				if before == after {
 					before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
 					after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)
