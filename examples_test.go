@@ -136,6 +136,23 @@ var examples = map[string]func() *layout.Graph{
 		ports.FromPort, ports.ToPort = layout.West, layout.East
 		return graph
 	},
+	"cluster": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("start", "a0")
+		graph.Edge("start", "b0")
+		graph.Edge("a0", "a1")
+		graph.Edge("a1", "a2")
+		graph.Edge("b0", "b1")
+		graph.Edge("a1", "b1")
+		graph.Edge("a2", "end")
+		graph.Edge("b1", "end")
+		graph.Edge("start", "end")
+		graph.Clusters = []*layout.Cluster{
+			{ID: "cluster_a", Label: "A side", Nodes: []*layout.Node{graph.Node("a0"), graph.Node("a1"), graph.Node("a2")}, FillColor: layout.RGB{0xEE, 0xEE, 0xFF}},
+			{ID: "cluster_b", Label: "B side", Nodes: []*layout.Node{graph.Node("b0"), graph.Node("b1")}, LineColor: layout.RGB{0, 0, 0xFF}},
+		}
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

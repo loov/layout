@@ -9,6 +9,8 @@ type Graph struct {
 	SameRank []Nodes
 	// MinRank and MaxRank hold nodes pinned to the first and last rank
 	MinRank, MaxRank Nodes
+	// Clusters groups nodes into boxes, see AddClusterBorders
+	Clusters []*Cluster
 	// Flat holds edges between nodes on the same rank; they are removed
 	// from In/Out by Rank and drawn sideways.
 	Flat [][2]*Node
@@ -26,6 +28,11 @@ type Node struct {
 	ID ID
 
 	Virtual bool
+
+	// Cluster the node belongs to, if any; BorderLeft/BorderRight mark
+	// the virtual border nodes of a cluster
+	Cluster                 *Cluster
+	BorderLeft, BorderRight bool
 
 	In  Nodes
 	Out Nodes

@@ -174,6 +174,19 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg.writeDefs()
 
 	svg.startG()
+	for _, cluster := range graph.Clusters {
+		svg.write("<rect class='cluster' x='%v' y='%v' width='%v' height='%v'",
+			cluster.TopLeft.X, cluster.TopLeft.Y,
+			cluster.BottomRight.X-cluster.TopLeft.X, cluster.BottomRight.Y-cluster.TopLeft.Y)
+		svg.write(" fill='%v'", ltcolor(cluster.FillColor))
+		svg.write(" stroke='%v'", dkcolor(cluster.LineColor))
+		svg.write("></rect>")
+		if cluster.Label != "" {
+			center := layout.Vector{X: (cluster.TopLeft.X + cluster.BottomRight.X) / 2, Y: cluster.TopLeft.Y + graph.LineHeight/2}
+			svg.writeText(graph, cluster.Label, center, graph.FontSize, "", nil)
+		}
+	}
+
 	for _, edge := range graph.Edges {
 		if len(edge.Path) == 0 {
 			// TODO: log invalid path

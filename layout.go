@@ -138,6 +138,11 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 			}
 			edge.LabelPos = transform(edge.LabelPos)
 		}
+		for _, cluster := range graphdef.Clusters {
+			a, b := transform(cluster.TopLeft), transform(cluster.BottomRight)
+			cluster.TopLeft = Vector{min(a.X, b.X), min(a.Y, b.Y)}
+			cluster.BottomRight = Vector{max(a.X, b.X), max(a.Y, b.Y)}
+		}
 	}()
 
 	left := Length(0)
@@ -153,6 +158,10 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 				edge.Path[i] = p.Add(shift)
 			}
 			edge.LabelPos = edge.LabelPos.Add(shift)
+		}
+		for _, cluster := range component.Clusters {
+			cluster.TopLeft = cluster.TopLeft.Add(shift)
+			cluster.BottomRight = cluster.BottomRight.Add(shift)
 		}
 		left += size.X + 2*graphdef.NodePadding
 	}
@@ -207,6 +216,11 @@ func components(graphdef *Graph) []*Graph {
 			union(group[0], node)
 		}
 	}
+	for _, cluster := range graphdef.Clusters {
+		for _, node := range cluster.Nodes[1:] {
+			union(cluster.Nodes[0], node)
+		}
+	}
 	// min/max pinned nodes share a rank, treat them as connected
 	for _, pinned := range [][]*Node{graphdef.MinRank, graphdef.MaxRank} {
 		for _, node := range pinned {
@@ -221,7 +235,7 @@ func components(graphdef *Graph) []*Graph {
 		graph := byRoot[root]
 		if graph == nil {
 			copy := *graphdef
-			copy.Nodes, copy.Edges, copy.SameRank, copy.MinRank, copy.MaxRank = nil, nil, nil, nil, nil
+			copy.Nodes, copy.Edges, copy.SameRank, copy.MinRank, copy.MaxRank, copy.Clusters = nil, nil, nil, nil, nil, nil
 			graph = &copy
 			byRoot[root] = graph
 			result = append(result, graph)
@@ -247,6 +261,13 @@ func components(graphdef *Graph) []*Graph {
 	for _, node := range graphdef.MaxRank {
 		g := sub(node)
 		g.MaxRank = append(g.MaxRank, node)
+	}
+	for _, cluster := range graphdef.Clusters {
+		if len(cluster.Nodes) == 0 {
+			continue
+		}
+		g := sub(cluster.Nodes[0])
+		g.Clusters = append(g.Clusters, cluster)
 	}
 	return result
 }
@@ -322,6 +343,18 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	// create virtual nodes
 	filledGraph := hier.DefaultAddVirtuals(rankedGraph)
 
+	// cluster borders
+	clusters := map[*Cluster]*hier.Cluster{}
+	for _, clusterdef := range graphdef.Clusters {
+		cluster := &hier.Cluster{}
+		for _, nodedef := range clusterdef.Nodes {
+			cluster.Members.Append(filledGraph.Nodes[nodes[nodedef]])
+		}
+		clusters[clusterdef] = cluster
+		filledGraph.Clusters = append(filledGraph.Clusters, cluster)
+	}
+	hier.AddClusterBorders(filledGraph)
+
 	// order nodes in ranks
 	orderedGraph := filledGraph
 	hier.OrderRanksN(orderedGraph, opts.OrderIterations)
@@ -385,6 +418,28 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		if hasLoop[nodedef] {
 			nodedef.Center.X -= loopWidth / 2
 		}
+	}
+
+	// cluster boxes span their borders horizontally and their members
+	// vertically, with room for the label on top
+	for clusterdef, cluster := range clusters {
+		left, right := Length(math.Inf(1)), Length(math.Inf(-1))
+		for i := range cluster.Left {
+			left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X))
+			right = max(right, Length(cluster.Right[i].Center.X+cluster.Right[i].Radius.X))
+		}
+		top, bottom := Length(math.Inf(1)), Length(math.Inf(-1))
+		for _, nodedef := range clusterdef.Nodes {
+			top = min(top, nodedef.Top())
+			bottom = max(bottom, nodedef.Bottom())
+		}
+		top -= graphdef.RowPadding / 2
+		bottom += graphdef.RowPadding / 2
+		if clusterdef.Label != "" {
+			top -= 2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y
+		}
+		clusterdef.TopLeft = Vector{left, top}
+		clusterdef.BottomRight = Vector{right, bottom}
 	}
 
 	// real nodes per rank, obstacles for edge routing
@@ -570,6 +625,7 @@ func loopPath(node *Node, width Length) []Vector {
 // those two ranks can be hit. Obstacles on the lower rank are passed above,
 // on the upper rank below.
 func routeAround(path []Vector, byRank [][]*Node, firstRank int, from, to *Node, pad Length) []Vector {
+	var lastHit *Node
 	for i := 0; i+1 < len(path); i++ {
 		a, b := path[i], path[i+1]
 		var hit *Node
@@ -586,19 +642,22 @@ func routeAround(path []Vector, byRank [][]*Node, firstRank int, from, to *Node,
 			}
 		}
 		if hit == nil {
+			lastHit = nil
 			continue
 		}
+		if hit == lastHit {
+			// the detour did not clear it (the segment starts beside the
+			// node); give up on this obstacle rather than loop
+			lastHit = nil
+			continue
+		}
+		lastHit = hit
 		way := Vector{X: hit.Center.X, Y: hit.Bottom() + pad}
 		if hit.Center.Y > (a.Y+b.Y)/2 {
 			way.Y = hit.Top() - pad
 		}
 		path = slices.Insert(path, i+1, way)
-		// the new waypoint may itself need routing, so segment i is re-checked;
-		// cap the number of detours per edge
-		if len(path) > 64 {
-			break
-		}
-		i-- // re-check segment a→way
+		i-- // re-check segment a→way, which may hit something else
 	}
 	return path
 }

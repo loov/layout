@@ -21,6 +21,7 @@ func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations) }
 // median sweeps; more sweeps can find better orders on large graphs.
 func OrderRanksN(graph *Graph, iterations int) {
 	OrderRanksDepthFirst(graph)
+	orderClusters(graph)
 
 	best := saveOrder(graph)
 	bestCrossings, bestLength := graph.TotalCrossings(), graph.TotalEdgeLength()
@@ -28,6 +29,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 		OrderRanksByMedian(graph, i%2 == 0)
 		OrderRanksTranspose(graph)
 		orderFlatEdges(graph)
+		orderClusters(graph)
 
 		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
 		if crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
@@ -101,8 +103,13 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 			}
 			node.Coef = medianGridX(adj, node.GridX)
 		}
+		clusterCoef(layer)
 		sort.SliceStable(layer, func(i, k int) bool {
-			return layer[i].Coef < layer[k].Coef
+			a, b := layer[i], layer[k]
+			if a.Coef != b.Coef {
+				return a.Coef < b.Coef
+			}
+			return borderSide(a) < borderSide(b)
 		})
 		for i, node := range layer {
 			node.GridX = float32(i)

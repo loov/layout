@@ -51,6 +51,7 @@ func Position(graph *Graph) {
 		node.Center.X = (v[1] + v[2]) / 2
 	}
 	flushLeft(graph)
+	AlignClusterBorders(graph)
 }
 
 // PositionInitial assigns rows and packs nodes left to right

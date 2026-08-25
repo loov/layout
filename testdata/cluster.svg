@@ -1,0 +1,27 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='204' height='320'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><rect class='cluster' x='12' y='56' width='88' height='192' fill='#E6E6F7' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='56' y='64' font-size='14' color='#000000'>A side</text>
+<rect class='cluster' x='100' y='120' width='88' height='128' fill='#FFFFFF' stroke='#0000F7'></rect><text text-anchor='middle' alignment-baseline='middle' x='144' y='128' font-size='14' color='#000000'>B side</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56,48 L56,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M71.49947,43.272343 L124.59033,81.88388 Q144,96 144,120 L144,144 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56,112 L56,144 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56,176 L56,208 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M144,176 L144,208 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M70.046326,167.66164 L131.27249,214.30411 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56,240 L56,272 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M129.95367,231.66164 L69.63225,277.61487 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M45.15124,45.88641 L25.57562,70.94321 Q6,96 6,127.79698 L6,128 Q6,160 6,192 L6,192 Q6,224 25.70061,249.21678 L45.747787,274.87717 '></path><ellipse cx='56' cy='32' rx='21.84' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='32' font-size='14' color='#000000'>start</text>
+<ellipse cx='56' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='96' font-size='14' color='#000000'>a0</text>
+<ellipse cx='144' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='144' y='160' font-size='14' color='#000000'>b0</text>
+<ellipse cx='56' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='160' font-size='14' color='#000000'>a1</text>
+<ellipse cx='56' cy='224' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='224' font-size='14' color='#000000'>a2</text>
+<ellipse cx='144' cy='224' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='144' y='224' font-size='14' color='#000000'>b1</text>
+<ellipse cx='56' cy='288' rx='17.92' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='288' font-size='14' color='#000000'>end</text>
+</g></svg>

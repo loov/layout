@@ -112,6 +112,30 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
 			subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
 			subcontext.parseStmts(stmt.Stmts)
+			if strings.HasPrefix(stmt.ID, "cluster") && len(subcontext.touched) > 0 {
+				cluster := &layout.Cluster{ID: stmt.ID, Nodes: subcontext.touched}
+				var color layout.Color
+				filled := false
+				for _, attr := range subgraphAttrs(stmt.Stmts) {
+					switch attr.Key {
+					case "label":
+						setString(&cluster.Label, attr.Val)
+					case "color":
+						setColor(&color, attr.Val)
+						setColor(&cluster.LineColor, attr.Val)
+					case "pencolor":
+						setColor(&cluster.LineColor, attr.Val)
+					case "fillcolor", "bgcolor":
+						setColor(&cluster.FillColor, attr.Val)
+					case "style":
+						filled = strings.Contains(attr.Val, "filled")
+					}
+				}
+				if filled && cluster.FillColor == nil {
+					cluster.FillColor = color
+				}
+				context.Graph.Clusters = append(context.Graph.Clusters, cluster)
+			}
 			switch {
 			case hasAttr(stmt.Stmts, "rank", "same"):
 				if len(subcontext.touched) > 1 {
@@ -136,6 +160,22 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 		context.touched = append(context.touched, node)
 	}
 	return node
+}
+
+// subgraphAttrs returns the attributes set directly on a subgraph
+func subgraphAttrs(stmts []ast.Stmt) []*ast.Attr {
+	var attrs []*ast.Attr
+	for _, stmt := range stmts {
+		switch stmt := stmt.(type) {
+		case *ast.Attr:
+			attrs = append(attrs, stmt)
+		case *ast.AttrStmt:
+			if stmt.Kind == ast.GraphKind {
+				attrs = append(attrs, stmt.Attrs...)
+			}
+		}
+	}
+	return attrs
 }
 
 func hasAttr(stmts []ast.Stmt, key, val string) bool {
@@ -214,8 +254,18 @@ func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
 }
 
 func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
+	var color layout.Color
+	filled := false
+	defer func() {
+		// style=filled without fillcolor fills with the outline color
+		if filled && node.FillColor == nil && color != nil {
+			node.FillColor = color
+		}
+	}()
 	for _, attr := range attrs {
 		switch attr.Key {
+		case "style":
+			filled = strings.Contains(attr.Val, "filled")
 		case "weight":
 			setFloat(&node.Weight, attr.Val)
 		case "shape":
@@ -223,6 +273,7 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		case "label":
 			setString(&node.Label, attr.Val)
 		case "color":
+			setColor(&color, attr.Val)
 			setColor(&node.LineColor, attr.Val)
 		case "fontcolor":
 			setColor(&node.FontColor, attr.Val)

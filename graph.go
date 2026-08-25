@@ -32,6 +32,8 @@ type Graph struct {
 	SameRank [][]*Node
 	// MinRank and MaxRank hold nodes pinned to the first and last rank
 	MinRank, MaxRank []*Node
+	// Clusters are groups of nodes drawn inside a box
+	Clusters []*Cluster
 }
 
 // NewGraph creates an empty undirected graph with default styling.
@@ -129,6 +131,10 @@ func (graph *Graph) Bounds() (min, max Vector) {
 		maxvector(&max, node.BottomRight())
 	}
 
+	for _, cluster := range graph.Clusters {
+		minvector(&min, cluster.TopLeft)
+		maxvector(&max, cluster.BottomRight)
+	}
 	for _, edge := range graph.Edges {
 		for _, p := range edge.Path {
 			minvector(&min, p)
