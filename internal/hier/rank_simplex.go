@@ -109,6 +109,9 @@ type simplex struct {
 	order                    []int
 	agg, cut                 []float32
 	stack                    []int
+	mark                     []int // visited marks by epoch, see subtree
+	epoch                    int
+	nodes                    []int // subtree result buffer
 }
 
 func (s *simplex) run() {
@@ -129,34 +132,159 @@ func (s *simplex) run() {
 	s.agg = make([]float32, s.n)
 	s.cut = make([]float32, len(s.edges))
 	s.stack = make([]int, 0, s.n)
+	s.mark = make([]int, s.n)
+	s.cutValues()
 
 	for iter := 0; iter < 8*len(s.edges)+8; iter++ {
 		leave := s.negativeCutEdge()
 		if leave < 0 {
 			break
 		}
-		enter := s.enteringEdge(leave)
+		side, sideIsTail := s.smallerSide(leave)
+		enter := s.enteringEdge(side, sideIsTail)
 		if enter < 0 {
 			break // should not happen: cut value negative implies a candidate
 		}
-		// make the entering edge tight by shifting the subtree cut off by
-		// the leaving edge; every other tree edge stays tight
-		child, _ := s.subtreeSide(leave)
-		delta := s.slack(enter)
-		if s.inSubtree(s.edges[enter].head, child) {
-			delta = -delta
-		}
-		if delta != 0 {
-			for v := range s.n {
-				if s.inSubtree(v, child) {
-					s.rank[v] += delta
-				}
-			}
-		}
-		s.edges[leave].tree = false
-		s.edges[enter].tree = true
+		s.exchange(leave, enter, side, sideIsTail)
 	}
 	s.normalize()
+}
+
+// smallerSide returns the vertices on the smaller side of the cut made by
+// tree edge leave, and whether that side contains the edge's tail.
+func (s *simplex) smallerSide(leave int) (side []int, sideIsTail bool) {
+	child, childIsTail := s.subtreeSide(leave)
+	e := s.edges[leave]
+	if 2*(s.lim[child]-s.low[child]+1) <= s.n {
+		return s.subtree(child, leave), childIsTail
+	}
+	return s.subtree(e.tail+e.head-child, leave), !childIsTail
+}
+
+// exchange replaces tree edge leave with non-tree edge enter, updating
+// ranks, cut values and the subtree numbering incrementally. side is the
+// smaller side of the cut, see smallerSide.
+func (s *simplex) exchange(leave, enter int, side []int, sideIsTail bool) {
+	f := s.edges[enter]
+
+	// shift the smaller side so that enter becomes tight: enter goes from
+	// the head side to the tail side, so the tail side moves up (lower
+	// ranks) or equivalently the head side moves down
+	delta := s.slack(enter)
+	if sideIsTail {
+		delta = -delta
+	}
+	if delta != 0 {
+		for _, v := range side {
+			s.rank[v] += delta
+		}
+	}
+
+	// cut values change only on the tree path between enter's endpoints;
+	// walking up from each endpoint to their lowest common ancestor
+	cutLeave := s.cut[leave]
+	lca := s.treeUpdate(f.tail, f.head, cutLeave, true)
+	if other := s.treeUpdate(f.head, f.tail, cutLeave, false); other != lca {
+		panic("hier: network simplex tree update mismatch")
+	}
+	s.cut[enter] = -cutLeave
+	s.cut[leave] = 0
+	s.edges[leave].tree = false
+	s.edges[enter].tree = true
+
+	// renumber the lca subtree; its number range does not change
+	s.renumber(lca, s.low[lca])
+}
+
+// treeUpdate walks from v towards the root until w is inside v's subtree,
+// adjusting the cut value of every parent edge on the way, and returns the
+// vertex where it stopped (the lowest common ancestor of v and w).
+func (s *simplex) treeUpdate(v, w int, cutvalue float32, dir bool) int {
+	for !s.inSubtree(w, v) {
+		p := s.parent[v]
+		if p < 0 {
+			panic("hier: network simplex endpoints in different trees")
+		}
+		e := s.edges[p]
+		d := dir
+		if v != e.tail {
+			d = !d
+		}
+		if d {
+			s.cut[p] += cutvalue
+		} else {
+			s.cut[p] -= cutvalue
+		}
+		v = e.tail + e.head - v
+	}
+	return v
+}
+
+// subtree returns the vertices reachable from root over tree edges without
+// crossing edge skip
+func (s *simplex) subtree(root, skip int) []int {
+	s.epoch++
+	s.mark[root] = s.epoch
+	s.stack = append(s.stack[:0], root)
+	nodes := append(s.nodes[:0], root)
+	for len(s.stack) > 0 {
+		v := s.stack[len(s.stack)-1]
+		s.stack = s.stack[:len(s.stack)-1]
+		for _, i := range s.adj[v] {
+			e := s.edges[i]
+			if !e.tree || i == skip {
+				continue
+			}
+			w := e.tail + e.head - v
+			if s.mark[w] == s.epoch {
+				continue
+			}
+			s.mark[w] = s.epoch
+			nodes = append(nodes, w)
+			s.stack = append(s.stack, w)
+		}
+	}
+	s.nodes = nodes
+	return nodes
+}
+
+// renumber assigns low/lim/parent within the subtree of root, starting the
+// numbering at next; used after an exchange to fix the lca subtree
+func (s *simplex) renumber(root int, next int) {
+	parentEdge := s.parent[root]
+	s.epoch++
+	s.mark[root] = s.epoch
+	s.cursor[root] = 0
+	s.stack = append(s.stack[:0], root)
+	s.low[root] = next
+	for len(s.stack) > 0 {
+		v := s.stack[len(s.stack)-1]
+		adj := s.adj[v]
+		descended := false
+		for s.cursor[v] < len(adj) {
+			i := adj[s.cursor[v]]
+			s.cursor[v]++
+			e := s.edges[i]
+			if !e.tree || i == parentEdge {
+				continue
+			}
+			w := e.tail + e.head - v
+			if s.mark[w] != s.epoch {
+				s.mark[w] = s.epoch
+				s.cursor[w] = 0
+				s.low[w] = next
+				s.parent[w] = i
+				s.stack = append(s.stack, w)
+				descended = true
+				break
+			}
+		}
+		if !descended {
+			s.lim[v] = next
+			next++
+			s.stack = s.stack[:len(s.stack)-1]
+		}
+	}
 }
 
 func (s *simplex) length(i int) int { return s.rank[s.edges[i].head] - s.rank[s.edges[i].tail] }
@@ -367,35 +495,37 @@ func (s *simplex) cutValues() []float32 {
 
 // negativeCutEdge returns the tree edge with the most negative cut value, or -1
 func (s *simplex) negativeCutEdge() int {
-	cut := s.cutValues()
 	best, bestCut := -1, float32(0)
-	for i, c := range cut {
-		if c < bestCut {
+	for i, c := range s.cut {
+		if c < bestCut && s.edges[i].tree {
 			best, bestCut = i, c
 		}
 	}
 	return best
 }
 
-// enteringEdge returns the non-tree edge from the head side to the tail side
-// of tree edge leave with minimal slack
-func (s *simplex) enteringEdge(leave int) int {
-	child, childIsTail := s.subtreeSide(leave)
+// enteringEdge returns the non-tree edge with minimal slack that goes from
+// the head side of the leaving edge to its tail side, scanning only the
+// adjacency of the smaller side (marked by the last subtree call).
+func (s *simplex) enteringEdge(side []int, sideIsTail bool) int {
 	best, bestSlack := -1, math.MaxInt
-	for i, e := range s.edges {
-		if e.tree {
-			continue
-		}
-		tailIn, headIn := s.inSubtree(e.tail, child), s.inSubtree(e.head, child)
-		if tailIn == headIn {
-			continue
-		}
-		// the tail must be on leave's head side
-		if tailIn == childIsTail {
-			continue
-		}
-		if sl := s.slack(i); sl < bestSlack {
-			best, bestSlack = i, sl
+	for _, v := range side {
+		for _, i := range s.adj[v] {
+			e := s.edges[i]
+			if e.tree {
+				continue
+			}
+			w := e.tail + e.head - v
+			if s.mark[w] == s.epoch {
+				continue // both ends on this side
+			}
+			// v is the tail exactly when this side is the tail side
+			if (e.tail == v) == sideIsTail {
+				continue
+			}
+			if sl := s.slack(i); sl < bestSlack {
+				best, bestSlack = i, sl
+			}
 		}
 	}
 	return best
