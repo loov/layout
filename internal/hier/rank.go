@@ -66,6 +66,19 @@ func extractFlatEdges(graph *Graph) {
 	}
 }
 
+// DoubleRanks spreads nodes over every other rank so that every edge spans
+// at least two ranks and gets a virtual node in between.
+func DoubleRanks(graph *Graph) {
+	for _, node := range graph.Nodes {
+		node.Rank *= 2
+	}
+	byRank := make([]Nodes, 2*len(graph.ByRank)-1)
+	for i, layer := range graph.ByRank {
+		byRank[2*i] = layer
+	}
+	graph.ByRank = byRank
+}
+
 // RankCompact renumbers ranks so that there are no empty ranks
 func RankCompact(graph *Graph) {
 	used := map[int]bool{}

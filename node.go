@@ -60,19 +60,24 @@ func (node *Node) DefaultLabel() string {
 // approxLabelRadius estimates the half size of the label text
 // assuming a fixed height to width ratio for characters.
 func (node *Node) approxLabelRadius(lineHeight Length) Vector {
+	return approxTextRadius(node.DefaultLabel(), node.FontSize, lineHeight)
+}
+
+// approxTextRadius estimates the half size of multi-line text assuming a
+// fixed height to width ratio for characters.
+func approxTextRadius(text string, fontSize, lineHeight Length) Vector {
 	const HeightWidthRatio = 0.5
-	if lineHeight < node.FontSize {
-		lineHeight = node.FontSize
+	if lineHeight < fontSize {
+		lineHeight = fontSize
 	}
 
 	size := Vector{}
-	lines := strings.Split(node.DefaultLabel(), "\n")
+	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		width := Length(len(line)) * node.FontSize * HeightWidthRatio
+		width := Length(len(line)) * fontSize * HeightWidthRatio
 		if width > size.X {
 			size.X = width
 		}
-		size.Y += lineHeight
 	}
 
 	size.X *= 0.5

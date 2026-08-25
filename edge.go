@@ -17,7 +17,9 @@ type Edge struct {
 	LineColor Color
 
 	// computed in layouting
-	Path []Vector
+	Path        []Vector
+	LabelPos    Vector // center of the label, when Label is set
+	LabelRadius Vector // half size of the label
 }
 
 // NewEdge creates an edge from one node to another with default styling.

@@ -127,6 +127,25 @@ func roundedPath(path []layout.Vector, radius layout.Length) string {
 // Nodes are drawn according to their shape and colors, edges as rounded
 // polylines along Edge.Path with an arrowhead on directed edges. Labels
 // wrapped in <...> are emitted as inline HTML.
+// writeText writes multi-line text centered on center
+func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
+	lines := strings.Split(text, "\n")
+	top := center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
+	top += graph.LineHeight * 0.5
+	for _, line := range lines {
+		svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", center.X, top)
+		if fontSize != 0 {
+			svg.write(" font-size='%v'", fontSize)
+		}
+		if fontName != "" {
+			svg.write(" font-family='%v'", fontName)
+		}
+		svg.write(" color='%v'", dkcolor(color))
+		svg.write(">%v</text>\n", escapeString(line))
+		top += graph.LineHeight
+	}
+}
+
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
@@ -158,6 +177,10 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 
 		svg.write("</path>")
+
+		if edge.Label != "" {
+			svg.writeText(graph, edge.Label, edge.LabelPos, edge.FontSize, edge.FontName, edge.FontColor)
+		}
 	}
 
 	for _, node := range graph.Nodes {
@@ -217,21 +240,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 				svg.write(`><body xmlns="http://www.w3.org/1999/xhtml">%v</body>`, lowercaseTags(label[1:len(label)-1]))
 				svg.write("</foreignObject>")
 			} else {
-				lines := strings.Split(label, "\n")
-				top := node.Center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
-				top += graph.LineHeight * 0.5
-				for _, line := range lines {
-					svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", node.Center.X, top)
-					if node.FontSize != 0 {
-						svg.write(" font-size='%v'", node.FontSize)
-					}
-					if node.FontName != "" {
-						svg.write(" font-family='%v'", node.FontName)
-					}
-					svg.write(" color='%v'", dkcolor(node.FontColor))
-					svg.write(">%v</text>\n", escapeString(line))
-					top += graph.LineHeight
-				}
+				svg.writeText(graph, label, node.Center, node.FontSize, node.FontName, node.FontColor)
 			}
 		}
 	}

@@ -115,6 +115,15 @@ var examples = map[string]func() *layout.Graph{
 		graph.Node("Lonely")
 		return graph
 	},
+	"labels": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("A", "B").Label = "yes"
+		graph.Edge("A", "C").Label = "no"
+		graph.Edge("B", "D")
+		graph.Edge("C", "D").Label = "long label here"
+		graph.Edge("D", "A").Label = "back"
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

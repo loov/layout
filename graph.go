@@ -130,6 +130,10 @@ func (graph *Graph) Bounds() (min, max Vector) {
 			minvector(&min, p)
 			maxvector(&max, p)
 		}
+		if edge.Label != "" {
+			minvector(&min, Vector{edge.LabelPos.X - edge.LabelRadius.X, edge.LabelPos.Y - edge.LabelRadius.Y})
+			maxvector(&max, Vector{edge.LabelPos.X + edge.LabelRadius.X, edge.LabelPos.Y + edge.LabelRadius.Y})
+		}
 	}
 
 	minvector(&min, max)

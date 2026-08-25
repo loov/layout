@@ -60,6 +60,12 @@ func (graph *Graph) AssignMissingValues() {
 		if edge.Weight < epsilon {
 			edge.Weight = epsilon
 		}
+		if edge.FontSize <= 0 {
+			edge.FontSize = graph.FontSize
+		}
+		if edge.Label != "" {
+			edge.LabelRadius = approxTextRadius(edge.Label, edge.FontSize, graph.LineHeight)
+		}
 	}
 }
 
@@ -73,16 +79,20 @@ func Hierarchical(graphdef *Graph) {
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
 	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
-	if sideways {
+	swapRadii := func() {
 		for _, node := range graphdef.Nodes {
 			node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
 		}
+		for _, edge := range graphdef.Edges {
+			edge.LabelRadius.X, edge.LabelRadius.Y = edge.LabelRadius.Y, edge.LabelRadius.X
+		}
+	}
+	if sideways {
+		swapRadii()
 	}
 	defer func() {
 		if sideways {
-			for _, node := range graphdef.Nodes {
-				node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
-			}
+			swapRadii()
 		}
 		_, size := graphdef.Bounds()
 		transform := func(p Vector) Vector {
@@ -103,6 +113,7 @@ func Hierarchical(graphdef *Graph) {
 			for i, p := range edge.Path {
 				edge.Path[i] = transform(p)
 			}
+			edge.LabelPos = transform(edge.LabelPos)
 		}
 	}()
 
@@ -118,6 +129,7 @@ func Hierarchical(graphdef *Graph) {
 			for i, p := range edge.Path {
 				edge.Path[i] = p.Add(shift)
 			}
+			edge.LabelPos = edge.LabelPos.Add(shift)
 		}
 		left += size.X + 2*graphdef.NodePadding
 	}
@@ -239,17 +251,67 @@ func hierarchicalComponent(graphdef *Graph) {
 	// assign nodes to ranks
 	rankedGraph := hier.DefaultRank(decycledGraph)
 
+	// labeled edges need a virtual node to hang the label on; doubling the
+	// ranks guarantees every edge has one in the middle
+	labels := map[[2]hier.ID][]*Edge{} // by unordered node pair
+	pair := func(a, b hier.ID) [2]hier.ID {
+		if a > b {
+			a, b = b, a
+		}
+		return [2]hier.ID{a, b}
+	}
+	for _, edge := range graphdef.Edges {
+		if edge.Label != "" && edge.From != edge.To {
+			key := pair(nodes[edge.From], nodes[edge.To])
+			labels[key] = append(labels[key], edge)
+		}
+	}
+	if len(labels) > 0 {
+		hier.DoubleRanks(rankedGraph)
+	}
+
 	// create virtual nodes
 	filledGraph := hier.DefaultAddVirtuals(rankedGraph)
 
 	// order nodes in ranks
 	orderedGraph := hier.DefaultOrderRanks(filledGraph)
 
+	// the middle virtual node of every labeled edge carries the labels
+	labelNode := map[*hier.Node][]*Edge{}
+	for _, source := range orderedGraph.Nodes {
+		if source.Virtual {
+			continue
+		}
+		for _, out := range source.Out {
+			var chain []*hier.Node
+			target := out
+			for target.Virtual {
+				chain = append(chain, target)
+				target = target.Out[0]
+			}
+			if len(chain) == 0 {
+				continue
+			}
+			if edges := labels[pair(source.ID, target.ID)]; len(edges) > 0 {
+				labelNode[chain[len(chain)/2]] = edges
+			}
+		}
+	}
+
 	// assign node sizes
 	for id, node := range orderedGraph.Nodes {
 		if node.Virtual {
 			node.Radius.X = float32(graphdef.EdgePadding)
 			node.Radius.Y = float32(graphdef.EdgePadding)
+			if edges, ok := labelNode[node]; ok {
+				var width, height Length
+				for _, edge := range edges {
+					width = max(width, edge.LabelRadius.X)
+					height += edge.LabelRadius.Y
+				}
+				node.Radius.X += float32(width + graphdef.EdgePadding)
+				node.Radius.Y = float32(height + graphdef.EdgePadding)
+			}
 			continue
 		}
 
@@ -306,10 +368,18 @@ func hierarchicalComponent(graphdef *Graph) {
 					break
 				}
 
-				path = append(path, Vector{
-					Length(target.Center.X),
-					Length(target.Center.Y),
-				})
+				point := Vector{Length(target.Center.X), Length(target.Center.Y)}
+				if edges, ok := labelNode[target]; ok {
+					// the edge passes on the left, the labels stack on the right
+					point.X = Length(target.Center.X-target.Radius.X) + graphdef.EdgePadding
+					x := point.X + (Length(target.Center.X+target.Radius.X)-point.X)/2
+					y := point.Y - Length(target.Radius.Y) + graphdef.EdgePadding
+					for _, edge := range edges {
+						edge.LabelPos = Vector{X: x, Y: y + edge.LabelRadius.Y}
+						y += 2 * edge.LabelRadius.Y
+					}
+				}
+				path = append(path, point)
 
 				target = target.Out[0]
 			}
@@ -372,6 +442,7 @@ func hierarchicalComponent(graphdef *Graph) {
 
 		if sourceid == targetid {
 			edge.Path = loopPath(edge.From, loopWidth)
+			edge.LabelPos = Vector{X: edge.From.Right() + loopWidth + graphdef.EdgePadding + edge.LabelRadius.X, Y: edge.From.Center.Y}
 			continue
 		}
 
