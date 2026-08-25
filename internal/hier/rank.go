@@ -1,5 +1,7 @@
 package hier
 
+import "slices"
+
 // DefaultRank does recommended ranking algorithm
 func DefaultRank(graph *Graph) *Graph {
 	Rank(graph)
@@ -13,6 +15,7 @@ func Rank(graph *Graph) {
 	for i := range 7 {
 		RankMinimizeEdgeStep(graph, i%2 == 0)
 	}
+	RankCompact(graph)
 
 	graph.ByRank = nil
 	for _, node := range graph.Nodes {
@@ -97,6 +100,9 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 	if down {
 		// try to move nodes down
 		for _, node := range graph.Nodes {
+			if len(node.Out) == 0 {
+				continue
+			}
 			if len(node.In) <= len(node.Out) {
 				// there are more edges below, try to move node downwards
 				minrank := len(graph.Nodes)
@@ -117,6 +123,9 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 		}
 	} else {
 		for _, node := range graph.Nodes {
+			if len(node.In) == 0 {
+				continue
+			}
 			if len(node.In) >= len(node.Out) {
 				// there are more edges above, try to move node upwards
 				maxrank := 0
@@ -137,4 +146,24 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 		}
 	}
 	return
+}
+
+// RankCompact renumbers ranks so that there are no empty ranks
+func RankCompact(graph *Graph) {
+	used := map[int]bool{}
+	for _, node := range graph.Nodes {
+		used[node.Rank] = true
+	}
+	ranks := make([]int, 0, len(used))
+	for r := range used {
+		ranks = append(ranks, r)
+	}
+	slices.Sort(ranks)
+	remap := make(map[int]int, len(ranks))
+	for i, r := range ranks {
+		remap[r] = i
+	}
+	for _, node := range graph.Nodes {
+		node.Rank = remap[node.Rank]
+	}
 }
