@@ -3,6 +3,7 @@ package layout
 import (
 	"math"
 	"math/rand"
+	"sort"
 )
 
 // Force lays out the graph with a Fruchterman-Reingold force simulation:
@@ -86,6 +87,34 @@ func Force(graph *Graph) error {
 			pos[i][1] += disp[i][1]
 		}
 		temperature *= 0.98
+	}
+
+	// an outlier stretches the whole picture: shrink every gap between
+	// neighbors along an axis to at most twice the median gap
+	for axis := range 2 {
+		order := make([]int, n)
+		for i := range order {
+			order[i] = i
+		}
+		sort.Slice(order, func(a, b int) bool { return pos[order[a]][axis] < pos[order[b]][axis] })
+		gaps := make([]float64, 0, n)
+		for i := 1; i < n; i++ {
+			gaps = append(gaps, pos[order[i]][axis]-pos[order[i-1]][axis])
+		}
+		if len(gaps) < 2 {
+			continue
+		}
+		sort.Float64s(gaps)
+		limit := math.Max(2*gaps[len(gaps)/2], k)
+		shift, prev := 0.0, pos[order[0]][axis]
+		for i := 1; i < n; i++ {
+			gap := pos[order[i]][axis] - prev
+			prev = pos[order[i]][axis]
+			if gap > limit {
+				shift += gap - limit
+			}
+			pos[order[i]][axis] -= shift
+		}
 	}
 
 	// shift so that the drawing starts at the padding
