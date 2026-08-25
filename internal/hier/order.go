@@ -141,6 +141,7 @@ func medianGridX(adj Nodes, fallback float32) float32 {
 
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings
 func OrderRanksTranspose(graph *Graph) (swaps int) {
+	graph.assignPos()
 	for range 20 {
 		improved := false
 		for _, nodes := range graph.ByRank {
@@ -152,6 +153,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 					improved = true
 				}
 			}
+			nodes.assignPos()
 		}
 		if !improved {
 			return swaps

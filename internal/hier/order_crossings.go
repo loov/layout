@@ -1,45 +1,49 @@
 package hier
 
-func (graph *Graph) CrossingsUp(u, v *Node) int {
-	if u.Rank == 0 {
-		return 0
-	}
+// Crossing counts require up-to-date Node.Pos, see assignPos.
 
-	count := 0
-	prev := graph.ByRank[u.Rank-1]
-	for _, w := range u.In {
-		for _, z := range v.In {
-			if prev.IndexOf(z) < prev.IndexOf(w) {
-				count++
-			}
-		}
-	}
-	return count
-}
+// CrossingsUp counts crossings between edges into u and v from the rank above,
+// assuming u is placed left of v.
+func (graph *Graph) CrossingsUp(u, v *Node) int { return crossings(u.In, v.In) }
 
-func (graph *Graph) CrossingsDown(u, v *Node) int {
-	if u.Rank == len(graph.ByRank)-1 {
-		return 0
-	}
+// CrossingsDown counts crossings between edges out of u and v to the rank below,
+// assuming u is placed left of v.
+func (graph *Graph) CrossingsDown(u, v *Node) int { return crossings(u.Out, v.Out) }
 
-	count := 0
-	next := graph.ByRank[u.Rank+1]
-	for _, w := range u.Out {
-		for _, z := range v.Out {
-			if next.IndexOf(z) < next.IndexOf(w) {
-				count++
-			}
-		}
-	}
-	return count
-}
-
+// Crossings counts crossings on both sides assuming u is left of v
 func (graph *Graph) Crossings(u, v *Node) int {
-	return graph.CrossingsDown(u, v) + graph.CrossingsUp(u, v)
+	return crossings(u.In, v.In) + crossings(u.Out, v.Out)
+}
+
+// crossings counts pairs (w in uadj, z in vadj) with z left of w
+func crossings(uadj, vadj Nodes) int {
+	count := 0
+	for _, w := range uadj {
+		for _, z := range vadj {
+			if z.Pos < w.Pos {
+				count++
+			}
+		}
+	}
+	return count
+}
+
+// assignPos records each node's index within its rank
+func (graph *Graph) assignPos() {
+	for _, layer := range graph.ByRank {
+		layer.assignPos()
+	}
+}
+
+func (layer Nodes) assignPos() {
+	for i, node := range layer {
+		node.Pos = i
+	}
 }
 
 // TotalCrossings counts edge crossings between all adjacent ranks
 func (graph *Graph) TotalCrossings() int {
+	graph.assignPos()
 	total := 0
 	for _, layer := range graph.ByRank {
 		for i, u := range layer {

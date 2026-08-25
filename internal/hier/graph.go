@@ -31,6 +31,7 @@ type Node struct {
 	// Ordering info
 	Coef  float32
 	GridX float32
+	Pos   int // index within its rank, see assignPos
 
 	// Visuals
 	Center Vector
