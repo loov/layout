@@ -541,6 +541,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
 
 			path = routeAround(path, byRank, source.Rank, sourcedef, targetdef, graphdef.EdgePadding)
+			path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
 
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
@@ -716,8 +717,50 @@ func absLength(v Length) Length {
 
 // segmentHitsBox reports whether segment ab intersects node's box grown by pad
 func segmentHitsBox(a, b Vector, node *Node, pad Length) bool {
-	x0, y0 := float64(node.Left()-pad), float64(node.Top()-pad)
-	x1, y1 := float64(node.Right()+pad), float64(node.Bottom()+pad)
+	return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})
+}
+
+// routeAroundClusters detours segments that cut across a cluster box the
+// edge does not belong to, going around the nearest corner.
+func routeAroundClusters(path []Vector, clusters []*Cluster, from, to *Node, pad Length) []Vector {
+	for _, cluster := range clusters {
+		if slices.Contains(cluster.Nodes, from) || slices.Contains(cluster.Nodes, to) {
+			continue // ponytail: linear scan, index membership if clusters get big
+		}
+		// virtual nodes outside the box sit pad away from it; grow by
+		// less so that chains running alongside are not hits
+		pad := pad / 2
+		tl, br := cluster.TopLeft.Add(Vector{-pad, -pad}), cluster.BottomRight.Add(Vector{pad, pad})
+		corners := []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}}
+		inserted := 0
+		for i := 0; i+1 < len(path) && inserted < 8; i++ {
+			a, b := path[i], path[i+1]
+			if !segmentHitsRect(a, b, tl, br) {
+				continue
+			}
+			// nearest corner to the segment's midpoint
+			mid := Vector{(a.X + b.X) / 2, (a.Y + b.Y) / 2}
+			best, bestDist := corners[0], Length(math.Inf(1))
+			for _, c := range corners {
+				if d := (c.X-mid.X)*(c.X-mid.X) + (c.Y-mid.Y)*(c.Y-mid.Y); d < bestDist {
+					best, bestDist = c, d
+				}
+			}
+			if best == a || best == b {
+				continue // already routed via this corner
+			}
+			path = slices.Insert(path, i+1, best)
+			inserted++
+			i-- // re-check a→corner
+		}
+	}
+	return path
+}
+
+// segmentHitsRect reports whether segment ab intersects the rectangle tl-br
+func segmentHitsRect(a, b Vector, tl, br Vector) bool {
+	x0, y0 := float64(tl.X), float64(tl.Y)
+	x1, y1 := float64(br.X), float64(br.Y)
 	dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
 	t0, t1 := 0.0, 1.0
 	clip := func(p, q float64) bool {
