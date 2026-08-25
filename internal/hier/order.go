@@ -28,6 +28,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 	stale := 0
 	for i := 0; i < iterations && stale < 4; i++ {
 		OrderRanksByMedian(graph, i%2 == 0)
+		OrderRanksSift(graph)
 		OrderRanksTranspose(graph)
 		orderFlatEdges(graph)
 		orderClusters(graph)
