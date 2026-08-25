@@ -455,6 +455,14 @@ func hierarchicalComponent(graphdef *Graph) {
 			continue
 		}
 
+		// pinned ports override the automatic attachment points
+		if edge.FromPort != CompassAuto {
+			path = append([]Vector{edge.From.CompassPoint(edge.FromPort)}, path[1:]...)
+		}
+		if edge.ToPort != CompassAuto {
+			path = append(path[:len(path)-1:len(path)-1], edge.To.CompassPoint(edge.ToPort))
+		}
+
 		key := pairKey(edge)
 		if n := pairCount[key]; n > 1 {
 			k := pairIndex[key]
@@ -462,6 +470,15 @@ func hierarchicalComponent(graphdef *Graph) {
 			spacing := 2 * graphdef.EdgePadding
 			offset := (Length(k) - Length(n-1)/2) * spacing
 			path = offsetPath(path, offset, edge.From, edge.To)
+		}
+
+		// pinned ports override the automatic attachment points
+		path = slices.Clone(path)
+		if edge.FromPort != CompassAuto {
+			path[0] = edge.From.CompassPoint(edge.FromPort)
+		}
+		if edge.ToPort != CompassAuto {
+			path[len(path)-1] = edge.To.CompassPoint(edge.ToPort)
 		}
 		edge.Path = path
 	}

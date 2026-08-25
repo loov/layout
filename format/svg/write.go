@@ -52,8 +52,17 @@ func (svg *writer) finishG() { svg.write("</g>") }
 func (svg *writer) writeDefs() {
 	svg.write(`
 	<defs>
-		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
 	</defs>`)
 }
@@ -127,6 +136,15 @@ func roundedPath(path []layout.Vector, radius layout.Length) string {
 // Nodes are drawn according to their shape and colors, edges as rounded
 // polylines along Edge.Path with an arrowhead on directed edges. Labels
 // wrapped in <...> are emitted as inline HTML.
+// markerID returns the marker definition for an arrow style, or "" for none
+func markerID(arrow layout.Arrow) string {
+	switch arrow {
+	case layout.ArrowNormal, layout.ArrowVee, layout.ArrowDot, layout.ArrowODot:
+		return string(arrow)
+	}
+	return ""
+}
+
 // writeText writes multi-line text centered on center
 func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
 	lines := strings.Split(text, "\n")
@@ -162,10 +180,16 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			continue
 		}
 
-		if edge.Directed {
-			svg.write("<path class='edge' marker-end='url(#arrowhead)'")
-		} else {
-			svg.write("<path class='edge'")
+		svg.write("<path class='edge'")
+		head, tail := edge.ArrowHead, edge.ArrowTail
+		if head == layout.ArrowDefault && edge.Directed {
+			head = layout.ArrowNormal
+		}
+		if marker := markerID(head); marker != "" {
+			svg.write(" marker-end='url(#%v)'", marker)
+		}
+		if marker := markerID(tail); marker != "" {
+			svg.write(" marker-start='url(#%v)'", marker)
 		}
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))

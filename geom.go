@@ -24,6 +24,37 @@ const (
 	RightToLeft RankDir = "RL"
 )
 
+// Compass is a point on a node's outline where an edge attaches.
+type Compass string
+
+// Compass points; the zero value lets the layout choose.
+const (
+	CompassAuto Compass = ""
+	North       Compass = "n"
+	NorthEast   Compass = "ne"
+	East        Compass = "e"
+	SouthEast   Compass = "se"
+	South       Compass = "s"
+	SouthWest   Compass = "sw"
+	West        Compass = "w"
+	NorthWest   Compass = "nw"
+	Center      Compass = "c"
+)
+
+// Arrow is the marker drawn at an edge end.
+type Arrow string
+
+// Arrow styles; the zero value is a normal arrowhead for directed edges'
+// heads and nothing otherwise.
+const (
+	ArrowDefault Arrow = ""
+	ArrowNormal  Arrow = "normal"
+	ArrowNone    Arrow = "none"
+	ArrowDot     Arrow = "dot"
+	ArrowODot    Arrow = "odot"
+	ArrowVee     Arrow = "vee"
+)
+
 // Vector is a point or size in the plane.
 type Vector struct{ X, Y Length }
 

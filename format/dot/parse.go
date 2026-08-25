@@ -155,9 +155,11 @@ func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
 
 func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 	sources := context.ensureVertex(edgeStmt.From)
+	sourcePort := vertexPort(edgeStmt.From)
 	to := edgeStmt.To
 	for to != nil {
 		targets := context.ensureVertex(to.Vertex)
+		targetPort := vertexPort(to.Vertex)
 		for _, source := range sources {
 			for _, target := range targets {
 				edge := layout.NewEdge(source, target)
@@ -165,6 +167,8 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 				edge.Directed = to.Directed
 				edge.From = source
 				edge.To = target
+				edge.FromPort = sourcePort
+				edge.ToPort = targetPort
 
 				applyEdgeAttrs(edge, context.edgeAttrs)
 				applyEdgeAttrs(edge, edgeStmt.Attrs)
@@ -174,8 +178,19 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 		}
 
 		sources = targets
+		sourcePort = targetPort
 		to = to.To
 	}
+}
+
+// vertexPort returns the compass point of a node vertex, if any. Named
+// ports (record fields) are not supported and ignored.
+func vertexPort(v ast.Vertex) layout.Compass {
+	node, ok := v.(*ast.Node)
+	if !ok || node.Port == nil || node.Port.CompassPoint == ast.CompassPointNone {
+		return layout.CompassAuto
+	}
+	return layout.Compass(node.Port.CompassPoint.String())
 }
 
 func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
@@ -208,6 +223,8 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		case "label":
 			setString(&node.Label, attr.Val)
 		case "color":
+			setColor(&node.LineColor, attr.Val)
+		case "fontcolor":
 			setColor(&node.FontColor, attr.Val)
 		case "fontname":
 			setString(&node.FontName, attr.Val)
@@ -237,7 +254,28 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		case "label":
 			setString(&edge.Label, attr.Val)
 		case "color":
+			setColor(&edge.LineColor, attr.Val)
+		case "fontcolor":
 			setColor(&edge.FontColor, attr.Val)
+		case "dir":
+			switch fixstring(attr.Val) {
+			case "back":
+				edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNormal
+			case "both":
+				edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNormal
+			case "none":
+				edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNone
+			case "forward":
+				edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNone
+			}
+		case "arrowhead":
+			edge.ArrowHead = layout.Arrow(fixstring(attr.Val))
+		case "arrowtail":
+			edge.ArrowTail = layout.Arrow(fixstring(attr.Val))
+		case "headport":
+			edge.ToPort = layout.Compass(fixstring(attr.Val))
+		case "tailport":
+			edge.FromPort = layout.Compass(fixstring(attr.Val))
 		case "fontname":
 			setString(&edge.FontName, attr.Val)
 		case "fontsize":

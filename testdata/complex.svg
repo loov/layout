@@ -3,10 +3,19 @@
 		.edge { fill: none; }
 	]]></style>
 	<defs>
-		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='4' d='M102.01428,85 L58.283283,145.9667 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#0000F7' stroke-width='4' d='M127,85 L127,145 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#A0F7A0' stroke-width='1' d='M62.28009,175.1294 L116.773125,240.69508 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M127,177 L127,237 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M133.10817,238.21182 L149.54626,198.41432 Q165,161 151.04831,123 L137.09662,85 '></path><rect x='95.5' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='41.5' font-size='14' color='#000000'>Lorem</text>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='4' d='M102.01428,85 L58.283283,145.9667 '></path><path class='edge' marker-end='url(#normal)' stroke='#0000F7' stroke-width='4' d='M127,85 L127,145 '></path><path class='edge' marker-end='url(#normal)' stroke='#A0F7A0' stroke-width='1' d='M62.28009,175.1294 L116.773125,240.69508 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M127,177 L127,237 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M133.10817,238.21182 L149.54626,198.41432 Q165,161 151.04831,123 L137.09662,85 '></path><rect x='95.5' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='41.5' font-size='14' color='#000000'>Lorem</text>
 <text text-anchor='middle' alignment-baseline='middle' x='127' y='57.5' font-size='14' color='#000000'>Ipsum</text>
 <text text-anchor='middle' alignment-baseline='middle' x='127' y='73.5' font-size='14' color='#000000'>Dolorem</text>
 <ellipse cx='47.5' cy='161' rx='31.5' ry='16' class='node' fill='#E07474' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='47.5' y='161' font-size='14' color='#000000'>Ignitus</text>

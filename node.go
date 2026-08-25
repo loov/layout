@@ -109,6 +109,33 @@ func (node *Node) Right() Length { return node.Center.X + node.Radius.X }
 // Bottom returns the y coordinate of the bottom side of the node bounds.
 func (node *Node) Bottom() Length { return node.Center.Y + node.Radius.Y }
 
+// CompassPoint returns the point on the node outline at the compass
+// direction, or the center for Center and CompassAuto.
+func (node *Node) CompassPoint(c Compass) Vector {
+	var dir Vector
+	switch c {
+	case North:
+		dir = Vector{0, -1}
+	case NorthEast:
+		dir = Vector{1, -1}
+	case East:
+		dir = Vector{1, 0}
+	case SouthEast:
+		dir = Vector{1, 1}
+	case South:
+		dir = Vector{0, 1}
+	case SouthWest:
+		dir = Vector{-1, 1}
+	case West:
+		dir = Vector{-1, 0}
+	case NorthWest:
+		dir = Vector{-1, -1}
+	default:
+		return node.Center
+	}
+	return node.Boundary(Vector{node.Center.X + dir.X*node.Radius.X, node.Center.Y + dir.Y*node.Radius.Y})
+}
+
 // Boundary returns the point on the node outline where the ray from the
 // center towards p exits the node.
 func (node *Node) Boundary(p Vector) Vector {

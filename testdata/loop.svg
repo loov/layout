@@ -3,10 +3,19 @@
 		.edge { fill: none; }
 	]]></style>
 	<defs>
-		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M70.31084,24.844582 L96.00251,24.200497 Q104,24 104,32 L104,32 Q104,40 96.00251,39.799503 L70.31084,39.15542 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M66.24295,44.291542 L88.019485,82.13236 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M48.84458,46.310837 L37.13685,80.84702 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M110.31084,88.84458 L136.00252,88.20049 Q144,88 144,96 L144,96 Q144,104 136.00252,103.79951 L110.31084,103.15542 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M32,112 L32,144 '></path><ellipse cx='56' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='32' font-size='14' color='#000000'>A</text>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M70.31084,24.844582 L96.00251,24.200497 Q104,24 104,32 L104,32 Q104,40 96.00251,39.799503 L70.31084,39.15542 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M66.24295,44.291542 L88.019485,82.13236 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48.84458,46.310837 L37.13685,80.84702 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M110.31084,88.84458 L136.00252,88.20049 Q144,88 144,96 L144,96 Q144,104 136.00252,103.79951 L110.31084,103.15542 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,112 L32,144 '></path><ellipse cx='56' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='32' font-size='14' color='#000000'>A</text>
 <ellipse cx='96' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' color='#000000'>B</text>
 <ellipse cx='32' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' color='#000000'>C</text>
 <ellipse cx='32' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='160' font-size='14' color='#000000'>D</text>

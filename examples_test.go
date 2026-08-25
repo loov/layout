@@ -124,6 +124,18 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "A").Label = "back"
 		return graph
 	},
+	"arrows": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		both := graph.Edge("A", "B")
+		both.ArrowHead, both.ArrowTail = layout.ArrowNormal, layout.ArrowNormal
+		graph.Edge("A", "C").ArrowHead = layout.ArrowDot
+		graph.Edge("A", "D").ArrowHead = layout.ArrowODot
+		graph.Edge("B", "E").ArrowHead = layout.ArrowVee
+		graph.Edge("C", "E").ArrowHead = layout.ArrowNone
+		ports := graph.Edge("D", "E")
+		ports.FromPort, ports.ToPort = layout.West, layout.East
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

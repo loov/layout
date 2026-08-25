@@ -6,6 +6,11 @@ type Edge struct {
 	From, To *Node
 	Weight   float64
 
+	// FromPort and ToPort pin the edge ends to compass points on the nodes
+	FromPort, ToPort Compass
+	// ArrowHead and ArrowTail select the markers at the To and From ends
+	ArrowHead, ArrowTail Arrow
+
 	Tooltip string
 
 	Label     string
