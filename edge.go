@@ -20,6 +20,7 @@ type Edge struct {
 
 	LineWidth Length
 	LineColor Color
+	LineStyle LineStyle
 
 	// computed in layouting
 	Path        []Vector

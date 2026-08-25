@@ -10,6 +10,9 @@ import (
 
 const epsilon = 1e-6
 
+// peripheryGap is the distance between a node's extra outlines
+const peripheryGap = 4 * Point
+
 // AssignMissingValues fills in unset padding, font and size values on the
 // graph, its nodes and edges from the graph defaults. Node sizes are
 // estimated from their labels.
@@ -36,10 +39,13 @@ func (graph *Graph) AssignMissingValues() {
 			node.FontSize = graph.FontSize
 		}
 
-		if node.Radius.X <= 0 || node.Radius.Y <= 0 {
+		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight
+		}
+		if node.Radius.Y <= 0 {
 			node.Radius.Y = graph.LineHeight
-
+		}
+		if !node.FixedSize {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
@@ -53,6 +59,10 @@ func (graph *Graph) AssignMissingValues() {
 			if node.Radius.Y < labelRadius.Y {
 				node.Radius.Y = labelRadius.Y
 			}
+		}
+		if node.Peripheries > 1 {
+			extra := Length(node.Peripheries-1) * peripheryGap
+			node.Radius = node.Radius.Add(Vector{extra, extra})
 		}
 	}
 

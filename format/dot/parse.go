@@ -166,6 +166,7 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 	node, exists := context.Graph.NodeByID[id]
 	if !exists {
 		node = context.Graph.Node(fixstring(id))
+		node.Label = node.ID // dot's default label is the id, label="" is empty
 		applyNodeAttrs(node, context.nodeAttrs)
 	}
 	if !slices.Contains(context.touched, node) {
@@ -278,6 +279,15 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 		switch attr.Key {
 		case "style":
 			filled = strings.Contains(attr.Val, "filled")
+			setLineStyle(&node.LineStyle, attr.Val)
+		case "fixedsize":
+			node.FixedSize = attr.Val == "true" || attr.Val == "shape"
+		case "peripheries":
+			if n, err := strconv.Atoi(attr.Val); err == nil {
+				node.Peripheries = n
+			}
+		case "image":
+			setString(&node.Image, attr.Val)
 		case "shape":
 			setShape(&node.Shape, attr.Val)
 		case "label":
@@ -312,6 +322,8 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		switch attr.Key {
 		case "weight":
 			setFloat(&edge.Weight, attr.Val)
+		case "style":
+			setLineStyle(&edge.LineStyle, attr.Val)
 		case "label":
 			setString(&edge.Label, attr.Val)
 		case "color":
@@ -401,6 +413,20 @@ func setLength(t *layout.Length, value string, unit layout.Length) {
 	}
 }
 
+// setLineStyle picks the stroke style out of a comma separated style list
+func setLineStyle(t *layout.LineStyle, value string) {
+	for _, s := range strings.Split(value, ",") {
+		switch strings.TrimSpace(s) {
+		case "dashed":
+			*t = layout.Dashed
+		case "dotted":
+			*t = layout.Dotted
+		case "bold":
+			*t = layout.Bold
+		}
+	}
+}
+
 func setShape(t *layout.Shape, value string) {
 	switch value {
 	case "box", "rect", "rectangle":
@@ -425,7 +451,7 @@ func setString(t *string, value string) {
 }
 
 func fixstring(s string) string {
-	if len(s) > 2 && s[0] == '"' && s[len(s)-1] == '"' {
+	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
 		s = s[1 : len(s)-1]
 	}
 	return strings.Replace(s, "\\n", "\n", -1)

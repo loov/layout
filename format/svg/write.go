@@ -234,7 +234,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
-		svg.write(" stroke-width='%v'", edge.LineWidth)
+		svg.writeStroke(edge.LineWidth, edge.LineStyle)
 		svg.write(" d='%v'>", roundedPath(edge.Path, 2*graph.RowPadding))
 
 		if edge.Tooltip != "" {
@@ -249,48 +249,33 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 
 	for _, node := range graph.Nodes {
-		// TODO: add other shapes
-		svgtag := "circle"
-		switch node.Shape {
-		default:
-			fallthrough
-		case layout.Circle:
-			svgtag = "circle"
-			r := max(node.Radius.X, node.Radius.Y)
-			svg.write("<circle cx='%v' cy='%v' r='%v'", node.Center.X, node.Center.Y, r)
-		case layout.Ellipse, layout.Auto:
-			svgtag = "ellipse"
-			svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'",
-				node.Center.X, node.Center.Y,
-				node.Radius.X, node.Radius.Y)
-		case layout.Box, layout.Record:
-			svgtag = "rect"
-			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
-				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
-				2*node.Radius.X, 2*node.Radius.Y)
-		case layout.None:
-			svgtag = "g"
-			svg.write("<g x='%v' y='%v' width='%v' height='%v'",
-				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
-				2*node.Radius.X, 2*node.Radius.Y)
-		case layout.Square:
-			svgtag = "rect"
-			r := max(node.Radius.X, node.Radius.Y)
-			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
-				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
-				2*r, 2*r)
-		}
+		svgtag := svg.writeShape(node, node.Radius)
 		svg.write(" class='node'")
 
 		svg.write(" fill='%v'", ltcolor(node.FillColor))
 		svg.write(" stroke='%v'", dkcolor(node.LineColor))
-		svg.write(" stroke-width='%v'", node.LineWidth)
+		svg.writeStroke(node.LineWidth, node.LineStyle)
 
 		svg.write(">")
 		if node.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(node.Tooltip))
 		}
 		svg.write("</%v>", svgtag)
+
+		// extra peripheries are inset outlines without fill
+		for i := 1; i < node.Peripheries; i++ {
+			inset := layout.Length(i) * peripheryGap
+			svg.writeShape(node, node.Radius.Add(layout.Vector{X: -inset, Y: -inset}))
+			svg.write(" fill='none'")
+			svg.write(" stroke='%v'", dkcolor(node.LineColor))
+			svg.writeStroke(node.LineWidth, node.LineStyle)
+			svg.write("/>")
+		}
+
+		if node.Image != "" {
+			svg.write("<image href='%v' x='%v' y='%v' width='%v' height='%v' preserveAspectRatio='xMidYMid meet'/>",
+				escapeString(node.Image), node.Left(), node.Top(), 2*node.Radius.X, 2*node.Radius.Y)
+		}
 
 		if node.Shape == layout.Record {
 			svg.writeRecord(graph, node, graph.LayoutRecord(node), node.TopLeft())
@@ -317,6 +302,47 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg.finish()
 
 	return svg.err
+}
+
+// peripheryGap matches layout.peripheryGap
+const peripheryGap = 4 * layout.Point
+
+// writeShape opens the node's shape element with the given half size and
+// returns the tag name; attributes can follow.
+func (svg *writer) writeShape(node *layout.Node, radius layout.Vector) string {
+	c := node.Center
+	switch node.Shape {
+	case layout.Ellipse, layout.Auto:
+		svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'", c.X, c.Y, radius.X, radius.Y)
+		return "ellipse"
+	case layout.Box, layout.Record:
+		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
+		return "rect"
+	case layout.Square:
+		r := max(radius.X, radius.Y)
+		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*r, 2*r)
+		return "rect"
+	case layout.None:
+		svg.write("<g x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
+		return "g"
+	default:
+		r := max(radius.X, radius.Y)
+		svg.write("<circle cx='%v' cy='%v' r='%v'", c.X, c.Y, r)
+		return "circle"
+	}
+}
+
+// writeStroke writes stroke width and dash attributes for a line style
+func (svg *writer) writeStroke(width layout.Length, style layout.LineStyle) {
+	switch style {
+	case layout.Bold:
+		width *= 2
+	case layout.Dashed:
+		svg.write(" stroke-dasharray='%v'", 5*width)
+	case layout.Dotted:
+		svg.write(" stroke-dasharray='%v %v' stroke-linecap='round'", width, 2*width)
+	}
+	svg.write(" stroke-width='%v'", width)
 }
 
 func lowercaseTags(s string) string {

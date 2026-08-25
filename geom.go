@@ -26,6 +26,17 @@ const (
 	RightToLeft RankDir = "RL"
 )
 
+// LineStyle selects how outlines and edges are stroked.
+type LineStyle string
+
+// Line styles; the zero value is a solid line.
+const (
+	Solid  LineStyle = ""
+	Dashed LineStyle = "dashed"
+	Dotted LineStyle = "dotted"
+	Bold   LineStyle = "bold"
+)
+
 // Compass is a point on a node's outline where an edge attaches.
 type Compass string
 

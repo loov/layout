@@ -1,0 +1,22 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='140' height='232'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M70,56 L70,88 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='2' d='M70,120 L70,152 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-dasharray='1 2' stroke-linecap='round' stroke-width='1' d='M70,152 L70,184 '></path><ellipse cx='70' cy='36' rx='16' ry='16' fill='none' stroke='#000000' stroke-dasharray='5' stroke-width='1'/><ellipse cx='70' cy='36' rx='20' ry='20' class='node' fill='#FFFFFF' stroke='#000000' stroke-dasharray='5' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='70' y='36' font-size='14' color='#000000'>a</text>
+<rect x='54' y='88' width='32' height='32' class='node' fill='#A5D0E6' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='70' y='104' font-size='14' color='#000000'>b</text>
+<ellipse cx='70' cy='152' rx='54' ry='0' class='node' fill='#FFFFFF' stroke='#000000' stroke-dasharray='1 2' stroke-linecap='round' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='70' y='152' font-size='14' color='#000000'>fixed wide label</text>
+<ellipse cx='70' cy='200' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><image href='x.png' x='54' y='184' width='32' height='32' preserveAspectRatio='xMidYMid meet'/><text text-anchor='middle' alignment-baseline='middle' x='70' y='200' font-size='14' color='#000000'>&#34;&#34;</text>
+</g></svg>

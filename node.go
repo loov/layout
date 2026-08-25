@@ -20,10 +20,18 @@ type Node struct {
 
 	LineWidth Length
 	LineColor Color
+	LineStyle LineStyle
+	// Peripheries is the number of outlines; 0 and 1 draw one
+	Peripheries int
 
 	Shape     Shape
 	FillColor Color
+	// Radius is the minimum half size; the label can grow it unless
+	// FixedSize is set
 	Radius    Vector
+	FixedSize bool
+	// Image is a URL drawn inside the node
+	Image string
 
 	// computed in layouting
 	Center Vector
