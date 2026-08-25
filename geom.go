@@ -1,5 +1,7 @@
 package layout
 
+import "math"
+
 // Shape is the outline drawn for a node.
 type Shape string
 
@@ -84,6 +86,28 @@ type Vector struct{ X, Y Length }
 
 // Add returns the component-wise sum of v and o.
 func (v Vector) Add(o Vector) Vector { return Vector{X: v.X + o.X, Y: v.Y + o.Y} }
+
+// CornerRadius returns the radius to round the corner at p with: the
+// given radius, limited to half of the adjacent segments and so that the
+// curve stays within maxDeviation of the corner. Writers use it so that
+// rounded edges stay clear of the obstacles the paths were routed around.
+func CornerRadius(prev, p, next Vector, radius, maxDeviation Length) Length {
+	length := func(a, b Vector) float64 { return math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)) }
+	l1, l2 := length(prev, p), length(p, next)
+	if l1 == 0 || l2 == 0 {
+		return 0
+	}
+	// the quadratic curve's midpoint is r*cos(θ/2)/2 from the corner,
+	// θ being the angle between the two segments
+	ux, uy := float64(prev.X-p.X)/l1, float64(prev.Y-p.Y)/l1
+	vx, vy := float64(next.X-p.X)/l2, float64(next.Y-p.Y)/l2
+	cosHalf := math.Hypot(ux+vx, uy+vy) / 2
+	r := math.Min(float64(radius), math.Min(l1, l2)/2)
+	if cosHalf > 0 {
+		r = math.Min(r, 2*float64(maxDeviation)/cosHalf)
+	}
+	return Length(r)
+}
 
 // Sub returns v - o.
 func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y} }

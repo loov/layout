@@ -66,7 +66,7 @@ func Diagnose(graph *Graph) Diagnostics {
 	for _, edge := range graph.Edges {
 		path := edge.Path
 		if graph.Splines == SplinesRounded {
-			path = flattenPath(path, 2*graph.RowPadding)
+			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
 		}
 		for i := 0; i+1 < len(path); i++ {
 			segments = append(segments, segment{path[i], path[i+1], edge})

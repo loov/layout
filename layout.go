@@ -566,7 +566,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			if graphdef.Splines != SplinesOrtho {
 				// orthogonal edges run on virtual node columns and rank
 				// channels, which are free of nodes by construction
-				path = routeAround(path, byRank, source.Rank, sourcedef, targetdef, graphdef.EdgePadding)
+				path = routeAround(path, byRank, sourcedef, targetdef, graphdef.EdgePadding)
 				path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
 			}
 
@@ -687,7 +687,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 // flattenPath approximates the rounded corners drawn by the writers
 // (quadratic curves of the given radius) with two extra points per corner.
-func flattenPath(path []Vector, radius Length) []Vector {
+func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
 	if len(path) < 3 {
 		return path
 	}
@@ -704,7 +704,7 @@ func flattenPath(path []Vector, radius Length) []Vector {
 	out := []Vector{path[0]}
 	for i := 1; i+1 < len(path); i++ {
 		prev, p, next := path[i-1], path[i], path[i+1]
-		r := min(radius, length(prev, p)/2, length(p, next)/2)
+		r := CornerRadius(prev, p, next, radius, maxDeviation)
 		in, exit := towards(p, prev, r), towards(p, next, r)
 		mid := Vector{X: (in.X + 2*p.X + exit.X) / 4, Y: (in.Y + 2*p.Y + exit.Y) / 4}
 		out = append(out, in, mid, exit)
@@ -799,7 +799,7 @@ func layoutPinned(graph *Graph) {
 func nudgeLabels(edges []*Edge, pad, radius Length) {
 	paths := make([][]Vector, len(edges))
 	for i, edge := range edges {
-		paths[i] = flattenPath(edge.Path, radius)
+		paths[i] = flattenPath(edge.Path, radius, pad)
 	}
 	var placed []*Edge
 	clear := func(edge *Edge, at Vector) bool {
@@ -878,15 +878,32 @@ func loopPath(node *Node, width Length) []Vector {
 // node. Segment i connects rank firstRank+i to firstRank+i+1; only nodes on
 // those two ranks can be hit. Obstacles on the lower rank are passed above,
 // on the upper rank below.
-func routeAround(path []Vector, byRank [][]*Node, firstRank int, from, to *Node, pad Length) []Vector {
+func routeAround(path []Vector, byRank [][]*Node, from, to *Node, pad Length) []Vector {
+	rowRadius := make([]Length, len(byRank))
+	for r, nodes := range byRank {
+		for _, node := range nodes {
+			rowRadius[r] = max(rowRadius[r], node.Radius.Y+pad)
+		}
+	}
 	var lastHit *Node
-	for i := 0; i+1 < len(path); i++ {
+	inserted := 0
+	for i := 0; i+1 < len(path) && inserted < 16; i++ {
 		a, b := path[i], path[i+1]
 		var hit *Node
 		hitDist := Length(math.Inf(1))
-		for rank := firstRank + i; rank <= firstRank+i+1 && rank < len(byRank); rank++ {
+		// every rank whose row the segment's y span touches
+		top, bottom := min(a.Y, b.Y), max(a.Y, b.Y)
+		for rank := range byRank {
+			if len(byRank[rank]) == 0 {
+				continue
+			}
+			if row := byRank[rank][0].Center; row.Y+rowRadius[rank] < top || row.Y-rowRadius[rank] > bottom {
+				continue
+			}
 			for _, node := range byRank[rank] {
-				if node == from || node == to || !segmentHitsBox(a, b, node, pad) {
+				// slightly less than pad: waypoints sit on the padded box
+				// and touching it is not a hit
+				if node == from || node == to || !segmentHitsBox(a, b, node, pad-0.01) {
 					continue
 				}
 				// nearest obstacle along the segment first
@@ -910,7 +927,19 @@ func routeAround(path []Vector, byRank [][]*Node, firstRank int, from, to *Node,
 		if hit.Center.Y > (a.Y+b.Y)/2 {
 			way.Y = hit.Top() - pad
 		}
+		// a segment that starts or ends beside the node goes around the
+		// corner on that end's side
+		beside := func(p Vector) bool { return p.Y > hit.Top() && p.Y < hit.Bottom() }
+		for _, p := range []Vector{a, b} {
+			if beside(p) {
+				way.X = hit.Right() + pad
+				if p.X < hit.Center.X {
+					way.X = hit.Left() - pad
+				}
+			}
+		}
 		path = slices.Insert(path, i+1, way)
+		inserted++
 		i-- // re-check segment a→way, which may hit something else
 	}
 	return path

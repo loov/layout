@@ -103,7 +103,7 @@ func vec(x, y layout.Length) string {
 // roundedPath draws the path as straight segments with rounded corners.
 // Each corner is a quadratic curve with the vertex as control point, cut at
 // most radius away from the vertex (less if the adjacent segments are short).
-func roundedPath(path []layout.Vector, radius layout.Length) string {
+func roundedPath(path []layout.Vector, radius, maxDeviation layout.Length) string {
 	var line strings.Builder
 	line.WriteString("M" + vec(path[0].X, path[0].Y))
 
@@ -125,7 +125,7 @@ func roundedPath(path []layout.Vector, radius layout.Length) string {
 			line.WriteString("L" + vec(p.X, p.Y))
 			continue
 		}
-		r := min(radius, length(prev, p)/2, length(p, next)/2)
+		r := layout.CornerRadius(prev, p, next, radius, maxDeviation)
 		in, out := towards(p, prev, r), towards(p, next, r)
 		line.WriteString("L" + vec(in.X, in.Y))
 		line.WriteString("Q" + vec(p.X, p.Y) + vec(out.X, out.Y))
@@ -262,7 +262,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		if graph.Splines == layout.SplinesPolyline || graph.Splines == layout.SplinesOrtho {
 			radius = 0
 		}
-		svg.write(" d='%v'>", roundedPath(edge.Path, radius))
+		svg.write(" d='%v'>", roundedPath(edge.Path, radius, graph.EdgePadding))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
