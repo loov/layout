@@ -13,7 +13,7 @@ func DefaultOrderRanks(graph *Graph) *Graph {
 // OrderRanks tries to minimize crossign edges
 func OrderRanks(graph *Graph) {
 	OrderRanksDepthFirst(graph)
-	for i := 0; i < 100; i++ {
+	for i := range 100 {
 		OrderRanksByCoef(graph, i%2 == 0)
 		if OrderRanksTranspose(graph) == 0 {
 			break
@@ -112,7 +112,7 @@ func OrderRanksAssignMetrics(graph *Graph, down bool) {
 
 // OrderRanksTranspose swaps nodes which are side by side and will use less crossings
 func OrderRanksTranspose(graph *Graph) (swaps int) {
-	for limit := 0; limit < 20; limit++ {
+	for range 20 {
 		improved := false
 
 		for _, nodes := range graph.ByRank[1:] {

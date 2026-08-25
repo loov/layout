@@ -1,5 +1,7 @@
 package hier
 
+import "slices"
+
 import "fmt"
 
 // DefaultPosition does recommended positioning algorithm
@@ -14,7 +16,7 @@ func Position(graph *Graph) {
 
 	// TODO: fold nudge into Node parameter
 	nudge := float32(10.0)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		PositionOutgoing(graph, false, nudge)
 		PositionIncoming(graph, false, nudge)
 		PositionOutgoing(graph, true, nudge)
@@ -23,7 +25,7 @@ func Position(graph *Graph) {
 		flushLeft(graph)
 	}
 
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		PositionIncoming(graph, true, 0)
 		PositionOutgoing(graph, true, 0)
 
@@ -69,8 +71,8 @@ func iterateLayers(graph *Graph, leftToRight bool, dy int, fn func(layer Nodes, 
 	} else {
 		for y := starty; 0 <= y && y < len(graph.ByRank); y += dy {
 			layer := graph.ByRank[y]
-			for i := len(layer) - 1; i >= 0; i-- {
-				fn(layer, i, layer[i])
+			for i, l := range slices.Backward(layer) {
+				fn(layer, i, l)
 			}
 		}
 	}

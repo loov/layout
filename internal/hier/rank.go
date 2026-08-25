@@ -10,7 +10,7 @@ func DefaultRank(graph *Graph) *Graph {
 func Rank(graph *Graph) {
 	RankFrontload(graph)
 
-	for i := 0; i < 7; i++ {
+	for i := range 7 {
 		RankMinimizeEdgeStep(graph, i%2 == 0)
 	}
 

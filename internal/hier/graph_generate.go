@@ -8,7 +8,7 @@ import (
 // GenerateRandomGraph creates a graph with n nodes and a P(src, dst) == p
 func GenerateRandomGraph(n int, p float64, rand *rand.Rand) *Graph {
 	graph := NewGraph()
-	for i := 0; i < n; i++ {
+	for range n {
 		graph.AddNode()
 	}
 
@@ -26,7 +26,7 @@ func GenerateRandomGraph(n int, p float64, rand *rand.Rand) *Graph {
 // GenerateRegularGraph creates a circular graph
 func GenerateRegularGraph(n, connections int) *Graph {
 	graph := NewGraph()
-	for i := 0; i < n; i++ {
+	for range n {
 		graph.AddNode()
 	}
 

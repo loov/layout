@@ -1,6 +1,8 @@
 package layout
 
 import (
+	"slices"
+
 	"github.com/loov/layout/internal/hier"
 )
 
@@ -182,8 +184,8 @@ func Hierarchical(graphdef *Graph) {
 
 func reversePath(path []Vector) []Vector {
 	rs := make([]Vector, 0, len(path))
-	for i := len(path) - 1; i >= 0; i-- {
-		rs = append(rs, path[i])
+	for _, p := range slices.Backward(path) {
+		rs = append(rs, p)
 	}
 	return rs
 }

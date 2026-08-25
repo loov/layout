@@ -26,7 +26,7 @@ var (
 	verbose = flag.Bool("v", false, "verbose output")
 )
 
-func infof(format string, args ...interface{}) {
+func infof(format string, args ...any) {
 	if *verbose {
 		fmt.Fprintf(os.Stderr, format, args...)
 		if !strings.HasSuffix("\n", format) {
@@ -35,7 +35,7 @@ func infof(format string, args ...interface{}) {
 	}
 }
 
-func errorf(format string, args ...interface{}) {
+func errorf(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format, args...)
 	if !strings.HasSuffix("\n", format) {
 		fmt.Fprint(os.Stderr, "\n")

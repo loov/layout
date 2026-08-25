@@ -91,7 +91,7 @@ func (rcv Nodes) _medianOfThreeNodeSlice(less func(*Node, *Node) bool, a, b, c i
 }
 
 func (rcv Nodes) _swapRangeNodeSlice(a, b, n int) {
-	for i := 0; i < n; i++ {
+	for i := range n {
 		rcv._swapNodeSlice(a+i, b+i)
 	}
 }

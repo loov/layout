@@ -17,42 +17,42 @@ func (Z *EdgeTable) Edge(x, y int) {
 }
 
 func (Z *EdgeTable) DeleteOutbound() {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			(*Z)[x][y] &^= (1 << byte(x))
 		}
 	}
 }
 
 func (Z *EdgeTable) DeleteInbound() {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			(*Z)[x][y] &^= (1 << byte(y))
 		}
 	}
 }
 
 func (Z *EdgeTable) Or(A, B *EdgeTable) {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			(*Z)[x][y] = (*A)[x][y] | (*B)[x][y]
 		}
 	}
 }
 
 func (Z *EdgeTable) And(A, B *EdgeTable) {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			(*Z)[x][y] = (*A)[x][y] & (*B)[x][y]
 		}
 	}
 }
 
 func (Z *EdgeTable) Mul(A, B *EdgeTable) {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			t := byte(0)
-			for k := 0; k < EdgeCount; k++ {
+			for k := range EdgeCount {
 				t |= (*A)[x][k] & (*B)[k][y]
 			}
 			(*Z)[x][y] = t
@@ -61,8 +61,8 @@ func (Z *EdgeTable) Mul(A, B *EdgeTable) {
 }
 
 func (Z *EdgeTable) Print() {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			v := (*Z)[x][y]
 			if v == 0 {
 				fmt.Printf(" · ")
@@ -75,8 +75,8 @@ func (Z *EdgeTable) Print() {
 }
 
 func (Z *EdgeTable) PrintBit() {
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			v := (*Z)[x][y]
 			fmt.Printf("%2d ", v)
 			s := fmt.Sprintf("%08b ", v)
@@ -90,13 +90,13 @@ func (Z *EdgeTable) PrintBit() {
 
 func (Z *EdgeTable) PrintBool() {
 	fmt.Printf("  ")
-	for y := 0; y < EdgeCount; y++ {
+	for y := range EdgeCount {
 		fmt.Printf("%d ", y)
 	}
 	fmt.Printf("\n")
-	for x := 0; x < EdgeCount; x++ {
+	for x := range EdgeCount {
 		fmt.Printf("%d ", x)
-		for y := 0; y < EdgeCount; y++ {
+		for y := range EdgeCount {
 			v := (*Z)[x][y]
 			if v == 0 {
 				fmt.Printf("░░")
@@ -110,13 +110,13 @@ func (Z *EdgeTable) PrintBool() {
 
 func (Z *EdgeTable) PrintLayer(n byte) {
 	fmt.Printf("  ")
-	for y := 0; y < EdgeCount; y++ {
+	for y := range EdgeCount {
 		fmt.Printf("%d ", y)
 	}
 	fmt.Printf("\n")
-	for x := 0; x < EdgeCount; x++ {
+	for x := range EdgeCount {
 		fmt.Printf("%d ", x)
-		for y := 0; y < EdgeCount; y++ {
+		for y := range EdgeCount {
 			v := ((*Z)[x][y] >> n) & 1
 			if v == 0 {
 				fmt.Printf("░░")
@@ -130,23 +130,23 @@ func (Z *EdgeTable) PrintLayer(n byte) {
 
 func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 	fmt.Printf("  ")
-	for y := 0; y < EdgeCount; y++ {
+	for y := range EdgeCount {
 		fmt.Printf("%d ", y)
 	}
 	fmt.Printf("   ")
-	for y := 0; y < EdgeCount; y++ {
+	for y := range EdgeCount {
 		fmt.Printf("%d ", y)
 	}
 	fmt.Printf("   ")
-	for y := 0; y < EdgeCount; y++ {
+	for y := range EdgeCount {
 		fmt.Printf("%d ", y)
 	}
 	fmt.Printf("\n")
 
-	for x := 0; x < EdgeCount; x++ {
+	for x := range EdgeCount {
 		fmt.Printf("%d ", x)
 
-		for y := 0; y < EdgeCount; y++ {
+		for y := range EdgeCount {
 			v := ((*A)[x][y] >> n) & 1
 			if v == 0 {
 				fmt.Printf("░░")
@@ -157,7 +157,7 @@ func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 
 		fmt.Printf(" %d ", x)
 
-		for y := 0; y < EdgeCount; y++ {
+		for y := range EdgeCount {
 			v := ((*B)[x][y] >> n) & 1
 			if v == 0 {
 				fmt.Printf("░░")
@@ -168,7 +168,7 @@ func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 
 		fmt.Printf(" %d ", x)
 
-		for y := 0; y < EdgeCount; y++ {
+		for y := range EdgeCount {
 			v := ((*C)[x][y] >> n) & 1
 			if v == 0 {
 				fmt.Printf("░░")
@@ -183,8 +183,8 @@ func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 
 func (Z *EdgeTable) CountLayer(n byte) int {
 	total := 0
-	for x := 0; x < EdgeCount; x++ {
-		for y := 0; y < EdgeCount; y++ {
+	for x := range EdgeCount {
+		for y := range EdgeCount {
 			total += int(((*Z)[x][y] >> n) & 1)
 		}
 	}
@@ -204,7 +204,7 @@ func Process(input *EdgeTable) EdgeTable {
 	var result, temp EdgeTable
 
 	result = *input
-	for i := 0; i < EdgeCount; i++ {
+	for range EdgeCount {
 		temp.Mul(&result, input)
 		result.Or(&result, &temp)
 	}
@@ -231,7 +231,7 @@ func main() {
 
 	inbound.DeleteInbound()
 
-	for layer := 0; layer < EdgeCount; layer++ {
+	for layer := range EdgeCount {
 		fmt.Println("------------------")
 		inbound.PrintLayer(byte(layer))
 	}
@@ -251,7 +251,7 @@ func main() {
 	fmt.Println("~~~~~~~~~~~~~~~~~~~~~")
 	anded.PrintBit()
 
-	for layer := 0; layer < EdgeCount; layer++ {
+	for layer := range EdgeCount {
 		fmt.Println("------------------")
 		PrintSideBySideLayer(&inbound, &outbound, &anded, byte(layer))
 

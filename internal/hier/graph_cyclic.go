@@ -1,5 +1,7 @@
 package hier
 
+import "slices"
+
 // IsCyclic checks whether graph is cyclic
 func (graph *Graph) IsCyclic() bool {
 	visited := NewNodeSet(graph.NodeCount())
@@ -24,11 +26,5 @@ func (graph *Graph) IsCyclic() bool {
 		return false
 	}
 
-	for _, node := range graph.Nodes {
-		if isCyclic(node) {
-			return true
-		}
-	}
-
-	return false
+	return slices.ContainsFunc(graph.Nodes, isCyclic)
 }

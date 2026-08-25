@@ -19,7 +19,7 @@ type writer struct {
 func (svg *writer) erred() bool  { return svg.err != nil }
 func (svg *writer) Error() error { return svg.err }
 
-func (svg *writer) write(format string, args ...interface{}) {
+func (svg *writer) write(format string, args ...any) {
 	if svg.erred() {
 		return
 	}
@@ -86,19 +86,19 @@ func vec(x, y layout.Length) string {
 }
 
 func straightPath(graph *layout.Graph, path []layout.Vector) string {
-	line := ""
+	var line strings.Builder
 
 	p0 := path[0]
-	line += "M" + vec(p0.X, p0.Y)
+	line.WriteString("M" + vec(p0.X, p0.Y))
 	for _, p := range path[1:] {
-		line += "L" + vec(p.X, p.Y)
+		line.WriteString("L" + vec(p.X, p.Y))
 	}
 
-	return line
+	return line.String()
 }
 
 func bezierPath(graph *layout.Graph, path []layout.Vector) string {
-	line := ""
+	var line strings.Builder
 
 	p0 := path[0]
 	dir := layout.Length(1)
@@ -106,20 +106,20 @@ func bezierPath(graph *layout.Graph, path []layout.Vector) string {
 		dir *= -1
 	}
 	cpoff := dir * graph.RowPadding * 2
-	line += "M" + vec(p0.X, p0.Y)
+	line.WriteString("M" + vec(p0.X, p0.Y))
 	for _, p1 := range path[1:] {
-		line += "C" +
+		line.WriteString("C" +
 			vec(p0.X, p0.Y+cpoff) +
 			vec(p1.X, p1.Y-cpoff) +
-			vec(p1.X, p1.Y)
+			vec(p1.X, p1.Y))
 		p0 = p1
 	}
 
-	return line
+	return line.String()
 }
 
 func smartPath(graph *layout.Graph, path []layout.Vector) string {
-	line := ""
+	var line strings.Builder
 
 	p0 := path[0]
 	p1 := path[1]
@@ -133,7 +133,7 @@ func smartPath(graph *layout.Graph, path []layout.Vector) string {
 	}
 
 	var sx, sy layout.Length
-	line += "M" + vec(p0.X, p0.Y)
+	line.WriteString("M" + vec(p0.X, p0.Y))
 	for i, p2 := range path[2:] {
 		sx = p0.X*0.2 + p1.X*0.8
 		if (p0.X < p1.X) != (p1.X < p2.X) {
@@ -141,9 +141,9 @@ func smartPath(graph *layout.Graph, path []layout.Vector) string {
 		}
 		sy = p1.Y - dir*graph.RowPadding
 		if i == 0 {
-			line += "C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y)
+			line.WriteString("C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y))
 		} else {
-			line += "S" + vec(sx, sy) + vec(p1.X, p1.Y)
+			line.WriteString("S" + vec(sx, sy) + vec(p1.X, p1.Y))
 		}
 
 		p0, p1 = p1, p2
@@ -152,12 +152,12 @@ func smartPath(graph *layout.Graph, path []layout.Vector) string {
 	sy = p1.Y - 2*dir*graph.RowPadding
 
 	if len(path) == 2 {
-		line += "C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y)
+		line.WriteString("C" + vec(p0.X, p0.Y+dir*graph.RowPadding) + vec(sx, sy) + vec(p1.X, p1.Y))
 	} else {
-		line += "S" + vec(sx, sy) + vec(p1.X, p1.Y)
+		line.WriteString("S" + vec(sx, sy) + vec(p1.X, p1.Y))
 	}
 
-	return line
+	return line.String()
 }
 
 func Write(w io.Writer, graph *layout.Graph) error {

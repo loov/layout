@@ -10,7 +10,7 @@ import (
 func writeLayout(out io.Writer, graph *hier.Graph) error {
 	var err error
 
-	write := func(format string, args ...interface{}) bool {
+	write := func(format string, args ...any) bool {
 		if err != nil {
 			return false
 		}

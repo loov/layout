@@ -1,8 +1,6 @@
 module github.com/loov/layout
 
-go 1.22
-
-toolchain go1.23.4
+go 1.26
 
 require (
 	golang.org/x/net v0.34.0

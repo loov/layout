@@ -7,20 +7,6 @@ func abs(v int) int {
 	return v
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func absf32(v float32) float32 {
 	if v < 0 {
 		return -v
