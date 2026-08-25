@@ -673,6 +673,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		orthoEdges(graphdef, rows, graphdef.EdgePadding)
 	}
 	if graphdef.Splines != SplinesOrtho {
+		spreadWaypoints(graphdef.Edges, graphdef.EdgePadding)
 		spreadEnds(graphdef, 9*Point)
 	}
 	if graphdef.Splines == SplinesLine {
@@ -710,6 +711,45 @@ func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
 		out = append(out, in, mid, exit)
 	}
 	return append(out, path[len(path)-1])
+}
+
+// spreadWaypoints moves interior path points that several edges share
+// (detours around the same node) sideways so that the edges don't run on
+// top of each other, in the order they head so that they don't cross.
+func spreadWaypoints(edges []*Edge, pad Length) {
+	type at struct {
+		edge  *Edge
+		index int
+		next  Vector // original following point
+	}
+	shared := map[Vector][]at{}
+	for _, edge := range edges {
+		for i := 1; i+1 < len(edge.Path); i++ {
+			shared[edge.Path[i]] = append(shared[edge.Path[i]], at{edge, i, edge.Path[i+1]})
+		}
+	}
+	points := make([]Vector, 0, len(shared))
+	for point, list := range shared {
+		if len(list) > 1 {
+			points = append(points, point)
+		}
+	}
+	sort.Slice(points, func(i, k int) bool {
+		if points[i].X != points[k].X {
+			return points[i].X < points[k].X
+		}
+		return points[i].Y < points[k].Y
+	})
+	for _, point := range points {
+		list := shared[point]
+		// spread along x, so the order of the following points' x keeps
+		// the edges from crossing
+		sort.SliceStable(list, func(i, k int) bool { return list[i].next.X < list[k].next.X })
+		for i, a := range list {
+			offset := (Length(i) - Length(len(list)-1)/2) * 2 * pad
+			a.edge.Path[a.index] = point.Add(Vector{offset, 0})
+		}
+	}
 }
 
 // spreadEnds keeps the attachment points on every node at least minSep
