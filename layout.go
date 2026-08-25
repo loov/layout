@@ -223,6 +223,20 @@ func Hierarchical(graphdef *Graph) {
 		edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
 	}
 
+	// edges between the same pair of nodes share one route; spread them out
+	pairKey := func(edge *Edge) [2]hier.ID {
+		a, b := nodes[edge.From], nodes[edge.To]
+		if a > b {
+			a, b = b, a
+		}
+		return [2]hier.ID{a, b}
+	}
+	pairCount := map[[2]hier.ID]int{}
+	for _, edge := range graphdef.Edges {
+		pairCount[pairKey(edge)]++
+	}
+	pairIndex := map[[2]hier.ID]int{}
+
 	for _, edge := range graphdef.Edges {
 		sourceid := nodes[edge.From]
 		targetid := nodes[edge.To]
@@ -232,19 +246,38 @@ func Hierarchical(graphdef *Graph) {
 			continue
 		}
 
-		path, ok := edgePaths[[2]hier.ID{sourceid, targetid}]
-		if ok {
-			edge.Path = path
+		var path []Vector
+		if p, ok := edgePaths[[2]hier.ID{sourceid, targetid}]; ok {
+			path = p
+		} else if p, ok := edgePaths[[2]hier.ID{targetid, sourceid}]; ok {
+			path = reversePath(p) // the edge was reversed to break a cycle
+		} else {
 			continue
 		}
 
-		// some paths may have been reversed
-		revpath, ok := edgePaths[[2]hier.ID{targetid, sourceid}]
-		if ok {
-			edge.Path = reversePath(revpath)
-			continue
+		key := pairKey(edge)
+		if n := pairCount[key]; n > 1 {
+			k := pairIndex[key]
+			pairIndex[key]++
+			spacing := 2 * graphdef.EdgePadding
+			offset := (Length(k) - Length(n-1)/2) * spacing
+			path = offsetPath(path, offset, edge.From, edge.To)
 		}
+		edge.Path = path
 	}
+}
+
+// offsetPath shifts the path sideways by dx and re-clips the ends to the nodes
+func offsetPath(path []Vector, dx Length, from, to *Node) []Vector {
+	out := make([]Vector, len(path))
+	for i, p := range path {
+		out[i] = Vector{X: p.X + dx, Y: p.Y}
+	}
+	if len(out) >= 2 {
+		out[0] = from.Boundary(out[1])
+		out[len(out)-1] = to.Boundary(out[len(out)-2])
+	}
+	return out
 }
 
 // reversePath returns the path in reverse order

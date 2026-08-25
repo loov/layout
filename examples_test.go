@@ -68,6 +68,17 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("C", "D")
 		return graph
 	},
+	"multi": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.AddEdge(layout.NewEdge(graph.Node("A"), graph.Node("B")))
+		graph.AddEdge(layout.NewEdge(graph.Node("A"), graph.Node("B")))
+		graph.AddEdge(layout.NewEdge(graph.Node("A"), graph.Node("B")))
+		graph.Edge("B", "C")
+		graph.Edge("C", "B")
+		graph.Edge("A", "D")
+		graph.Edge("D", "C")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

@@ -1,0 +1,13 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='83' height='256'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' stroke='#000000' stroke-width='1' d='M25.025145,46.3997 L13.012572,71.19985 Q1,96 1,123.55629 L1,132.44371 Q1,160 13.012572,184.80016 L25.025145,209.6003 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M27.446428,47.33835 L20.223213,71.669174 Q13,96 13,121.38039 L13,134.61961 Q13,160 20.223213,184.33083 L27.446428,208.66165 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M30.260374,47.905148 L27.630188,71.952576 Q25,96 25,120.190834 L25,135.80916 Q25,160 27.630188,184.04742 L30.260374,208.09485 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M34.29232,208.16505 L45.75638,175.11636 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M48.12268,175.73915 L37.069756,208.82445 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M37.888775,46.876907 L46.87395,80.54116 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M51,112 L51,144 '></path><ellipse cx='32' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='32' font-size='14' color='#000000'>A</text>
+<ellipse cx='32' cy='224' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='224' font-size='14' color='#000000'>B</text>
+<ellipse cx='51' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='51' y='160' font-size='14' color='#000000'>C</text>
+<ellipse cx='51' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='51' y='96' font-size='14' color='#000000'>D</text>
+</g></svg>
