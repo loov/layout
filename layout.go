@@ -150,6 +150,10 @@ func Hierarchical(graphdef *Graph) {
 			targetdef := reverse[target.ID]
 			path = append(path, targetdef.TopCenter())
 
+			// clip ends to node outlines so fan-ins don't converge on one point
+			path[0] = sourcedef.Boundary(path[1])
+			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
 	}

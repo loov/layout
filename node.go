@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"math"
 	"strings"
 )
 
@@ -82,3 +83,22 @@ func (node *Node) Left() Length   { return node.Center.X - node.Radius.X }
 func (node *Node) Top() Length    { return node.Center.Y - node.Radius.Y }
 func (node *Node) Right() Length  { return node.Center.X + node.Radius.X }
 func (node *Node) Bottom() Length { return node.Center.Y + node.Radius.Y }
+
+// Boundary returns the point on the node outline where the ray from the
+// center towards p exits the node.
+func (node *Node) Boundary(p Vector) Vector {
+	dx, dy := float64(p.X-node.Center.X), float64(p.Y-node.Center.Y)
+	if dx == 0 && dy == 0 {
+		return node.Center
+	}
+	rx, ry := float64(node.Radius.X), float64(node.Radius.Y)
+
+	var t float64
+	switch node.Shape {
+	case Box, Square:
+		t = math.Min(rx/math.Abs(dx), ry/math.Abs(dy)) // ray-rect; Inf for zero component is fine
+	default: // ellipse and circle
+		t = 1 / math.Hypot(dx/rx, dy/ry)
+	}
+	return Vector{node.Center.X + Length(dx*t), node.Center.Y + Length(dy*t)}
+}
