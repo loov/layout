@@ -20,6 +20,7 @@ import (
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
+	"github.com/loov/layout/format/graphml"
 	"github.com/loov/layout/format/svg"
 )
 
@@ -68,6 +69,8 @@ func main() {
 			*informat = "dot"
 		case ".gv":
 			*informat = "dot"
+		case ".graphml":
+			*informat = "graphml"
 		}
 	}
 
@@ -132,6 +135,8 @@ func main() {
 	switch *informat {
 	case "dot":
 		graphs, err = dot.ParseFile(input)
+	case "graphml":
+		graphs, err = graphml.ParseFile(input)
 	default:
 		errorf("unknown input format %q", *informat)
 		flag.Usage()
