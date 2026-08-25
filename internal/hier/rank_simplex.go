@@ -7,7 +7,10 @@ import "math"
 // one rank, using the network simplex method of Gansner et al.
 //
 // Nodes in a SameRank group are contracted into a single vertex so they end
-// up on the same rank. The graph must be acyclic.
+// up on the same rank; MinRank and MaxRank nodes are contracted with an
+// artificial source or sink connected to every other vertex. Edges that
+// would contradict those constraints are ignored here and end up flat or
+// backwards; see Rank. The graph must be acyclic.
 //
 // Cut values are recomputed from scratch after every pivot, which is
 // O(V·E) per pivot; fine for hundreds of nodes, slow for thousands.
@@ -26,6 +29,22 @@ func RankNetworkSimplex(graph *Graph) {
 			rep[node.ID] = rep[group[0].ID]
 		}
 	}
+	unify := func(group Nodes) {
+		for _, node := range group[1:] {
+			r := rep[node.ID]
+			for i := range rep {
+				if rep[i] == r {
+					rep[i] = rep[group[0].ID]
+				}
+			}
+		}
+	}
+	if len(graph.MinRank) > 0 {
+		unify(graph.MinRank)
+	}
+	if len(graph.MaxRank) > 0 {
+		unify(graph.MaxRank)
+	}
 	verts := 0
 	index := make([]int, graph.NodeCount()) // contracted vertex index by node id
 	for i := range index {
@@ -39,14 +58,31 @@ func RankNetworkSimplex(graph *Graph) {
 		index[node.ID] = index[rep[node.ID]]
 	}
 
+	source, sink := -1, -1
+	if len(graph.MinRank) > 0 {
+		source = index[graph.MinRank[0].ID]
+	}
+	if len(graph.MaxRank) > 0 {
+		sink = index[graph.MaxRank[0].ID]
+	}
+
 	s := &simplex{n: verts}
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
 			u, v := index[src.ID], index[dst.ID]
-			if u == v {
-				continue // edge inside a same-rank group
+			if u == v || v == source || u == sink {
+				continue // inside a group, or contradicting a min/max pin
 			}
 			s.edges = append(s.edges, simplexEdge{tail: u, head: v, weight: graph.Weight(src, dst)})
+		}
+	}
+	// zero weight edges keep the artificial source first and sink last
+	for v := range verts {
+		if source >= 0 && v != source {
+			s.edges = append(s.edges, simplexEdge{tail: source, head: v})
+		}
+		if sink >= 0 && v != sink && v != source {
+			s.edges = append(s.edges, simplexEdge{tail: v, head: sink})
 		}
 	}
 	s.run()

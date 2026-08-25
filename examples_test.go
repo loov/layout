@@ -93,6 +93,18 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "D")
 		return graph
 	},
+	"minmax": func() *layout.Graph {
+		// X is pinned to the top and Y to the bottom despite their edges
+		graph := layout.NewDigraph()
+		graph.Edge("A", "B")
+		graph.Edge("B", "C")
+		graph.Edge("C", "D")
+		graph.Edge("B", "X")
+		graph.Edge("Y", "C")
+		graph.MinRank = []*layout.Node{graph.Node("X")}
+		graph.MaxRank = []*layout.Node{graph.Node("Y")}
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

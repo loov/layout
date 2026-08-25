@@ -12,6 +12,7 @@ func DefaultRank(graph *Graph) *Graph {
 // widths and fills in ByRank.
 func Rank(graph *Graph) {
 	RankNetworkSimplex(graph)
+	flipBackwardEdges(graph)
 	RankCompact(graph)
 	RankBalance(graph)
 	RankCompact(graph)
@@ -25,6 +26,27 @@ func Rank(graph *Graph) {
 			graph.ByRank = byRank
 		}
 		graph.ByRank[node.Rank].Append(node)
+	}
+}
+
+// flipBackwardEdges reverses edges whose target ended up above their source
+// because of rank constraints, keeping every edge pointing down or flat
+func flipBackwardEdges(graph *Graph) {
+	var backward [][2]*Node
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			if dst.Rank < src.Rank {
+				backward = append(backward, [2]*Node{src, dst})
+			}
+		}
+	}
+	for _, edge := range backward {
+		src, dst := edge[0], edge[1]
+		weight := graph.Weight(src, dst)
+		src.Out.Remove(dst)
+		dst.In.Remove(src)
+		delete(graph.weights, [2]ID{src.ID, dst.ID})
+		graph.AddWeightedEdge(dst, src, weight)
 	}
 }
 

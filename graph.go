@@ -26,6 +26,8 @@ type Graph struct {
 	Edges    []*Edge
 	// SameRank groups nodes that must be placed on the same rank
 	SameRank [][]*Node
+	// MinRank and MaxRank hold nodes pinned to the first and last rank
+	MinRank, MaxRank []*Node
 }
 
 // NewGraph creates an empty undirected graph with default styling.

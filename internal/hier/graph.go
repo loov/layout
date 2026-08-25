@@ -7,6 +7,8 @@ type Graph struct {
 	Nodes Nodes
 	// SameRank groups nodes that must share a rank
 	SameRank []Nodes
+	// MinRank and MaxRank hold nodes pinned to the first and last rank
+	MinRank, MaxRank Nodes
 	// Flat holds edges between nodes on the same rank; they are removed
 	// from In/Out by Rank and drawn sideways.
 	Flat [][2]*Node

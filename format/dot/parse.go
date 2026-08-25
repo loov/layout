@@ -112,8 +112,15 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 			subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
 			subcontext.edgeAttrs = append(subcontext.edgeAttrs, context.edgeAttrs...)
 			subcontext.parseStmts(stmt.Stmts)
-			if hasAttr(stmt.Stmts, "rank", "same") && len(subcontext.touched) > 1 {
-				context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
+			switch {
+			case hasAttr(stmt.Stmts, "rank", "same"):
+				if len(subcontext.touched) > 1 {
+					context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
+				}
+			case hasAttr(stmt.Stmts, "rank", "min"), hasAttr(stmt.Stmts, "rank", "source"):
+				context.Graph.MinRank = append(context.Graph.MinRank, subcontext.touched...)
+			case hasAttr(stmt.Stmts, "rank", "max"), hasAttr(stmt.Stmts, "rank", "sink"):
+				context.Graph.MaxRank = append(context.Graph.MaxRank, subcontext.touched...)
 			}
 		}
 	}

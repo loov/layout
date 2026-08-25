@@ -131,6 +131,12 @@ func Hierarchical(graphdef *Graph) {
 		graph.AddWeightedEdge(graph.Nodes[from], graph.Nodes[to], float32(edge.Weight))
 	}
 
+	for _, nodedef := range graphdef.MinRank {
+		graph.MinRank.Append(graph.Nodes[nodes[nodedef]])
+	}
+	for _, nodedef := range graphdef.MaxRank {
+		graph.MaxRank.Append(graph.Nodes[nodes[nodedef]])
+	}
 	for _, group := range graphdef.SameRank {
 		var members hier.Nodes
 		for _, nodedef := range group {
