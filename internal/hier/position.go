@@ -48,7 +48,7 @@ func PositionInitial(graph *Graph) {
 		for _, node := range nodes {
 			node.Center.X = left + node.Radius.X
 			node.Center.Y = top
-			left += node.Center.X + node.Radius.X
+			left = node.Center.X + node.Radius.X
 		}
 		top += halfrow
 	}
@@ -130,7 +130,7 @@ func PositionIncoming(graph *Graph, leftToRight bool, nudge float32) {
 			}
 			center /= float32(len(node.In))
 
-			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.Y+nudge)
+			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
 
 			// is between sides
 			node.Center.X = center
