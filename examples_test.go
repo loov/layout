@@ -269,3 +269,16 @@ func TestHierarchicalErrors(t *testing.T) {
 		t.Error("expected an error for a nil endpoint")
 	}
 }
+
+func TestHierarchicalWith(t *testing.T) {
+	// more iterations and no balancing must still give a valid layout
+	graph := examples["complex"]()
+	if err := layout.HierarchicalWith(graph, layout.Options{OrderIterations: 100, NoRankBalance: true}); err != nil {
+		t.Fatal(err)
+	}
+	for _, edge := range graph.Edges {
+		if len(edge.Path) < 2 {
+			t.Errorf("edge %v has no path", edge)
+		}
+	}
+}

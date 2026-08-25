@@ -11,13 +11,20 @@ func DefaultOrderRanks(graph *Graph) *Graph {
 	return graph
 }
 
+// DefaultOrderIterations is the number of ordering sweeps OrderRanks runs
+const DefaultOrderIterations = 24
+
 // OrderRanks tries to minimize crossing edges
-func OrderRanks(graph *Graph) {
+func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations) }
+
+// OrderRanksN tries to minimize crossing edges with the given number of
+// median sweeps; more sweeps can find better orders on large graphs.
+func OrderRanksN(graph *Graph, iterations int) {
 	OrderRanksDepthFirst(graph)
 
 	best := saveOrder(graph)
 	bestCrossings, bestLength := graph.TotalCrossings(), graph.TotalEdgeLength()
-	for i := range 24 {
+	for i := range iterations {
 		OrderRanksByMedian(graph, i%2 == 0)
 		OrderRanksTranspose(graph)
 		orderFlatEdges(graph)

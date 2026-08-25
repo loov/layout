@@ -10,12 +10,19 @@ func DefaultRank(graph *Graph) *Graph {
 
 // Rank assigns ranks with the network simplex method, evens out rank
 // widths and fills in ByRank.
-func Rank(graph *Graph) {
+func Rank(graph *Graph) { RankWith(graph, true) }
+
+// RankWith assigns ranks with the network simplex method and fills in
+// ByRank; with balance set, nodes that can move freely are spread over
+// the least populated ranks.
+func RankWith(graph *Graph, balance bool) {
 	RankNetworkSimplex(graph)
 	flipBackwardEdges(graph)
 	RankCompact(graph)
-	RankBalance(graph)
-	RankCompact(graph)
+	if balance {
+		RankBalance(graph)
+		RankCompact(graph)
+	}
 	extractFlatEdges(graph)
 
 	graph.ByRank = nil

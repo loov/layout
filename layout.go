@@ -77,8 +77,26 @@ func (graph *Graph) AssignMissingValues() {
 // It sets Node.Center and Edge.Path. It fails when an edge refers to a
 // node that is not part of the graph.
 func Hierarchical(graphdef *Graph) error {
+	return HierarchicalWith(graphdef, Options{})
+}
+
+// Options tunes the hierarchical layout. The zero value gives the defaults.
+type Options struct {
+	// OrderIterations is the number of crossing reduction sweeps;
+	// 0 uses the default of 24. More sweeps can help on large graphs.
+	OrderIterations int
+	// NoRankBalance keeps nodes that could go on several ranks at the
+	// topmost one instead of spreading them over the least crowded ranks.
+	NoRankBalance bool
+}
+
+// HierarchicalWith is Hierarchical with explicit options.
+func HierarchicalWith(graphdef *Graph, opts Options) error {
 	if err := graphdef.validate(); err != nil {
 		return err
+	}
+	if opts.OrderIterations <= 0 {
+		opts.OrderIterations = hier.DefaultOrderIterations
 	}
 	graphdef.AssignMissingValues()
 
@@ -124,7 +142,7 @@ func Hierarchical(graphdef *Graph) error {
 
 	left := Length(0)
 	for _, component := range components(graphdef) {
-		hierarchicalComponent(component)
+		hierarchicalComponent(component, opts)
 		_, size := component.Bounds()
 		shift := Vector{X: left}
 		for _, node := range component.Nodes {
@@ -235,7 +253,7 @@ func components(graphdef *Graph) []*Graph {
 
 // hierarchicalComponent lays out one connected graph top to bottom,
 // placing it to the right of whatever the previous components occupy.
-func hierarchicalComponent(graphdef *Graph) {
+func hierarchicalComponent(graphdef *Graph, opts Options) {
 	nodes := map[*Node]hier.ID{}
 	reverse := map[hier.ID]*Node{}
 
@@ -279,7 +297,8 @@ func hierarchicalComponent(graphdef *Graph) {
 	decycledGraph := hier.DefaultDecycle(graph)
 
 	// assign nodes to ranks
-	rankedGraph := hier.DefaultRank(decycledGraph)
+	rankedGraph := decycledGraph
+	hier.RankWith(rankedGraph, !opts.NoRankBalance)
 
 	// labeled edges need a virtual node to hang the label on; doubling the
 	// ranks guarantees every edge has one in the middle
@@ -304,7 +323,8 @@ func hierarchicalComponent(graphdef *Graph) {
 	filledGraph := hier.DefaultAddVirtuals(rankedGraph)
 
 	// order nodes in ranks
-	orderedGraph := hier.DefaultOrderRanks(filledGraph)
+	orderedGraph := filledGraph
+	hier.OrderRanksN(orderedGraph, opts.OrderIterations)
 
 	// the middle virtual node of every labeled edge carries the labels
 	labelNode := map[*hier.Node][]*Edge{}
