@@ -185,6 +185,9 @@ func sanityCheckLayer(graph *Graph, layer Nodes) {
 
 // flushLeft corrects for graph drift due to moving nodes around
 func flushLeft(graph *Graph) {
+	if len(graph.Nodes) == 0 {
+		return
+	}
 	node := graph.Nodes[0]
 	minleft := node.Center.X - node.Radius.X
 	for _, node := range graph.Nodes[1:] {

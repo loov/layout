@@ -115,7 +115,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 	for range 20 {
 		improved := false
 
-		for _, nodes := range graph.ByRank[1:] {
+		for _, nodes := range graph.ByRank {
 			if len(nodes) == 0 {
 				continue
 			}
