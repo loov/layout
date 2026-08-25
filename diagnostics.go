@@ -325,7 +325,7 @@ func Diagnose(graph *Graph) Diagnostics {
 		for i := 0; i+1 < len(path); i++ {
 			best = math.Min(best, rectSegmentDistance(ltl, lbr, path[i], path[i+1]))
 		}
-		if limit := float64(2 * edge.LabelRadius.Y); best > limit {
+		if limit := float64(2 * min(edge.LabelRadius.X, edge.LabelRadius.Y)); best > limit {
 			m.FarLabels++
 			m.Details = append(m.Details, fmt.Sprintf("label %q of %v is %.0f from its edge", edge.Label, edge, best))
 		}

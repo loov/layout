@@ -912,16 +912,79 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length) {
 			continue
 		}
 		// candidates in growing rings: along the rank first, then across
-		// it, then diagonally
+		// it, then diagonally; never further from the edge than the text
+		// height, so the label stays attributable
+		own := paths[slices.Index(edges, edge)]
+		// snap to the drawn path first: the label was placed against a
+		// waypoint, but rounding and multi-edge offsets move the line
+		if p, ok := nearestOnPath(own, edge.LabelPos); ok {
+			d := edge.LabelPos.Sub(p)
+			if l := math.Hypot(float64(d.X), float64(d.Y)); l > 0 {
+				ux, uy := float64(d.X)/l, float64(d.Y)/l
+				support := math.Abs(ux)*float64(edge.LabelRadius.X) + math.Abs(uy)*float64(edge.LabelRadius.Y)
+				dist := float64(pad) + support
+				// this side, or the other side of the line when only that
+				// one is free (parallel edges of a pair)
+				same := p.Add(Vector{Length(ux * dist), Length(uy * dist)})
+				other := p.Add(Vector{Length(-ux * dist), Length(-uy * dist)})
+				edge.LabelPos = same
+				if !clear(edge, same) && clear(edge, other) {
+					edge.LabelPos = other
+				}
+			}
+		}
+		near := func(at Vector) bool {
+			tl, br := at.Sub(edge.LabelRadius), at.Add(edge.LabelRadius)
+			best := math.Inf(1)
+			for i := 0; i+1 < len(own); i++ {
+				best = math.Min(best, rectSegmentDistance(tl, br, own[i], own[i+1]))
+			}
+			// the text height is the smaller extent (radii are swapped
+			// for sideways layouts), minus a margin
+			return best <= float64(2*min(edge.LabelRadius.X, edge.LabelRadius.Y)-pad)
+		}
+		// slide along the own path, nearest spot first, trying both sides
 		found := false
-		for ring := 0; ring <= 4 && !found; ring++ {
-			d := Length(ring) * 2 * pad
-			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
-				if at := edge.LabelPos.Add(Vector{dir.X * d, dir.Y * d}); clear(edge, at) {
-					edge.LabelPos, found = at, true
+		if !clear(edge, edge.LabelPos) {
+			type spot struct {
+				at   Vector
+				dist float64
+			}
+			var spots []spot
+			base, _ := nearestOnPath(own, edge.LabelPos)
+			for i := 0; i+1 < len(own) && !found; i++ {
+				a, b := own[i], own[i+1]
+				dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
+				l := math.Hypot(dx, dy)
+				if l == 0 {
+					continue
+				}
+				nx, ny := -dy/l, dx/l
+				support := math.Abs(nx)*float64(edge.LabelRadius.X) + math.Abs(ny)*float64(edge.LabelRadius.Y)
+				off := float64(pad) + support
+				for t := 0.0; t <= l; t += float64(pad) {
+					p := Vector{a.X + Length(t*dx/l), a.Y + Length(t*dy/l)}
+					d := math.Hypot(float64(p.X-base.X), float64(p.Y-base.Y))
+					spots = append(spots,
+						spot{p.Add(Vector{Length(nx * off), Length(ny * off)}), d},
+						spot{p.Add(Vector{Length(-nx * off), Length(-ny * off)}), d})
+				}
+			}
+			sort.SliceStable(spots, func(i, k int) bool { return spots[i].dist < spots[k].dist })
+			for _, s := range spots {
+				if clear(edge, s.at) {
+					edge.LabelPos, found = s.at, true
 					break
 				}
-				if ring == 0 {
+			}
+		}
+		// otherwise rings: along the rank first, then across it, then
+		// diagonally; never further from the edge than the text height
+		for ring := 1; ring <= 4 && !found; ring++ {
+			d := Length(ring) * 2 * pad
+			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
+				if at := edge.LabelPos.Add(Vector{dir.X * d, dir.Y * d}); near(at) && clear(edge, at) {
+					edge.LabelPos, found = at, true
 					break
 				}
 			}
@@ -1132,4 +1195,22 @@ func segmentHitsRect(a, b Vector, tl, br Vector) bool {
 	}
 	ax, ay := float64(a.X), float64(a.Y)
 	return clip(-dx, ax-x0) && clip(dx, x1-ax) && clip(-dy, ay-y0) && clip(dy, y1-ay) && t0 <= t1
+}
+
+// nearestOnPath returns the point of the polyline closest to p
+func nearestOnPath(path []Vector, p Vector) (Vector, bool) {
+	best, bestDist := Vector{}, math.Inf(1)
+	for i := 0; i+1 < len(path); i++ {
+		a, b := path[i], path[i+1]
+		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
+		t := 0.0
+		if l := dx*dx + dy*dy; l > 0 {
+			t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
+		}
+		q := Vector{a.X + Length(t*dx), a.Y + Length(t*dy)}
+		if d := math.Hypot(float64(p.X-q.X), float64(p.Y-q.Y)); d < bestDist {
+			best, bestDist = q, d
+		}
+	}
+	return best, bestDist < math.Inf(1)
 }
