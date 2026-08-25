@@ -2,9 +2,11 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg] input [output]
+//	glay [-s dot] [-t svg] [-o output] [-g name] [input]
 //
-// The input format is detected from the file extension when -s is not set.
+// The input format is detected from the file extension when -s is not set;
+// input "-" or no input reads stdin (dot unless -s is set). Files with
+// several graphs need -g to pick one by name or index.
 package main
 
 import (
@@ -30,6 +32,8 @@ var (
 
 	informat  = flag.String("s", "", "input format")
 	outformat = flag.String("t", "svg", "output format")
+	outfile   = flag.String("o", "", "output file (default stdout)")
+	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )
@@ -54,12 +58,15 @@ func main() {
 	flag.Parse()
 
 	input := flag.Arg(0)
-	output := flag.Arg(1)
-
-	if input == "" {
-		errorf("input is missing")
-		flag.Usage()
-		return
+	output := *outfile
+	if output == "" {
+		output = flag.Arg(1)
+	}
+	if input == "" || input == "-" {
+		input = "-"
+		if *informat == "" {
+			*informat = "dot"
+		}
 	}
 
 	if *informat == "" {
@@ -132,11 +139,21 @@ func main() {
 
 	infof("parsing %q", input)
 
+	in := io.Reader(os.Stdin)
+	if input != "-" {
+		file, err := os.Open(input)
+		if err != nil {
+			errorf("unable to open %q: %v", input, err)
+			os.Exit(1)
+		}
+		defer file.Close()
+		in = file
+	}
 	switch *informat {
 	case "dot":
-		graphs, err = dot.ParseFile(input)
+		graphs, err = dot.Parse(in)
 	case "graphml":
-		graphs, err = graphml.ParseFile(input)
+		graphs, err = graphml.Parse(in)
 	default:
 		errorf("unknown input format %q", *informat)
 		flag.Usage()
@@ -160,8 +177,20 @@ func main() {
 	}
 
 	graph := graphs[0]
-	if len(graphs) > 1 {
-		errorf("file %q contains multiple graphs, processing only first\n", input)
+	if *pick != "" {
+		graph = nil
+		for i, g := range graphs {
+			if g.ID == *pick || fmt.Sprint(i) == *pick {
+				graph = g
+			}
+		}
+		if graph == nil {
+			errorf("no graph %q in %q", *pick, input)
+			os.Exit(1)
+		}
+	} else if len(graphs) > 1 {
+		errorf("%q contains %v graphs, pick one with -g", input, len(graphs))
+		os.Exit(1)
 	}
 
 	// layout
