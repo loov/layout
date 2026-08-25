@@ -34,9 +34,22 @@ func AddClusterBorders(graph *Graph) {
 			}
 		}
 	}
-	// virtual chains belong to the innermost cluster containing both ends
+	// rank spans from the real members
+	rankSpan := func(cluster *Cluster) {
+		cluster.MinRank, cluster.MaxRank = math.MaxInt, -1
+		for _, node := range cluster.Members {
+			cluster.MinRank = min(cluster.MinRank, node.Rank)
+			cluster.MaxRank = max(cluster.MaxRank, node.Rank)
+		}
+	}
+	for _, cluster := range graph.Clusters {
+		rankSpan(cluster)
+	}
+	// a virtual node belongs to the innermost cluster of either end whose
+	// ranks it is on: a chain is inside the cluster it leaves until the
+	// cluster's last rank, and inside the one it enters from its first
 	for _, src := range graph.Nodes {
-		if src.Virtual || src.Cluster == nil {
+		if src.Virtual {
 			continue
 		}
 		for _, out := range src.Out {
@@ -46,22 +59,27 @@ func AddClusterBorders(graph *Graph) {
 				chain.Append(dst)
 				dst = dst.Out[0]
 			}
-			if cluster := src.Cluster.commonAncestor(dst.Cluster); cluster != nil {
-				for _, v := range chain {
-					v.Cluster = cluster
-					cluster.Members.Append(v)
+			for _, v := range chain {
+				var owner *Cluster
+				for c := src.Cluster; c != nil; c = c.Parent {
+					if v.Rank <= c.MaxRank && (owner == nil || c.depth() > owner.depth()) {
+						owner = c
+					}
+				}
+				for c := dst.Cluster; c != nil; c = c.Parent {
+					if v.Rank >= c.MinRank && (owner == nil || c.depth() > owner.depth()) {
+						owner = c
+					}
+				}
+				if owner != nil {
+					v.Cluster = owner
+					owner.Members.Append(v)
 				}
 			}
 		}
 	}
 
 	for _, cluster := range graph.Clusters {
-		cluster.MinRank, cluster.MaxRank = math.MaxInt, -1
-		for _, node := range cluster.Members {
-			cluster.MinRank = min(cluster.MinRank, node.Rank)
-			cluster.MaxRank = max(cluster.MaxRank, node.Rank)
-		}
-
 		var prevLeft, prevRight *Node
 		for rank := cluster.MinRank; rank <= cluster.MaxRank; rank++ {
 			left, right := graph.AddNode(), graph.AddNode()
@@ -90,21 +108,6 @@ func (cluster *Cluster) depth() int {
 		d++
 	}
 	return d
-}
-
-// commonAncestor returns the innermost cluster containing both, or nil
-func (cluster *Cluster) commonAncestor(other *Cluster) *Cluster {
-	a, b := cluster, other
-	for a.depth() > b.depth() {
-		a = a.Parent
-	}
-	for b != nil && b.depth() > a.depth() {
-		b = b.Parent
-	}
-	for a != b {
-		a, b = a.Parent, b.Parent
-	}
-	return a
 }
 
 // borderWeight makes border chains expensive to cross and keeps them straight
