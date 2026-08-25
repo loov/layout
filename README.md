@@ -52,6 +52,15 @@ func main() {
 
 See other examples in `examples` folder.
 
+Other layouts and outputs:
+
+* `layout.Force(graph)` — force-directed layout for undirected or cyclic graphs.
+* `layout.HierarchicalWith(graph, layout.Fast)` or `layout.Quality` — trade crossings for time.
+* `format/json` — plain coordinates for drawing the graph elsewhere.
+* `format/text` — Unicode box-drawing output for terminals (best with `graph.Splines = layout.SplinesOrtho`).
+
+The same is available from the command line: `glay -l force -q fast -t txt|json|svg|dot input.dot`.
+
 ## Quality
 
 Currently the `layout.Hierarchy` algorithm output is significantly worse than graphviz. It is recommended to use `graphviz dot`, if possible.
