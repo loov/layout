@@ -7,6 +7,8 @@ type Graph struct {
 	Nodes Nodes
 	// SameRank groups nodes that must share a rank
 	SameRank []Nodes
+	// weights of edges by (src, dst); missing means 1
+	weights map[[2]ID]float32
 	// Ranking
 	ByRank []Nodes
 }
@@ -80,10 +82,51 @@ func (graph *Graph) AddNode() *Node {
 	return node
 }
 
-// AddEdge adds a new edge to the node
+// AddEdge adds a new edge with weight 1
 func (graph *Graph) AddEdge(src, dst *Node) {
 	src.Out.Append(dst)
 	dst.In.Append(src)
+}
+
+// AddWeightedEdge adds a new edge with the given weight.
+// Heavier edges are kept shorter and straighter.
+func (graph *Graph) AddWeightedEdge(src, dst *Node, weight float32) {
+	graph.AddEdge(src, dst)
+	graph.SetWeight(src, dst, weight)
+}
+
+// Weight returns the weight of edge src -> dst
+func (graph *Graph) Weight(src, dst *Node) float32 {
+	if w, ok := graph.weights[[2]ID{src.ID, dst.ID}]; ok {
+		return w
+	}
+	return 1
+}
+
+// SetWeight sets the weight of edge src -> dst
+func (graph *Graph) SetWeight(src, dst *Node, weight float32) {
+	if graph.weights == nil {
+		graph.weights = map[[2]ID]float32{}
+	}
+	graph.weights[[2]ID{src.ID, dst.ID}] = weight
+}
+
+// InWeight returns the total weight of incoming edges
+func (graph *Graph) InWeight(node *Node) float32 {
+	total := float32(0)
+	for _, src := range node.In {
+		total += graph.Weight(src, node)
+	}
+	return total
+}
+
+// OutWeight returns the total weight of outgoing edges
+func (graph *Graph) OutWeight(node *Node) float32 {
+	total := float32(0)
+	for _, dst := range node.Out {
+		total += graph.Weight(node, dst)
+	}
+	return total
 }
 
 // Roots returns nodes without any incoming edges

@@ -84,7 +84,7 @@ func Hierarchical(graphdef *Graph) {
 	}
 	for _, edge := range graphdef.Edges {
 		from, to := nodes[edge.From], nodes[edge.To]
-		graph.AddEdge(graph.Nodes[from], graph.Nodes[to])
+		graph.AddWeightedEdge(graph.Nodes[from], graph.Nodes[to], float32(edge.Weight))
 	}
 
 	for _, group := range graphdef.SameRank {

@@ -27,18 +27,21 @@ func AddVirtuals(graph *Graph) {
 
 			src.Out[di] = nil
 			dst.In.Remove(src)
+			weight := graph.Weight(src, dst)
+			delete(graph.weights, [2]ID{src.ID, dst.ID})
 
 			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
 				node := graph.AddNode()
 				node.Rank = rank
 				node.Virtual = true
 				graph.ByRank[node.Rank].Append(node)
-				graph.AddEdge(node, dst)
+				graph.AddWeightedEdge(node, dst, weight)
 				dst = node
 			}
 
 			src.Out[di] = dst
 			dst.In.Append(src)
+			graph.SetWeight(src, dst, weight)
 		}
 	}
 }

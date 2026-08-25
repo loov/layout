@@ -1,31 +1,39 @@
 package hier
 
 // Crossing counts require up-to-date Node.Pos, see assignPos.
+// Each crossing counts the product of the two edge weights.
 
 // CrossingsUp counts crossings between edges into u and v from the rank above,
 // assuming u is placed left of v.
-func (graph *Graph) CrossingsUp(u, v *Node) int { return crossings(u.In, v.In) }
-
-// CrossingsDown counts crossings between edges out of u and v to the rank below,
-// assuming u is placed left of v.
-func (graph *Graph) CrossingsDown(u, v *Node) int { return crossings(u.Out, v.Out) }
-
-// Crossings counts crossings on both sides assuming u is left of v
-func (graph *Graph) Crossings(u, v *Node) int {
-	return crossings(u.In, v.In) + crossings(u.Out, v.Out)
-}
-
-// crossings counts pairs (w in uadj, z in vadj) with z left of w
-func crossings(uadj, vadj Nodes) int {
-	count := 0
-	for _, w := range uadj {
-		for _, z := range vadj {
+func (graph *Graph) CrossingsUp(u, v *Node) float32 {
+	total := float32(0)
+	for _, w := range u.In {
+		for _, z := range v.In {
 			if z.Pos < w.Pos {
-				count++
+				total += graph.Weight(w, u) * graph.Weight(z, v)
 			}
 		}
 	}
-	return count
+	return total
+}
+
+// CrossingsDown counts crossings between edges out of u and v to the rank below,
+// assuming u is placed left of v.
+func (graph *Graph) CrossingsDown(u, v *Node) float32 {
+	total := float32(0)
+	for _, w := range u.Out {
+		for _, z := range v.Out {
+			if z.Pos < w.Pos {
+				total += graph.Weight(u, w) * graph.Weight(v, z)
+			}
+		}
+	}
+	return total
+}
+
+// Crossings counts crossings on both sides assuming u is left of v
+func (graph *Graph) Crossings(u, v *Node) float32 {
+	return graph.CrossingsUp(u, v) + graph.CrossingsDown(u, v)
 }
 
 // assignPos records each node's index within its rank
@@ -42,10 +50,10 @@ func (layer Nodes) assignPos() {
 	}
 }
 
-// TotalCrossings counts edge crossings between all adjacent ranks
-func (graph *Graph) TotalCrossings() int {
+// TotalCrossings counts weighted edge crossings between all adjacent ranks
+func (graph *Graph) TotalCrossings() float32 {
 	graph.assignPos()
-	total := 0
+	total := float32(0)
 	for _, layer := range graph.ByRank {
 		for i, u := range layer {
 			for _, v := range layer[i+1:] {

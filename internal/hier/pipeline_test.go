@@ -40,7 +40,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 	DefaultOrderRanks(graph)
 	after := graph.TotalCrossings()
 	if after > before {
-		t.Errorf("%s: ordering made crossings worse %d -> %d", name, before, after)
+		t.Errorf("%s: ordering made crossings worse %v -> %v", name, before, after)
 	}
 	for _, node := range graph.Nodes {
 		node.Radius = Vector{X: 20, Y: 5}

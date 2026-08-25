@@ -37,6 +37,15 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "A")
 		return graph
 	},
+	"weighted": func() *layout.Graph {
+		// K2,2 must have one crossing; the heavy P->C edge should stay straight
+		graph := layout.NewDigraph()
+		graph.Edge("P", "B")
+		graph.Edge("P", "C").Weight = 10
+		graph.Edge("Q", "B")
+		graph.Edge("Q", "C")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

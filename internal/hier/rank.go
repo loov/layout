@@ -66,13 +66,13 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 			if len(node.Out) == 0 || pinned.Contains(node) {
 				continue
 			}
-			if len(node.In) <= len(node.Out) {
+			if graph.InWeight(node) <= graph.OutWeight(node) {
 				// there are more edges below, try to move node downwards
 				minrank := len(graph.Nodes)
 				for _, dst := range node.Out {
 					minrank = min(dst.Rank, minrank)
 				}
-				if len(node.In) < len(node.Out) && node.Rank < minrank-1 {
+				if graph.InWeight(node) < graph.OutWeight(node) && node.Rank < minrank-1 {
 					node.Rank = minrank - 1
 					changed = true
 				}
@@ -83,13 +83,13 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 			if len(node.In) == 0 || pinned.Contains(node) {
 				continue
 			}
-			if len(node.In) >= len(node.Out) {
+			if graph.InWeight(node) >= graph.OutWeight(node) {
 				// there are more edges above, try to move node upwards
 				maxrank := 0
 				for _, src := range node.In {
 					maxrank = max(src.Rank, maxrank)
 				}
-				if len(node.In) > len(node.Out) && node.Rank > maxrank+1 {
+				if graph.InWeight(node) > graph.OutWeight(node) && node.Rank > maxrank+1 {
 					node.Rank = maxrank + 1
 					changed = true
 				}
@@ -129,7 +129,7 @@ func RankBalance(graph *Graph) {
 
 	pinned := graph.pinnedNodes()
 	for _, node := range graph.Nodes {
-		if len(node.In) != len(node.Out) || len(node.In) == 0 || pinned.Contains(node) {
+		if graph.InWeight(node) != graph.OutWeight(node) || len(node.In) == 0 || pinned.Contains(node) {
 			continue
 		}
 		lo, hi := 0, len(graph.Nodes)

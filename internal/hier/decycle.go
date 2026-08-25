@@ -58,6 +58,7 @@ func (graph *Decycle) Run() {
 
 	if !graph.SkipUpdate {
 		graph.updateEdges()
+		graph.updateWeights()
 	}
 }
 
@@ -136,6 +137,20 @@ func (graph *Decycle) updateEdges() {
 	for _, node := range graph.Nodes {
 		node.In.Normalize()
 		node.Out.Normalize()
+	}
+}
+
+// updateWeights carries edge weights over to flipped edges
+func (graph *Decycle) updateWeights() {
+	old := graph.weights
+	graph.weights = nil
+	for _, edge := range graph.edges {
+		src, dst := graph.Nodes[edge[0]], graph.Nodes[edge[1]]
+		if w, ok := old[[2]ID{src.ID, dst.ID}]; ok {
+			graph.SetWeight(src, dst, w)
+		} else if w, ok := old[[2]ID{dst.ID, src.ID}]; ok {
+			graph.SetWeight(src, dst, w)
+		}
 	}
 }
 
