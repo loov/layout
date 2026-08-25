@@ -3,6 +3,7 @@ package layout
 import (
 	"math"
 	"strings"
+	"unicode"
 )
 
 // Node is a vertex in a graph. Radius is half the node size; Center is
@@ -57,32 +58,48 @@ func (node *Node) DefaultLabel() string {
 	return node.ID
 }
 
-// approxLabelRadius estimates the half size of the label text
-// assuming a fixed height to width ratio for characters.
-func (node *Node) approxLabelRadius(lineHeight Length) Vector {
-	return approxTextRadius(node.DefaultLabel(), node.FontSize, lineHeight)
-}
-
-// approxTextRadius estimates the half size of multi-line text assuming a
-// fixed height to width ratio for characters.
-func approxTextRadius(text string, fontSize, lineHeight Length) Vector {
-	const HeightWidthRatio = 0.5
+// textRadius returns the half size of multi-line text, measuring each
+// line with graph.MeasureText or the built-in approximation.
+func (graph *Graph) textRadius(text string, fontName string, fontSize Length) Vector {
+	lineHeight := graph.LineHeight
 	if lineHeight < fontSize {
 		lineHeight = fontSize
+	}
+	measure := graph.MeasureText
+	if measure == nil {
+		measure = approxTextWidth
 	}
 
 	size := Vector{}
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		width := Length(len(line)) * fontSize * HeightWidthRatio
-		if width > size.X {
-			size.X = width
-		}
+		size.X = max(size.X, measure(line, fontName, fontSize).X)
 	}
-
-	size.X *= 0.5
 	size.Y = Length(len(lines)) * lineHeight * 0.5
 	return size
+}
+
+// approxTextWidth estimates the half size of one line of proportional text
+// from per-character width classes.
+func approxTextWidth(line string, _ string, fontSize Length) Vector {
+	width := Length(0)
+	for _, r := range line {
+		var em Length
+		switch {
+		case strings.ContainsRune("il.,:;'|!I", r):
+			em = 0.28
+		case strings.ContainsRune("jtfr ()[]-", r):
+			em = 0.36
+		case strings.ContainsRune("mwMW@", r):
+			em = 0.85
+		case unicode.IsUpper(r):
+			em = 0.68
+		default:
+			em = 0.52
+		}
+		width += em * fontSize
+	}
+	return Vector{X: width / 2, Y: fontSize / 2}
 }
 
 // TopLeft returns the top left corner of the node bounds.

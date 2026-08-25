@@ -9,6 +9,10 @@ type Graph struct {
 	// RankDir is the direction ranks are laid out in, see RankDir constants.
 	RankDir RankDir
 
+	// MeasureText returns the half size of a single line of text in the
+	// given font. When nil, a built-in approximation is used.
+	MeasureText func(line string, fontName string, fontSize Length) Vector
+
 	// Defaults for nodes and edges that leave the value unset
 	LineHeight Length
 	FontSize   Length

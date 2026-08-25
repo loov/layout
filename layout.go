@@ -43,7 +43,7 @@ func (graph *Graph) AssignMissingValues() {
 			node.Radius.X = graph.LineHeight
 			node.Radius.Y = graph.LineHeight
 
-			labelRadius := node.approxLabelRadius(graph.LineHeight)
+			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
 
@@ -64,7 +64,7 @@ func (graph *Graph) AssignMissingValues() {
 			edge.FontSize = graph.FontSize
 		}
 		if edge.Label != "" {
-			edge.LabelRadius = approxTextRadius(edge.Label, edge.FontSize, graph.LineHeight)
+			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)
 		}
 	}
 }
