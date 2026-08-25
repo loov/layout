@@ -52,6 +52,9 @@ type Node struct {
 	// Visuals
 	Center Vector
 	Radius Vector
+	// Anchor is the x offset from Center where the edge passes through
+	// a virtual node, for nodes that carry a label beside the edge
+	Anchor float32
 }
 
 // String returns node label

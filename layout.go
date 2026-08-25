@@ -429,6 +429,10 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 				}
 				node.Radius.X += float32(width + graphdef.EdgePadding)
 				node.Radius.Y = float32(height + graphdef.EdgePadding)
+				if graphdef.Splines != SplinesOrtho {
+					// the edge passes on the left, the labels stack on the right
+					node.Anchor = -node.Radius.X + float32(graphdef.EdgePadding)
+				}
 			}
 			continue
 		}
@@ -541,16 +545,11 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 				point := Vector{Length(target.Center.X), Length(target.Center.Y)}
 				if edges, ok := labelNode[target]; ok {
-					// the edge passes on the left, the labels stack on the right
-					point.X = Length(target.Center.X-target.Radius.X) + graphdef.EdgePadding
-					if graphdef.Splines == SplinesOrtho {
-						// orthogonal edges stay on the column, the labels sit beside it
-						point.X = Length(target.Center.X)
-					}
-					x := point.X + (Length(target.Center.X+target.Radius.X)-point.X)/2
+					point.X = Length(target.Center.X + target.Anchor)
+					// labels sit right beside the line, stacked vertically
 					y := point.Y - Length(target.Radius.Y) + graphdef.EdgePadding
 					for _, edge := range edges {
-						edge.LabelPos = Vector{X: x, Y: y + edge.LabelRadius.Y}
+						edge.LabelPos = Vector{X: point.X + graphdef.EdgePadding + edge.LabelRadius.X, Y: y + edge.LabelRadius.Y}
 						y += 2 * edge.LabelRadius.Y
 					}
 				}

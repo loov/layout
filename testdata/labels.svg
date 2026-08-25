@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='200.31999450683594' height='248'>
+<svg xmlns='http://www.w3.org/2000/svg' width='210.7000018310547' height='248'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,10 +15,10 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M83.572205,41.825417 L49.028915,68.702805 Q37.08,78 35.41814,93.04834 L33.75628,108.09668 '></path><text text-anchor='middle' alignment-baseline='middle' x='8.999999046325684' y='78' font-size='14' color='#000000'>yes</text>
-<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M91.76211,47.37222 L87.34105,62.686108 Q82.92,78 87.34105,93.31389 L91.76211,108.627785 '></path><text text-anchor='middle' alignment-baseline='middle' x='63.19999694824219' y='78' font-size='14' color='#000000'>no</text>
-<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,140 L32,155 Q32,170 43.669075,179.42511 L81.40622,209.9054 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M84.195885,134.57834 L55.65889,159.72588 Q43.999996,170 56.327347,179.4617 L86.93585,202.95486 '></path><text text-anchor='middle' alignment-baseline='middle' x='99.19999504089355' y='170' font-size='14' color='#000000'>long label here</text>
-<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M109.20603,206.68103 L145.82806,180.44095 Q160.4,170 151.52791,154.42307 L145.78583,144.34154 Q134.2,124 129.84,101 L129.0679,96.927 Q125.479996,78 115.13576,61.74881 L104.79153,45.497616 '></path><text text-anchor='middle' alignment-baseline='middle' x='169.75999450683594' y='124' font-size='14' color='#000000'>back</text>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M84.90601,43.3334 L62.19351,66.12519 Q50.36,78 44.145554,93.56996 L37.93111,109.13992 '></path><text text-anchor='middle' alignment-baseline='middle' x='19.280000610351564' y='78' font-size='14' color='#000000'>yes</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M96.2,48 L96.2,63 Q96.2,78 96.2,93 L96.2,108 '></path><text text-anchor='middle' alignment-baseline='middle' x='73.47999694824219' y='78' font-size='14' color='#000000'>no</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,140 L32,155 Q32,170 43.669075,179.42511 L81.40622,209.9054 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M84.195885,134.57834 L55.65889,159.72588 Q43.999996,170 56.327347,179.4617 L86.93585,202.95486 '></path><text text-anchor='middle' alignment-baseline='middle' x='96.19999618530275' y='170' font-size='14' color='#000000'>long label here</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M109.20603,206.68103 L143.38309,182.1928 Q160.4,170 154.7799,149.83434 L153.98999,147 Q147.58,124 141.17,101 L140.66943,99.2039 Q134.76,78 120.61928,61.130886 L106.47856,44.261776 '></path><text text-anchor='middle' alignment-baseline='middle' x='180.1400018310547' y='124' font-size='14' color='#000000'>back</text>
 <ellipse cx='96.19999694824219' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96.19999694824219' y='32' font-size='14' color='#000000'>A</text>
 <ellipse cx='32' cy='124' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='124' font-size='14' color='#000000'>B</text>
 <ellipse cx='96.19999694824219' cy='124' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96.19999694824219' y='124' font-size='14' color='#000000'>C</text>

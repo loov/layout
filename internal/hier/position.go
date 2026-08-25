@@ -62,7 +62,9 @@ func StraightenChains(graph *Graph) {
 				if !node.Virtual || node.BorderLeft || node.BorderRight || len(node.In) != 1 || len(node.Out) != 1 {
 					continue
 				}
-				want := (node.In[0].Center.X + node.Out[0].Center.X) / 2
+				// align the anchors, where the edges actually pass
+				in, out := node.In[0], node.Out[0]
+				want := (in.Center.X+in.Anchor+out.Center.X+out.Anchor)/2 - node.Anchor
 				if i > 0 {
 					left := layer[i-1]
 					want = max(want, left.Center.X+left.Radius.X+node.Radius.X)
