@@ -30,36 +30,71 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		return -1
 	}
 
+	// point on the node outline at x, on its bottom or top side
+	outline := func(node *Node, x Length, bottom bool) Vector {
+		dx := float64(x - node.Center.X)
+		dy := float64(node.Radius.Y)
+		switch node.Shape {
+		case Box, Square, Record, None:
+		default: // ellipse
+			if rx := float64(node.Radius.X); rx > 0 {
+				dy *= math.Sqrt(math.Max(0, 1-(dx/rx)*(dx/rx)))
+			}
+		}
+		if !bottom {
+			dy = -dy
+		}
+		return Vector{x, node.Center.Y + Length(dy)}
+	}
+
+	// edge ends per node side, spread across the node width in the order
+	// of where they head so that stubs neither coincide nor cross
+	type end struct {
+		edge    *Edge
+		start   bool
+		towards Length
+	}
+	type side struct {
+		node   *Node
+		bottom bool
+	}
+	ends := map[side][]end{}
+	routed := func(edge *Edge) bool {
+		return edge.From != edge.To && len(edge.Path) >= 2 && edge.Path[0].Y != edge.Path[len(edge.Path)-1].Y
+	}
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || len(edge.Path) < 2 || edge.Path[0].Y == edge.Path[len(edge.Path)-1].Y {
+		if !routed(edge) {
+			continue
+		}
+		down := edge.Path[0].Y < edge.Path[len(edge.Path)-1].Y
+		if edge.FromPort == CompassAuto {
+			k := side{edge.From, down}
+			ends[k] = append(ends[k], end{edge, true, edge.Path[1].X})
+		}
+		if edge.ToPort == CompassAuto {
+			k := side{edge.To, !down}
+			ends[k] = append(ends[k], end{edge, false, edge.Path[len(edge.Path)-2].X})
+		}
+	}
+	for k, list := range ends {
+		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
+		spacing := min(2*pad, 2*k.node.Radius.X/Length(len(list)+1))
+		for i, e := range list {
+			x := k.node.Center.X + (Length(i)-Length(len(list)-1)/2)*spacing
+			p := outline(k.node, x, k.bottom)
+			if e.start {
+				e.edge.Path[0] = p
+			} else {
+				e.edge.Path[len(e.edge.Path)-1] = p
+			}
+		}
+	}
+
+	for _, edge := range graph.Edges {
+		if !routed(edge) {
 			continue
 		}
 		path := slices.Clone(edge.Path)
-		// leave and enter vertically, at the x nearest the next waypoint
-		exit := func(node *Node, towards Vector, bottom bool) Vector {
-			x := min(max(towards.X, node.Left()+pad), node.Right()-pad)
-			dx := float64(x - node.Center.X)
-			dy := float64(node.Radius.Y)
-			switch node.Shape {
-			case Box, Square, Record, None:
-			default: // ellipse
-				if rx := float64(node.Radius.X); rx > 0 {
-					dy *= math.Sqrt(math.Max(0, 1-(dx/rx)*(dx/rx)))
-				}
-			}
-			if !bottom {
-				dy = -dy
-			}
-			return Vector{x, node.Center.Y + Length(dy)}
-		}
-		down := path[0].Y < path[len(path)-1].Y
-		from, to := edge.From, edge.To
-		if edge.FromPort == CompassAuto {
-			path[0] = exit(from, path[1], down)
-		}
-		if edge.ToPort == CompassAuto {
-			path[len(path)-1] = exit(to, path[len(path)-2], !down)
-		}
 		for i := 0; i+1 < len(path); i++ {
 			a, b := path[i], path[i+1]
 			if a.X == b.X {
