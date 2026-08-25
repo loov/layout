@@ -374,7 +374,11 @@ func TestDiagnostics(t *testing.T) {
 		if err := layout.Hierarchical(graph); err != nil {
 			t.Fatal(err)
 		}
-		fmt.Fprintf(&out, "%-12s %v\n", name, layout.Diagnose(graph))
+		d := layout.Diagnose(graph)
+		fmt.Fprintf(&out, "%-12s %v\n", name, d)
+		for _, line := range d.Details {
+			t.Logf("%s: %s", name, line)
+		}
 	}
 	files, _ := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
 	for _, file := range files {
