@@ -12,9 +12,11 @@ func DefaultRank(graph *Graph) *Graph {
 func Rank(graph *Graph) {
 	RankFrontload(graph)
 
-	for i := range 7 {
-		RankMinimizeEdgeStep(graph, i%2 == 0)
+	// ponytail: greedy tightening, network simplex if edge spans still look long
+	for i := 0; i < 100 && RankMinimizeEdgeStep(graph, i%2 == 0); i++ {
 	}
+	RankCompact(graph)
+	RankBalance(graph)
 	RankCompact(graph)
 
 	graph.ByRank = nil
@@ -109,14 +111,8 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 				for _, dst := range node.Out {
 					minrank = min(dst.Rank, minrank)
 				}
-				if node.Rank <= minrank-1 {
-					if len(node.In) == len(node.Out) {
-						// node.Rank = node.Rank
-						node.Rank = (node.Rank + (minrank - 1) + 1) / 2
-						// node.Rank = randbetween(node.Rank, minrank-1)
-					} else {
-						node.Rank = minrank - 1
-					}
+				if len(node.In) < len(node.Out) && node.Rank < minrank-1 {
+					node.Rank = minrank - 1
 					changed = true
 				}
 			}
@@ -132,14 +128,8 @@ func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 				for _, src := range node.In {
 					maxrank = max(src.Rank, maxrank)
 				}
-				if node.Rank >= maxrank+1 {
-					if len(node.In) == len(node.Out) {
-						// node.Rank = node.Rank
-						node.Rank = (node.Rank + (maxrank + 1)) / 2
-						// node.Rank = randbetween(node.Rank, maxrank+1)
-					} else {
-						node.Rank = maxrank + 1
-					}
+				if len(node.In) > len(node.Out) && node.Rank > maxrank+1 {
+					node.Rank = maxrank + 1
 					changed = true
 				}
 			}
@@ -165,5 +155,36 @@ func RankCompact(graph *Graph) {
 	}
 	for _, node := range graph.Nodes {
 		node.Rank = remap[node.Rank]
+	}
+}
+
+// RankBalance moves nodes with equal in/out degree to the least populated
+// rank they can legally occupy, evening out rank widths.
+func RankBalance(graph *Graph) {
+	width := map[int]int{}
+	for _, node := range graph.Nodes {
+		width[node.Rank]++
+	}
+
+	for _, node := range graph.Nodes {
+		if len(node.In) != len(node.Out) || len(node.In) == 0 {
+			continue
+		}
+		lo, hi := 0, len(graph.Nodes)
+		for _, src := range node.In {
+			lo = max(lo, src.Rank+1)
+		}
+		for _, dst := range node.Out {
+			hi = min(hi, dst.Rank-1)
+		}
+		best := node.Rank
+		for r := lo; r <= hi; r++ {
+			if width[r] < width[best] {
+				best = r
+			}
+		}
+		width[node.Rank]--
+		width[best]++
+		node.Rank = best
 	}
 }
