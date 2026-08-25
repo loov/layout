@@ -26,6 +26,7 @@ Minimal usage:
 package main
 
 import (
+    "log"
     "os"
 
     "github.com/loov/layout"
@@ -39,7 +40,9 @@ func main() {
     graph.Edge("B", "D")
     graph.Edge("C", "D")
 
-    layout.Hierarchical(graph)
+    if err := layout.Hierarchical(graph); err != nil {
+        log.Fatal(err)
+    }
 
     svg.Write(os.Stdout, graph)
 }

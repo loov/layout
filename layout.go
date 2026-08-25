@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"fmt"
 	"math"
 	"slices"
 
@@ -73,8 +74,12 @@ func (graph *Graph) AssignMissingValues() {
 // cycles are broken, nodes are assigned to ranks, ordered within ranks to
 // reduce crossings, positioned, and finally edge paths are computed.
 //
-// It sets Node.Center and Edge.Path.
-func Hierarchical(graphdef *Graph) {
+// It sets Node.Center and Edge.Path. It fails when an edge refers to a
+// node that is not part of the graph.
+func Hierarchical(graphdef *Graph) error {
+	if err := graphdef.validate(); err != nil {
+		return err
+	}
 	graphdef.AssignMissingValues()
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
@@ -133,6 +138,31 @@ func Hierarchical(graphdef *Graph) {
 		}
 		left += size.X + 2*graphdef.NodePadding
 	}
+	return nil
+}
+
+// validate checks that every edge connects nodes of the graph
+func (graph *Graph) validate() error {
+	known := make(map[*Node]bool, len(graph.Nodes))
+	for i, node := range graph.Nodes {
+		if node == nil {
+			return fmt.Errorf("node %d is nil", i)
+		}
+		known[node] = true
+	}
+	for i, edge := range graph.Edges {
+		switch {
+		case edge == nil:
+			return fmt.Errorf("edge %d is nil", i)
+		case edge.From == nil || edge.To == nil:
+			return fmt.Errorf("edge %d has a nil endpoint", i)
+		case !known[edge.From]:
+			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.From)
+		case !known[edge.To]:
+			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.To)
+		}
+	}
+	return nil
 }
 
 // components splits the graph into connected components, each a Graph
@@ -315,11 +345,7 @@ func hierarchicalComponent(graphdef *Graph) {
 			continue
 		}
 
-		nodedef, ok := reverse[hier.ID(id)]
-		if !ok {
-			// TODO: handle missing node
-			continue
-		}
+		nodedef := reverse[hier.ID(id)]
 		node.Radius.X = float32(nodedef.Radius.X + graphdef.NodePadding)
 		if hasLoop[nodedef] {
 			node.Radius.X += float32(loopWidth / 2)

@@ -165,7 +165,11 @@ func main() {
 	}
 
 	// layout
-	layout.Hierarchical(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		errorf("layout failed: %v", err)
+		os.Exit(1)
+		return
+	}
 
 	// output
 	var out io.Writer

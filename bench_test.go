@@ -31,7 +31,9 @@ func BenchmarkHierarchical(b *testing.B) {
 				b.StopTimer()
 				graph := randomGraph(n, 1)
 				b.StartTimer()
-				layout.Hierarchical(graph)
+				if err := layout.Hierarchical(graph); err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}

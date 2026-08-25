@@ -206,7 +206,9 @@ func TestGraphviz(t *testing.T) {
 // TestWriteDot checks the dot writer against testdata/minimal.dot.
 func TestWriteDot(t *testing.T) {
 	graph := examples["minimal"]()
-	layout.Hierarchical(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
 	var got bytes.Buffer
 	if err := dot.Write(&got, graph); err != nil {
 		t.Fatal(err)
@@ -224,7 +226,9 @@ func TestWriteDot(t *testing.T) {
 
 func checkGolden(t *testing.T, path string, graph *layout.Graph) {
 	t.Helper()
-	layout.Hierarchical(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
 
 	var got bytes.Buffer
 	if err := svg.Write(&got, graph); err != nil {
@@ -249,5 +253,19 @@ func compareGolden(t *testing.T, path string, got []byte) {
 	}
 	if !bytes.Equal(got, want) {
 		t.Errorf("%s differs from golden file; run `go test -update`", path)
+	}
+}
+
+func TestHierarchicalErrors(t *testing.T) {
+	graph := layout.NewDigraph()
+	stray := layout.NewNode("stray")
+	graph.AddEdge(layout.NewEdge(graph.Node("A"), stray))
+	if err := layout.Hierarchical(graph); err == nil {
+		t.Error("expected an error for an edge to a node outside the graph")
+	}
+	graph = layout.NewDigraph()
+	graph.AddEdge(&layout.Edge{From: graph.Node("A")})
+	if err := layout.Hierarchical(graph); err == nil {
+		t.Error("expected an error for a nil endpoint")
 	}
 }

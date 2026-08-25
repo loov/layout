@@ -7,7 +7,9 @@
 //
 //	graph := layout.NewDigraph()
 //	graph.Edge("A", "B")
-//	layout.Hierarchical(graph)
+//	if err := layout.Hierarchical(graph); err != nil {
+//		log.Fatal(err)
+//	}
 //	svg.Write(os.Stdout, graph)
 //
 // All lengths are in points, see Length.

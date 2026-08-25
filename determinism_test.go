@@ -22,7 +22,9 @@ func TestDeterministic(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		layout.Hierarchical(graphs[0])
+		if err := layout.Hierarchical(graphs[0]); err != nil {
+			t.Fatal(err)
+		}
 		var out bytes.Buffer
 		if err := svg.Write(&out, graphs[0]); err != nil {
 			t.Fatal(err)
