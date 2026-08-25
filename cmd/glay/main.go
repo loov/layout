@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg] [-o output] [-g name] [-q fast|quality] [input]
+//	glay [-s dot] [-t svg|dot|json|txt] [-o output] [-g name] [-q fast|quality] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -23,7 +23,9 @@ import (
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
 	"github.com/loov/layout/format/graphml"
+	"github.com/loov/layout/format/json"
 	"github.com/loov/layout/format/svg"
+	"github.com/loov/layout/format/text"
 )
 
 var (
@@ -92,6 +94,10 @@ func main() {
 			*outformat = "svg"
 		case ".dot", ".gv":
 			*outformat = "dot"
+		case ".json":
+			*outformat = "json"
+		case ".txt":
+			*outformat = "txt"
 		default:
 			*outformat = "svg"
 		}
@@ -232,6 +238,10 @@ func main() {
 		err = svg.Write(out, graph)
 	case "dot":
 		err = dot.Write(out, graph)
+	case "json":
+		err = json.Write(out, graph)
+	case "txt", "text":
+		err = text.Write(out, graph)
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)
