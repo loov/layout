@@ -385,7 +385,11 @@ func TestDiagnostics(t *testing.T) {
 		if err := layout.Hierarchical(graphs[0]); err != nil {
 			t.Fatal(err)
 		}
-		fmt.Fprintf(&out, "%-12s %v\n", strings.TrimSuffix(filepath.Base(file), ".gv"), layout.Diagnose(graphs[0]))
+		d := layout.Diagnose(graphs[0])
+		fmt.Fprintf(&out, "%-12s %v\n", strings.TrimSuffix(filepath.Base(file), ".gv"), d)
+		for _, line := range d.Details {
+			t.Logf("%s: %s", filepath.Base(file), line)
+		}
 	}
 	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
 }
