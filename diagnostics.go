@@ -18,6 +18,13 @@ type Diagnostics struct {
 	// EdgeOverlaps counts pairs of edges running closer than a stroke
 	// width for more than an arrowhead length, which draw as one line.
 	EdgeOverlaps int
+	// ParallelEdges counts pairs of edges running within an arrowhead
+	// width of each other for more than four arrowhead lengths, which read
+	// as a bundle.
+	ParallelEdges int
+	// Shafts counts edge ends whose shaft passes through their own node
+	// before reaching the outline, so the arrowhead draws over the node.
+	Shafts int
 	// EndOverlaps counts pairs of edge ends (starts or ends) closer than an
 	// arrowhead, where arrowheads draw on top of each other.
 	EndOverlaps int
@@ -26,6 +33,9 @@ type Diagnostics struct {
 	JaggedEdges int
 	// BendyEdges counts edges with more than three bends.
 	BendyEdges int
+	// WavyEdges counts edges whose turns change direction at least twice
+	// (left, right, left), which reads as a wobble.
+	WavyEdges int
 	// EdgeNearNode counts edges passing within EdgePadding of a node
 	// they don't end at, once per edge and node.
 	EdgeNearNode int
@@ -48,9 +58,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (m Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d ends=%d jagged=%d bends=%d back=%d labels=%d length=%.0f area=%.0f",
-		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeNearNode, m.EdgeCrossings, m.ShallowCrossings, m.EdgeOverlaps, m.EndOverlaps,
-		m.JaggedEdges, m.BendyEdges, m.BackEdges, m.LabelOverlaps, m.EdgeLength, m.Area)
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d wavy=%d back=%d labels=%d length=%.0f area=%.0f",
+		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeNearNode, m.EdgeCrossings, m.ShallowCrossings, m.EdgeOverlaps, m.ParallelEdges, m.EndOverlaps, m.Shafts,
+		m.JaggedEdges, m.BendyEdges, m.WavyEdges, m.BackEdges, m.LabelOverlaps, m.EdgeLength, m.Area)
 }
 
 // Diagnose computes Diagnostics for a laid out graph.
@@ -118,6 +128,24 @@ func Diagnose(graph *Graph) Diagnostics {
 	// segments closer than a stroke width over more than an arrowhead
 	// length draw as one line
 	const stroke, arrow = 1.5 * Point, 6 * Point
+	// alongside reports whether q runs within dist of p's line for more
+	// than minLen
+	alongside := func(p, q segment, dist, minLen Length) bool {
+		d := func(a, b, c Vector) float64 {
+			return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
+		}
+		dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
+		length := math.Hypot(dx, dy)
+		if length < eps {
+			return false
+		}
+		if math.Abs(d(p.a, p.b, q.a))/length >= float64(dist) || math.Abs(d(p.a, p.b, q.b))/length >= float64(dist) {
+			return false
+		}
+		proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
+		lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
+		return math.Min(hi, length)-math.Max(lo, 0) > float64(minLen)
+	}
 	cross := func(p, q segment) (crosses, collinear bool) {
 		d := func(a, b, c Vector) float64 {
 			return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
@@ -141,10 +169,16 @@ func Diagnose(graph *Graph) Diagnostics {
 	}
 	type edgePair struct{ a, b *Edge }
 	overlaps := map[edgePair]bool{}
+	parallel := map[edgePair]bool{}
 	for i, p := range segments {
 		for _, q := range segments[i+1:] {
 			if p.edge == q.edge {
 				continue
+			}
+			if pair := (edgePair{p.edge, q.edge}); !parallel[pair] && alongside(p, q, arrow+stroke, 4*arrow) {
+				parallel[pair] = true
+				m.ParallelEdges++
+				m.Details = append(m.Details, fmt.Sprintf("edges %v and %v run alongside at %v-%v", p.edge, q.edge, p.a, p.b))
 			}
 			crosses, collinear := cross(p, q)
 			if crosses {
@@ -164,6 +198,34 @@ func Diagnose(graph *Graph) Diagnostics {
 				m.EdgeOverlaps++
 				m.Details = append(m.Details, fmt.Sprintf("edges %v and %v overlap at %v-%v", p.edge, q.edge, p.a, p.b))
 			}
+		}
+	}
+
+	// a shaft that enters its own node before the tip draws the arrowhead
+	// over the node; test the segment before the tip, trimmed at the tip
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To {
+			continue
+		}
+		path := edge.Path
+		if graph.Splines == SplinesRounded {
+			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
+		}
+		if len(path) < 2 {
+			continue
+		}
+		trim := func(inner, tip Vector) (Vector, Vector) {
+			return inner, Vector{tip.X + (inner.X-tip.X)*0.05, tip.Y + (inner.Y-tip.Y)*0.05}
+		}
+		// the tip itself inside the node counts too
+		inside := func(p Vector, node *Node) bool { return segmentHitsNode(p, p, node, -0.5) }
+		if a, b := trim(path[1], path[0]); segmentHitsNode(a, b, edge.From, -eps) || inside(path[0], edge.From) {
+			m.Shafts++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v starts inside node %v", edge, edge.From))
+		}
+		if a, b := trim(path[len(path)-2], path[len(path)-1]); segmentHitsNode(a, b, edge.To, -eps) || inside(path[len(path)-1], edge.To) {
+			m.Shafts++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v ends inside node %v", edge, edge.To))
 		}
 	}
 
@@ -209,7 +271,7 @@ func Diagnose(graph *Graph) Diagnostics {
 			m.BackEdges++
 			m.Details = append(m.Details, fmt.Sprintf("edge %v points against the rank direction", edge))
 		}
-		turn, bends := 0.0, 0
+		turn, bends, flips, last := 0.0, 0, 0, 0.0
 		path := edge.Path
 		for i := 1; i+1 < len(path); i++ {
 			a, b := path[i].Sub(path[i-1]), path[i+1].Sub(path[i])
@@ -220,7 +282,15 @@ func Diagnose(graph *Graph) Diagnostics {
 			turn += angle
 			if math.Abs(angle) > 5*math.Pi/180 {
 				bends++
+				if last != 0 && (angle > 0) != (last > 0) {
+					flips++
+				}
+				last = angle
 			}
+		}
+		if flips >= 2 {
+			m.WavyEdges++
+			m.Details = append(m.Details, fmt.Sprintf("edge %v changes turn direction %d times", edge, flips))
 		}
 		if math.Abs(turn) > math.Pi/2 {
 			m.JaggedEdges++
@@ -272,8 +342,13 @@ func segmentHitsNode(a, b Vector, node *Node, pad Length) bool {
 	case Box, Square, Record, None:
 		return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})
 	}
-	// ellipse: scale to a unit circle and test the distance from the center
+	// ellipse: scale to a unit circle and test the distance from the center;
+	// circles are drawn with the larger radius
 	rx, ry := float64(node.Radius.X+pad), float64(node.Radius.Y+pad)
+	if node.Shape == Circle {
+		rx = math.Max(rx, ry)
+		ry = rx
+	}
 	if rx <= 0 || ry <= 0 {
 		return false
 	}

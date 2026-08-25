@@ -64,6 +64,11 @@ func (graph *Graph) AssignMissingValues() {
 				node.Radius.Y = labelRadius.Y
 			}
 		}
+		if node.Shape == Circle {
+			// drawn as a circle of the larger radius
+			r := max(node.Radius.X, node.Radius.Y)
+			node.Radius = Vector{r, r}
+		}
 		if node.Peripheries > 1 {
 			extra := Length(node.Peripheries-1) * peripheryGap
 			node.Radius = node.Radius.Add(Vector{extra, extra})
