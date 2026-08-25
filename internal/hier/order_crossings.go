@@ -24,8 +24,8 @@ func (graph *Graph) CrossingsDown(u, v *Node) int {
 
 	count := 0
 	next := graph.ByRank[u.Rank+1]
-	for _, w := range u.In {
-		for _, z := range v.In {
+	for _, w := range u.Out {
+		for _, z := range v.Out {
 			if next.IndexOf(z) < next.IndexOf(w) {
 				count++
 			}
