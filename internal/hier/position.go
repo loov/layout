@@ -120,16 +120,10 @@ func PositionIncoming(graph *Graph, leftToRight bool, nudge float32) {
 		func(layer Nodes, i int, node *Node) {
 			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
 
-			// calculate average location based on incoming
-			if len(node.In) == 0 {
+			center, ok := targetX(node, node.In)
+			if !ok {
 				return
 			}
-			center := float32(0.0)
-			for _, node := range node.In {
-				center += node.Center.X
-			}
-			center /= float32(len(node.In))
-
 			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
 
 			// is between sides
@@ -143,21 +137,37 @@ func PositionOutgoing(graph *Graph, leftToRight bool, nudge float32) {
 		func(layer Nodes, i int, node *Node) {
 			wallLeft, wallRight := NodeWalls(graph, layer, i, node, leftToRight)
 
-			// calculate average location based on incoming
-			if len(node.Out) == 0 {
+			center, ok := targetX(node, node.Out)
+			if !ok {
 				return
 			}
-			center := float32(0.0)
-			for _, node := range node.Out {
-				center += node.Center.X
-			}
-			center /= float32(len(node.Out))
-
 			center = clampf32(center, wallLeft+node.Radius.X-nudge, wallRight-node.Radius.X+nudge)
 
 			// is between sides
 			node.Center.X = center
 		})
+}
+
+// targetX returns the preferred x for node given its adjacent nodes on one side.
+// Virtual nodes aim for a straight line through their single in/out neighbors;
+// real nodes weight virtual neighbors higher so long edges stay straight.
+func targetX(node *Node, adj Nodes) (float32, bool) {
+	if node.Virtual && len(node.In) == 1 && len(node.Out) == 1 {
+		return (node.In[0].Center.X + node.Out[0].Center.X) / 2, true
+	}
+	if len(adj) == 0 {
+		return 0, false
+	}
+	sum, weight := float32(0), float32(0)
+	for _, n := range adj {
+		w := float32(1)
+		if n.Virtual {
+			w = 2
+		}
+		sum += w * n.Center.X
+		weight += w
+	}
+	return sum / weight, true
 }
 
 // sanityCheckLayer checks whether any nodes are overlapping
