@@ -47,6 +47,9 @@ func (graph *Graph) AssignMissingValues() {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
+			if node.Shape == Record {
+				labelRadius = graph.recordRadius(node)
+			}
 
 			if node.Radius.X < labelRadius.X {
 				node.Radius.X = labelRadius.X

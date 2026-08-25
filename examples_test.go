@@ -153,6 +153,18 @@ var examples = map[string]func() *layout.Graph{
 		}
 		return graph
 	},
+	"record": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		a := graph.Node("A")
+		a.Shape = layout.Record
+		a.Label = "<f0> left|<f1> middle|{top|bottom}"
+		b := graph.Node("B")
+		b.Shape = layout.Record
+		b.Label = "{name|type|value}"
+		graph.Edge("A", "B")
+		graph.Edge("A", "C")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

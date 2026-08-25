@@ -403,6 +403,8 @@ func setShape(t *layout.Shape, value string) {
 		*t = layout.Ellipse
 	case "none":
 		*t = layout.None
+	case "record", "Mrecord":
+		*t = layout.Record
 	default:
 		*t = layout.Auto
 	}

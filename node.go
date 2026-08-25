@@ -164,7 +164,7 @@ func (node *Node) Boundary(p Vector) Vector {
 
 	var t float64
 	switch node.Shape {
-	case Box, Square:
+	case Box, Square, Record:
 		t = math.Min(rx/math.Abs(dx), ry/math.Abs(dy)) // ray-rect; Inf for zero component is fine
 	default: // ellipse and circle
 		t = 1 / math.Hypot(dx/rx, dy/ry)

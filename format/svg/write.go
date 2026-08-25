@@ -145,6 +145,34 @@ func markerID(arrow layout.Arrow) string {
 	return ""
 }
 
+// writeRecord draws record fields: separators between sub-fields and
+// centered text in leaf fields
+func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *layout.RecordField, origin layout.Vector) {
+	if len(rec.Fields) == 0 {
+		center := layout.Vector{
+			X: origin.X + (rec.TopLeft.X+rec.BottomRight.X)/2,
+			Y: origin.Y + (rec.TopLeft.Y+rec.BottomRight.Y)/2,
+		}
+		svg.writeText(graph, rec.Text, center, node.FontSize, node.FontName, node.FontColor)
+		return
+	}
+	for i, field := range rec.Fields {
+		if i > 0 {
+			var a, b layout.Vector
+			if rec.Vertical {
+				a = layout.Vector{X: rec.TopLeft.X, Y: field.TopLeft.Y}
+				b = layout.Vector{X: rec.BottomRight.X, Y: field.TopLeft.Y}
+			} else {
+				a = layout.Vector{X: field.TopLeft.X, Y: rec.TopLeft.Y}
+				b = layout.Vector{X: field.TopLeft.X, Y: rec.BottomRight.Y}
+			}
+			svg.write("<line x1='%v' y1='%v' x2='%v' y2='%v' stroke='%v' stroke-width='%v'/>",
+				origin.X+a.X, origin.Y+a.Y, origin.X+b.X, origin.Y+b.Y, dkcolor(node.LineColor), node.LineWidth)
+		}
+		svg.writeRecord(graph, node, field, origin)
+	}
+}
+
 // writeText writes multi-line text centered on center
 func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
 	lines := strings.Split(text, "\n")
@@ -235,7 +263,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'",
 				node.Center.X, node.Center.Y,
 				node.Radius.X, node.Radius.Y)
-		case layout.Box:
+		case layout.Box, layout.Record:
 			svgtag = "rect"
 			svg.write("<rect x='%v' y='%v' width='%v' height='%v'",
 				node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y,
@@ -264,6 +292,10 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 		svg.write("</%v>", svgtag)
 
+		if node.Shape == layout.Record {
+			svg.writeRecord(graph, node, graph.LayoutRecord(node), node.TopLeft())
+			continue
+		}
 		if label := node.DefaultLabel(); label != "" {
 			if label[0] == '<' && label[len(label)-1] == '>' {
 				svg.write("<foreignObject x='%v' y='%v' width='100%%' height='100%%' ", node.Center.X-node.Radius.X, node.Center.Y-node.Radius.Y)

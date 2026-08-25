@@ -11,6 +11,8 @@ const (
 	Square        = "square"
 	Circle        = "circle"
 	Ellipse       = "ellipse"
+	// Record draws the label as a table of fields, see ParseRecord.
+	Record = "record"
 )
 
 // RankDir is the direction in which ranks progress.
