@@ -536,6 +536,10 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 				if edges, ok := labelNode[target]; ok {
 					// the edge passes on the left, the labels stack on the right
 					point.X = Length(target.Center.X-target.Radius.X) + graphdef.EdgePadding
+					if graphdef.Splines == SplinesOrtho {
+						// orthogonal edges stay on the column, the labels sit beside it
+						point.X = Length(target.Center.X)
+					}
 					x := point.X + (Length(target.Center.X+target.Radius.X)-point.X)/2
 					y := point.Y - Length(target.Radius.Y) + graphdef.EdgePadding
 					for _, edge := range edges {
@@ -558,8 +562,12 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			path[0] = sourcedef.Boundary(path[1])
 			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
 
-			path = routeAround(path, byRank, source.Rank, sourcedef, targetdef, graphdef.EdgePadding)
-			path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
+			if graphdef.Splines != SplinesOrtho {
+				// orthogonal edges run on virtual node columns and rank
+				// channels, which are free of nodes by construction
+				path = routeAround(path, byRank, source.Rank, sourcedef, targetdef, graphdef.EdgePadding)
+				path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
+			}
 
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
@@ -648,6 +656,21 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		edge.Path = path
 	}
 
+	if graphdef.Splines == SplinesOrtho {
+		// row extents per rank: real node boxes, virtual nodes are flat
+		rows := make([][2]Length, len(positionedGraph.ByRank))
+		for r, layer := range positionedGraph.ByRank {
+			rows[r] = [2]Length{Length(math.Inf(1)), Length(math.Inf(-1))}
+			for _, node := range layer {
+				top, bottom := Length(node.Center.Y), Length(node.Center.Y)
+				if !node.Virtual {
+					top, bottom = reverse[node.ID].Top(), reverse[node.ID].Bottom()
+				}
+				rows[r][0], rows[r][1] = min(rows[r][0], top), max(rows[r][1], bottom)
+			}
+		}
+		orthoEdges(graphdef, rows, graphdef.EdgePadding)
+	}
 	if graphdef.Splines == SplinesLine {
 		for _, edge := range graphdef.Edges {
 			if edge.From != edge.To && len(edge.Path) > 2 {

@@ -23,6 +23,7 @@ const (
 	SplinesRounded  Splines = ""
 	SplinesPolyline Splines = "polyline" // straight segments through the path points
 	SplinesLine     Splines = "line"     // one straight segment from node to node
+	SplinesOrtho    Splines = "ortho"    // horizontal and vertical segments only
 )
 
 // RankDir is the direction in which ranks progress.

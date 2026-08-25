@@ -259,7 +259,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
 		svg.writeStroke(edge.LineWidth, edge.LineStyle)
 		radius := 2 * graph.RowPadding
-		if graph.Splines == layout.SplinesPolyline {
+		if graph.Splines == layout.SplinesPolyline || graph.Splines == layout.SplinesOrtho {
 			radius = 0
 		}
 		svg.write(" d='%v'>", roundedPath(edge.Path, radius))

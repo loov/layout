@@ -178,6 +178,8 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 				graph.Splines = layout.SplinesPolyline
 			case "line", "false":
 				graph.Splines = layout.SplinesLine
+			case "ortho":
+				graph.Splines = layout.SplinesOrtho
 			}
 		case "nodesep":
 			setLength(&graph.NodePadding, attr.Val, layout.Inch)
