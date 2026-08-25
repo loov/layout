@@ -121,6 +121,10 @@ func roundedPath(path []layout.Vector, radius layout.Length) string {
 
 	for i := 1; i+1 < len(path); i++ {
 		prev, p, next := path[i-1], path[i], path[i+1]
+		if radius <= 0 {
+			line.WriteString("L" + vec(p.X, p.Y))
+			continue
+		}
 		r := min(radius, length(prev, p)/2, length(p, next)/2)
 		in, out := towards(p, prev, r), towards(p, next, r)
 		line.WriteString("L" + vec(in.X, in.Y))
@@ -254,7 +258,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
 		svg.writeStroke(edge.LineWidth, edge.LineStyle)
-		svg.write(" d='%v'>", roundedPath(edge.Path, 2*graph.RowPadding))
+		radius := 2 * graph.RowPadding
+		if graph.Splines == layout.SplinesPolyline {
+			radius = 0
+		}
+		svg.write(" d='%v'>", roundedPath(edge.Path, radius))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))

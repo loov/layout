@@ -648,6 +648,13 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		edge.Path = path
 	}
 
+	if graphdef.Splines == SplinesLine {
+		for _, edge := range graphdef.Edges {
+			if edge.From != edge.To && len(edge.Path) > 2 {
+				edge.Path = []Vector{edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)}
+			}
+		}
+	}
 	nudgeLabels(graphdef.Edges, graphdef.EdgePadding, 2*graphdef.RowPadding)
 }
 

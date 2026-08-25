@@ -172,6 +172,13 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 			default:
 				graph.RankDir = layout.TopToBottom
 			}
+		case "splines":
+			switch strings.ToLower(fixstring(attr.Val)) {
+			case "polyline":
+				graph.Splines = layout.SplinesPolyline
+			case "line", "false":
+				graph.Splines = layout.SplinesLine
+			}
 		case "nodesep":
 			setLength(&graph.NodePadding, attr.Val, layout.Inch)
 		case "ranksep":

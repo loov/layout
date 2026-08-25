@@ -15,6 +15,16 @@ const (
 	Record = "record"
 )
 
+// Splines selects how edge paths are drawn.
+type Splines string
+
+// Spline styles; the zero value draws rounded polylines.
+const (
+	SplinesRounded  Splines = ""
+	SplinesPolyline Splines = "polyline" // straight segments through the path points
+	SplinesLine     Splines = "line"     // one straight segment from node to node
+)
+
 // RankDir is the direction in which ranks progress.
 type RankDir string
 

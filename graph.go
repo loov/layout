@@ -8,6 +8,8 @@ type Graph struct {
 
 	// RankDir is the direction ranks are laid out in, see RankDir constants.
 	RankDir RankDir
+	// Splines is how edges are routed and drawn, see Splines constants.
+	Splines Splines
 
 	// MeasureText returns the half size of a single line of text in the
 	// given font. When nil, a built-in approximation is used.
