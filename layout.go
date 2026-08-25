@@ -725,7 +725,7 @@ func segmentHitsBox(a, b Vector, node *Node, pad Length) bool {
 func routeAroundClusters(path []Vector, clusters []*Cluster, from, to *Node, pad Length) []Vector {
 	for _, cluster := range clusters {
 		if slices.Contains(cluster.Nodes, from) || slices.Contains(cluster.Nodes, to) {
-			continue // ponytail: linear scan, index membership if clusters get big
+			continue
 		}
 		// virtual nodes outside the box sit pad away from it; grow by
 		// less so that chains running alongside are not hits

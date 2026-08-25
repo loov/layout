@@ -1,7 +1,7 @@
 package hier
 
-// maxSiftLayer bounds the O(n²) pairwise crossing matrix per layer.
-// ponytail: larger layers are left to median+transpose
+// maxSiftLayer bounds the O(n²) pairwise crossing matrix per layer;
+// larger layers are left to median+transpose.
 const maxSiftLayer = 400
 
 // OrderRanksSift moves every node to the position within its layer that
