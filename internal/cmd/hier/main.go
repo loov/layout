@@ -163,7 +163,7 @@ func main() {
 
 	info("\nADDING VIRTUALS")
 	start = time.Now()
-	hier.AddVirtualVertices(graph)
+	hier.AddVirtuals(graph)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
@@ -222,6 +222,8 @@ func main() {
 		out = file
 	}
 
+	// ponytail: no hier -> svg writer exists; dump the edge matrix
+	_, err = io.WriteString(out, graph.EdgeMatrixString())
 	if err != nil {
 		info("writing %q failed: %v", output, err)
 		os.Exit(1)
