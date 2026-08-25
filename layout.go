@@ -638,6 +638,80 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		}
 		edge.Path = path
 	}
+
+	nudgeLabels(graphdef.Edges, graphdef.EdgePadding, 2*graphdef.RowPadding)
+}
+
+// flattenPath approximates the rounded corners drawn by the writers
+// (quadratic curves of the given radius) with two extra points per corner.
+func flattenPath(path []Vector, radius Length) []Vector {
+	if len(path) < 3 {
+		return path
+	}
+	length := func(a, b Vector) Length {
+		return Length(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
+	}
+	towards := func(a, b Vector, d Length) Vector {
+		l := length(a, b)
+		if l == 0 {
+			return a
+		}
+		return Vector{X: a.X + (b.X-a.X)*d/l, Y: a.Y + (b.Y-a.Y)*d/l}
+	}
+	out := []Vector{path[0]}
+	for i := 1; i+1 < len(path); i++ {
+		prev, p, next := path[i-1], path[i], path[i+1]
+		r := min(radius, length(prev, p)/2, length(p, next)/2)
+		in, exit := towards(p, prev, r), towards(p, next, r)
+		mid := Vector{X: (in.X + 2*p.X + exit.X) / 4, Y: (in.Y + 2*p.Y + exit.Y) / 4}
+		out = append(out, in, mid, exit)
+	}
+	return append(out, path[len(path)-1])
+}
+
+// nudgeLabels slides edge labels sideways along their rank until they
+// clear every edge path and the labels placed before them.
+func nudgeLabels(edges []*Edge, pad, radius Length) {
+	paths := make([][]Vector, len(edges))
+	for i, edge := range edges {
+		paths[i] = flattenPath(edge.Path, radius)
+	}
+	var placed []*Edge
+	clear := func(edge *Edge, at Vector) bool {
+		tl := at.Add(Vector{-edge.LabelRadius.X - pad, -edge.LabelRadius.Y})
+		br := at.Add(Vector{edge.LabelRadius.X + pad, edge.LabelRadius.Y})
+		for _, path := range paths {
+			for i := 0; i+1 < len(path); i++ {
+				if segmentHitsRect(path[i], path[i+1], tl, br) {
+					return false
+				}
+			}
+		}
+		for _, other := range placed {
+			if other.LabelPos.X-other.LabelRadius.X < br.X && tl.X < other.LabelPos.X+other.LabelRadius.X &&
+				other.LabelPos.Y-other.LabelRadius.Y < br.Y && tl.Y < other.LabelPos.Y+other.LabelRadius.Y {
+				return false
+			}
+		}
+		return true
+	}
+	for _, edge := range edges {
+		if edge.Label == "" || len(edge.Path) < 2 {
+			continue
+		}
+		// alternate right and left in growing steps
+		for step := 0; step <= 8; step++ {
+			dx := Length((step+1)/2) * 2 * pad
+			if step%2 == 0 {
+				dx = -dx
+			}
+			if at := edge.LabelPos.Add(Vector{dx, 0}); clear(edge, at) {
+				edge.LabelPos = at
+				break
+			}
+		}
+		placed = append(placed, edge)
+	}
 }
 
 // offsetPath shifts the path sideways by dx and re-clips the ends to the nodes
