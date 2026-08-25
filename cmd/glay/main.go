@@ -79,6 +79,8 @@ func main() {
 		switch strings.ToLower(filepath.Ext(output)) {
 		case ".svg":
 			*outformat = "svg"
+		case ".dot", ".gv":
+			*outformat = "dot"
 		default:
 			*outformat = "svg"
 		}
@@ -178,6 +180,8 @@ func main() {
 	switch *outformat {
 	case "svg":
 		err = svg.Write(out, graph)
+	case "dot":
+		err = dot.Write(out, graph)
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)

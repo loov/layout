@@ -203,6 +203,25 @@ func TestGraphviz(t *testing.T) {
 	}
 }
 
+// TestWriteDot checks the dot writer against testdata/minimal.dot.
+func TestWriteDot(t *testing.T) {
+	graph := examples["minimal"]()
+	layout.Hierarchical(graph)
+	var got bytes.Buffer
+	if err := dot.Write(&got, graph); err != nil {
+		t.Fatal(err)
+	}
+	// round trip: the output must parse again with the same nodes and edges
+	parsed, err := dot.Parse(bytes.NewReader(got.Bytes()))
+	if err != nil {
+		t.Fatalf("output does not parse: %v\n%s", err, got.Bytes())
+	}
+	if len(parsed) != 1 || len(parsed[0].Nodes) != len(graph.Nodes) || len(parsed[0].Edges) != len(graph.Edges) {
+		t.Fatalf("round trip mismatch\n%s", got.Bytes())
+	}
+	compareGolden(t, filepath.Join("testdata", "minimal.dot"), got.Bytes())
+}
+
 func checkGolden(t *testing.T, path string, graph *layout.Graph) {
 	t.Helper()
 	layout.Hierarchical(graph)
@@ -211,9 +230,14 @@ func checkGolden(t *testing.T, path string, graph *layout.Graph) {
 	if err := svg.Write(&got, graph); err != nil {
 		t.Fatal(err)
 	}
+	compareGolden(t, path, got.Bytes())
+}
 
+// compareGolden compares got with the file at path, rewriting it with -update
+func compareGolden(t *testing.T, path string, got []byte) {
+	t.Helper()
 	if *update {
-		if err := os.WriteFile(path, got.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(path, got, 0644); err != nil {
 			t.Fatal(err)
 		}
 		return
@@ -223,7 +247,7 @@ func checkGolden(t *testing.T, path string, graph *layout.Graph) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Equal(got.Bytes(), want) {
+	if !bytes.Equal(got, want) {
 		t.Errorf("%s differs from golden file; run `go test -update`", path)
 	}
 }
