@@ -63,3 +63,40 @@ func (graph *Graph) TotalCrossings() float32 {
 	}
 	return total
 }
+
+// TotalEdgeLength sums the weighted horizontal distance, in positions,
+// between the ends of every edge; a secondary ordering objective.
+func (graph *Graph) TotalEdgeLength() float32 {
+	graph.assignPos()
+	total := float32(0)
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			d := float32(src.Pos - dst.Pos)
+			if d < 0 {
+				d = -d
+			}
+			total += graph.Weight(src, dst) * d
+		}
+	}
+	return total
+}
+
+// edgeLength sums the horizontal distance of node's edges given it sits at pos
+func (graph *Graph) edgeLength(node *Node, pos int) float32 {
+	total := float32(0)
+	for _, src := range node.In {
+		d := float32(src.Pos - pos)
+		if d < 0 {
+			d = -d
+		}
+		total += graph.Weight(src, node) * d
+	}
+	for _, dst := range node.Out {
+		d := float32(dst.Pos - pos)
+		if d < 0 {
+			d = -d
+		}
+		total += graph.Weight(node, dst) * d
+	}
+	return total
+}

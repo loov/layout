@@ -16,17 +16,14 @@ func OrderRanks(graph *Graph) {
 	OrderRanksDepthFirst(graph)
 
 	best := saveOrder(graph)
-	bestCrossings := graph.TotalCrossings()
+	bestCrossings, bestLength := graph.TotalCrossings(), graph.TotalEdgeLength()
 	for i := range 24 {
 		OrderRanksByMedian(graph, i%2 == 0)
 		OrderRanksTranspose(graph)
 
-		crossings := graph.TotalCrossings()
-		if crossings < bestCrossings {
-			best, bestCrossings = saveOrder(graph), crossings
-		}
-		if crossings == 0 {
-			break
+		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
+		if crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
+			best, bestCrossings, bestLength = saveOrder(graph), crossings, length
 		}
 	}
 	graph.ByRank = best
@@ -141,7 +138,8 @@ func medianGridX(adj Nodes, fallback float32) float32 {
 	}
 }
 
-// OrderRanksTranspose swaps adjacent nodes while it reduces crossings
+// OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or
+// shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
 	graph.assignPos()
 	for range 20 {
@@ -149,13 +147,18 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 		for _, nodes := range graph.ByRank {
 			for i := 0; i+1 < len(nodes); i++ {
 				left, right := nodes[i], nodes[i+1]
-				if graph.Crossings(left, right) > graph.Crossings(right, left) {
+				before, after := graph.Crossings(left, right), graph.Crossings(right, left)
+				if before == after {
+					before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
+					after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)
+				}
+				if before > after {
 					nodes[i], nodes[i+1] = right, left
+					nodes.assignPos()
 					swaps++
 					improved = true
 				}
 			}
-			nodes.assignPos()
 		}
 		if !improved {
 			return swaps
