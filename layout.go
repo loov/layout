@@ -518,6 +518,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			byRank[node.Rank] = append(byRank[node.Rank], reverse[node.ID])
 		}
 	}
+	obstacles := newObstacles(byRank, graphdef.EdgePadding)
 
 	// calculate edges
 	edgePaths := map[[2]hier.ID][]Vector{}
@@ -571,7 +572,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			if graphdef.Splines != SplinesOrtho {
 				// orthogonal edges run on virtual node columns and rank
 				// channels, which are free of nodes by construction
-				path = routeAround(path, byRank, sourcedef, targetdef, graphdef.EdgePadding)
+				path = routeAround(path, obstacles, sourcedef, targetdef, graphdef.EdgePadding)
 				path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
 			}
 
@@ -943,17 +944,30 @@ func loopPath(node *Node, width Length) []Vector {
 	}
 }
 
+// obstacles indexes the real nodes per rank, sorted by x, with the
+// largest padded radius per rank for quick rejection.
+type obstacles struct {
+	byRank               [][]*Node
+	rowRadius, colRadius []Length
+}
+
+func newObstacles(byRank [][]*Node, pad Length) *obstacles {
+	obs := &obstacles{byRank: byRank, rowRadius: make([]Length, len(byRank)), colRadius: make([]Length, len(byRank))}
+	for r, nodes := range byRank {
+		sort.Slice(nodes, func(i, k int) bool { return nodes[i].Center.X < nodes[k].Center.X })
+		for _, node := range nodes {
+			obs.rowRadius[r] = max(obs.rowRadius[r], node.Radius.Y+pad)
+			obs.colRadius[r] = max(obs.colRadius[r], node.Radius.X+pad)
+		}
+	}
+	return obs
+}
+
 // routeAround inserts waypoints so that no segment of path passes through a
 // node. Segment i connects rank firstRank+i to firstRank+i+1; only nodes on
 // those two ranks can be hit. Obstacles on the lower rank are passed above,
 // on the upper rank below.
-func routeAround(path []Vector, byRank [][]*Node, from, to *Node, pad Length) []Vector {
-	rowRadius := make([]Length, len(byRank))
-	for r, nodes := range byRank {
-		for _, node := range nodes {
-			rowRadius[r] = max(rowRadius[r], node.Radius.Y+pad)
-		}
-	}
+func routeAround(path []Vector, obs *obstacles, from, to *Node, pad Length) []Vector {
 	var lastHit *Node
 	inserted := 0
 	for i := 0; i+1 < len(path) && inserted < 16; i++ {
@@ -962,14 +976,22 @@ func routeAround(path []Vector, byRank [][]*Node, from, to *Node, pad Length) []
 		hitDist := Length(math.Inf(1))
 		// every rank whose row the segment's y span touches
 		top, bottom := min(a.Y, b.Y), max(a.Y, b.Y)
-		for rank := range byRank {
-			if len(byRank[rank]) == 0 {
+		left, right := min(a.X, b.X), max(a.X, b.X)
+		for rank, nodes := range obs.byRank {
+			if len(nodes) == 0 {
 				continue
 			}
-			if row := byRank[rank][0].Center; row.Y+rowRadius[rank] < top || row.Y-rowRadius[rank] > bottom {
+			if row := nodes[0].Center; row.Y+obs.rowRadius[rank] < top || row.Y-obs.rowRadius[rank] > bottom {
 				continue
 			}
-			for _, node := range byRank[rank] {
+			// nodes are sorted by x; only those whose box can reach the
+			// segment's x span
+			reach := obs.colRadius[rank]
+			first := sort.Search(len(nodes), func(k int) bool { return nodes[k].Center.X >= left-reach })
+			for _, node := range nodes[first:] {
+				if node.Center.X > right+reach {
+					break
+				}
 				// slightly less than pad: waypoints sit on the padded box
 				// and touching it is not a hit
 				if node == from || node == to || !segmentHitsBox(a, b, node, pad-0.01) {
