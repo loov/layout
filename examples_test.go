@@ -14,6 +14,7 @@ import (
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
 	"github.com/loov/layout/format/svg"
+	"github.com/loov/layout/format/text"
 )
 
 var update = flag.Bool("update", false, "update testdata golden files")
@@ -210,6 +211,25 @@ func TestExamples(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
 			checkGolden(t, filepath.Join("testdata", name+".svg"), build())
+		})
+	}
+}
+
+// TestExamplesText renders each example with ortho edges as text and
+// compares it to testdata/<name>.txt.
+func TestExamplesText(t *testing.T) {
+	for name, build := range examples {
+		t.Run(name, func(t *testing.T) {
+			graph := build()
+			graph.Splines = layout.SplinesOrtho
+			if err := layout.Hierarchical(graph); err != nil {
+				t.Fatal(err)
+			}
+			var got bytes.Buffer
+			if err := text.Write(&got, graph); err != nil {
+				t.Fatal(err)
+			}
+			compareGolden(t, filepath.Join("testdata", name+".txt"), got.Bytes())
 		})
 	}
 }
