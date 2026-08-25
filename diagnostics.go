@@ -50,6 +50,9 @@ type Diagnostics struct {
 	EdgeLength Length
 	// Area is the width times height of the drawing, in points.
 	Area Length
+	// FarLabels counts labels further from their own edge than the text
+	// height, which makes them hard to attribute.
+	FarLabels int
 	// LabelOverlaps counts labels that intersect a node, an edge segment or
 	// another label.
 	LabelOverlaps int
@@ -60,9 +63,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (m Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d wavy=%d back=%d labels=%d length=%.0f area=%.0f",
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f",
 		m.NodeOverlaps, m.EdgeThroughNode, m.EdgeNearNode, m.EdgeCrossings, m.ShallowCrossings, m.EdgeOverlaps, m.ParallelEdges, m.EndOverlaps, m.Shafts,
-		m.JaggedEdges, m.BendyEdges, m.WavyEdges, m.BackEdges, m.LabelOverlaps, m.EdgeLength, m.Area)
+		m.JaggedEdges, m.BendyEdges, m.WavyEdges, m.BackEdges, m.LabelOverlaps, m.FarLabels, m.EdgeLength, m.Area)
 }
 
 // Diagnose computes Diagnostics for a laid out graph.
@@ -307,6 +310,27 @@ func Diagnose(graph *Graph) Diagnostics {
 	tl, br := graph.Bounds()
 	m.Area = (br.X - tl.X) * (br.Y - tl.Y)
 
+	// distance from a label box to its own path
+	for _, edge := range graph.Edges {
+		if edge.Label == "" || len(edge.Path) < 2 {
+			continue
+		}
+		path := edge.Path
+		if graph.Splines == SplinesRounded {
+			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
+		}
+		ltl := edge.LabelPos.Sub(edge.LabelRadius)
+		lbr := edge.LabelPos.Add(edge.LabelRadius)
+		best := math.Inf(1)
+		for i := 0; i+1 < len(path); i++ {
+			best = math.Min(best, rectSegmentDistance(ltl, lbr, path[i], path[i+1]))
+		}
+		if limit := float64(2 * edge.LabelRadius.Y); best > limit {
+			m.FarLabels++
+			m.Details = append(m.Details, fmt.Sprintf("label %q of %v is %.0f from its edge", edge.Label, edge, best))
+		}
+	}
+
 	type box struct{ tl, br Vector }
 	var labels []box
 	var labelEdges []*Edge
@@ -369,4 +393,30 @@ func segmentHitsNode(a, b Vector, node *Node, pad Length) bool {
 	}
 	px, py := ax+t*dx, ay+t*dy
 	return px*px+py*py < 1
+}
+
+// rectSegmentDistance returns the distance between the rectangle tl-br and
+// segment ab, zero when they touch.
+func rectSegmentDistance(tl, br, a, b Vector) float64 {
+	if segmentHitsRect(a, b, tl, br) {
+		return 0
+	}
+	pointSegment := func(p, a, b Vector) float64 {
+		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
+		t := 0.0
+		if l := dx*dx + dy*dy; l > 0 {
+			t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
+		}
+		return math.Hypot(float64(p.X-a.X)-t*dx, float64(p.Y-a.Y)-t*dy)
+	}
+	pointRect := func(p Vector) float64 {
+		dx := math.Max(0, math.Max(float64(tl.X-p.X), float64(p.X-br.X)))
+		dy := math.Max(0, math.Max(float64(tl.Y-p.Y), float64(p.Y-br.Y)))
+		return math.Hypot(dx, dy)
+	}
+	best := math.Min(pointRect(a), pointRect(b))
+	for _, c := range []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}} {
+		best = math.Min(best, pointSegment(c, a, b))
+	}
+	return best
 }
