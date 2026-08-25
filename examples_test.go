@@ -5,9 +5,11 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
 	"github.com/loov/layout/format/svg"
 )
 
@@ -76,29 +78,53 @@ var examples = map[string]func() *layout.Graph{
 func TestExamples(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
-			graph := build()
-			layout.Hierarchical(graph)
+			checkGolden(t, filepath.Join("testdata", name+".svg"), build())
+		})
+	}
+}
 
-			var got bytes.Buffer
-			if err := svg.Write(&got, graph); err != nil {
-				t.Fatal(err)
-			}
-
-			path := filepath.Join("testdata", name+".svg")
-			if *update {
-				if err := os.WriteFile(path, got.Bytes(), 0644); err != nil {
-					t.Fatal(err)
-				}
-				return
-			}
-
-			want, err := os.ReadFile(path)
+// TestGraphviz lays out the classic Graphviz directed examples in
+// testdata/graphviz/*.gv and compares them to the .svg next to them.
+func TestGraphviz(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		t.Run(strings.TrimSuffix(filepath.Base(file), ".gv"), func(t *testing.T) {
+			graphs, err := dot.ParseFile(file)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !bytes.Equal(got.Bytes(), want) {
-				t.Errorf("%s differs from golden file; run `go test -update`", path)
+			if len(graphs) != 1 {
+				t.Fatalf("expected one graph, got %d", len(graphs))
 			}
+			checkGolden(t, strings.TrimSuffix(file, ".gv")+".svg", graphs[0])
 		})
+	}
+}
+
+func checkGolden(t *testing.T, path string, graph *layout.Graph) {
+	t.Helper()
+	layout.Hierarchical(graph)
+
+	var got bytes.Buffer
+	if err := svg.Write(&got, graph); err != nil {
+		t.Fatal(err)
+	}
+
+	if *update {
+		if err := os.WriteFile(path, got.Bytes(), 0644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(got.Bytes(), want) {
+		t.Errorf("%s differs from golden file; run `go test -update`", path)
 	}
 }
