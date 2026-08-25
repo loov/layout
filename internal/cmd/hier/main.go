@@ -139,8 +139,7 @@ func main() {
 
 	info("\nDECYCLING")
 	start = time.Now()
-	decycle := hier.NewDecycle(graph)
-	decycle.Run()
+	hier.Decycle(graph)
 	stop = time.Now()
 
 	if *verbose {

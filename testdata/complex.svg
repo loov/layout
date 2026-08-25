@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='162' height='299'>
+<svg xmlns='http://www.w3.org/2000/svg' width='181' height='299'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -6,10 +6,10 @@
 		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
 	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='4' d='M71.6401,85 L47.67651,127.216705 Q28.5,161 36.356842,199.04366 L44.213684,237.08731 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#0000F7' stroke-width='4' d='M102.8599,85 L126.8455,127.25547 Q146,161 138.15218,199 L130.30435,237 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#A0F7A0' stroke-width='1' d='M54.00462,237.34483 L79.8346,175.17787 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M120.352104,237 L94.6654,175.17787 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M87.25,145 L87.25,85 '></path><rect x='55.75' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='87.25' y='41.5' font-size='14' color='#000000'>Lorem</text>
-<text text-anchor='middle' alignment-baseline='middle' x='87.25' y='57.5' font-size='14' color='#000000'>Ipsum</text>
-<text text-anchor='middle' alignment-baseline='middle' x='87.25' y='73.5' font-size='14' color='#000000'>Dolorem</text>
-<ellipse cx='47.5' cy='253' rx='31.5' ry='16' class='node' fill='#E07474' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='47.5' y='253' font-size='14' color='#000000'>Ignitus</text>
-<rect x='111' y='237' width='32' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='253' font-size='12' color='#202020'>C</text>
-<ellipse cx='87.25' cy='161' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='87.25' y='161' font-size='14' color='#000000'>D</text>
+	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='4' d='M102.01428,85 L58.283283,145.9667 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#0000F7' stroke-width='4' d='M127,85 L127,145 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#A0F7A0' stroke-width='1' d='M62.28009,175.1294 L116.773125,240.69508 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M127,177 L127,237 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M133.10817,238.21182 L149.54626,198.41432 Q165,161 151.04831,123 L137.09662,85 '></path><rect x='95.5' y='30' width='63' height='55' class='node' fill='#F7A020' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='41.5' font-size='14' color='#000000'>Lorem</text>
+<text text-anchor='middle' alignment-baseline='middle' x='127' y='57.5' font-size='14' color='#000000'>Ipsum</text>
+<text text-anchor='middle' alignment-baseline='middle' x='127' y='73.5' font-size='14' color='#000000'>Dolorem</text>
+<ellipse cx='47.5' cy='161' rx='31.5' ry='16' class='node' fill='#E07474' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='47.5' y='161' font-size='14' color='#000000'>Ignitus</text>
+<rect x='111' y='145' width='32' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='127' y='161' font-size='12' color='#202020'>C</text>
+<ellipse cx='127' cy='253' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='127' y='253' font-size='14' color='#000000'>D</text>
 </g></svg>
