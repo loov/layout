@@ -74,6 +74,15 @@ func Hierarchical(graphdef *Graph) {
 	nodes := map[*Node]hier.ID{}
 	reverse := map[hier.ID]*Node{}
 
+	// nodes with self-loops need room on their right for the loop
+	loopWidth := 2 * graphdef.NodePadding
+	hasLoop := map[*Node]bool{}
+	for _, edge := range graphdef.Edges {
+		if edge.From == edge.To {
+			hasLoop[edge.From] = true
+		}
+	}
+
 	// construct hierarchical graph
 	graph := &hier.Graph{}
 	for _, nodedef := range graphdef.Nodes {
@@ -121,17 +130,24 @@ func Hierarchical(graphdef *Graph) {
 			continue
 		}
 		node.Radius.X = float32(nodedef.Radius.X + graphdef.NodePadding)
+		if hasLoop[nodedef] {
+			node.Radius.X += float32(loopWidth / 2)
+		}
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
 
 	// position nodes
 	positionedGraph := hier.DefaultPosition(orderedGraph)
 
-	// assign final positions
+	// assign final positions; loop nodes were widened symmetrically,
+	// shift them left so the extra room is on the right
 	for nodedef, id := range nodes {
 		node := positionedGraph.Nodes[id]
 		nodedef.Center.X = Length(node.Center.X)
 		nodedef.Center.Y = Length(node.Center.Y)
+		if hasLoop[nodedef] {
+			nodedef.Center.X -= loopWidth / 2
+		}
 	}
 
 	// real nodes per rank, obstacles for edge routing
@@ -212,11 +228,7 @@ func Hierarchical(graphdef *Graph) {
 		targetid := nodes[edge.To]
 
 		if sourceid == targetid {
-			// TODO: improve loops
-			edge.Path = []Vector{
-				edge.From.BottomCenter(),
-				edge.From.TopCenter(),
-			}
+			edge.Path = loopPath(edge.From, loopWidth)
 			continue
 		}
 
@@ -242,6 +254,19 @@ func reversePath(path []Vector) []Vector {
 		rs = append(rs, p)
 	}
 	return rs
+}
+
+// loopPath draws a self-loop on the right side of the node
+func loopPath(node *Node, width Length) []Vector {
+	right := node.Right() + width
+	up := Vector{X: node.Right(), Y: node.Center.Y - node.Radius.Y/2}
+	down := Vector{X: node.Right(), Y: node.Center.Y + node.Radius.Y/2}
+	return []Vector{
+		node.Boundary(up),
+		{X: right, Y: up.Y},
+		{X: right, Y: down.Y},
+		node.Boundary(down),
+	}
 }
 
 // routeAround inserts waypoints so that no segment of path passes through a

@@ -59,6 +59,15 @@ var examples = map[string]func() *layout.Graph{
 		graph.SameRank = append(graph.SameRank, []*layout.Node{graph.Node("A"), graph.Node("B"), graph.Node("C")})
 		return graph
 	},
+	"loop": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("A", "A")
+		graph.Edge("A", "B")
+		graph.Edge("A", "C")
+		graph.Edge("B", "B")
+		graph.Edge("C", "D")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point
