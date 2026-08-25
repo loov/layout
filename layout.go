@@ -721,20 +721,27 @@ func spreadEnds(graph *Graph, minSep Length) {
 		edge  *Edge
 		start bool
 		angle float64
+		fixed bool // a loop's attachment, which stays where it is
 	}
 	byNode := map[*Node][]end{}
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || len(edge.Path) < 2 {
+		if len(edge.Path) < 2 {
 			continue
 		}
 		angle := func(node *Node, p Vector) float64 {
 			return math.Atan2(float64(p.Y-node.Center.Y), float64(p.X-node.Center.X))
 		}
+		if edge.From == edge.To {
+			byNode[edge.From] = append(byNode[edge.From],
+				end{edge, true, angle(edge.From, edge.Path[0]), true},
+				end{edge, false, angle(edge.From, edge.Path[len(edge.Path)-1]), true})
+			continue
+		}
 		if edge.FromPort == CompassAuto {
-			byNode[edge.From] = append(byNode[edge.From], end{edge, true, angle(edge.From, edge.Path[1])})
+			byNode[edge.From] = append(byNode[edge.From], end{edge, true, angle(edge.From, edge.Path[1]), false})
 		}
 		if edge.ToPort == CompassAuto {
-			byNode[edge.To] = append(byNode[edge.To], end{edge, false, angle(edge.To, edge.Path[len(edge.Path)-2])})
+			byNode[edge.To] = append(byNode[edge.To], end{edge, false, angle(edge.To, edge.Path[len(edge.Path)-2]), false})
 		}
 	}
 	for node, ends := range byNode {
@@ -742,26 +749,43 @@ func spreadEnds(graph *Graph, minSep Length) {
 			continue
 		}
 		sort.Slice(ends, func(i, k int) bool { return ends[i].angle < ends[k].angle })
+		// start the sequence after the largest gap so that the ±π seam
+		// never falls between neighbors
+		gap, at := ends[0].angle+2*math.Pi-ends[len(ends)-1].angle, len(ends)-1
+		for i := 1; i < len(ends); i++ {
+			if d := ends[i].angle - ends[i-1].angle; d > gap {
+				gap, at = d, i-1
+			}
+		}
+		for i := range at + 1 {
+			ends[i].angle += 2 * math.Pi
+		}
+		ends = append(ends[at+1:], ends[:at+1]...)
 		// angle step from the arc length on the smaller radius, so that
 		// it is enough along the flat sides of wide nodes too
 		step := float64(minSep) / float64(min(node.Radius.X, node.Radius.Y))
 		for i := 1; i < len(ends); i++ {
-			if d := ends[i].angle - ends[i-1].angle; d < step {
-				shift := (step - d) / 2
+			d := ends[i].angle - ends[i-1].angle
+			if d >= step {
+				continue
+			}
+			switch {
+			case ends[i].fixed && !ends[i-1].fixed:
+				ends[i-1].angle -= step - d
+			case ends[i-1].fixed && !ends[i].fixed:
+				ends[i].angle += step - d
+			case !ends[i].fixed:
+				// split the push, moving everything before along
 				for k := range i {
-					ends[k].angle -= shift
+					ends[k].angle -= (step - d) / 2
 				}
-				ends[i].angle += shift
+				ends[i].angle += (step - d) / 2
 			}
 		}
-		// the first and last are neighbors across the ±π wrap
-		first, last := &ends[0], &ends[len(ends)-1]
-		if d := first.angle + 2*math.Pi - last.angle; d < step {
-			shift := (step - d) / 2
-			first.angle += shift
-			last.angle -= shift
-		}
 		for _, e := range ends {
+			if e.fixed {
+				continue
+			}
 			p := node.Boundary(node.Center.Add(Vector{Length(math.Cos(e.angle)), Length(math.Sin(e.angle))}))
 			if e.start {
 				e.edge.Path[0] = p

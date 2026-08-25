@@ -12,12 +12,12 @@ multi        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=0 ja
 rankdir      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=1 jagged=0 bends=0 back=1 labels=0 length=369 area=24999
 record       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=91 area=26843
 weighted     nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=181 area=12544
-abstract     nodes=0 through=0 near=2 crossings=62 shallow=14 overlaps=3 ends=0 jagged=2 bends=3 back=0 labels=0 length=13093 area=669827
-alf          nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=1409 area=423955
+abstract     nodes=0 through=0 near=2 crossings=62 shallow=14 overlaps=3 ends=0 jagged=2 bends=3 back=0 labels=0 length=13092 area=669827
+alf          nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=1418 area=423955
 clust4       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=1 labels=0 length=921 area=89424
-fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=1 jagged=0 bends=1 back=3 labels=0 length=2004 area=187001
+fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=1 jagged=1 bends=1 back=3 labels=0 length=2010 area=187001
 nested       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=595 area=67952
 ortho        nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 ends=0 jagged=0 bends=2 back=1 labels=0 length=1192 area=89424
 switch       nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 ends=0 jagged=0 bends=0 back=0 labels=0 length=4925 area=282639
-unix         nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 ends=1 jagged=1 bends=1 back=0 labels=0 length=6429 area=833168
-world        nodes=0 through=0 near=1 crossings=55 shallow=8 overlaps=1 ends=0 jagged=6 bends=1 back=0 labels=0 length=14025 area=662234
+unix         nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 ends=0 jagged=1 bends=1 back=0 labels=0 length=6450 area=833168
+world        nodes=0 through=0 near=1 crossings=55 shallow=8 overlaps=1 ends=0 jagged=6 bends=1 back=0 labels=0 length=14027 area=662234
