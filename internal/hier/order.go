@@ -20,6 +20,7 @@ func OrderRanks(graph *Graph) {
 	for i := range 24 {
 		OrderRanksByMedian(graph, i%2 == 0)
 		OrderRanksTranspose(graph)
+		orderFlatEdges(graph)
 
 		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
 		if crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
@@ -27,6 +28,7 @@ func OrderRanks(graph *Graph) {
 		}
 	}
 	graph.ByRank = best
+	graph.assignPos()
 }
 
 // saveOrder returns a copy of the current rank ordering
@@ -136,6 +138,32 @@ func medianGridX(adj Nodes, fallback float32) float32 {
 		}
 		return (xs[m-1]*right + xs[m]*left) / (left + right)
 	}
+}
+
+// orderFlatEdges ensures the source of every flat edge is left of its target
+// by moving the target right after the source.
+func orderFlatEdges(graph *Graph) {
+	graph.assignPos()
+	for _, edge := range graph.Flat {
+		src, dst := edge[0], edge[1]
+		if src.Pos < dst.Pos {
+			continue
+		}
+		layer := graph.ByRank[src.Rank]
+		layer.moveNode(dst.Pos, src.Pos)
+		layer.assignPos()
+	}
+}
+
+// moveNode moves the node at index from to index to, shifting the others
+func (nodes Nodes) moveNode(from, to int) {
+	node := nodes[from]
+	if from < to {
+		copy(nodes[from:to], nodes[from+1:to+1])
+	} else {
+		copy(nodes[to+1:from+1], nodes[to:from])
+	}
+	nodes[to] = node
 }
 
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or

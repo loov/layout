@@ -46,6 +46,19 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("Q", "C")
 		return graph
 	},
+	"flat": func() *layout.Graph {
+		// A, B, C on one rank with A->B adjacent and A->C arcing over B
+		graph := layout.NewDigraph()
+		graph.Edge("A", "B")
+		graph.Edge("A", "C")
+		graph.Edge("B", "D")
+		graph.Edge("C", "D")
+		graph.Edge("R", "A")
+		graph.Edge("R", "B")
+		graph.Edge("R", "C")
+		graph.SameRank = append(graph.SameRank, []*layout.Node{graph.Node("A"), graph.Node("B"), graph.Node("C")})
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

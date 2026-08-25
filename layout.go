@@ -185,6 +185,28 @@ func Hierarchical(graphdef *Graph) {
 		}
 	}
 
+	// flat edges run sideways along the rank, arcing over nodes in between
+	for _, flat := range positionedGraph.Flat {
+		sourcedef, targetdef := reverse[flat[0].ID], reverse[flat[1].ID]
+		path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
+		if flat[1].Pos-flat[0].Pos > 1 {
+			top := min(sourcedef.Top(), targetdef.Top())
+			for _, node := range byRank[flat[0].Rank] {
+				if node.Center.X > sourcedef.Center.X && node.Center.X < targetdef.Center.X {
+					top = min(top, node.Top())
+				}
+			}
+			y := top - 2*graphdef.EdgePadding
+			path = []Vector{
+				sourcedef.TopCenter(),
+				{sourcedef.Center.X, y},
+				{targetdef.Center.X, y},
+				targetdef.TopCenter(),
+			}
+		}
+		edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
+	}
+
 	for _, edge := range graphdef.Edges {
 		sourceid := nodes[edge.From]
 		targetid := nodes[edge.To]

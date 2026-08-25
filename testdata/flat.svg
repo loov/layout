@@ -1,0 +1,14 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='192' height='192'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M48,96 L80,96 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M32,80 L32,74 Q32,68 38,68 L154,68 Q160,68 160,74 L160,80 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M104.875206,109.312805 L121.35889,145.44336 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M151.1248,109.312805 L134.64111,145.44336 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M83.2,41.6 L42.965836,84.3488 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M96,48 L96,80 '></path><path class='edge' marker-end='url(#arrowhead)' stroke='#000000' stroke-width='1' d='M108.8,41.6 L149.03416,84.3488 '></path><ellipse cx='32' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' color='#000000'>A</text>
+<ellipse cx='96' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' color='#000000'>B</text>
+<ellipse cx='160' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='160' y='96' font-size='14' color='#000000'>C</text>
+<ellipse cx='128' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='128' y='160' font-size='14' color='#000000'>D</text>
+<ellipse cx='96' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96' y='32' font-size='14' color='#000000'>R</text>
+</g></svg>

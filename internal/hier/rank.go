@@ -15,6 +15,7 @@ func Rank(graph *Graph) {
 	RankCompact(graph)
 	RankBalance(graph)
 	RankCompact(graph)
+	extractFlatEdges(graph)
 
 	graph.ByRank = nil
 	for _, node := range graph.Nodes {
@@ -24,6 +25,22 @@ func Rank(graph *Graph) {
 			graph.ByRank = byRank
 		}
 		graph.ByRank[node.Rank].Append(node)
+	}
+}
+
+// extractFlatEdges moves edges between nodes on the same rank to graph.Flat
+func extractFlatEdges(graph *Graph) {
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			if src.Rank == dst.Rank {
+				graph.Flat = append(graph.Flat, [2]*Node{src, dst})
+			}
+		}
+	}
+	for _, edge := range graph.Flat {
+		src, dst := edge[0], edge[1]
+		src.Out.Remove(dst)
+		dst.In.Remove(src)
 	}
 }
 
