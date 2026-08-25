@@ -1,5 +1,10 @@
 package hier
 
+import (
+	"cmp"
+	"slices"
+)
+
 // NodeSet is a dense node set
 type NodeSet []bool
 
@@ -64,12 +69,7 @@ func (nodes *Nodes) Delete(i int) { *nodes = append((*nodes)[:i], (*nodes)[i+1:]
 
 // Normalize sorts and removes duplicates from the list
 func (nodes *Nodes) Normalize() {
-	nodes.SortBy(func(a, b *Node) bool {
-		return a.ID < b.ID
-	})
-	// sort.Slice(*nodes, func(i, k int) bool {
-	// 	return (*nodes)[i].ID < (*nodes)[k].ID
-	// })
+	slices.SortStableFunc(*nodes, func(a, b *Node) int { return cmp.Compare(a.ID, b.ID) })
 
 	{ // remove duplicates from sorted array
 		var p *Node
@@ -86,11 +86,11 @@ func (nodes *Nodes) Normalize() {
 
 // SortDescending sorts nodes in descending order of outdegree
 func (nodes Nodes) SortDescending() Nodes {
-	nodes.SortBy(func(a, b *Node) bool {
+	slices.SortStableFunc(nodes, func(a, b *Node) int {
 		if a.OutDegree() == b.OutDegree() {
-			return a.InDegree() < b.InDegree()
+			return cmp.Compare(a.InDegree(), b.InDegree())
 		}
-		return a.OutDegree() > b.OutDegree()
+		return cmp.Compare(b.OutDegree(), a.OutDegree())
 	})
 
 	return nodes

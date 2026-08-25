@@ -1,5 +1,10 @@
 package hier
 
+import (
+	"cmp"
+	"slices"
+)
+
 // DecycleDefault runs recommended decycling algorithm
 func DefaultDecycle(graph *Graph) *Graph {
 	decycle := NewDecycle(graph)
@@ -136,11 +141,11 @@ func (graph *Decycle) updateEdges() {
 
 // sortAscending sorts nodes such that the last node is most beneficial to process
 func (graph *Decycle) sortAscending(nodes Nodes) {
-	nodes.SortBy(func(a, b *Node) bool {
+	slices.SortStableFunc(nodes, func(a, b *Node) int {
 		ai, bi := graph.info[a.ID], graph.info[b.ID]
 		if ai.Out == bi.Out {
-			return ai.In > bi.In
+			return cmp.Compare(bi.In, ai.In)
 		}
-		return ai.Out < bi.Out
+		return cmp.Compare(ai.Out, bi.Out)
 	})
 }

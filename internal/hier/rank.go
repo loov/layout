@@ -57,47 +57,6 @@ func RankFrontload(graph *Graph) {
 	}
 }
 
-// RankBackload assigns node.Rank := min(node.Out[i].Rank) - 1
-func RankBackload(graph *Graph) {
-	roots := Nodes{}
-	outcount := make([]int, len(graph.Nodes))
-	for _, node := range graph.Nodes {
-		outcount[node.ID] = len(node.Out)
-		if len(node.Out) == 0 {
-			roots.Append(node)
-		}
-	}
-
-	rank := 0
-	graph.ByRank = nil
-	for len(roots) > 0 {
-		graph.ByRank = append(graph.ByRank, roots)
-		next := Nodes{}
-		for _, root := range roots {
-			root.Rank = rank
-			for _, src := range root.In {
-				outcount[src.ID]--
-				if outcount[src.ID] == 0 {
-					next.Append(src)
-				}
-			}
-		}
-		roots = next
-		rank++
-	}
-
-	for i := range graph.ByRank[:len(graph.ByRank)/2] {
-		k := len(graph.ByRank) - i - 1
-		graph.ByRank[i], graph.ByRank[k] = graph.ByRank[k], graph.ByRank[i]
-	}
-
-	for rank, nodes := range graph.ByRank {
-		for _, node := range nodes {
-			node.Rank = rank
-		}
-	}
-}
-
 // RankMinimizeEdgeStep moves nodes up/down to more equally distribute
 func RankMinimizeEdgeStep(graph *Graph, down bool) (changed bool) {
 	pinned := graph.pinnedNodes()
