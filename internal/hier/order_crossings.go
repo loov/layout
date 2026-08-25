@@ -37,3 +37,16 @@ func (graph *Graph) CrossingsDown(u, v *Node) int {
 func (graph *Graph) Crossings(u, v *Node) int {
 	return graph.CrossingsDown(u, v) + graph.CrossingsUp(u, v)
 }
+
+// TotalCrossings counts edge crossings between all adjacent ranks
+func (graph *Graph) TotalCrossings() int {
+	total := 0
+	for _, layer := range graph.ByRank {
+		for i, u := range layer {
+			for _, v := range layer[i+1:] {
+				total += graph.CrossingsUp(u, v)
+			}
+		}
+	}
+	return total
+}
