@@ -199,18 +199,24 @@ func (graph *Graph) validate() error {
 // sharing the original nodes, edges and settings. Components are laid out
 // independently and then placed side by side.
 func components(graphdef *Graph) []*Graph {
-	parent := map[*Node]*Node{}
-	var find func(n *Node) *Node
-	find = func(n *Node) *Node {
-		for parent[n] != nil && parent[n] != n {
-			n = parent[n]
+	index := make(map[*Node]int, len(graphdef.Nodes))
+	for i, node := range graphdef.Nodes {
+		index[node] = i
+	}
+	parent := make([]int, len(graphdef.Nodes))
+	for i := range parent {
+		parent[i] = i
+	}
+	var findIndex func(i int) int
+	findIndex = func(i int) int {
+		for parent[i] != i {
+			parent[i] = parent[parent[i]] // path halving
+			i = parent[i]
 		}
-		return n
+		return i
 	}
-	union := func(a, b *Node) { parent[find(a)] = find(b) }
-	for _, node := range graphdef.Nodes {
-		parent[node] = node
-	}
+	find := func(n *Node) *Node { return graphdef.Nodes[findIndex(index[n])] }
+	union := func(a, b *Node) { parent[findIndex(index[a])] = findIndex(index[b]) }
 	for _, edge := range graphdef.Edges {
 		union(edge.From, edge.To)
 	}
