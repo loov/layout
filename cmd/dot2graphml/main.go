@@ -1,3 +1,8 @@
+// Command dot2graphml converts dot files to GraphML that yEd can open.
+//
+// Usage:
+//
+//	dot2graphml [-erase-labels] [-set-shape shape] input.dot [output.graphml]
 package main
 
 import (

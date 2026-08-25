@@ -1,14 +1,19 @@
 package layout
 
+// Graph is a set of nodes and edges together with the default styling
+// used for nodes that don't specify their own.
 type Graph struct {
 	ID       string
 	Directed bool
 
-	// Defaults
+	// Defaults for nodes and edges that leave the value unset
 	LineHeight Length
 	FontSize   Length
 	Shape      Shape
 
+	// NodePadding is the horizontal space reserved around each node,
+	// RowPadding the vertical space between ranks, and EdgePadding the
+	// space reserved for an edge passing between nodes.
 	NodePadding Length
 	RowPadding  Length
 	EdgePadding Length
@@ -20,6 +25,7 @@ type Graph struct {
 	SameRank [][]*Node
 }
 
+// NewGraph creates an empty undirected graph with default styling.
 func NewGraph() *Graph {
 	graph := &Graph{}
 
@@ -30,6 +36,7 @@ func NewGraph() *Graph {
 	return graph
 }
 
+// NewDigraph creates an empty directed graph with default styling.
 func NewDigraph() *Graph {
 	graph := NewGraph()
 	graph.Directed = true
@@ -67,7 +74,7 @@ func (graph *Graph) Edge(from, to string) *Edge {
 
 // AddNode adds a new node.
 //
-// When a node with the specified id already it will return false
+// When a node with the same id already exists it returns false
 // and the node is not added.
 func (graph *Graph) AddNode(node *Node) bool {
 	if node.ID != "" {
@@ -81,10 +88,12 @@ func (graph *Graph) AddNode(node *Node) bool {
 	return true
 }
 
+// AddEdge adds an edge without checking for duplicates.
 func (graph *Graph) AddEdge(edge *Edge) {
 	graph.Edges = append(graph.Edges, edge)
 }
 
+// minvector sets a to the component-wise minimum of a and b
 func minvector(a *Vector, b Vector) {
 	if b.X < a.X {
 		a.X = b.X
@@ -94,6 +103,7 @@ func minvector(a *Vector, b Vector) {
 	}
 }
 
+// maxvector sets a to the component-wise maximum of a and b
 func maxvector(a *Vector, b Vector) {
 	if b.X > a.X {
 		a.X = b.X
@@ -103,6 +113,7 @@ func maxvector(a *Vector, b Vector) {
 	}
 }
 
+// Bounds returns the bounding box of all nodes and edge paths.
 func (graph *Graph) Bounds() (min, max Vector) {
 	for _, node := range graph.Nodes {
 		minvector(&min, node.TopLeft())

@@ -1,3 +1,5 @@
+// Package graphml writes graphs as GraphML, including the yFiles
+// extensions needed for yEd to show labels.
 package graphml
 
 import (
@@ -8,6 +10,7 @@ import (
 	"github.com/loov/layout"
 )
 
+// Write encodes the graphs as a single GraphML document.
 func Write(out io.Writer, graphs ...*layout.Graph) error {
 	file := NewFile()
 	for _, graph := range graphs {
@@ -28,6 +31,7 @@ func Write(out io.Writer, graphs ...*layout.Graph) error {
 	return enc.Encode(file)
 }
 
+// Convert translates a layout graph into its GraphML representation.
 func Convert(graph *layout.Graph) *Graph {
 	out := &Graph{}
 	out.ID = graph.ID

@@ -3,13 +3,13 @@ package hier
 // NewGraphFromEdgeList creates a graph from edge list
 //
 // Example:
-//     graph := NewGraphFromEdgeList([][]int{
-//         0: []int{1,2},
-//         1: []int{2,0},
-//     })
 //
-//  Creates an graph with edges 0 -> 1, 0 -> 2, 1 -> 2, 1 -> 0.
+//	   graph := NewGraphFromEdgeList([][]int{
+//	       0: []int{1,2},
+//	       1: []int{2,0},
+//	   })
 //
+//	Creates an graph with edges 0 -> 1, 0 -> 2, 1 -> 2, 1 -> 0.
 func NewGraphFromEdgeList(edgeList [][]int) *Graph {
 	graph := NewGraph()
 

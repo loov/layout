@@ -32,6 +32,7 @@ func OrderRanks(graph *Graph) {
 	graph.ByRank = best
 }
 
+// saveOrder returns a copy of the current rank ordering
 func saveOrder(graph *Graph) []Nodes {
 	saved := make([]Nodes, len(graph.ByRank))
 	for i, layer := range graph.ByRank {
@@ -103,6 +104,7 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 	}
 }
 
+// assignGridX records each node's index within its rank as GridX
 func assignGridX(graph *Graph) {
 	for _, nodes := range graph.ByRank {
 		for i, node := range nodes {

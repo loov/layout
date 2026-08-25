@@ -8,12 +8,12 @@ func DefaultAddVirtuals(graph *Graph) *Graph {
 
 // AddVirtuals creates nodes for edges spanning multiple ranks
 //
-//     Rank  input    output
-//      0      A        A
-//            /|       / \
-//      1    B |  =>  B   V
-//            \|       \ /
-//      2      C        C
+//	Rank  input    output
+//	 0      A        A
+//	       /|       / \
+//	 1    B |  =>  B   V
+//	       \|       \ /
+//	 2      C        C
 func AddVirtuals(graph *Graph) {
 	if len(graph.ByRank) == 0 {
 		return

@@ -2,32 +2,38 @@ package layout
 
 import "math"
 
+// Color is anything that can be expressed as 8-bit RGBA.
 type Color interface {
 	// RGBA returns the non-alpha-premultiplied red, green, blue and alpha values
 	// for the color. Each value ranges within [0, 0xff].
 	RGBA8() (r, g, b, a uint8)
 }
 
-// RGB represents an 24bit color
+// RGB is an opaque 24-bit color.
 type RGB struct{ R, G, B uint8 }
 
+// RGBA8 implements Color.
 func (rgb RGB) RGBA8() (r, g, b, a uint8) { return rgb.R, rgb.G, rgb.B, 0xFF }
 
-// RGBA represents an 24bit color
+// RGBA is a 32-bit color with alpha.
 type RGBA struct{ R, G, B, A uint8 }
 
+// RGBA8 implements Color.
 func (rgb RGBA) RGBA8() (r, g, b, a uint8) { return rgb.R, rgb.G, rgb.B, rgb.A }
 
-// HSL represents an color in hue, saturation and lightness space
+// HSL is an opaque color in hue, saturation and lightness space;
+// hue is in degrees, saturation and lightness in [0, 1].
 type HSL struct{ H, S, L float32 }
 
+// RGBA8 implements Color.
 func (hsl HSL) RGBA8() (r, g, b, a uint8) {
 	return HSLA{hsl.H, hsl.S, hsl.L, 1.0}.RGBA8()
 }
 
-// HSLA represents an color in hue, saturation and lightness space
+// HSLA is a color in hue, saturation and lightness space with alpha in [0, 1].
 type HSLA struct{ H, S, L, A float32 }
 
+// RGBA8 implements Color.
 func (hsl HSLA) RGBA8() (r, g, b, a uint8) {
 	rf, gf, bf, af := hsla(hsl.H, hsl.S, hsl.L, hsl.A)
 	return sat8(rf), sat8(gf), sat8(bf), sat8(af)

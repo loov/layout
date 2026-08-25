@@ -7,6 +7,7 @@ import (
 	"github.com/loov/layout/internal/hier"
 )
 
+// writeLayout writes the internal ranked graph as dot, for debugging
 func writeLayout(out io.Writer, graph *hier.Graph) error {
 	var err error
 

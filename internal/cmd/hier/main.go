@@ -1,3 +1,5 @@
+// Command hier runs the hierarchical layout stages one at a time and
+// reports statistics about each, for debugging the layout algorithm.
 package main
 
 import (

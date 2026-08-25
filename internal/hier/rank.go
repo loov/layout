@@ -192,6 +192,7 @@ func RankBalance(graph *Graph) {
 	}
 }
 
+// pinnedNodes returns the nodes whose rank is fixed by a SameRank group
 func (graph *Graph) pinnedNodes() NodeSet {
 	pinned := NewNodeSet(graph.NodeCount())
 	for _, group := range graph.SameRank {

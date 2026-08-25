@@ -1,3 +1,5 @@
+// Command propagate is an experiment in computing reachability layers of
+// a small graph with bitset edge tables.
 package main
 
 import (
@@ -5,17 +7,22 @@ import (
 	"strings"
 )
 
+// EdgeCount is the number of nodes; EdgeMask has one bit per node.
 const (
 	EdgeCount = 6
 	EdgeMask  = (1 << EdgeCount) - 1
 )
 
+// EdgeTable holds, for every pair of nodes, a bitset of the nodes
+// through which they are connected.
 type EdgeTable [EdgeCount][EdgeCount]byte
 
+// Edge marks a direct connection from x to y.
 func (Z *EdgeTable) Edge(x, y int) {
 	(*Z)[x][y] = EdgeMask
 }
 
+// DeleteOutbound clears each node's own bit from its outgoing connections.
 func (Z *EdgeTable) DeleteOutbound() {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -24,6 +31,7 @@ func (Z *EdgeTable) DeleteOutbound() {
 	}
 }
 
+// DeleteInbound clears each node's own bit from its incoming connections.
 func (Z *EdgeTable) DeleteInbound() {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -32,6 +40,7 @@ func (Z *EdgeTable) DeleteInbound() {
 	}
 }
 
+// Or sets Z to the element-wise union of A and B.
 func (Z *EdgeTable) Or(A, B *EdgeTable) {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -40,6 +49,7 @@ func (Z *EdgeTable) Or(A, B *EdgeTable) {
 	}
 }
 
+// And sets Z to the element-wise intersection of A and B.
 func (Z *EdgeTable) And(A, B *EdgeTable) {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -48,6 +58,8 @@ func (Z *EdgeTable) And(A, B *EdgeTable) {
 	}
 }
 
+// Mul sets Z to the boolean matrix product of A and B, recording the
+// intermediate nodes in the bitsets.
 func (Z *EdgeTable) Mul(A, B *EdgeTable) {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -60,6 +72,7 @@ func (Z *EdgeTable) Mul(A, B *EdgeTable) {
 	}
 }
 
+// Print writes the table as hex.
 func (Z *EdgeTable) Print() {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -74,6 +87,7 @@ func (Z *EdgeTable) Print() {
 	}
 }
 
+// PrintBit writes the table as binary.
 func (Z *EdgeTable) PrintBit() {
 	for x := range EdgeCount {
 		for y := range EdgeCount {
@@ -88,6 +102,7 @@ func (Z *EdgeTable) PrintBit() {
 	}
 }
 
+// PrintBool writes the table as a connectivity matrix.
 func (Z *EdgeTable) PrintBool() {
 	fmt.Printf("  ")
 	for y := range EdgeCount {
@@ -108,6 +123,7 @@ func (Z *EdgeTable) PrintBool() {
 	}
 }
 
+// PrintLayer writes the connectivity matrix restricted to bit n.
 func (Z *EdgeTable) PrintLayer(n byte) {
 	fmt.Printf("  ")
 	for y := range EdgeCount {
@@ -128,6 +144,7 @@ func (Z *EdgeTable) PrintLayer(n byte) {
 	}
 }
 
+// PrintSideBySideLayer writes bit n of three tables next to each other.
 func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 	fmt.Printf("  ")
 	for y := range EdgeCount {
@@ -181,6 +198,7 @@ func PrintSideBySideLayer(A, B, C *EdgeTable, n byte) {
 	}
 }
 
+// CountLayer counts entries that have bit n set.
 func (Z *EdgeTable) CountLayer(n byte) int {
 	total := 0
 	for x := range EdgeCount {
@@ -200,6 +218,8 @@ const (
 	NodeF
 )
 
+// Process repeatedly multiplies the table with itself, propagating
+// connectivity until it stops changing.
 func Process(input *EdgeTable) EdgeTable {
 	var result, temp EdgeTable
 

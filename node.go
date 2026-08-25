@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+// Node is a vertex in a graph. Radius is half the node size; Center is
+// filled in by layouting.
 type Node struct {
 	ID string
 
@@ -27,6 +29,7 @@ type Node struct {
 	Center Vector
 }
 
+// NewNode creates a node with the given id and default styling.
 func NewNode(id string) *Node {
 	node := &Node{}
 	node.ID = id
@@ -35,6 +38,7 @@ func NewNode(id string) *Node {
 	return node
 }
 
+// String returns the node id, or its label when there is no id.
 func (node *Node) String() string {
 	if node == nil {
 		return "?"
@@ -45,6 +49,7 @@ func (node *Node) String() string {
 	return node.Label
 }
 
+// DefaultLabel returns the label, falling back to the id.
 func (node *Node) DefaultLabel() string {
 	if node.Label != "" {
 		return node.Label
@@ -52,6 +57,8 @@ func (node *Node) DefaultLabel() string {
 	return node.ID
 }
 
+// approxLabelRadius estimates the half size of the label text
+// assuming a fixed height to width ratio for characters.
 func (node *Node) approxLabelRadius(lineHeight Length) Vector {
 	const HeightWidthRatio = 0.5
 	if lineHeight < node.FontSize {
@@ -73,15 +80,28 @@ func (node *Node) approxLabelRadius(lineHeight Length) Vector {
 	return size
 }
 
-func (node *Node) TopLeft() Vector     { return Vector{node.Left(), node.Top()} }
+// TopLeft returns the top left corner of the node bounds.
+func (node *Node) TopLeft() Vector { return Vector{node.Left(), node.Top()} }
+
+// BottomRight returns the bottom right corner of the node bounds.
 func (node *Node) BottomRight() Vector { return Vector{node.Right(), node.Bottom()} }
 
-func (node *Node) TopCenter() Vector    { return Vector{node.Center.X, node.Top()} }
+// TopCenter returns the middle of the top edge of the node bounds.
+func (node *Node) TopCenter() Vector { return Vector{node.Center.X, node.Top()} }
+
+// BottomCenter returns the middle of the bottom edge of the node bounds.
 func (node *Node) BottomCenter() Vector { return Vector{node.Center.X, node.Bottom()} }
 
-func (node *Node) Left() Length   { return node.Center.X - node.Radius.X }
-func (node *Node) Top() Length    { return node.Center.Y - node.Radius.Y }
-func (node *Node) Right() Length  { return node.Center.X + node.Radius.X }
+// Left returns the x coordinate of the left side of the node bounds.
+func (node *Node) Left() Length { return node.Center.X - node.Radius.X }
+
+// Top returns the y coordinate of the top side of the node bounds.
+func (node *Node) Top() Length { return node.Center.Y - node.Radius.Y }
+
+// Right returns the x coordinate of the right side of the node bounds.
+func (node *Node) Right() Length { return node.Center.X + node.Radius.X }
+
+// Bottom returns the y coordinate of the bottom side of the node bounds.
 func (node *Node) Bottom() Length { return node.Center.Y + node.Radius.Y }
 
 // Boundary returns the point on the node outline where the ray from the

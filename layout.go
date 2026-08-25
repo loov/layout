@@ -9,6 +9,9 @@ import (
 
 const epsilon = 1e-6
 
+// AssignMissingValues fills in unset padding, font and size values on the
+// graph, its nodes and edges from the graph defaults. Node sizes are
+// estimated from their labels.
 func (graph *Graph) AssignMissingValues() {
 	if graph.FontSize <= 0 {
 		graph.FontSize = graph.LineHeight * 14 / 16
@@ -60,6 +63,11 @@ func (graph *Graph) AssignMissingValues() {
 	}
 }
 
+// Hierarchical lays out the graph top-down in ranks (Sugiyama style):
+// cycles are broken, nodes are assigned to ranks, ordered within ranks to
+// reduce crossings, positioned, and finally edge paths are computed.
+//
+// It sets Node.Center and Edge.Path.
 func Hierarchical(graphdef *Graph) {
 	graphdef.AssignMissingValues()
 
@@ -205,6 +213,7 @@ func Hierarchical(graphdef *Graph) {
 	}
 }
 
+// reversePath returns the path in reverse order
 func reversePath(path []Vector) []Vector {
 	rs := make([]Vector, 0, len(path))
 	for _, p := range slices.Backward(path) {

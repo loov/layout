@@ -1,5 +1,6 @@
 package layout
 
+// Edge connects two nodes. Path is filled in by layouting.
 type Edge struct {
 	Directed bool
 	From, To *Node
@@ -19,6 +20,7 @@ type Edge struct {
 	Path []Vector
 }
 
+// NewEdge creates an edge from one node to another with default styling.
 func NewEdge(from, to *Node) *Edge {
 	edge := &Edge{}
 	edge.From = from
@@ -28,6 +30,7 @@ func NewEdge(from, to *Node) *Edge {
 	return edge
 }
 
+// String returns the edge as "from->to".
 func (edge *Edge) String() string {
 	return edge.From.String() + "->" + edge.To.String()
 }

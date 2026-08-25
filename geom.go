@@ -1,7 +1,9 @@
 package layout
 
+// Shape is the outline drawn for a node.
 type Shape string
 
+// Node shapes. Auto uses the graph default.
 const (
 	Auto    Shape = ""
 	None          = "none"
@@ -11,11 +13,13 @@ const (
 	Ellipse       = "ellipse"
 )
 
+// Vector is a point or size in the plane.
 type Vector struct{ X, Y Length }
 
-// Length is a value represented in points
+// Length is a distance in points.
 type Length float64
 
+// Units of Length.
 const (
 	Point = 1
 	Inch  = 72

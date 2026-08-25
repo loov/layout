@@ -1,3 +1,4 @@
+// Package svg writes laid out graphs as SVG images.
 package svg
 
 import (
@@ -12,12 +13,16 @@ import (
 	"golang.org/x/net/html"
 )
 
+// writer accumulates output and the first error encountered
 type writer struct {
 	w   io.Writer
 	err error
 }
 
-func (svg *writer) erred() bool  { return svg.err != nil }
+// erred reports whether a write has failed
+func (svg *writer) erred() bool { return svg.err != nil }
+
+// Error returns the first write error, if any
 func (svg *writer) Error() error { return svg.err }
 
 func (svg *writer) write(format string, args ...any) {
@@ -117,6 +122,11 @@ func roundedPath(path []layout.Vector, radius layout.Length) string {
 	return line.String()
 }
 
+// Write renders the laid out graph as an SVG document.
+//
+// Nodes are drawn according to their shape and colors, edges as rounded
+// polylines along Edge.Path with an arrowhead on directed edges. Labels
+// wrapped in <...> are emitted as inline HTML.
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w

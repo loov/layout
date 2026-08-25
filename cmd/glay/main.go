@@ -1,3 +1,10 @@
+// Command glay lays out a graph and writes it as an image.
+//
+// Usage:
+//
+//	glay [-s dot] [-t svg] input [output]
+//
+// The input format is detected from the file extension when -s is not set.
 package main
 
 import (

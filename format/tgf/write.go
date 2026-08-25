@@ -1,3 +1,4 @@
+// Package tgf writes graphs in the Trivial Graph Format.
 package tgf
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/loov/layout/internal/hier"
 )
 
+// writeLayout writes the internal ranked graph as TGF, for debugging
 func writeLayout(out io.Writer, graph *hier.Graph) error {
 	var err error
 	write := func(format string, args ...any) bool {

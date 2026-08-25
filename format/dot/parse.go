@@ -1,4 +1,8 @@
-// package dot implements dot file format parsing
+// Package dot parses the Graphviz dot file format into layout graphs.
+//
+// Node and edge attributes that map onto layout properties (label, shape,
+// colors, font, line width, tooltip) are applied; rank=same subgraphs are
+// recorded in Graph.SameRank. Other attributes are ignored.
 package dot
 
 import (
@@ -13,10 +17,16 @@ import (
 	"gonum.org/v1/gonum/graph/formats/dot/ast"
 )
 
-func Parse(r io.Reader) ([]*layout.Graph, error)     { return parse(dot.Parse(r)) }
-func ParseFile(path string) ([]*layout.Graph, error) { return parse(dot.ParseFile(path)) }
-func ParseString(s string) ([]*layout.Graph, error)  { return parse(dot.ParseString(s)) }
+// Parse reads dot from r and returns every graph it contains.
+func Parse(r io.Reader) ([]*layout.Graph, error) { return parse(dot.Parse(r)) }
 
+// ParseFile reads dot from the file at path and returns every graph it contains.
+func ParseFile(path string) ([]*layout.Graph, error) { return parse(dot.ParseFile(path)) }
+
+// ParseString parses dot from s and returns every graph it contains.
+func ParseString(s string) ([]*layout.Graph, error) { return parse(dot.ParseString(s)) }
+
+// parse converts a parsed dot file into layout graphs
 func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 	if err != nil {
 		return nil, err
@@ -33,6 +43,7 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 	return graphs, nil
 }
 
+// parserContext holds the attribute defaults in effect for a (sub)graph
 type parserContext struct {
 	Graph   *layout.Graph
 	Cluster string
