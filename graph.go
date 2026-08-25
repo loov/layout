@@ -6,6 +6,9 @@ type Graph struct {
 	ID       string
 	Directed bool
 
+	// RankDir is the direction ranks are laid out in, see RankDir constants.
+	RankDir RankDir
+
 	// Defaults for nodes and edges that leave the value unset
 	LineHeight Length
 	FontSize   Length

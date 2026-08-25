@@ -13,6 +13,17 @@ const (
 	Ellipse       = "ellipse"
 )
 
+// RankDir is the direction in which ranks progress.
+type RankDir string
+
+// Rank directions; the zero value is TopToBottom.
+const (
+	TopToBottom RankDir = ""
+	LeftToRight RankDir = "LR"
+	BottomToTop RankDir = "BT"
+	RightToLeft RankDir = "RL"
+)
+
 // Vector is a point or size in the plane.
 type Vector struct{ X, Y Length }
 

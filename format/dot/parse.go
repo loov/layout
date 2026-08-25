@@ -59,6 +59,30 @@ func (context *parserContext) parse(src *ast.Graph) {
 	context.Graph.ID = src.ID
 	context.Graph.Directed = src.Directed
 	context.parseStmts(src.Stmts)
+	applyGraphAttrs(context.Graph, context.allAttrs)
+}
+
+// applyGraphAttrs applies graph level attributes
+func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
+	for _, attr := range attrs {
+		switch attr.Key {
+		case "rankdir":
+			switch strings.ToUpper(fixstring(attr.Val)) {
+			case "LR":
+				graph.RankDir = layout.LeftToRight
+			case "RL":
+				graph.RankDir = layout.RightToLeft
+			case "BT":
+				graph.RankDir = layout.BottomToTop
+			default:
+				graph.RankDir = layout.TopToBottom
+			}
+		case "nodesep":
+			setLength(&graph.NodePadding, attr.Val, layout.Inch)
+		case "ranksep":
+			setLength(&graph.RowPadding, attr.Val, layout.Inch)
+		}
+	}
 }
 
 func (context *parserContext) parseStmts(stmts []ast.Stmt) {

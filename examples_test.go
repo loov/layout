@@ -79,6 +79,20 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "C")
 		return graph
 	},
+	"rankdir": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		a := graph.Node("A")
+		a.Shape = layout.Box
+		a.Label = "Left\nto\nright"
+		graph.Edge("A", "B")
+		graph.Edge("A", "C")
+		graph.Edge("B", "D")
+		graph.Edge("C", "D")
+		graph.Edge("D", "A")
+		graph.Edge("D", "D")
+		return graph
+	},
 	"complex": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.RowPadding = 30 * layout.Point

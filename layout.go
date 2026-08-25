@@ -71,6 +71,41 @@ func (graph *Graph) AssignMissingValues() {
 func Hierarchical(graphdef *Graph) {
 	graphdef.AssignMissingValues()
 
+	// lay out top to bottom in a transposed/flipped frame, then map back
+	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
+	if sideways {
+		for _, node := range graphdef.Nodes {
+			node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
+		}
+	}
+	defer func() {
+		if sideways {
+			for _, node := range graphdef.Nodes {
+				node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
+			}
+		}
+		_, size := graphdef.Bounds()
+		transform := func(p Vector) Vector {
+			switch graphdef.RankDir {
+			case LeftToRight:
+				return Vector{X: p.Y, Y: p.X}
+			case RightToLeft:
+				return Vector{X: size.Y - p.Y, Y: p.X}
+			case BottomToTop:
+				return Vector{X: p.X, Y: size.Y - p.Y}
+			}
+			return p
+		}
+		for _, node := range graphdef.Nodes {
+			node.Center = transform(node.Center)
+		}
+		for _, edge := range graphdef.Edges {
+			for i, p := range edge.Path {
+				edge.Path[i] = transform(p)
+			}
+		}
+	}()
+
 	nodes := map[*Node]hier.ID{}
 	reverse := map[hier.ID]*Node{}
 
