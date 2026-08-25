@@ -46,8 +46,8 @@ func (svg *writer) finishG() { svg.write("</g>") }
 func (svg *writer) writeDefs() {
 	svg.write(`
 	<defs>
-		<marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
-	      <path d="M0,0 L0,6 L9,3 z" />
+		<marker id="arrowhead" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
 	    </marker>
 	</defs>`)
 }
