@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"slices"
+	"sort"
 
 	"github.com/loov/layout/internal/hier"
 )
@@ -671,6 +672,9 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		}
 		orthoEdges(graphdef, rows, graphdef.EdgePadding)
 	}
+	if graphdef.Splines != SplinesOrtho {
+		spreadEnds(graphdef, 9*Point)
+	}
 	if graphdef.Splines == SplinesLine {
 		for _, edge := range graphdef.Edges {
 			if edge.From != edge.To && len(edge.Path) > 2 {
@@ -706,6 +710,66 @@ func flattenPath(path []Vector, radius Length) []Vector {
 		out = append(out, in, mid, exit)
 	}
 	return append(out, path[len(path)-1])
+}
+
+// spreadEnds keeps the attachment points on every node at least minSep
+// apart along the outline so that arrowheads don't stack, pushing the
+// crowded ones apart around their mean direction. Edges pinned to a port
+// keep their point.
+func spreadEnds(graph *Graph, minSep Length) {
+	type end struct {
+		edge  *Edge
+		start bool
+		angle float64
+	}
+	byNode := map[*Node][]end{}
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To || len(edge.Path) < 2 {
+			continue
+		}
+		angle := func(node *Node, p Vector) float64 {
+			return math.Atan2(float64(p.Y-node.Center.Y), float64(p.X-node.Center.X))
+		}
+		if edge.FromPort == CompassAuto {
+			byNode[edge.From] = append(byNode[edge.From], end{edge, true, angle(edge.From, edge.Path[1])})
+		}
+		if edge.ToPort == CompassAuto {
+			byNode[edge.To] = append(byNode[edge.To], end{edge, false, angle(edge.To, edge.Path[len(edge.Path)-2])})
+		}
+	}
+	for node, ends := range byNode {
+		if len(ends) < 2 {
+			continue
+		}
+		sort.Slice(ends, func(i, k int) bool { return ends[i].angle < ends[k].angle })
+		// angle step from the arc length on the smaller radius, so that
+		// it is enough along the flat sides of wide nodes too
+		step := float64(minSep) / float64(min(node.Radius.X, node.Radius.Y))
+		for i := 1; i < len(ends); i++ {
+			if d := ends[i].angle - ends[i-1].angle; d < step {
+				shift := (step - d) / 2
+				for k := range i {
+					ends[k].angle -= shift
+				}
+				ends[i].angle += shift
+			}
+		}
+		// the first and last are neighbors across the ±π wrap
+		first, last := &ends[0], &ends[len(ends)-1]
+		if d := first.angle + 2*math.Pi - last.angle; d < step {
+			shift := (step - d) / 2
+			first.angle += shift
+			last.angle -= shift
+		}
+		for _, e := range ends {
+			p := node.Boundary(node.Center.Add(Vector{Length(math.Cos(e.angle)), Length(math.Sin(e.angle))}))
+			if e.start {
+				e.edge.Path[0] = p
+			} else {
+				e.edge.Path[len(e.edge.Path)-1] = p
+			}
+		}
+	}
 }
 
 // layoutPinned keeps node positions and gives edges without a path a
