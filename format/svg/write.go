@@ -86,36 +86,34 @@ func vec(x, y layout.Length) string {
 		strconv.FormatFloat(float64(y), 'f', -1, 32) + " "
 }
 
-// splinePath draws a smooth curve through the path points as cubic beziers.
-// Tangents follow the neighboring points, scaled to each segment's own length
-// so that a long segment doesn't distort a short one next to it.
-func splinePath(path []layout.Vector) string {
+// roundedPath draws the path as straight segments with rounded corners.
+// Each corner is a quadratic curve with the vertex as control point, cut at
+// most radius away from the vertex (less if the adjacent segments are short).
+func roundedPath(path []layout.Vector, radius layout.Length) string {
 	var line strings.Builder
 	line.WriteString("M" + vec(path[0].X, path[0].Y))
-	if len(path) == 2 {
-		line.WriteString("L" + vec(path[1].X, path[1].Y))
-		return line.String()
-	}
 
-	// unit tangent at each point
-	tangent := make([]layout.Vector, len(path))
-	for i := range path {
-		a, b := path[max(0, i-1)], path[min(len(path)-1, i+1)]
-		d := layout.Vector{X: b.X - a.X, Y: b.Y - a.Y}
-		if l := math.Hypot(float64(d.X), float64(d.Y)); l > 0 {
-			d.X /= layout.Length(l)
-			d.Y /= layout.Length(l)
+	length := func(a, b layout.Vector) layout.Length {
+		return layout.Length(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
+	}
+	// point at distance d from a towards b
+	towards := func(a, b layout.Vector, d layout.Length) layout.Vector {
+		l := length(a, b)
+		if l == 0 {
+			return a
 		}
-		tangent[i] = d
+		return layout.Vector{X: a.X + (b.X-a.X)*d/l, Y: a.Y + (b.Y-a.Y)*d/l}
 	}
 
-	for i := 0; i+1 < len(path); i++ {
-		p1, p2 := path[i], path[i+1]
-		k := layout.Length(math.Hypot(float64(p2.X-p1.X), float64(p2.Y-p1.Y))) / 3
-		c1 := layout.Vector{X: p1.X + tangent[i].X*k, Y: p1.Y + tangent[i].Y*k}
-		c2 := layout.Vector{X: p2.X - tangent[i+1].X*k, Y: p2.Y - tangent[i+1].Y*k}
-		line.WriteString("C" + vec(c1.X, c1.Y) + vec(c2.X, c2.Y) + vec(p2.X, p2.Y))
+	for i := 1; i+1 < len(path); i++ {
+		prev, p, next := path[i-1], path[i], path[i+1]
+		r := min(radius, length(prev, p)/2, length(p, next)/2)
+		in, out := towards(p, prev, r), towards(p, next, r)
+		line.WriteString("L" + vec(in.X, in.Y))
+		line.WriteString("Q" + vec(p.X, p.Y) + vec(out.X, out.Y))
 	}
+	last := path[len(path)-1]
+	line.WriteString("L" + vec(last.X, last.Y))
 	return line.String()
 }
 
@@ -143,7 +141,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		svg.write(" stroke='%v'", dkcolor(edge.LineColor))
 		svg.write(" stroke-width='%v'", edge.LineWidth)
-		svg.write(" d='%v'>", splinePath(edge.Path))
+		svg.write(" d='%v'>", roundedPath(edge.Path, 2*graph.RowPadding))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
