@@ -28,8 +28,11 @@ type Node struct {
 	FillColor Color
 	// Radius is the minimum half size; the label can grow it unless
 	// FixedSize is set
-	Radius    Vector
-	FixedSize bool
+	Radius Vector
+	// peripheryPad is the padding added to Radius for extra peripheries,
+	// removed again before the next layout recomputes it
+	peripheryPad Vector
+	FixedSize    bool
 	// Image is a URL drawn inside the node
 	Image string
 

@@ -40,6 +40,8 @@ func (graph *Graph) AssignMissingValues() {
 			node.FontSize = graph.FontSize
 		}
 
+		node.Radius = node.Radius.Sub(node.peripheryPad)
+		node.peripheryPad = Vector{}
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight
 		}
@@ -64,14 +66,15 @@ func (graph *Graph) AssignMissingValues() {
 				node.Radius.Y = labelRadius.Y
 			}
 		}
-		if node.Shape == Circle {
-			// drawn as a circle of the larger radius
+		if node.Shape == Circle || node.Shape == Square {
+			// drawn with the larger radius on both axes
 			r := max(node.Radius.X, node.Radius.Y)
 			node.Radius = Vector{r, r}
 		}
 		if node.Peripheries > 1 {
 			extra := Length(node.Peripheries-1) * peripheryGap
-			node.Radius = node.Radius.Add(Vector{extra, extra})
+			node.peripheryPad = Vector{extra, extra}
+			node.Radius = node.Radius.Add(node.peripheryPad)
 		}
 	}
 
@@ -218,6 +221,54 @@ func (graph *Graph) validate() error {
 			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.From)
 		case !known[edge.To]:
 			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.To)
+		}
+	}
+	group := func(what string, nodes []*Node) error {
+		if len(nodes) == 0 {
+			return fmt.Errorf("%s has no nodes", what)
+		}
+		for _, node := range nodes {
+			if node == nil || !known[node] {
+				return fmt.Errorf("%s: node %v is not in the graph", what, node)
+			}
+		}
+		return nil
+	}
+	for i, nodes := range graph.SameRank {
+		if err := group(fmt.Sprintf("same rank group %d", i), nodes); err != nil {
+			return err
+		}
+	}
+	for _, pinned := range []struct {
+		what  string
+		nodes []*Node
+	}{{"min rank", graph.MinRank}, {"max rank", graph.MaxRank}} {
+		if len(pinned.nodes) == 0 {
+			continue
+		}
+		if err := group(pinned.what, pinned.nodes); err != nil {
+			return err
+		}
+	}
+	clusters := make(map[*Cluster]bool, len(graph.Clusters))
+	for i, cluster := range graph.Clusters {
+		if cluster == nil {
+			return fmt.Errorf("cluster %d is nil", i)
+		}
+		clusters[cluster] = true
+	}
+	for _, cluster := range graph.Clusters {
+		if err := group(fmt.Sprintf("cluster %q", cluster.ID), cluster.Nodes); err != nil {
+			return err
+		}
+		depth := 0
+		for parent := cluster.Parent; parent != nil; parent = parent.Parent {
+			if !clusters[parent] {
+				return fmt.Errorf("cluster %q: parent %q is not in the graph", cluster.ID, parent.ID)
+			}
+			if depth++; depth > len(graph.Clusters) {
+				return fmt.Errorf("cluster %q: parent chain is a cycle", cluster.ID)
+			}
 		}
 	}
 	return nil

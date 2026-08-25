@@ -1,5 +1,7 @@
 package layout
 
+import "math"
+
 // Graph is a set of nodes and edges together with the default styling
 // used for nodes that don't specify their own.
 type Graph struct {
@@ -133,6 +135,8 @@ func maxvector(a *Vector, b Vector) {
 
 // Bounds returns the bounding box of all nodes and edge paths.
 func (graph *Graph) Bounds() (min, max Vector) {
+	inf := Length(math.Inf(1))
+	min, max = Vector{inf, inf}, Vector{-inf, -inf}
 	for _, node := range graph.Nodes {
 		minvector(&min, node.TopLeft())
 		maxvector(&max, node.BottomRight())
@@ -153,8 +157,8 @@ func (graph *Graph) Bounds() (min, max Vector) {
 		}
 	}
 
-	minvector(&min, max)
-	maxvector(&max, min)
-
+	if min.X > max.X { // nothing to bound
+		return Vector{}, Vector{}
+	}
 	return
 }

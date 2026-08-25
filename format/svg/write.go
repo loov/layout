@@ -6,6 +6,7 @@ import (
 	stdhtml "html"
 	"io"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -32,8 +33,12 @@ func (svg *writer) write(format string, args ...any) {
 	_, svg.err = fmt.Fprintf(svg.w, format, args...)
 }
 
-func (svg *writer) start(width, height layout.Length) {
-	svg.write("<svg xmlns='http://www.w3.org/2000/svg' width='%v' height='%v'>", width, height)
+func (svg *writer) start(left, top, right, bottom layout.Length) {
+	svg.write("<svg xmlns='http://www.w3.org/2000/svg' width='%v' height='%v'", right-left, bottom-top)
+	if left != 0 || top != 0 { // content at negative coordinates needs a shifted viewport
+		svg.write(" viewBox='%v %v %v %v'", left, top, right-left, bottom-top)
+	}
+	svg.write(">")
 }
 func (svg *writer) finish() {
 	svg.write("</svg>\n")
@@ -74,10 +79,9 @@ func colortext(color layout.Color) string {
 		return "none"
 	}
 	return string([]byte{'#',
-		hex[r>>4], hex[r&7],
-		hex[g>>4], hex[g&7],
-		hex[b>>4], hex[b&7],
-		//hex[a>>4], hex[a&7],
+		hex[r>>4], hex[r&0xF],
+		hex[g>>4], hex[g&0xF],
+		hex[b>>4], hex[b&0xF],
 	})
 }
 
@@ -188,9 +192,9 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 			svg.write(" font-size='%v'", fontSize)
 		}
 		if fontName != "" {
-			svg.write(" font-family='%v'", fontName)
+			svg.write(" font-family='%v'", escapeString(fontName))
 		}
-		svg.write(" color='%v'", dkcolor(color))
+		svg.write(" fill='%v'", dkcolor(color))
 		svg.write(">%v</text>\n", escapeString(line))
 		top += graph.LineHeight
 	}
@@ -208,10 +212,10 @@ func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius 
 		svg.write(" font-size='%v'", fontSize)
 	}
 	if fontName != "" {
-		svg.write(" font-family='%v'", fontName)
+		svg.write(" font-family='%v'", escapeString(fontName))
 	}
 	svg.write(" color='%v'", dkcolor(color))
-	svg.write(`><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%%">%v</body>`, lowercaseTags(label[1:len(label)-1]))
+	svg.write(`><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%%">%v</body>`, sanitizeHTML(label[1:len(label)-1]))
 	svg.write("</foreignObject>")
 }
 
@@ -219,8 +223,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w
 
-	_, bottomRight := graph.Bounds()
-	svg.start(bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
+	topLeft, bottomRight := graph.Bounds()
+	svg.start(min(topLeft.X, 0), min(topLeft.Y, 0), bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
 	svg.writeStyle()
 	svg.writeDefs()
 
@@ -334,7 +338,7 @@ func (svg *writer) writeShape(node *layout.Node, radius layout.Vector) string {
 		return "rect"
 	case layout.Square:
 		r := max(radius.X, radius.Y)
-		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*r, 2*r)
+		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-r, c.Y-r, 2*r, 2*r)
 		return "rect"
 	case layout.None:
 		svg.write("<g x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
@@ -359,21 +363,52 @@ func (svg *writer) writeStroke(width layout.Length, style layout.LineStyle) {
 	svg.write(" stroke-width='%v'", width)
 }
 
-func lowercaseTags(s string) string {
+// sanitizeHTML normalizes an HTML-like label and strips anything that
+// could run script: script-like elements, on* handlers and javascript urls.
+func sanitizeHTML(s string) string {
 	root := &html.Node{Type: html.ElementNode}
 	nodes, err := html.ParseFragment(strings.NewReader(s), root)
 	if err != nil {
-		return s
+		return escapeString(s)
 	}
 
-	var out strings.Builder
 	for _, node := range nodes {
-		err := html.Render(&out, node)
-		if err != nil {
-			return s
+		root.AppendChild(node)
+	}
+	sanitizeNode(root)
+	var out strings.Builder
+	for node := root.FirstChild; node != nil; node = node.NextSibling {
+		if err := html.Render(&out, node); err != nil {
+			return escapeString(s)
 		}
 	}
 	return out.String()
+}
+
+func sanitizeNode(n *html.Node) {
+	for c := n.FirstChild; c != nil; {
+		next := c.NextSibling
+		if c.Type == html.ElementNode {
+			switch c.Data {
+			case "script", "style", "iframe", "object", "embed", "link", "meta", "base", "form", "svg", "math":
+				n.RemoveChild(c)
+				c = next
+				continue
+			}
+		}
+		sanitizeNode(c)
+		c = next
+	}
+	if n.Type != html.ElementNode {
+		return
+	}
+	n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool {
+		key := strings.ToLower(a.Key)
+		val := strings.ToLower(strings.TrimSpace(a.Val))
+		return strings.HasPrefix(key, "on") ||
+			((key == "href" || key == "src" || key == "xlink:href" || key == "action" || key == "formaction") &&
+				(strings.HasPrefix(val, "javascript:") || strings.HasPrefix(val, "data:")))
+	})
 }
 
 func escapeString(s string) string {
