@@ -48,7 +48,7 @@ func main() {
 }
 ```
 
-![Output](./examples/minimal.png)
+![Output](./testdata/minimal.png)
 
 See other examples in `examples` folder.
 
