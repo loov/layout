@@ -1,6 +1,9 @@
 package layout
 
-import "math"
+import (
+	"math"
+	"strconv"
+)
 
 // Shape is the outline drawn for a node.
 type Shape string
@@ -114,6 +117,10 @@ func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y}
 
 // Length is a distance in points.
 type Length float64
+
+// String formats the length with float32 precision: plenty for drawing,
+// and it hides cross-architecture rounding noise in the last bits.
+func (l Length) String() string { return strconv.FormatFloat(float64(l), 'f', -1, 32) }
 
 // Units of Length.
 const (

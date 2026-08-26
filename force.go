@@ -39,6 +39,9 @@ func Force(graph *Graph) error {
 		pos[i] = [2]float64{rng.Float64() * side, rng.Float64() * side}
 	}
 
+	// float64 conversions below block FMA fusion, so the layout is
+	// identical across architectures (goldens are compared byte for byte)
+
 	// O(n²) repulsion; add a grid or Barnes-Hut past a few thousand nodes
 	const iterations = 300
 	disp := make([][2]float64, n)
@@ -50,15 +53,15 @@ func Force(graph *Graph) error {
 		for i := range n {
 			for j := i + 1; j < n; j++ {
 				dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
-				d := math.Hypot(dx, dy)
+				d := hypot(dx, dy)
 				if d < 1e-3 {
 					dx, dy, d = 1e-3*float64(i-j), 1e-3, 1e-3
 				}
 				f := k * k / d / d // repulsion k²/d, normalized by d
-				disp[i][0] += dx * f
-				disp[i][1] += dy * f
-				disp[j][0] -= dx * f
-				disp[j][1] -= dy * f
+				disp[i][0] += float64(dx * f)
+				disp[i][1] += float64(dy * f)
+				disp[j][0] -= float64(dx * f)
+				disp[j][1] -= float64(dy * f)
 			}
 		}
 		for _, edge := range graph.Edges {
@@ -67,18 +70,18 @@ func Force(graph *Graph) error {
 				continue
 			}
 			dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
-			d := math.Hypot(dx, dy)
+			d := hypot(dx, dy)
 			if d < 1e-3 {
 				continue
 			}
 			f := d * edge.Weight / k // attraction d²/k, normalized by d
-			disp[i][0] -= dx * f
-			disp[i][1] -= dy * f
-			disp[j][0] += dx * f
-			disp[j][1] += dy * f
+			disp[i][0] -= float64(dx * f)
+			disp[i][1] -= float64(dy * f)
+			disp[j][0] += float64(dx * f)
+			disp[j][1] += float64(dy * f)
 		}
 		for i := range pos {
-			d := math.Hypot(disp[i][0], disp[i][1])
+			d := hypot(disp[i][0], disp[i][1])
 			if d > temperature {
 				disp[i][0] *= temperature / d
 				disp[i][1] *= temperature / d
@@ -134,4 +137,11 @@ func Force(graph *Graph) error {
 	}
 	layoutPinned(graph)
 	return nil
+}
+
+// hypot is math.Hypot without its internal FMA fusion: the explicit
+// float64 conversions round every product, so results match across
+// architectures. Fine here, the coordinates are far from overflow.
+func hypot(x, y float64) float64 {
+	return math.Sqrt(float64(x*x) + float64(y*y))
 }

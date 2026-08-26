@@ -304,7 +304,7 @@ func compareGolden(t *testing.T, path string, got []byte) {
 		t.Fatal(err)
 	}
 	if !bytes.Equal(got, want) {
-		t.Errorf("%s differs from golden file; run `go test -update`", path)
+		t.Errorf("%s differs from golden file; run `go test -update`\n%s", path, diffLines(want, got))
 	}
 }
 
@@ -416,4 +416,24 @@ func TestDiagnostics(t *testing.T) {
 		}
 	}
 	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
+}
+
+// diffLines reports the mismatching lines between want and got.
+func diffLines(want, got []byte) string {
+	wantLines := strings.Split(string(want), "\n")
+	gotLines := strings.Split(string(got), "\n")
+	var out strings.Builder
+	for i := range max(len(wantLines), len(gotLines)) {
+		w, g := "<missing>", "<missing>"
+		if i < len(wantLines) {
+			w = wantLines[i]
+		}
+		if i < len(gotLines) {
+			g = gotLines[i]
+		}
+		if w != g {
+			fmt.Fprintf(&out, "line %d:\n\twant: %s\n\tgot:  %s\n", i+1, w, g)
+		}
+	}
+	return out.String()
 }
