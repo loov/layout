@@ -7,7 +7,7 @@ import (
 
 // Decycle makes the graph acyclic by reversing the back edges of a depth
 // first search. Self-loops are removed and duplicate edges merged; edge
-// weights follow the reversed edges.
+// weights and minimum lengths follow the reversed edges.
 //
 // The search starts from nodes with many outgoing and few incoming edges,
 // so that the reversed edges tend to be the ones pointing "up" in the
@@ -54,9 +54,9 @@ func Decycle(graph *Graph) {
 		}
 	}
 
-	// rebuild adjacency and weights from the edge list
-	weights := graph.weights
-	graph.weights = nil
+	// rebuild adjacency, weights and minimum lengths from the edge list
+	weights, minlens := graph.weights, graph.minlens
+	graph.weights, graph.minlens = nil, nil
 	for _, node := range graph.Nodes {
 		node.In.Clear()
 		node.Out.Clear()
@@ -68,6 +68,11 @@ func Decycle(graph *Graph) {
 			graph.SetWeight(src, dst, w)
 		} else if w, ok := weights[[2]ID{dst.ID, src.ID}]; ok {
 			graph.SetWeight(src, dst, w)
+		}
+		if n, ok := minlens[[2]ID{src.ID, dst.ID}]; ok {
+			graph.SetMinLen(src, dst, n)
+		} else if n, ok := minlens[[2]ID{dst.ID, src.ID}]; ok {
+			graph.SetMinLen(src, dst, n)
 		}
 	}
 	for _, node := range graph.Nodes {

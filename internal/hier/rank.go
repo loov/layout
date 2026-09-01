@@ -43,11 +43,13 @@ func flipBackwardEdges(graph *Graph) {
 	}
 	for _, edge := range backward {
 		src, dst := edge[0], edge[1]
-		weight := graph.Weight(src, dst)
+		weight, minlen := graph.Weight(src, dst), graph.MinLen(src, dst)
 		src.Out.Remove(dst)
 		dst.In.Remove(src)
 		delete(graph.weights, [2]ID{src.ID, dst.ID})
+		delete(graph.minlens, [2]ID{src.ID, dst.ID})
 		graph.AddWeightedEdge(dst, src, weight)
+		graph.SetMinLen(dst, src, minlen)
 	}
 }
 
@@ -80,11 +82,23 @@ func DoubleRanks(graph *Graph) {
 	graph.ByRank = byRank
 }
 
-// RankCompact renumbers ranks so that there are no empty ranks
+// RankCompact renumbers ranks so that there are no empty ranks. Ranks
+// crossed by an edge that must span several ranks are kept, so that
+// compacting doesn't undo its minimum length.
 func RankCompact(graph *Graph) {
 	used := map[int]bool{}
 	for _, node := range graph.Nodes {
 		used[node.Rank] = true
+	}
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			if graph.MinLen(src, dst) <= 1 {
+				continue
+			}
+			for rank := src.Rank + 1; rank < dst.Rank; rank++ {
+				used[rank] = true
+			}
+		}
 	}
 	ranks := make([]int, 0, len(used))
 	for r := range used {
@@ -115,10 +129,10 @@ func RankBalance(graph *Graph) {
 		}
 		lo, hi := 0, len(graph.Nodes)
 		for _, src := range node.In {
-			lo = max(lo, src.Rank+1)
+			lo = max(lo, src.Rank+int(graph.MinLen(src, node)))
 		}
 		for _, dst := range node.Out {
-			hi = min(hi, dst.Rank-1)
+			hi = min(hi, dst.Rank-int(graph.MinLen(node, dst)))
 		}
 		best := node.Rank
 		for r := lo; r <= hi; r++ {

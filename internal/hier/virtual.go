@@ -23,6 +23,7 @@ func AddVirtuals(graph *Graph) {
 			dst.In.Remove(src)
 			weight := graph.Weight(src, dst)
 			delete(graph.weights, [2]ID{src.ID, dst.ID})
+			delete(graph.minlens, [2]ID{src.ID, dst.ID})
 
 			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
 				node := graph.AddNode()

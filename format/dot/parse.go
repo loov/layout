@@ -1,7 +1,7 @@
 // Package dot parses the Graphviz dot file format into layout graphs.
 //
 // Node and edge attributes that map onto layout properties (label, shape,
-// colors, font, line width, tooltip) are applied; rank=same subgraphs are
+// colors, font, line width, tooltip, weight, minlen) are applied; rank=same subgraphs are
 // recorded in Graph.SameRank. Other attributes are ignored.
 package dot
 
@@ -481,6 +481,11 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		switch attr.Key {
 		case "weight":
 			setFloat(&edge.Weight, attr.Val)
+		case "minlen":
+			// minlen=0, meaning "same rank", is not supported; use rank=same
+			if n, err := strconv.Atoi(attr.Val); err == nil && n > 0 {
+				edge.MinLen = n
+			}
 		case "style":
 			setLineStyle(&edge.LineStyle, attr.Val)
 		case "pos":

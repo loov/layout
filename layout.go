@@ -82,6 +82,9 @@ func (graph *Graph) AssignMissingValues() {
 		if edge.Weight < epsilon {
 			edge.Weight = epsilon
 		}
+		if edge.MinLen < 1 {
+			edge.MinLen = 1
+		}
 		if edge.FontSize <= 0 {
 			edge.FontSize = graph.FontSize
 		}
@@ -389,8 +392,10 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		node.Label = nodedef.ID
 	}
 	for _, edge := range graphdef.Edges {
-		from, to := nodes[edge.From], nodes[edge.To]
-		graph.AddWeightedEdge(graph.Nodes[from], graph.Nodes[to], float32(edge.Weight))
+		from, to := graph.Nodes[nodes[edge.From]], graph.Nodes[nodes[edge.To]]
+		graph.AddWeightedEdge(from, to, float32(edge.Weight))
+		// parallel edges share one hierarchical edge, the longest wins
+		graph.SetMinLen(from, to, max(int32(edge.MinLen), graph.MinLen(from, to)))
 	}
 
 	for _, nodedef := range graphdef.MinRank {

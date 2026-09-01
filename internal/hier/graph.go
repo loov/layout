@@ -16,6 +16,9 @@ type Graph struct {
 	Flat [][2]*Node
 	// weights of edges by (src, dst); missing means 1
 	weights map[[2]ID]float32
+	// minlens holds the minimum rank span of edges by (src, dst);
+	// missing means 1
+	minlens map[[2]ID]int32
 	// Ranking
 	ByRank []Nodes
 }
@@ -133,6 +136,32 @@ func (graph *Graph) SetWeight(src, dst *Node, weight float32) {
 		graph.weights = map[[2]ID]float32{}
 	}
 	graph.weights[[2]ID{src.ID, dst.ID}] = weight
+}
+
+// MinLen returns the minimum number of ranks edge src -> dst must span
+func (graph *Graph) MinLen(src, dst *Node) int32 {
+	if len(graph.minlens) == 0 {
+		return 1
+	}
+	if n, ok := graph.minlens[[2]ID{src.ID, dst.ID}]; ok {
+		return n
+	}
+	return 1
+}
+
+// SetMinLen sets the minimum number of ranks edge src -> dst must span
+func (graph *Graph) SetMinLen(src, dst *Node, minlen int32) {
+	if minlen < 0 {
+		minlen = 0
+	}
+	if minlen == 1 {
+		delete(graph.minlens, [2]ID{src.ID, dst.ID})
+		return
+	}
+	if graph.minlens == nil {
+		graph.minlens = map[[2]ID]int32{}
+	}
+	graph.minlens[[2]ID{src.ID, dst.ID}] = minlen
 }
 
 // InWeight returns the total weight of incoming edges

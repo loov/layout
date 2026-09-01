@@ -4,7 +4,7 @@ import "math"
 
 // RankNetworkSimplex assigns ranks minimizing the total weighted edge length
 // Σ weight(e)·(rank(dst) − rank(src)) subject to every edge spanning at least
-// one rank, using the network simplex method of Gansner et al.
+// its minimum length, using the network simplex method of Gansner et al.
 //
 // Nodes in a SameRank group are contracted into a single vertex so they end
 // up on the same rank; MinRank and MaxRank nodes are contracted with an
@@ -74,16 +74,16 @@ func RankNetworkSimplex(graph *Graph) {
 			if u == v || v == source || u == sink {
 				continue // inside a group, or contradicting a min/max pin
 			}
-			s.addEdge(int32(u), int32(v), graph.Weight(src, dst))
+			s.addEdge(int32(u), int32(v), graph.Weight(src, dst), graph.MinLen(src, dst))
 		}
 	}
 	// zero weight edges keep the artificial source first and sink last
 	for v := range verts {
 		if source >= 0 && v != source {
-			s.addEdge(int32(source), int32(v), 0)
+			s.addEdge(int32(source), int32(v), 0, 1)
 		}
 		if sink >= 0 && v != sink && v != source {
-			s.addEdge(int32(v), int32(sink), 0)
+			s.addEdge(int32(v), int32(sink), 0, 1)
 		}
 	}
 	s.run()
@@ -102,6 +102,7 @@ type simplex struct {
 	// edges
 	tail, head []int32
 	weight     []float32
+	minlen     []int32
 	tree       []bool
 	cut        []float32
 
@@ -121,10 +122,11 @@ type simplex struct {
 	nodes                    []int32 // subtree result buffer
 }
 
-func (s *simplex) addEdge(tail, head int32, weight float32) {
+func (s *simplex) addEdge(tail, head int32, weight float32, minlen int32) {
 	s.tail = append(s.tail, tail)
 	s.head = append(s.head, head)
 	s.weight = append(s.weight, weight)
+	s.minlen = append(s.minlen, minlen)
 	s.tree = append(s.tree, false)
 }
 
@@ -401,7 +403,7 @@ func (s *simplex) renumber(root int32, next int32) {
 }
 
 func (s *simplex) length(i int32) int32 { return s.rank[s.head[i]] - s.rank[s.tail[i]] }
-func (s *simplex) slack(i int32) int32  { return s.length(i) - 1 }
+func (s *simplex) slack(i int32) int32  { return s.length(i) - s.minlen[i] }
 
 // initRank assigns longest-path ranks, a feasible starting point
 func (s *simplex) initRank() {
@@ -424,7 +426,7 @@ func (s *simplex) initRank() {
 				continue
 			}
 			h := s.head[i]
-			s.rank[h] = max(s.rank[h], s.rank[v]+1)
+			s.rank[h] = max(s.rank[h], s.rank[v]+s.minlen[i])
 			indeg[h]--
 			if indeg[h] == 0 {
 				queue = append(queue, h)

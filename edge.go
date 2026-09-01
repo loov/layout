@@ -5,6 +5,9 @@ type Edge struct {
 	Directed bool
 	From, To *Node
 	Weight   float64
+	// MinLen is the minimum number of ranks the edge must span in a
+	// hierarchical layout; 0 uses the default of 1.
+	MinLen int
 
 	// FromPort and ToPort pin the edge ends to compass points on the nodes
 	FromPort, ToPort Compass
