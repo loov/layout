@@ -21,6 +21,9 @@ func (c *canvas) drawCluster(cluster *layout.Cluster) {
 	c.dashed = false
 }
 
+// peripheryGap matches the layout's distance between a node's outlines
+const peripheryGap = 4 * layout.Point
+
 // drawNode draws a node as a box that holds its label, and marks the box
 // solid so that edges don't draw over it
 func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
@@ -37,8 +40,11 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		}
 		return
 	}
-	x0, y0 := c.col(node.Left()), c.row(node.Top())
-	x1, y1 := c.col(node.Right()), c.row(node.Bottom())
+	// a double outline takes the cells of a single one, so the room the
+	// layout reserves for extra outlines stays outside the box
+	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
+	x0, y0 := c.col(node.Left()+inset), c.row(node.Top()+inset)
+	x1, y1 := c.col(node.Right()-inset), c.row(node.Bottom()-inset)
 	lines := strings.Split(node.DefaultLabel(), "\n")
 	// the box must hold the label and have distinct edges
 	if node.Shape != layout.Record {
