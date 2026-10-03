@@ -108,6 +108,22 @@ func main() {
 		return
 	}
 
+	var write func(io.Writer, *layout.Graph) error
+	switch *outformat {
+	case "svg":
+		write = svg.Write
+	case "dot":
+		write = dot.Write
+	case "json":
+		write = json.Write
+	case "txt", "text":
+		write = text.Write
+	default:
+		errorf("unknown output format %q", *outformat)
+		os.Exit(1)
+		return
+	}
+
 	if *cpuprofile != "" {
 		f, err := os.Create(*cpuprofile)
 		if err != nil {
@@ -242,20 +258,7 @@ func main() {
 		out = file
 	}
 
-	switch *outformat {
-	case "svg":
-		err = svg.Write(out, graph)
-	case "dot":
-		err = dot.Write(out, graph)
-	case "json":
-		err = json.Write(out, graph)
-	case "txt", "text":
-		err = text.Write(out, graph)
-	default:
-		errorf("unknown output format %q", *outformat)
-		os.Exit(1)
-		return
-	}
+	err = write(out, graph)
 
 	if err != nil {
 		errorf("writing %q failed: %v", output, err)
