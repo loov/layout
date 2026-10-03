@@ -83,9 +83,13 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		c.record(graph.LayoutRecord(node), node.TopLeft(), c.col, inside)
 		return
 	}
+	top := (y0+y1)/2 - len(lines)/2
+	if graph.PackEdgeEnds && (graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft) {
+		top = y0 + 1 // with the main path, along the first row
+	}
 	for i, line := range lines {
 		r := []rune(line)
-		c.text((x0+x1+1-len(r))/2, (y0+y1)/2-len(lines)/2+i, line)
+		c.text((x0+x1+1-len(r))/2, top+i, line)
 	}
 }
 

@@ -14,9 +14,10 @@ import (
 )
 
 // Prepare sets ortho edges and spacing that leaves rows between ranks
-// for horizontal runs and arrowheads: more fan-out needs more rows. It
-// also makes nodes with several edges on their left or right, sideways
-// or from self-loops, tall enough to keep the edges on separate rows.
+// for horizontal runs and arrowheads: more fan-out needs more rows.
+// Sideways, it packs edge ends along the top of nodes, see
+// layout.Graph.PackEdgeEnds; otherwise it makes nodes with self-loops
+// tall enough for the loop ends.
 func Prepare(graph *layout.Graph) {
 	graph.Splines = layout.SplinesOrtho
 	if graph.LineHeight <= 0 {
@@ -40,34 +41,18 @@ func Prepare(graph *layout.Graph) {
 	graph.NodePadding = graph.LineHeight * 2
 	graph.EdgePadding = graph.LineHeight
 
-	// edges sideways and self-loops leave and enter nodes on their left
-	// and right, which are only a few rows tall; make nodes just tall
-	// enough for a row per edge end on the busier side
+	// sideways, the main path runs along the top row of the nodes, with
+	// further edges a row each below it; the layout makes room for them
 	sideways := graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft
-	ins, outs, loops := map[*layout.Node]int{}, map[*layout.Node]int{}, map[*layout.Node]int{}
-	for _, edge := range graph.Edges {
-		if edge.From == edge.To {
-			loops[edge.From]++
-		} else {
-			outs[edge.From]++
-			ins[edge.To]++
-		}
+	graph.PackEdgeEnds = sideways
+	if sideways {
+		return
 	}
-	for _, node := range graph.Nodes {
-		var rows layout.Length // half height, in rows
-		switch n := max(ins[node], outs[node]); {
-		case sideways && n > 1:
-			// an edge that runs straight stays at the center row and the
-			// others may all go to one side of it, a row each; drawing
-			// gives each end its own row
-			rows = layout.Length(n)
-		case !sideways && loops[node] > 0:
-			// loop ends are half the half height off the center, a row
-			// above and below it with two rows
-			rows = 2
-		}
-		if rows > 0 {
-			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*rows)
+	// self-loops leave and return on the right, half the half height off
+	// the center: two rows put them a row above and below it
+	for _, edge := range graph.Edges {
+		if node := edge.From; edge.To == node {
+			node.Radius.Y = max(node.Radius.Y, 2*graph.LineHeight)
 			if node.Shape == layout.Circle {
 				// drawn as a box either way; a circle would widen as much
 				node.Shape = layout.Ellipse

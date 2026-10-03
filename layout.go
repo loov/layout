@@ -446,6 +446,17 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	loopHeight := min(loopWidth, graphdef.RowPadding)
 	loopExtra := map[*Node]Length{}
 	loopLeft := map[*Node]Length{} // loops with ports may also pass the left side
+	// a node widened for loops sits left of the widened box's center
+	loopShift := func(node *Node) Length { return -(loopExtra[node] - loopLeft[node]) / 2 }
+	// with packed edge ends, the first end of a node is where its
+	// edges line up, this far from its center
+	pack := graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho
+	packed := func(node *Node) Length {
+		if !pack {
+			return 0
+		}
+		return min(0, graphdef.EdgePadding-node.Radius.X)
+	}
 	for _, edge := range graphdef.Edges {
 		if edge.From == edge.To {
 			extra := loopWidth
@@ -560,6 +571,32 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		}
 	}
 
+	// packed edge ends need room on each side of a node for its ends an
+	// edge padding apart, from an edge padding in
+	if pack {
+		ends := map[*Node][2]int{} // above and below, by rank
+		for _, edge := range graphdef.Edges {
+			from, to := orderedGraph.Nodes[nodes[edge.From]].Rank, orderedGraph.Nodes[nodes[edge.To]].Rank
+			if from == to {
+				continue // loops and flat edges leave sideways
+			}
+			below := from < to
+			if edge.FromPort == CompassAuto {
+				e := ends[edge.From]
+				e[map[bool]int{false: 0, true: 1}[below]]++
+				ends[edge.From] = e
+			}
+			if edge.ToPort == CompassAuto {
+				e := ends[edge.To]
+				e[map[bool]int{false: 1, true: 0}[below]]++
+				ends[edge.To] = e
+			}
+		}
+		for node, e := range ends {
+			node.Radius.X = max(node.Radius.X, Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2)
+		}
+	}
+
 	// assign node sizes
 	for id, node := range orderedGraph.Nodes {
 		if node.Virtual {
@@ -588,7 +625,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		// grows by both, and the node sits left of the box center by the
 		// difference, where its edges line up with the neighbors
 		node.Radius.X += float32((loopExtra[nodedef] + loopLeft[nodedef]) / 2)
-		node.Anchor = -float32(loopExtra[nodedef]-loopLeft[nodedef]) / 2
+		node.Anchor = float32(loopShift(nodedef) + packed(nodedef))
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
 
@@ -621,11 +658,10 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	align := map[Align]hier.Align{AlignBalanced: hier.Balanced, AlignLeft: hier.Left, AlignRight: hier.Right}[opts.Align]
 	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, align)
 
-	// assign final positions at the anchors, which are off the center
-	// of nodes widened for loops
+	// assign final positions, off the center of nodes widened for loops
 	for nodedef, id := range nodes {
 		node := positionedGraph.Nodes[id]
-		nodedef.Center.X = Length(node.Center.X + node.Anchor)
+		nodedef.Center.X = Length(node.Center.X) + loopShift(nodedef)
 		nodedef.Center.Y = Length(node.Center.Y)
 	}
 
@@ -686,7 +722,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		sourcedef := reverse[source.ID]
 		for _, out := range source.Out {
 			path := []Vector{}
-			path = append(path, sourcedef.BottomCenter())
+			path = append(path, sourcedef.BottomCenter().Add(Vector{X: packed(sourcedef)}))
 
 			target := out
 			for target != nil && target.Virtual {
@@ -720,11 +756,14 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			}
 
 			targetdef := reverse[target.ID]
-			path = append(path, targetdef.TopCenter())
+			path = append(path, targetdef.TopCenter().Add(Vector{X: packed(targetdef)}))
 
-			// clip ends to node outlines so fan-ins don't converge on one point
-			path[0] = sourcedef.Boundary(path[1])
-			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+			// clip ends to node outlines so fan-ins don't converge on one
+			// point; packed ends stay at the first end, where they line up
+			if !pack {
+				path[0] = sourcedef.Boundary(path[1])
+				path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+			}
 
 			if graphdef.Splines != SplinesOrtho {
 				// orthogonal edges run on virtual node columns and rank
@@ -844,7 +883,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 				rows[r][0], rows[r][1] = min(rows[r][0], top), max(rows[r][1], bottom)
 			}
 		}
-		orthoEdges(graphdef, rows, graphdef.EdgePadding)
+		orthoEdges(graphdef, rows, graphdef.EdgePadding, pack)
 	}
 	if graphdef.Splines != SplinesOrtho {
 		spreadWaypoints(graphdef.Edges, graphdef.EdgePadding)

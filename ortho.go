@@ -10,7 +10,7 @@ import (
 // Vertical runs stay at the waypoint x; every horizontal jog is placed in
 // the channel between the two ranks, on its own track when it overlaps
 // another jog there. Loops and flat edges keep their paths.
-func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
+func orthoEdges(graph *Graph, rows [][2]Length, pad Length, pack bool) {
 	type jog struct {
 		edge   *Edge
 		index  int // index of the segment start in edge.Path
@@ -99,19 +99,33 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 	}
 	for k, list := range ends {
 		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
-		spacing := min(2*pad, 2*k.node.Radius.X/Length(len(list)+1))
-		// ends whose route already runs straight across the side keep
-		// that x, so the edge needs no jog; the rest take evenly spread slots
+		// slots evenly spread around the center, or packed from the left
+		// an edge padding apart
+		n := Length(len(list))
+		spacing := min(2*pad, 2*k.node.Radius.X/(n+1))
 		center, reach := k.node.Center.X, k.node.Radius.X-spacing/2
+		lo, hi := center-reach, center+reach
+		slot := func(i int) Length { return center + (Length(i)-(n-1)/2)*spacing }
+		if pack {
+			inset := min(pad, k.node.Radius.X)
+			lo, hi = center-k.node.Radius.X+inset, center+k.node.Radius.X-inset
+			spacing = pad
+			if n > 1 {
+				spacing = min(pad, (hi-lo)/(n-1))
+			}
+			slot = func(i int) Length { return lo + Length(i)*spacing }
+		}
+		// ends whose route already runs straight across the side keep
+		// that x, so the edge needs no jog; the rest take the slots
 		want := make([]Length, len(list))
 		weight := make([]float64, len(list))
 		for i, e := range list {
-			want[i], weight[i] = center+(Length(i)-Length(len(list)-1)/2)*spacing, 1
-			if e.towards == e.x && absLength(e.x-center) <= reach {
-				want[i], weight[i] = e.x, 1e9
+			want[i], weight[i] = slot(i), 1
+			if absLength(e.towards-e.x) < 0.01 && e.towards >= lo && e.towards <= hi {
+				want[i], weight[i] = e.towards, 1e9
 			}
 		}
-		xs := separate(want, weight, spacing, center-reach, center+reach)
+		xs := separate(want, weight, spacing, lo, hi)
 		for i, e := range list {
 			if weight[i] > 1 && absLength(xs[i]-want[i]) < spacing/1e3 {
 				xs[i] = want[i] // undo rounding, the run must stay exactly vertical
@@ -203,12 +217,17 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		}
 		jogs, channels[k] = ordered, ordered
 		// each jog goes just below the jogs placed before that it comes
-		// within half a pad of; ends that close still turn apart
+		// within half a pad of; ends that close still turn apart. Packed
+		// ends are a pad apart, so their jogs keep that
+		gap := pad / 2
+		if pack {
+			gap = pad
+		}
 		track := make([]int, len(jogs))
 		tracks := 0
 		for i, j := range jogs {
 			for o := range i {
-				if jogs[o].x0 < j.x1+pad/2 && j.x0 < jogs[o].x1+pad/2 {
+				if jogs[o].x0 < j.x1+gap && j.x0 < jogs[o].x1+gap {
 					track[i] = max(track[i], track[o]+1)
 				}
 			}

@@ -12,6 +12,12 @@ type Graph struct {
 	RankDir RankDir
 	// Splines is how edges are routed and drawn, see Splines constants.
 	Splines Splines
+	// PackEdgeEnds spreads the ends of ortho edges on a side of a node
+	// from its start, the left or the top when sideways, an edge padding
+	// apart, instead of around the center, and lines nodes up at their
+	// first end: the main path of a sideways layout then runs along the
+	// top of its nodes. text.Prepare sets it for sideways layouts.
+	PackEdgeEnds bool
 
 	// MeasureText returns the half size of a single line of text in the
 	// given font. When nil, a built-in approximation is used.
