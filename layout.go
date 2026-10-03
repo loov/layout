@@ -248,7 +248,12 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 			for i, p := range edge.Path {
 				edge.Path[i] = transform(p)
 			}
-			edge.LabelPos = transform(edge.LabelPos)
+			if edge.Label == "" {
+				// unused, and kept from drifting over repeated layouts
+				edge.LabelPos = Vector{}
+			} else {
+				edge.LabelPos = transform(edge.LabelPos)
+			}
 		}
 		for _, cluster := range graphdef.Clusters {
 			a, b := transform(cluster.TopLeft), transform(cluster.BottomRight)

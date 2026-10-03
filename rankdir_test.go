@@ -61,3 +61,28 @@ func TestRankDirDuplicateEdge(t *testing.T) {
 		}
 	}
 }
+
+// TestRankDirRepeat checks that laying out a graph again gives the same
+// label positions, unlabeled edges included.
+func TestRankDirRepeat(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.LeftToRight, layout.RightToLeft, layout.BottomToTop} {
+		graph := layout.NewDigraph()
+		graph.RankDir = dir
+		graph.Edge("a", "b")
+		graph.Edge("c", "d").Label = "label"
+		graph.Edge("e", "f")
+		var first []layout.Vector
+		for run := range 3 {
+			if err := layout.Hierarchical(graph); err != nil {
+				t.Fatal(err)
+			}
+			for i, edge := range graph.Edges {
+				if run == 0 {
+					first = append(first, edge.LabelPos)
+				} else if edge.LabelPos != first[i] {
+					t.Errorf("%v run %d: %v label at %v, was %v", dir, run, edge, edge.LabelPos, first[i])
+				}
+			}
+		}
+	}
+}
