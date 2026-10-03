@@ -92,3 +92,58 @@ func TestPinnedLayoutsHonorPorts(t *testing.T) {
 		})
 	}
 }
+
+func TestSelfLoopsHonorPortsAndAvoidTheNode(t *testing.T) {
+	ports := []layout.Compass{layout.CompassAuto, layout.North, layout.NorthEast, layout.East, layout.SouthEast, layout.South, layout.SouthWest, layout.West, layout.NorthWest}
+	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft, "pinned"} {
+		for _, from := range ports {
+			for _, to := range ports {
+				g := layout.NewDigraph()
+				e := g.Edge("a", "a")
+				e.From.Shape = layout.Box
+				e.FromPort, e.ToPort = from, to
+				if dir == "pinned" {
+					g.Pinned = true
+					e.From.Center = layout.Vector{X: 100, Y: 100}
+				} else {
+					g.RankDir = dir
+				}
+				if err := layout.Hierarchical(g); err != nil {
+					t.Fatal(err)
+				}
+				name := string(dir) + "/" + string(from) + "-" + string(to)
+				if from != layout.CompassAuto && e.Path[0] != e.From.CompassPoint(from) {
+					t.Errorf("%s: start %v, want %v", name, e.Path[0], e.From.CompassPoint(from))
+				}
+				if to != layout.CompassAuto && e.Path[len(e.Path)-1] != e.To.CompassPoint(to) {
+					t.Errorf("%s: end %v, want %v", name, e.Path[len(e.Path)-1], e.To.CompassPoint(to))
+				}
+				n := e.From
+				for i := 0; i+1 < len(e.Path); i++ {
+					for k := 1; k < 20; k++ {
+						f := layout.Length(k) / 20
+						d := e.Path[i+1].Sub(e.Path[i])
+						p := e.Path[i].Add(layout.Vector{X: d.X * f, Y: d.Y * f})
+						if p.X > n.Left()+0.01 && p.X < n.Right()-0.01 && p.Y > n.Top()+0.01 && p.Y < n.Bottom()-0.01 {
+							t.Errorf("%s: segment %d passes through the node at %v: %v", name, i, p, e.Path)
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+func TestSelfLoopLabelFollowsPortedLoop(t *testing.T) {
+	g := layout.NewDigraph()
+	e := g.Edge("a", "a")
+	e.Label = "loop"
+	e.FromPort, e.ToPort = layout.NorthWest, layout.SouthWest
+	if err := layout.Hierarchical(g); err != nil {
+		t.Fatal(err)
+	}
+	if e.LabelPos.X+e.LabelRadius.X > e.From.Left() {
+		t.Fatalf("label at %v is not left of the node at %v", e.LabelPos, e.From.Center)
+	}
+}
