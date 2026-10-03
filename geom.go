@@ -126,7 +126,7 @@ func (l Length) String() string { return strconv.FormatFloat(float64(l), 'f', -1
 const (
 	Point = 1
 	Inch  = 72
-	Twip  = Inch / 1440
+	Twip  = Inch / 1440.0
 
 	Meter      = 39.3701 * Inch
 	Centimeter = Meter * 0.01
