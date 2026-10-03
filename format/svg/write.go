@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/loov/layout"
 	"golang.org/x/net/html"
@@ -367,8 +368,9 @@ func (svg *writer) writeStroke(width layout.Length, style layout.LineStyle) {
 	svg.write(" stroke-width='%v'", width)
 }
 
-// sanitizeHTML normalizes an HTML-like label and strips anything that
-// could run script: script-like elements, on* handlers and javascript urls.
+// sanitizeHTML normalizes an HTML-like label into well-formed XHTML and
+// strips anything that could run script: script-like elements, on*
+// handlers and javascript urls.
 func sanitizeHTML(s string) string {
 	root := &html.Node{Type: html.ElementNode}
 	nodes, err := html.ParseFragment(strings.NewReader(s), root)
@@ -382,11 +384,56 @@ func sanitizeHTML(s string) string {
 	sanitizeNode(root)
 	var out strings.Builder
 	for node := root.FirstChild; node != nil; node = node.NextSibling {
-		if err := html.Render(&out, node); err != nil {
-			return escapeString(s)
-		}
+		renderXML(&out, node)
 	}
 	return out.String()
+}
+
+// renderXML writes n as XML. Comments and other non-element nodes are
+// dropped, and so are attributes whose name is not an XML name without a
+// namespace prefix; elements with such names are replaced by their
+// content.
+func renderXML(out *strings.Builder, n *html.Node) {
+	switch n.Type {
+	case html.TextNode:
+		out.WriteString(escapeString(n.Data))
+		return
+	case html.ElementNode:
+	default:
+		return
+	}
+	named := xmlName(n.Data)
+	if named {
+		out.WriteString("<" + n.Data)
+		seen := map[string]bool{}
+		for _, a := range n.Attr {
+			if a.Namespace == "" && xmlName(a.Key) && !seen[a.Key] {
+				seen[a.Key] = true
+				out.WriteString(" " + a.Key + `="` + escapeString(a.Val) + `"`)
+			}
+		}
+		if n.FirstChild == nil {
+			out.WriteString("/>")
+			return
+		}
+		out.WriteString(">")
+	}
+	for c := n.FirstChild; c != nil; c = c.NextSibling {
+		renderXML(out, c)
+	}
+	if named {
+		out.WriteString("</" + n.Data + ">")
+	}
+}
+
+// xmlName reports whether s is an XML name without a namespace prefix
+func xmlName(s string) bool {
+	for i, r := range s {
+		if !(unicode.IsLetter(r) || r == '_' || i > 0 && (unicode.IsDigit(r) || r == '-' || r == '.')) {
+			return false
+		}
+	}
+	return s != ""
 }
 
 func sanitizeNode(n *html.Node) {
@@ -421,6 +468,13 @@ func sanitizeNode(n *html.Node) {
 	})
 }
 
+// escapeString escapes s for XML text and attribute values, dropping
+// characters that XML 1.0 does not allow
 func escapeString(s string) string {
-	return stdhtml.EscapeString(s)
+	return stdhtml.EscapeString(strings.Map(func(r rune) rune {
+		if r == '\t' || r == '\n' || r == '\r' || 0x20 <= r && r <= 0xD7FF || 0xE000 <= r && r <= 0xFFFD || 0x10000 <= r {
+			return r
+		}
+		return -1
+	}, s))
 }

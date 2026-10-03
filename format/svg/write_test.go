@@ -1,8 +1,13 @@
 package svg
 
 import (
+	"bytes"
+	"encoding/xml"
+	"io"
 	"strings"
 	"testing"
+
+	"github.com/loov/layout"
 )
 
 func TestSanitizeHTMLRemovesObfuscatedScriptURLs(t *testing.T) {
@@ -28,6 +33,42 @@ func TestSanitizeHTMLPreservesSafeLinks(t *testing.T) {
 				t.Fatalf("safe link removed: %s", got)
 			}
 		})
+	}
+}
+
+func TestWriteIsWellFormedXML(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Node("a").Label = `<<b>x<!-- a -- b --></b><i 1a="v" foo:bar="w" ok="y" ok="z">i</i><foo:bar>t</foo:bar>>`
+	graph.Node("b").Label = "x\x01y"
+	graph.Node("b").Tooltip = "t\x02￾"
+	graph.Edge("a", "b").Label = "<<u>e</u>&amp;<br>z\x0b>"
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	dec := xml.NewDecoder(&out)
+	for {
+		tok, err := dec.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+		if start, ok := tok.(xml.StartElement); ok {
+			names := []xml.Name{start.Name}
+			for _, attr := range start.Attr {
+				names = append(names, attr.Name)
+			}
+			for _, name := range names {
+				if name.Space != "" && !strings.Contains(name.Space, "://") {
+					t.Errorf("undeclared prefix in %s:%s", name.Space, name.Local)
+				}
+			}
+		}
 	}
 }
 
