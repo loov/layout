@@ -321,16 +321,18 @@ func (c *canvas) walk(x0, y0, x1, y1 int) {
 // marker draws an edge end marker pointing in dir at the end of the edge
 // in cell end. It sits in the gap before the node when the run there is
 // straight, else on the node border. It reports whether style has a
-// marker.
+// marker; styles without a marker of their own draw a normal arrowhead.
 func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
+	if style == layout.ArrowDefault || style == layout.ArrowNone {
+		return false
+	}
 	r, ok := map[layout.Arrow]rune{
-		layout.ArrowNormal: arrow[dir],
-		layout.ArrowVee:    map[int]rune{up: '↑', down: '↓', left: '←', right: '→'}[dir],
-		layout.ArrowDot:    '●',
-		layout.ArrowODot:   '○',
+		layout.ArrowVee:  map[int]rune{up: '↑', down: '↓', left: '←', right: '→'}[dir],
+		layout.ArrowDot:  '●',
+		layout.ArrowODot: '○',
 	}[style]
 	if !ok {
-		return false
+		r = arrow[dir]
 	}
 	if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
 		end = [2]int{px, py}

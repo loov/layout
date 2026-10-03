@@ -25,8 +25,8 @@
 //     doublecircle, ellipse, oval, none, plaintext, plain, point, record
 //     and Mrecord use the graph default; that includes diamond. Mrecord
 //     draws with square corners.
-//   - Arrowheads other than normal, vee, dot, odot and none are not
-//     drawn.
+//   - Arrowheads other than normal, vee, dot, odot and none draw as a
+//     normal arrowhead.
 //   - Colors are names from the X11 scheme or #RRGGBB and #RRGGBBAA;
 //     HSV values, color lists and gradients are ignored.
 //   - Styles other than solid, dashed, dotted, bold and filled are

@@ -150,13 +150,16 @@ func roundedPath(path []layout.Vector, radius, maxDeviation layout.Length) strin
 // Nodes are drawn according to their shape and colors, edges as rounded
 // polylines along Edge.Path with an arrowhead on directed edges. Labels
 // wrapped in <...> are emitted as inline HTML.
-// markerID returns the marker definition for an arrow style, or "" for none
+// markerID returns the marker definition for an arrow style, or "" for
+// none; styles without a marker of their own draw a normal arrowhead
 func markerID(arrow layout.Arrow) string {
 	switch arrow {
-	case layout.ArrowNormal, layout.ArrowVee, layout.ArrowDot, layout.ArrowODot:
+	case layout.ArrowDefault, layout.ArrowNone:
+		return ""
+	case layout.ArrowVee, layout.ArrowDot, layout.ArrowODot:
 		return string(arrow)
 	}
-	return ""
+	return string(layout.ArrowNormal)
 }
 
 // drawPoint converts v for the draw package

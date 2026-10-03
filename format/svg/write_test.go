@@ -118,3 +118,23 @@ func TestSanitizeHTMLRemovesRawTextElements(t *testing.T) {
 		})
 	}
 }
+
+// TestUnknownArrowDrawsNormal checks that arrow styles without a marker
+// of their own still show the edge direction.
+func TestUnknownArrowDrawsNormal(t *testing.T) {
+	graph := layout.NewDigraph()
+	edge := graph.Edge("a", "b")
+	edge.ArrowHead, edge.ArrowTail = "diamond", "tee"
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"marker-end='url(#normal)'", "marker-start='url(#normal)'"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %s", want)
+		}
+	}
+}

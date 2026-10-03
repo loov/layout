@@ -77,7 +77,8 @@ const (
 type Arrow string
 
 // Arrow styles; the zero value is a normal arrowhead for directed edges'
-// heads and nothing otherwise.
+// heads and nothing otherwise. Writers draw other values, such as
+// Graphviz names without a constant here, as a normal arrowhead.
 const (
 	ArrowDefault Arrow = ""
 	ArrowNormal  Arrow = "normal"

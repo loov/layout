@@ -69,6 +69,7 @@ func TestArrows(t *testing.T) {
 		{layout.ArrowVee, layout.ArrowDot, false, "●↓"},
 		{layout.ArrowNormal, layout.ArrowNormal, true, "◀▶"},
 		{layout.ArrowVee, layout.ArrowVee, true, "←→"},
+		{"diamond", "tee", false, "▲▼"},
 	} {
 		graph := layout.NewDigraph()
 		edge := graph.Edge("A", "B")
