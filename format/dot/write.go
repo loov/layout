@@ -56,7 +56,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			attrs = append(attrs, "label="+quote(node.Label))
 		}
 		if node.Shape != layout.Auto {
-			attrs = append(attrs, "shape="+string(node.Shape))
+			attrs = append(attrs, "shape="+quote(string(node.Shape)))
 		}
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}

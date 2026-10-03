@@ -165,3 +165,19 @@ func TestWriteEscapesRoundTrip(t *testing.T) {
 		t.Errorf("edge label %q, want %q", got.Edges[0].Label, e.Label)
 	}
 }
+
+func TestWriteQuotesShape(t *testing.T) {
+	g := layout.NewDigraph()
+	g.Node("a").Shape = `box]; evil [label="x`
+	var out bytes.Buffer
+	if err := Write(&out, g); err != nil {
+		t.Fatal(err)
+	}
+	graphs, err := Parse(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(graphs[0].Nodes) != 1 {
+		t.Fatalf("shape injected nodes:\n%s", &out)
+	}
+}
