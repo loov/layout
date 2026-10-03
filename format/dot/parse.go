@@ -494,7 +494,21 @@ func vertexPort(v ast.Vertex) layout.Compass {
 	if !ok || node.Port == nil || node.Port.CompassPoint == ast.CompassPointNone {
 		return layout.CompassAuto
 	}
-	return layout.Compass(node.Port.CompassPoint.String())
+	return parseCompass(node.Port.CompassPoint.String())
+}
+
+// parseCompass reads a port such as "n" or "port:n" as its compass point.
+// Named ports and "_" give CompassAuto.
+func parseCompass(port string) layout.Compass {
+	if i := strings.LastIndexByte(port, ':'); i >= 0 {
+		port = port[i+1:]
+	}
+	switch c := layout.Compass(port); c {
+	case layout.North, layout.NorthEast, layout.East, layout.SouthEast,
+		layout.South, layout.SouthWest, layout.West, layout.NorthWest, layout.Center:
+		return c
+	}
+	return layout.CompassAuto
 }
 
 func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
@@ -633,9 +647,9 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 		case "arrowtail":
 			tail = layout.Arrow(attr.Val)
 		case "headport":
-			edge.ToPort = layout.Compass(attr.Val)
+			edge.ToPort = parseCompass(attr.Val)
 		case "tailport":
-			edge.FromPort = layout.Compass(attr.Val)
+			edge.FromPort = parseCompass(attr.Val)
 		case "fontname":
 			setString(&edge.FontName, attr.Val)
 		case "fontsize":

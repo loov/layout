@@ -268,3 +268,24 @@ func TestQuotedLabelsAreNotHTML(t *testing.T) {
 		t.Errorf("record label = %q", got)
 	}
 }
+
+func TestPorts(t *testing.T) {
+	for _, tc := range []struct {
+		src      string
+		from, to layout.Compass
+	}{
+		{`digraph { a -> b [tailport=ne, headport=s] }`, layout.NorthEast, layout.South},
+		{`digraph { a -> b [tailport="p:w", headport="field:c"] }`, layout.West, layout.Center},
+		{`digraph { a -> b [tailport=bogus, headport=_] }`, layout.CompassAuto, layout.CompassAuto},
+		{`digraph { a:p:e -> b:_ }`, layout.East, layout.CompassAuto},
+	} {
+		graphs, err := ParseString(tc.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		e := graphs[0].Edges[0]
+		if e.FromPort != tc.from || e.ToPort != tc.to {
+			t.Errorf("%s: ports %q, %q, want %q, %q", tc.src, e.FromPort, e.ToPort, tc.from, tc.to)
+		}
+	}
+}
