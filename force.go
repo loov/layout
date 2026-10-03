@@ -13,21 +13,29 @@ import (
 //
 // It sets Node.Center and Edge.Path and fails when an edge refers to a
 // node that is not part of the graph.
-func Force(graph *Graph) error {
-	if err := graph.validate(); err != nil {
+func Force(graphdef *Graph) error {
+	if err := graphdef.validate(); err != nil {
 		return err
 	}
+	work := newWorkGraph(graphdef)
+	force(work)
+	work.copyBack()
+	return nil
+}
+
+// force lays out the working copy of a validated graph.
+func force(graph *lgraph) {
 	if graph.ForText {
 		graph.prepareText()
 	}
 	graph.AssignMissingValues()
 	if graph.Pinned {
 		layoutPinned(graph)
-		return nil
+		return
 	}
 	n := len(graph.Nodes)
 	if n == 0 {
-		return nil
+		return
 	}
 
 	// ideal edge length: the largest node plus padding
@@ -38,7 +46,7 @@ func Force(graph *Graph) error {
 	area := k * k * float64(n)
 	side := math.Sqrt(area)
 
-	index := make(map[*Node]int, n)
+	index := make(map[*lnode]int, n)
 	pos := make([][2]float64, n)
 	rng := rand.New(rand.NewSource(1)) // deterministic
 	for i, node := range graph.Nodes {
@@ -157,7 +165,6 @@ func Force(graph *Graph) error {
 		cluster.TopLeft, cluster.BottomRight = Vector{}, Vector{}
 	}
 	layoutPinned(graph)
-	return nil
 }
 
 // hypot is math.Hypot without its internal FMA fusion: the explicit

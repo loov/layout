@@ -22,7 +22,7 @@ const pointRadius = 3 * Point
 // AssignMissingValues fills in unset padding, font and size values on the
 // graph, its nodes and edges from the graph defaults. Node sizes are
 // estimated from their labels.
-func (graph *Graph) AssignMissingValues() {
+func (graph *lgraph) AssignMissingValues() {
 	if graph.FontSize <= 0 {
 		graph.FontSize = graph.LineHeight * 14 / 16
 	}
@@ -186,6 +186,14 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 	if err := graphdef.validate(); err != nil {
 		return err
 	}
+	work := newWorkGraph(graphdef)
+	hierarchical(work, opts)
+	work.copyBack()
+	return nil
+}
+
+// hierarchical lays out the working copy of a validated graph.
+func hierarchical(graphdef *lgraph, opts Options) {
 	if opts.OrderIterations <= 0 {
 		opts.OrderIterations = hier.DefaultOrderIterations
 	}
@@ -195,7 +203,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 	graphdef.AssignMissingValues()
 	if graphdef.Pinned {
 		layoutPinned(graphdef)
-		return nil
+		return
 	}
 
 	// edges are updated in place below, an edge listed twice only once
@@ -203,7 +211,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 
 	// Compass directions are physical directions, so map them into the
 	// temporary rank frame and restore the caller's values afterward.
-	ports := make(map[*Edge][2]Compass, len(edges))
+	ports := make(map[*ledge][2]Compass, len(edges))
 	for _, edge := range edges {
 		ports[edge] = [2]Compass{edge.FromPort, edge.ToPort}
 		edge.FromPort = compassInRankFrame(edge.FromPort, graphdef.RankDir)
@@ -288,13 +296,12 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		}
 		left += size.X + 2*graphdef.NodePadding
 	}
-	return nil
 }
 
 // uniqueEdges returns edges without repeats of the same edge
-func uniqueEdges(edges []*Edge) []*Edge {
-	seen := make(map[*Edge]bool, len(edges))
-	return slices.DeleteFunc(slices.Clone(edges), func(edge *Edge) bool {
+func uniqueEdges(edges []*ledge) []*ledge {
+	seen := make(map[*ledge]bool, len(edges))
+	return slices.DeleteFunc(slices.Clone(edges), func(edge *ledge) bool {
 		repeat := seen[edge]
 		seen[edge] = true
 		return repeat
@@ -415,8 +422,8 @@ func (graph *Graph) validate() error {
 // components splits the graph into connected components, each a Graph
 // sharing the original nodes, edges and settings. Components are laid out
 // independently and then placed side by side.
-func components(graphdef *Graph) []*Graph {
-	index := make(map[*Node]int, len(graphdef.Nodes))
+func components(graphdef *lgraph) []*lgraph {
+	index := make(map[*lnode]int, len(graphdef.Nodes))
 	for i, node := range graphdef.Nodes {
 		index[node] = i
 	}
@@ -431,8 +438,8 @@ func components(graphdef *Graph) []*Graph {
 		}
 		return i
 	}
-	find := func(n *Node) *Node { return graphdef.Nodes[findIndex(index[n])] }
-	union := func(a, b *Node) { parent[findIndex(index[a])] = findIndex(index[b]) }
+	find := func(n *lnode) *lnode { return graphdef.Nodes[findIndex(index[n])] }
+	union := func(a, b *lnode) { parent[findIndex(index[a])] = findIndex(index[b]) }
 	for _, edge := range graphdef.Edges {
 		union(edge.From, edge.To)
 	}
@@ -447,15 +454,15 @@ func components(graphdef *Graph) []*Graph {
 		}
 	}
 	// min/max pinned nodes share a rank, treat them as connected
-	for _, pinned := range [][]*Node{graphdef.MinRank, graphdef.MaxRank} {
+	for _, pinned := range [][]*lnode{graphdef.MinRank, graphdef.MaxRank} {
 		for _, node := range pinned {
 			union(pinned[0], node)
 		}
 	}
 
-	byRoot := map[*Node]*Graph{}
-	var result []*Graph
-	sub := func(node *Node) *Graph {
+	byRoot := map[*lnode]*lgraph{}
+	var result []*lgraph
+	sub := func(node *lnode) *lgraph {
 		root := find(node)
 		graph := byRoot[root]
 		if graph == nil {
@@ -499,22 +506,22 @@ func components(graphdef *Graph) []*Graph {
 
 // hierarchicalComponent lays out one connected graph top to bottom,
 // placing it to the right of whatever the previous components occupy.
-func hierarchicalComponent(graphdef *Graph, opts Options) {
-	nodes := map[*Node]hier.ID{}
-	reverse := map[hier.ID]*Node{}
+func hierarchicalComponent(graphdef *lgraph, opts Options) {
+	nodes := map[*lnode]hier.ID{}
+	reverse := map[hier.ID]*lnode{}
 
 	// nodes with self-loops need room on their right for the loop and
 	// its label
 	loopWidth := max(graphdef.NodePadding, 2*graphdef.EdgePadding)
 	loopHeight := min(loopWidth, graphdef.RowPadding)
-	loopExtra := map[*Node]Length{}
-	loopLeft := map[*Node]Length{} // loops with ports may also pass the left side
+	loopExtra := map[*lnode]Length{}
+	loopLeft := map[*lnode]Length{} // loops with ports may also pass the left side
 	// a node widened for loops sits left of the widened box's center
-	loopShift := func(node *Node) Length { return -(loopExtra[node] - loopLeft[node]) / 2 }
+	loopShift := func(node *lnode) Length { return -(loopExtra[node] - loopLeft[node]) / 2 }
 	// with packed edge ends, the first end of a node is where its
 	// edges line up, this far from its center
 	pack := graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho
-	packed := func(node *Node) Length {
+	packed := func(node *lnode) Length {
 		if !pack || node.Shape == PointShape {
 			return 0
 		}
@@ -572,7 +579,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 	// labeled edges need a virtual node to hang the label on; doubling the
 	// ranks guarantees every edge has one in the middle
-	labels := map[[2]hier.ID][]*Edge{} // by unordered node pair
+	labels := map[[2]hier.ID][]*ledge{} // by unordered node pair
 	pair := func(a, b hier.ID) [2]hier.ID {
 		if a > b {
 			a, b = b, a
@@ -594,7 +601,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	hier.AddVirtuals(filledGraph)
 
 	// cluster borders
-	clusters := map[*Cluster]*hier.Cluster{}
+	clusters := map[*lcluster]*hier.Cluster{}
 	for _, clusterdef := range graphdef.Clusters {
 		cluster := &hier.Cluster{}
 		if clusterdef.Label != "" && !sideways(graphdef.RankDir) {
@@ -618,7 +625,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	hier.OrderRanksN(orderedGraph, opts.OrderIterations)
 
 	// the middle virtual node of every labeled edge carries the labels
-	labelNode := map[*hier.Node][]*Edge{}
+	labelNode := map[*hier.Node][]*ledge{}
 	for _, source := range orderedGraph.Nodes {
 		if source.Virtual {
 			continue
@@ -642,7 +649,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	// packed edge ends need room on each side of a node for its ends an
 	// edge padding apart, from an edge padding in
 	if pack {
-		ends := map[*Node][2]int{} // above and below, by rank
+		ends := map[*lnode][2]int{} // above and below, by rank
 		for _, edge := range graphdef.Edges {
 			from, to := orderedGraph.Nodes[nodes[edge.From]].Rank, orderedGraph.Nodes[nodes[edge.To]].Rank
 			if from == to {
@@ -749,7 +756,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	// vertically, with room for the label on top; inner boxes are
 	// finished first so that outer boxes can enclose them
 	byDepth := slices.Clone(graphdef.Clusters)
-	slices.SortStableFunc(byDepth, func(a, b *Cluster) int { return b.depth() - a.depth() })
+	slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
 	for _, clusterdef := range byDepth {
 		clusterdef.TopLeft = Vector{Length(math.Inf(1)), Length(math.Inf(1))}
 		clusterdef.BottomRight = Vector{Length(math.Inf(-1)), Length(math.Inf(-1))}
@@ -784,7 +791,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// real nodes per rank, obstacles for edge routing
-	byRank := make([][]*Node, len(positionedGraph.ByRank))
+	byRank := make([][]*lnode, len(positionedGraph.ByRank))
 	for _, node := range positionedGraph.Nodes {
 		if !node.Virtual {
 			byRank[node.Rank] = append(byRank[node.Rank], reverse[node.ID])
@@ -900,7 +907,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	}
 
 	// edges between the same pair of nodes share one route; spread them out
-	pairKey := func(edge *Edge) [2]hier.ID {
+	pairKey := func(edge *ledge) [2]hier.ID {
 		a, b := nodes[edge.From], nodes[edge.To]
 		if a > b {
 			a, b = b, a
@@ -1043,9 +1050,9 @@ func drawPoint(v Vector) draw.Point { return draw.Point{X: float64(v.X), Y: floa
 // spreadWaypoints moves interior path points that several edges share
 // (detours around the same node) sideways so that the edges don't run on
 // top of each other, in the order they head so that they don't cross.
-func spreadWaypoints(edges []*Edge, pad Length) {
+func spreadWaypoints(edges []*ledge, pad Length) {
 	type at struct {
-		edge  *Edge
+		edge  *ledge
 		index int
 		next  Vector // original following point
 	}
@@ -1083,19 +1090,19 @@ func spreadWaypoints(edges []*Edge, pad Length) {
 // apart along the outline so that arrowheads don't stack, pushing the
 // crowded ones apart around their mean direction. Edges pinned to a port
 // keep their point.
-func spreadEnds(graph *Graph, minSep Length) {
+func spreadEnds(graph *lgraph, minSep Length) {
 	type end struct {
-		edge  *Edge
+		edge  *ledge
 		start bool
 		angle float64
 		fixed bool // a loop's attachment, which stays where it is
 	}
-	byNode := map[*Node][]end{}
+	byNode := map[*lnode][]end{}
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			continue
 		}
-		angle := func(node *Node, p Vector) float64 {
+		angle := func(node *lnode, p Vector) float64 {
 			return math.Atan2(float64(p.Y-node.Center.Y), float64(p.X-node.Center.X))
 		}
 		if edge.From == edge.To {
@@ -1165,10 +1172,10 @@ func spreadEnds(graph *Graph, minSep Length) {
 
 // layoutPinned keeps node positions and gives edges without a path a
 // straight line, labels without a position the middle of their path.
-func layoutPinned(graph *Graph) {
+func layoutPinned(graph *lgraph) {
 	boxClusters(graph)
 	loops := countLoops(graph.Edges)
-	given := map[*Edge]bool{} // label positions that stay
+	given := map[*ledge]bool{} // label positions that stay
 	for _, edge := range graph.Edges {
 		given[edge] = edge.LabelPos != (Vector{})
 	}
@@ -1209,10 +1216,10 @@ func layoutPinned(graph *Graph) {
 // layouts that place nodes without making room for clusters. A box that
 // already encloses its contents is kept as given; any other, such as one
 // left from an earlier layout of moved nodes, is replaced.
-func boxClusters(graph *Graph) {
+func boxClusters(graph *lgraph) {
 	pad := max(graph.EdgePadding, graph.RowPadding/2)
 	byDepth := slices.Clone(graph.Clusters)
-	slices.SortStableFunc(byDepth, func(a, b *Cluster) int { return b.depth() - a.depth() })
+	slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
 	for _, cluster := range byDepth {
 		inf := Length(math.Inf(1))
 		tl, br := Vector{inf, inf}, Vector{-inf, -inf}
@@ -1249,12 +1256,12 @@ func boxClusters(graph *Graph) {
 // nudgeLabels slides edge labels sideways along their rank until they
 // clear every edge path and the labels placed before them. Labels of the
 // edges in keep stay where they are, and the others avoid them.
-func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edge]bool) {
+func nudgeLabels(edges []*ledge, nodes []*lnode, pad, radius Length, keep map[*ledge]bool) {
 	paths := make([][]Vector, len(edges))
 	for i, edge := range edges {
 		paths[i] = flattenPath(edge.Path, radius, pad)
 	}
-	var placed []*Edge
+	var placed []*ledge
 	for _, edge := range edges {
 		if keep[edge] && edge.Label != "" {
 			placed = append(placed, edge)
@@ -1262,7 +1269,7 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 	}
 	// clearOf reports whether a label of edge at at stays clear of nodes,
 	// placed labels and, with lines, every edge path
-	clearOf := func(edge *Edge, at Vector, lines bool) bool {
+	clearOf := func(edge *ledge, at Vector, lines bool) bool {
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
 		tl := at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y})
@@ -1291,7 +1298,7 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 		}
 		return true
 	}
-	clear := func(edge *Edge, at Vector) bool { return clearOf(edge, at, true) }
+	clear := func(edge *ledge, at Vector) bool { return clearOf(edge, at, true) }
 	for _, edge := range edges {
 		if edge.Label == "" || len(edge.Path) < 2 || keep[edge] {
 			continue
@@ -1389,7 +1396,7 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 }
 
 // offsetPath shifts the path sideways by dx and re-clips the ends to the nodes
-func offsetPath(path []Vector, dx Length, from, to *Node) []Vector {
+func offsetPath(path []Vector, dx Length, from, to *lnode) []Vector {
 	out := make([]Vector, len(path))
 	for i, p := range path {
 		out[i] = Vector{X: p.X + dx, Y: p.Y}
@@ -1414,12 +1421,12 @@ func reversePath(path []Vector) []Vector {
 // pairs numbers the edges between each pair of nodes, which run side by
 // side in pinned and force layouts
 type pairs struct {
-	order        map[*Node]int // keeps a pair's direction the same both ways
-	count, index map[[2]*Node]int
+	order        map[*lnode]int // keeps a pair's direction the same both ways
+	count, index map[[2]*lnode]int
 }
 
-func newPairs(graph *Graph) *pairs {
-	p := &pairs{order: map[*Node]int{}, count: map[[2]*Node]int{}, index: map[[2]*Node]int{}}
+func newPairs(graph *lgraph) *pairs {
+	p := &pairs{order: map[*lnode]int{}, count: map[[2]*lnode]int{}, index: map[[2]*lnode]int{}}
 	for i, node := range graph.Nodes {
 		p.order[node] = i
 	}
@@ -1431,16 +1438,16 @@ func newPairs(graph *Graph) *pairs {
 	return p
 }
 
-func (p *pairs) key(edge *Edge) [2]*Node {
+func (p *pairs) key(edge *ledge) [2]*lnode {
 	if p.order[edge.From] > p.order[edge.To] {
-		return [2]*Node{edge.To, edge.From}
+		return [2]*lnode{edge.To, edge.From}
 	}
-	return [2]*Node{edge.From, edge.To}
+	return [2]*lnode{edge.From, edge.To}
 }
 
 // shift returns the offset of the next edge between its nodes, spacing
 // apart, across the line from the first node of the pair to the second
-func (p *pairs) shift(edge *Edge, spacing Length) Vector {
+func (p *pairs) shift(edge *ledge, spacing Length) Vector {
 	key := p.key(edge)
 	n := p.count[key]
 	if n < 2 {
@@ -1460,11 +1467,11 @@ func (p *pairs) shift(edge *Edge, spacing Length) Vector {
 // loopCount numbers the self-loops without ports of each node, which
 // stack down its side
 type loopCount struct {
-	count, index map[*Node]int
+	count, index map[*lnode]int
 }
 
-func countLoops(edges []*Edge) *loopCount {
-	loops := &loopCount{count: map[*Node]int{}, index: map[*Node]int{}}
+func countLoops(edges []*ledge) *loopCount {
+	loops := &loopCount{count: map[*lnode]int{}, index: map[*lnode]int{}}
 	for _, edge := range edges {
 		if edge.From == edge.To && edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
 			loops.count[edge.From]++
@@ -1474,7 +1481,7 @@ func countLoops(edges []*Edge) *loopCount {
 }
 
 // next returns the place of the self-loop edge among its node's loops
-func (loops *loopCount) next(edge *Edge) int {
+func (loops *loopCount) next(edge *ledge) int {
 	if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
 		return 0
 	}
@@ -1483,7 +1490,7 @@ func (loops *loopCount) next(edge *Edge) int {
 	return k
 }
 
-func loopPath(edge *Edge, width, height Length, k, n int) []Vector {
+func loopPath(edge *ledge, width, height Length, k, n int) []Vector {
 	node := edge.From
 	right := node.Right() + width
 	// the n loops without ports stack down the right side, loop k in the
@@ -1563,11 +1570,11 @@ func loopPath(edge *Edge, width, height Length, k, n int) []Vector {
 // obstacles indexes the real nodes per rank, sorted by x, with the
 // largest padded radius per rank for quick rejection.
 type obstacles struct {
-	byRank               [][]*Node
+	byRank               [][]*lnode
 	rowRadius, colRadius []Length
 }
 
-func newObstacles(byRank [][]*Node, pad Length) *obstacles {
+func newObstacles(byRank [][]*lnode, pad Length) *obstacles {
 	obs := &obstacles{byRank: byRank, rowRadius: make([]Length, len(byRank)), colRadius: make([]Length, len(byRank))}
 	for r, nodes := range byRank {
 		sort.Slice(nodes, func(i, k int) bool { return nodes[i].Center.X < nodes[k].Center.X })
@@ -1583,12 +1590,12 @@ func newObstacles(byRank [][]*Node, pad Length) *obstacles {
 // node. Segment i connects rank firstRank+i to firstRank+i+1; only nodes on
 // those two ranks can be hit. Obstacles on the lower rank are passed above,
 // on the upper rank below.
-func routeAround(path []Vector, obs *obstacles, from, to *Node, pad Length) []Vector {
-	var lastHit *Node
+func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []Vector {
+	var lastHit *lnode
 	inserted := 0
 	for i := 0; i+1 < len(path) && inserted < 16; i++ {
 		a, b := path[i], path[i+1]
-		var hit *Node
+		var hit *lnode
 		hitDist := Length(math.Inf(1))
 		// every rank whose row the segment's y span touches
 		top, bottom := min(a.Y, b.Y), max(a.Y, b.Y)
@@ -1660,13 +1667,13 @@ func absLength(v Length) Length {
 }
 
 // segmentHitsBox reports whether segment ab intersects node's box grown by pad
-func segmentHitsBox(a, b Vector, node *Node, pad Length) bool {
+func segmentHitsBox(a, b Vector, node *lnode, pad Length) bool {
 	return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})
 }
 
 // routeAroundClusters detours segments that cut across a cluster box the
 // edge does not belong to, going around the nearest corner.
-func routeAroundClusters(path []Vector, clusters []*Cluster, from, to *Node, pad Length) []Vector {
+func routeAroundClusters(path []Vector, clusters []*lcluster, from, to *lnode, pad Length) []Vector {
 	for _, cluster := range clusters {
 		if slices.Contains(cluster.Nodes, from) || slices.Contains(cluster.Nodes, to) {
 			continue

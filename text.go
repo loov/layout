@@ -10,12 +10,12 @@ import (
 // for horizontal runs and arrowheads: more fan-out needs more rows.
 // Sideways, it packs edge ends along the top of nodes, see PackEdgeEnds;
 // otherwise it makes nodes with self-loops tall enough for the loop ends.
-func (graph *Graph) prepareText() {
+func (graph *lgraph) prepareText() {
 	graph.Splines = SplinesOrtho
 	if graph.LineHeight <= 0 {
 		graph.LineHeight = 16
 	}
-	fan := map[*Node]int{}
+	fan := map[*lnode]int{}
 	labels := false
 	for _, edge := range graph.Edges {
 		fan[edge.From]++
@@ -80,7 +80,7 @@ func (graph *Graph) prepareText() {
 	// self-loops stack down the right side, each leaving and returning a
 	// quarter of its share from the share's ends: four rows a loop put
 	// them a row above and below its middle
-	loops := map[*Node]int{}
+	loops := map[*lnode]int{}
 	for _, edge := range graph.Edges {
 		if edge.From == edge.To {
 			loops[edge.From]++
@@ -99,7 +99,7 @@ func (graph *Graph) prepareText() {
 // between the dividers. Fields share the width beyond their estimated
 // sizes evenly, so a field grows by the record's growth divided by the
 // fields beside it at each level.
-func (graph *Graph) reserveRecord(node *Node, cellW Length) {
+func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 	if node.FontSize <= 0 {
 		// as the layout sizes the fields
 		node.FontSize = graph.FontSize

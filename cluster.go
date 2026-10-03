@@ -19,11 +19,3 @@ type Cluster struct {
 	// computed in layouting
 	TopLeft, BottomRight Vector
 }
-
-func (cluster *Cluster) depth() int {
-	d := 0
-	for c := cluster; c != nil; c = c.Parent {
-		d++
-	}
-	return d
-}

@@ -10,9 +10,9 @@ import (
 // Vertical runs stay at the waypoint x; every horizontal jog is placed in
 // the channel between the two ranks, on its own track when it overlaps
 // another jog there. Loops and flat edges keep their paths.
-func orthoEdges(graph *Graph, rows [][2]Length, pad Length, pack bool) {
+func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	type jog struct {
-		edge   *Edge
+		edge   *ledge
 		index  int // index of the segment start in edge.Path
 		x0, x1 Length
 		xin    Length // x where the edge enters the channel from above
@@ -33,7 +33,7 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length, pack bool) {
 	}
 
 	// point on the node outline at x, on its bottom or top side
-	outline := func(node *Node, x Length, bottom bool) Vector {
+	outline := func(node *lnode, x Length, bottom bool) Vector {
 		dx := float64(x - node.Center.X)
 		dy := float64(node.Radius.Y)
 		switch node.Shape {
@@ -52,17 +52,17 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length, pack bool) {
 	// edge ends per node side, spread across the node width in the order
 	// of where they head so that stubs neither coincide nor cross
 	type end struct {
-		edge    *Edge
+		edge    *ledge
 		start   bool
 		towards Length
 		x       Length // where the end attaches before spreading
 	}
 	type side struct {
-		node   *Node
+		node   *lnode
 		bottom bool
 	}
 	ends := map[side][]end{}
-	routed := func(edge *Edge) bool {
+	routed := func(edge *ledge) bool {
 		return edge.From != edge.To && len(edge.Path) >= 2 && edge.Path[0].Y != edge.Path[len(edge.Path)-1].Y
 	}
 
@@ -242,7 +242,7 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length, pack bool) {
 
 	// insert the jog points per edge, later segments first so that
 	// earlier indices stay valid
-	byEdge := map[*Edge][]*jog{}
+	byEdge := map[*ledge][]*jog{}
 	for _, jogs := range channels {
 		for _, j := range jogs {
 			byEdge[j.edge] = append(byEdge[j.edge], j)
