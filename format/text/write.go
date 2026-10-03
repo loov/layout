@@ -11,6 +11,7 @@ import (
 	"math"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // Prepare sets ortho edges and spacing that leaves rows between ranks
@@ -60,7 +61,7 @@ func Prepare(graph *layout.Graph) {
 		}
 		switch shape {
 		case layout.Record:
-			rows := recordRows(layout.ParseRecord(node.DefaultLabel()))
+			rows := recordRows(draw.ParseRecord(node.DefaultLabel()))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*layout.Length(rows+1)/2)
 			reserveRecord(graph, node, cellW)
 		default:

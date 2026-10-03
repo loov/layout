@@ -2,8 +2,8 @@ package layout
 
 import (
 	"math"
-	"strings"
-	"unicode"
+
+	"github.com/loov/layout/internal/draw"
 )
 
 // Node is a vertex in a graph. Radius is half the node size; Center is
@@ -77,83 +77,17 @@ func (node *Node) DefaultLabel() string {
 // textRadius returns the half size of multi-line text, measuring each
 // line with graph.MeasureText or the built-in approximation.
 func (graph *Graph) textRadius(text string, fontName string, fontSize Length) Vector {
-	lineHeight := graph.LineHeight
-	if lineHeight < fontSize {
-		lineHeight = fontSize
-	}
-	measure := graph.MeasureText
-	if measure == nil {
-		measure = approxTextWidth
-	}
-
-	size := Vector{}
-	lines := strings.Split(text, "\n")
-	for _, line := range lines {
-		size.X = max(size.X, measure(line, fontName, fontSize).X)
-	}
-	size.Y = Length(len(lines)) * lineHeight * 0.5
-	return size
+	w, h := draw.TextSize(text, float64(graph.LineHeight), float64(fontSize), graph.lineWidth(fontName, fontSize))
+	return Vector{Length(w) / 2, Length(h) / 2}
 }
 
-// approxTextWidth estimates the half size of one line of proportional text
-// from per-character width classes.
-func approxTextWidth(line string, _ string, fontSize Length) Vector {
-	width := Length(0)
-	for _, r := range line {
-		var em Length
-		switch {
-		case IsWide(r):
-			em = 1
-		case IsZeroWidth(r):
-			em = 0
-		case strings.ContainsRune("il.,:;'|!I", r):
-			em = 0.28
-		case strings.ContainsRune("jtfr ()[]-", r):
-			em = 0.36
-		case strings.ContainsRune("mwMW@", r):
-			em = 0.85
-		case unicode.IsUpper(r):
-			em = 0.68
-		default:
-			em = 0.52
-		}
-		width += em * fontSize
+// lineWidth returns the width of one line of text measured with
+// graph.MeasureText, or nil to use the built-in approximation.
+func (graph *Graph) lineWidth(fontName string, fontSize Length) func(line string) float64 {
+	if graph.MeasureText == nil {
+		return nil
 	}
-	return Vector{X: width / 2, Y: fontSize / 2}
-}
-
-// IsWide reports whether r is a wide character: East Asian wide and
-// fullwidth characters and emoji, about an em wide in proportional fonts
-// and two columns wide in terminals.
-func IsWide(r rune) bool {
-	for _, span := range [...][2]rune{
-		{0x1100, 0x115F},   // Hangul Jamo initials
-		{0x2E80, 0x303E},   // CJK radicals, symbols and punctuation
-		{0x3041, 0x33FF},   // kana, Bopomofo, Hangul compatibility, CJK compatibility
-		{0x3400, 0x4DBF},   // CJK extension A
-		{0x4E00, 0x9FFF},   // CJK unified ideographs
-		{0xA000, 0xA4CF},   // Yi
-		{0xAC00, 0xD7A3},   // Hangul syllables
-		{0xF900, 0xFAFF},   // CJK compatibility ideographs
-		{0xFE30, 0xFE4F},   // CJK compatibility forms
-		{0xFF00, 0xFF60},   // fullwidth forms
-		{0xFFE0, 0xFFE6},   // fullwidth signs
-		{0x1F300, 0x1F64F}, // pictographs and emoticons
-		{0x1F900, 0x1F9FF}, // supplemental pictographs
-		{0x20000, 0x3FFFD}, // CJK extensions B and later
-	} {
-		if span[0] <= r && r <= span[1] {
-			return true
-		}
-	}
-	return false
-}
-
-// IsZeroWidth reports whether r takes no room of its own: combining
-// marks, joiners and variation selectors, which modify the character
-// before them.
-func IsZeroWidth(r rune) bool {
-	return unicode.In(r, unicode.Mn, unicode.Me, unicode.Cf) || 0xFE00 <= r && r <= 0xFE0F
+	return func(line string) float64 { return 2 * float64(graph.MeasureText(line, fontName, fontSize).X) }
 }
 
 // TopLeft returns the top left corner of the node bounds.

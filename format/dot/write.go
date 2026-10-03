@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // Write writes the graphs as dot with the computed layout, one after
@@ -229,7 +230,7 @@ func colorID(color layout.Color) string {
 // labelID returns a label as a dot HTML string when it is HTML-like with
 // nesting angle brackets, which keep it in one piece, and quoted otherwise
 func labelID(label string) string {
-	if !layout.IsHTMLLabel(label) {
+	if !draw.IsHTMLLabel(label) {
 		return quote(label)
 	}
 	depth := 0

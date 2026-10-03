@@ -6,11 +6,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-// IsHTMLLabel reports whether label is an HTML-like label, "<...>".
-func IsHTMLLabel(label string) bool {
-	return len(label) >= 2 && label[0] == '<' && label[len(label)-1] == '>'
-}
-
 // htmlLabelRadius estimates the half size of an HTML-like label: tables
 // sum their cell texts per row, everything else is lines split at <br>.
 func (graph *Graph) htmlLabelRadius(label, fontName string, fontSize Length) Vector {

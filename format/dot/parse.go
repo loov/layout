@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 
 	"gonum.org/v1/gonum/graph/formats/dot"
 	"gonum.org/v1/gonum/graph/formats/dot/ast"
@@ -95,7 +96,7 @@ func unquoteStmts(stmts []ast.Stmt, literal map[string]bool) {
 // unquoteID unquotes a node id, noting quoted ids that read as HTML
 func unquoteID(id string, literal map[string]bool) string {
 	unquoted := unquote(id)
-	if unquoted != id && layout.IsHTMLLabel(unquoted) {
+	if unquoted != id && draw.IsHTMLLabel(unquoted) {
 		literal[unquoted] = true
 	}
 	return unquoted
@@ -142,7 +143,7 @@ func expandLabel(raw string, names ...string) string {
 	}
 	escapes := append([]string{`\\`, `\`, `\"`, `"`, `\n`, "\n", `\l`, "\n", `\r`, "\n"}, names...)
 	label := strings.TrimSuffix(strings.NewReplacer(escapes...).Replace(raw[1:len(raw)-1]), "\n")
-	if layout.IsHTMLLabel(label) {
+	if draw.IsHTMLLabel(label) {
 		label = literalMark + label
 	}
 	return label

@@ -5,6 +5,7 @@ import (
 	"unicode"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // line direction bits of a cell
@@ -181,10 +182,10 @@ func (c *canvas) text(x, y int, s string) {
 	c.ink = c.font
 	for _, r := range s {
 		switch {
-		case layout.IsZeroWidth(r), unicode.IsControl(r):
+		case draw.IsZeroWidth(r), unicode.IsControl(r):
 			// a cell holds one character; marks on it are dropped, and
 			// control characters would garble the terminal
-		case layout.IsWide(r):
+		case draw.IsWide(r):
 			c.set(x, y, r)
 			c.set(x+1, y, covered)
 			c.hold(x, y)
@@ -221,7 +222,7 @@ func (c *canvas) unpair(x, y int, before bool) {
 	if before && c.cells[i] == covered && x > 0 {
 		c.cells[i-1] = ' '
 	}
-	if layout.IsWide(c.cells[i]) && x+1 < c.w && c.cells[i+1] == covered {
+	if draw.IsWide(c.cells[i]) && x+1 < c.w && c.cells[i+1] == covered {
 		c.cells[i+1] = ' '
 	}
 }
@@ -237,8 +238,8 @@ func width(s string) int {
 	n := 0
 	for _, r := range s {
 		switch {
-		case layout.IsZeroWidth(r), unicode.IsControl(r):
-		case layout.IsWide(r):
+		case draw.IsZeroWidth(r), unicode.IsControl(r):
+		case draw.IsWide(r):
 			n += 2
 		default:
 			n++
@@ -288,10 +289,10 @@ func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
 // record draws field texts centered in their boxes with dividers between
 // sibling fields; row maps the top and bottom of fields to the rows of the
 // borders and dividers around them
-func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row func(layout.Length) int) {
+func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(layout.Length) int) {
 	if len(rec.Fields) == 0 {
-		x0, y0 := col(origin.X+rec.TopLeft.X), row(origin.Y+rec.TopLeft.Y)
-		x1, y1 := col(origin.X+rec.BottomRight.X), row(origin.Y+rec.BottomRight.Y)
+		x0, y0 := col(origin.X+layout.Length(rec.X0)), row(origin.Y+layout.Length(rec.Y0))
+		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
 		lines := strings.Split(rec.Text, "\n")
 		for i, line := range lines {
 			c.text((x0+x1+1-width(line))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
@@ -304,13 +305,13 @@ func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row 
 			continue
 		}
 		if rec.Vertical {
-			y := row(origin.Y + field.TopLeft.Y)
-			for x := col(origin.X+field.TopLeft.X) + 1; x < col(origin.X+field.BottomRight.X); x++ {
+			y := row(origin.Y + layout.Length(field.Y0))
+			for x := col(origin.X+layout.Length(field.X0)) + 1; x < col(origin.X+layout.Length(field.X1)); x++ {
 				c.set(x, y, '─')
 			}
 		} else {
-			x := col(origin.X + field.TopLeft.X)
-			for y := row(origin.Y+field.TopLeft.Y) + 1; y < row(origin.Y+field.BottomRight.Y); y++ {
+			x := col(origin.X + layout.Length(field.X0))
+			for y := row(origin.Y+layout.Length(field.Y0)) + 1; y < row(origin.Y+layout.Length(field.Y1)); y++ {
 				c.set(x, y, '│')
 			}
 		}
@@ -411,10 +412,20 @@ func sign(v int) int {
 	return 1
 }
 
+// layoutRecord computes the record fields of a node, measuring text as
+// the layout did
+func layoutRecord(graph *layout.Graph, node *layout.Node) *draw.Record {
+	var lineWidth func(string) float64
+	if graph.MeasureText != nil {
+		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, node.FontSize).X) }
+	}
+	return draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y), float64(graph.LineHeight), float64(node.FontSize), lineWidth)
+}
+
 // recordRows returns the rows the fields of a record need inside its
 // box: a row per line of text, and one per divider between fields
 // stacked vertically
-func recordRows(rec *layout.RecordField) int {
+func recordRows(rec *draw.Record) int {
 	if len(rec.Fields) == 0 {
 		return strings.Count(rec.Text, "\n") + 1
 	}
@@ -443,11 +454,11 @@ func reserveRecord(graph *layout.Graph, node *layout.Node, cellW layout.Length) 
 		defer func() { node.FontSize = 0 }()
 	}
 	grow := layout.Length(0)
-	var walk func(rec *layout.RecordField, share layout.Length)
-	walk = func(rec *layout.RecordField, share layout.Length) {
+	var walk func(rec *draw.Record, share layout.Length)
+	walk = func(rec *draw.Record, share layout.Length) {
 		if len(rec.Fields) == 0 {
 			need := layout.Length(textWidth(rec.Text)+2) * cellW
-			grow = max(grow, (need-(rec.BottomRight.X-rec.TopLeft.X))*share)
+			grow = max(grow, (need-layout.Length(rec.X1-rec.X0))*share)
 			return
 		}
 		if !rec.Vertical {
@@ -457,6 +468,6 @@ func reserveRecord(graph *layout.Graph, node *layout.Node, cellW layout.Length) 
 			walk(field, share)
 		}
 	}
-	walk(graph.LayoutRecord(node), 1)
+	walk(layoutRecord(graph, node), 1)
 	node.Radius.X += grow / 2
 }

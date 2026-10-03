@@ -3,15 +3,14 @@ package text
 import (
 	"strings"
 
+	"github.com/loov/layout/internal/draw"
 	"golang.org/x/net/html"
-
-	"github.com/loov/layout"
 )
 
 // plain returns a label as text draws it: an HTML-like label without its
 // markup, with a line per <br> and per table row and cells apart
 func plain(label string) string {
-	if !layout.IsHTMLLabel(label) {
+	if !draw.IsHTMLLabel(label) {
 		return label
 	}
 	nodes, err := html.ParseFragment(strings.NewReader(label[1:len(label)-1]), &html.Node{Type: html.ElementNode})

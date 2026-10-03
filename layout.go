@@ -7,6 +7,7 @@ import (
 	"slices"
 	"sort"
 
+	"github.com/loov/layout/internal/draw"
 	"github.com/loov/layout/internal/hier"
 )
 
@@ -57,13 +58,14 @@ func (graph *Graph) AssignMissingValues() {
 		}
 		if !node.FixedSize && node.Shape != PointShape {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
-			if IsHTMLLabel(node.DefaultLabel()) {
+			if draw.IsHTMLLabel(node.DefaultLabel()) {
 				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			}
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
 			if node.Shape == Record {
-				labelRadius = graph.recordRadius(node)
+				w, h := draw.RecordSize(node.DefaultLabel(), float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize))
+				labelRadius = Vector{Length(w) / 2, Length(h) / 2}
 			}
 
 			if node.Radius.X < labelRadius.X {
@@ -95,7 +97,7 @@ func (graph *Graph) AssignMissingValues() {
 		if edge.FontSize <= 0 {
 			edge.FontSize = graph.FontSize
 		}
-		if IsHTMLLabel(edge.Label) {
+		if draw.IsHTMLLabel(edge.Label) {
 			edge.LabelRadius = graph.htmlLabelRadius(edge.Label, edge.FontName, edge.FontSize)
 		} else if edge.Label != "" {
 			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)
@@ -1025,13 +1027,16 @@ func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
 	out := []Vector{path[0]}
 	for i := 1; i+1 < len(path); i++ {
 		prev, p, next := path[i-1], path[i], path[i+1]
-		r := CornerRadius(prev, p, next, radius, maxDeviation)
+		r := Length(draw.CornerRadius(drawPoint(prev), drawPoint(p), drawPoint(next), float64(radius), float64(maxDeviation)))
 		in, exit := towards(p, prev, r), towards(p, next, r)
 		mid := Vector{X: (in.X + 2*p.X + exit.X) / 4, Y: (in.Y + 2*p.Y + exit.Y) / 4}
 		out = append(out, in, mid, exit)
 	}
 	return append(out, path[len(path)-1])
 }
+
+// drawPoint converts v for the draw package
+func drawPoint(v Vector) draw.Point { return draw.Point{X: float64(v.X), Y: float64(v.Y)} }
 
 // spreadWaypoints moves interior path points that several edges share
 // (detours around the same node) sideways so that the edges don't run on

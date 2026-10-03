@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // drawCluster draws the dashed frame and fill of a cluster
@@ -59,9 +60,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
-	var rec *layout.RecordField
+	var rec *draw.Record
 	if node.Shape == layout.Record {
-		rec = graph.LayoutRecord(node)
+		rec = layoutRecord(graph, node)
 		y1 = max(y1, y0+recordRows(rec)+1)
 	} else {
 		y1 = max(y1, y0+len(lines)+1)

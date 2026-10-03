@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 func TestSubgraphRankAttributesAcceptBothForms(t *testing.T) {
@@ -258,11 +259,11 @@ func TestQuotedLabelsAreNotHTML(t *testing.T) {
 	}
 	g := graphs[0]
 	for _, label := range []string{g.Node("a").Label, g.Clusters[0].Label, g.Edges[0].Label} {
-		if layout.IsHTMLLabel(label) {
+		if draw.IsHTMLLabel(label) {
 			t.Errorf("quoted label %q reads as HTML", label)
 		}
 	}
-	if !layout.IsHTMLLabel(g.Node("b").Label) {
+	if !draw.IsHTMLLabel(g.Node("b").Label) {
 		t.Errorf("HTML label %q lost", g.Node("b").Label)
 	}
 	if got := g.Node("c").Label; got != "<f0>|<f1>" {
@@ -323,10 +324,10 @@ func TestQuotedHTMLID(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := graphs[0]
-	if label := graph.Node("<init>").DefaultLabel(); layout.IsHTMLLabel(label) {
+	if label := graph.Node("<init>").DefaultLabel(); draw.IsHTMLLabel(label) {
 		t.Errorf("quoted id gives an HTML label %q", label)
 	}
-	if label := graph.Node("<<B>bold</B>>").DefaultLabel(); !layout.IsHTMLLabel(label) {
+	if label := graph.Node("<<B>bold</B>>").DefaultLabel(); !draw.IsHTMLLabel(label) {
 		t.Errorf("HTML id gives a plain label %q", label)
 	}
 }

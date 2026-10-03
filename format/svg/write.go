@@ -12,6 +12,7 @@ import (
 	"unicode"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 	"golang.org/x/net/html"
 )
 
@@ -134,7 +135,7 @@ func roundedPath(path []layout.Vector, radius, maxDeviation layout.Length) strin
 			line.WriteString("L" + vec(p.X, p.Y))
 			continue
 		}
-		r := layout.CornerRadius(prev, p, next, radius, maxDeviation)
+		r := layout.Length(draw.CornerRadius(drawPoint(prev), drawPoint(p), drawPoint(next), float64(radius), float64(maxDeviation)))
 		in, out := towards(p, prev, r), towards(p, next, r)
 		line.WriteString("L" + vec(in.X, in.Y))
 		line.WriteString("Q" + vec(p.X, p.Y) + vec(out.X, out.Y))
@@ -158,13 +159,26 @@ func markerID(arrow layout.Arrow) string {
 	return ""
 }
 
+// drawPoint converts v for the draw package
+func drawPoint(v layout.Vector) draw.Point { return draw.Point{X: float64(v.X), Y: float64(v.Y)} }
+
+// layoutRecord computes the record fields of a node, measuring text as
+// the layout did
+func layoutRecord(graph *layout.Graph, node *layout.Node) *draw.Record {
+	var lineWidth func(string) float64
+	if graph.MeasureText != nil {
+		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, node.FontSize).X) }
+	}
+	return draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y), float64(graph.LineHeight), float64(node.FontSize), lineWidth)
+}
+
 // writeRecord draws record fields: separators between sub-fields and
 // centered text in leaf fields
-func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *layout.RecordField, origin layout.Vector) {
+func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *draw.Record, origin layout.Vector) {
 	if len(rec.Fields) == 0 {
 		center := layout.Vector{
-			X: origin.X + (rec.TopLeft.X+rec.BottomRight.X)/2,
-			Y: origin.Y + (rec.TopLeft.Y+rec.BottomRight.Y)/2,
+			X: origin.X + layout.Length(rec.X0+rec.X1)/2,
+			Y: origin.Y + layout.Length(rec.Y0+rec.Y1)/2,
 		}
 		svg.writeText(graph, rec.Text, center, node.FontSize, node.FontName, node.FontColor)
 		return
@@ -173,11 +187,11 @@ func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *layo
 		if i > 0 {
 			var a, b layout.Vector
 			if rec.Vertical {
-				a = layout.Vector{X: rec.TopLeft.X, Y: field.TopLeft.Y}
-				b = layout.Vector{X: rec.BottomRight.X, Y: field.TopLeft.Y}
+				a = layout.Vector{X: layout.Length(rec.X0), Y: layout.Length(field.Y0)}
+				b = layout.Vector{X: layout.Length(rec.X1), Y: layout.Length(field.Y0)}
 			} else {
-				a = layout.Vector{X: field.TopLeft.X, Y: rec.TopLeft.Y}
-				b = layout.Vector{X: field.TopLeft.X, Y: rec.BottomRight.Y}
+				a = layout.Vector{X: layout.Length(field.X0), Y: layout.Length(rec.Y0)}
+				b = layout.Vector{X: layout.Length(field.X0), Y: layout.Length(rec.Y1)}
 			}
 			svg.write("<line x1='%v' y1='%v' x2='%v' y2='%v' stroke='%v' stroke-width='%v'/>",
 				origin.X+a.X, origin.Y+a.Y, origin.X+b.X, origin.Y+b.Y, dkcolor(node.LineColor), node.LineWidth)
@@ -208,7 +222,7 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 // writeLabel writes plain text centered at center, or an HTML-like label
 // as a foreignObject filling the box of the given half size.
 func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
-	if !layout.IsHTMLLabel(label) {
+	if !draw.IsHTMLLabel(label) {
 		svg.writeText(graph, label, center, fontSize, fontName, color)
 		return
 	}
@@ -319,7 +333,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 
 		if node.Shape == layout.Record {
-			svg.writeRecord(graph, node, graph.LayoutRecord(node), node.TopLeft())
+			svg.writeRecord(graph, node, layoutRecord(graph, node), node.TopLeft())
 			continue
 		}
 		if label := node.DefaultLabel(); label != "" {
