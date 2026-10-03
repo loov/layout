@@ -59,7 +59,6 @@ func main() {
         log.Fatal(err)
     }
     svg.Write(os.Stdout, graph)
-    text.Write(os.Stdout, graph)
 }
 ```
 
