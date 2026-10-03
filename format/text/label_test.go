@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/loov/layout"
 )
@@ -84,5 +85,21 @@ func TestClusterLabel(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "┌ "+label+" ") {
 		t.Errorf("label is cut:\n%s", buf.String())
+	}
+}
+
+// TestControlCharacters checks that control characters in labels are not
+// written, as they would garble the terminal, and take no columns.
+func TestControlCharacters(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Shape = layout.Box
+	graph.Node("a").Label = "x\x1b[31my\tz\x00"
+	graph.Edge("a", "b").Label = "e\x1b[0m"
+	got := render(t, graph)
+	if strings.ContainsFunc(got, func(r rune) bool { return r != '\n' && unicode.IsControl(r) }) {
+		t.Errorf("control characters are written:\n%q", got)
+	}
+	if !regexp.MustCompile(`│ *x\[31myz *│`).MatchString(got) {
+		t.Errorf("want the label without control characters in a whole box:\n%s", got)
 	}
 }

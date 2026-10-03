@@ -2,6 +2,7 @@ package text
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/loov/layout"
 )
@@ -178,8 +179,9 @@ func (c *canvas) text(x, y int, s string) {
 	c.ink = c.font
 	for _, r := range s {
 		switch {
-		case layout.IsZeroWidth(r):
-			// a cell holds one character; marks on it are dropped
+		case layout.IsZeroWidth(r), unicode.IsControl(r):
+			// a cell holds one character; marks on it are dropped, and
+			// control characters would garble the terminal
 		case layout.IsWide(r):
 			c.set(x, y, r)
 			c.set(x+1, y, covered)
@@ -217,12 +219,13 @@ func (c *canvas) unpair(x, y int, before bool) {
 const covered = 0
 
 // width returns the columns s takes in a terminal: two for wide
-// characters, none for marks on the character before
+// characters, none for marks on the character before and for control
+// characters, which are not drawn
 func width(s string) int {
 	n := 0
 	for _, r := range s {
 		switch {
-		case layout.IsZeroWidth(r):
+		case layout.IsZeroWidth(r), unicode.IsControl(r):
 		case layout.IsWide(r):
 			n += 2
 		default:
