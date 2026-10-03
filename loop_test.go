@@ -23,3 +23,21 @@ func TestLoopLeavesHorizontally(t *testing.T) {
 		}
 	}
 }
+
+// TestLoopNodeLinesUp checks that a node with a self-loop lines up with
+// its neighbors: the room reserved for the loop doesn't shift it.
+func TestLoopNodeLinesUp(t *testing.T) {
+	for _, align := range []layout.Align{layout.AlignBalanced, layout.AlignLeft, layout.AlignRight} {
+		graph := layout.NewDigraph()
+		graph.Edge("a", "b")
+		graph.Edge("b", "b")
+		graph.Edge("b", "c")
+		if err := layout.HierarchicalWith(graph, layout.Options{Align: align}); err != nil {
+			t.Fatal(err)
+		}
+		a, b, c := graph.Node("a").Center.X, graph.Node("b").Center.X, graph.Node("c").Center.X
+		if a != b || b != c {
+			t.Errorf("align %v: a, b, c at x %v, %v, %v, want one line", align, a, b, c)
+		}
+	}
+}

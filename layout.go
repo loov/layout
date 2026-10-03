@@ -573,7 +573,11 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 		nodedef := reverse[hier.ID(id)]
 		node.Radius.X = float32(nodedef.Radius.X + graphdef.NodePadding)
+		// room for loops on the right, and the left with ports: the box
+		// grows by both, and the node sits left of the box center by the
+		// difference, where its edges line up with the neighbors
 		node.Radius.X += float32((loopExtra[nodedef] + loopLeft[nodedef]) / 2)
+		node.Anchor = -float32(loopExtra[nodedef]-loopLeft[nodedef]) / 2
 		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
 	}
 
@@ -606,13 +610,12 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	align := map[Align]hier.Align{AlignBalanced: hier.Balanced, AlignLeft: hier.Left, AlignRight: hier.Right}[opts.Align]
 	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, align)
 
-	// assign final positions; loop nodes were widened symmetrically,
-	// shift them left so the extra room is on the right
+	// assign final positions at the anchors, which are off the center
+	// of nodes widened for loops
 	for nodedef, id := range nodes {
 		node := positionedGraph.Nodes[id]
-		nodedef.Center.X = Length(node.Center.X)
+		nodedef.Center.X = Length(node.Center.X + node.Anchor)
 		nodedef.Center.Y = Length(node.Center.Y)
-		nodedef.Center.X -= (loopExtra[nodedef] - loopLeft[nodedef]) / 2
 	}
 
 	// cluster boxes span their borders horizontally and their members
