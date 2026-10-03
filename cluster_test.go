@@ -119,4 +119,73 @@ func TestClusterNeighborsAlign(t *testing.T) {
 	}
 }
 
+// TestClusterBoxesRelayout checks that force and pinned layouts box
+// clusters around their nodes when the boxes are left from an earlier
+// layout, and that pinned layouts keep a given box around its nodes.
+func TestClusterBoxesRelayout(t *testing.T) {
+	build := func() (*layout.Graph, *layout.Cluster) {
+		graph := layout.NewDigraph()
+		graph.Edge("a", "b")
+		graph.Edge("b", "c")
+		graph.Edge("c", "d")
+		cluster := &layout.Cluster{ID: "c", Label: "c", Nodes: []*layout.Node{graph.Node("b"), graph.Node("c")}}
+		graph.Clusters = []*layout.Cluster{cluster}
+		return graph, cluster
+	}
+	encloses := func(cluster *layout.Cluster) bool {
+		for _, node := range cluster.Nodes {
+			if node.Left() < cluster.TopLeft.X || node.Right() > cluster.BottomRight.X ||
+				node.Top() < cluster.TopLeft.Y || node.Bottom() > cluster.BottomRight.Y {
+				return false
+			}
+		}
+		return true
+	}
+
+	graph, cluster := build()
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	if !encloses(cluster) {
+		t.Errorf("hierarchical then force: box %v-%v misses its nodes", cluster.TopLeft, cluster.BottomRight)
+	}
+
+	graph, cluster = build()
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	graph.Edge("b", "e")
+	graph.Edge("e", "f")
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	if !encloses(cluster) {
+		t.Errorf("force twice: box %v-%v misses its nodes", cluster.TopLeft, cluster.BottomRight)
+	}
+
+	graph, cluster = build()
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	graph.Pinned = true
+	graph.Node("b").Center.X += 200
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	if !encloses(cluster) {
+		t.Errorf("pinned after moving a node: box %v-%v misses its nodes", cluster.TopLeft, cluster.BottomRight)
+	}
+	given := [2]layout.Vector{{-1000, -1000}, {1000, 1000}}
+	cluster.TopLeft, cluster.BottomRight = given[0], given[1]
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	if cluster.TopLeft != given[0] || cluster.BottomRight != given[1] {
+		t.Errorf("pinned: given box moved to %v-%v", cluster.TopLeft, cluster.BottomRight)
+	}
+}
+
 type Length = layout.Length

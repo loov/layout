@@ -1138,17 +1138,16 @@ func layoutPinned(graph *Graph) {
 	}
 }
 
-// boxClusters gives clusters without a box one around their nodes and
-// nested clusters, padded, with a strip for the label on top and room for
-// its width, for layouts that place nodes without making room for clusters
+// boxClusters boxes clusters around their nodes and nested clusters,
+// padded, with a strip for the label on top and room for its width, for
+// layouts that place nodes without making room for clusters. A box that
+// already encloses its contents is kept as given; any other, such as one
+// left from an earlier layout of moved nodes, is replaced.
 func boxClusters(graph *Graph) {
 	pad := max(graph.EdgePadding, graph.RowPadding/2)
 	byDepth := slices.Clone(graph.Clusters)
 	slices.SortStableFunc(byDepth, func(a, b *Cluster) int { return b.depth() - a.depth() })
 	for _, cluster := range byDepth {
-		if cluster.TopLeft != cluster.BottomRight {
-			continue // given
-		}
 		inf := Length(math.Inf(1))
 		tl, br := Vector{inf, inf}, Vector{-inf, -inf}
 		for _, node := range cluster.Nodes {
@@ -1163,6 +1162,11 @@ func boxClusters(graph *Graph) {
 		}
 		if tl.X > br.X {
 			continue // nothing inside
+		}
+		if cluster.TopLeft != cluster.BottomRight &&
+			cluster.TopLeft.X <= tl.X && cluster.TopLeft.Y <= tl.Y &&
+			br.X <= cluster.BottomRight.X && br.Y <= cluster.BottomRight.Y {
+			continue // given
 		}
 		tl, br = tl.Sub(Vector{pad, pad}), br.Add(Vector{pad, pad})
 		if cluster.Label != "" {

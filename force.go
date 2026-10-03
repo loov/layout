@@ -150,6 +150,9 @@ func Force(graph *Graph) error {
 	for _, edge := range graph.Edges {
 		edge.Path, edge.LabelPos = nil, Vector{}
 	}
+	for _, cluster := range graph.Clusters {
+		cluster.TopLeft, cluster.BottomRight = Vector{}, Vector{}
+	}
 	layoutPinned(graph)
 	return nil
 }
