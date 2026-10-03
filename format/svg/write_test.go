@@ -30,3 +30,17 @@ func TestSanitizeHTMLPreservesSafeLinks(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeHTMLRemovesRawTextElements(t *testing.T) {
+	for _, tag := range []string{"noscript", "xmp", "noembed", "noframes", "plaintext"} {
+		t.Run(tag, func(t *testing.T) {
+			got := sanitizeHTML(`<b>ok</b><` + tag + `><img src="x" onerror="alert(1)"/></` + tag + `>`)
+			if strings.Contains(got, "onerror") || strings.Contains(got, "<img") {
+				t.Fatalf("raw text survived: %s", got)
+			}
+			if !strings.Contains(got, "<b>ok</b>") {
+				t.Fatalf("safe markup removed: %s", got)
+			}
+		})
+	}
+}

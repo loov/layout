@@ -390,7 +390,10 @@ func sanitizeNode(n *html.Node) {
 		next := c.NextSibling
 		if c.Type == html.ElementNode {
 			switch c.Data {
-			case "script", "style", "iframe", "object", "embed", "link", "meta", "base", "form", "svg", "math":
+			case "script", "style", "iframe", "object", "embed", "link", "meta", "base", "form", "svg", "math",
+				// raw text elements are rendered unescaped, so their text would
+				// become markup when the SVG is read as XML
+				"noscript", "xmp", "noembed", "noframes", "plaintext":
 				n.RemoveChild(c)
 				c = next
 				continue
