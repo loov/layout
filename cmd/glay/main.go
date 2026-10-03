@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-align balanced|left|right] [-colors 16|truecolor] [-bg color] [input]
+//	glay [-s dot] [-t svg|dot|json|graphml|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-align balanced|left|right] [-colors 16|truecolor] [-bg color] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -34,7 +34,7 @@ var (
 	memprofile = flag.String("memprofile", "", "profile memory usage")
 
 	informat  = flag.String("s", "", "input format")
-	outformat = flag.String("t", "", "output format (default from the output file extension, else svg)")
+	outformat = flag.String("t", "", "output format: svg, dot, json, graphml, txt, ans (default from the output file extension, svg for stdout)")
 	outfile   = flag.String("o", "", "output file (default stdout)")
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
@@ -102,8 +102,12 @@ func main() {
 			*outformat = "txt"
 		case ".ans":
 			*outformat = "ans"
-		default:
-			*outformat = "svg"
+		case ".graphml":
+			*outformat = "graphml"
+		case "":
+			if output == "" {
+				*outformat = "svg"
+			}
 		}
 	}
 
@@ -112,6 +116,24 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 		return
+	}
+
+	// ans options are checked for every format, so that typos show
+	var textOpts text.Options
+	switch *colors {
+	case "16":
+	case "truecolor", "24bit":
+		textOpts.Palette = text.TrueColor
+	default:
+		errorf("unknown colors %q", *colors)
+		os.Exit(1)
+	}
+	if *bg != "" {
+		textOpts.Background = parseColor(*bg)
+		if textOpts.Background == nil {
+			errorf("unknown background color %q", *bg)
+			os.Exit(1)
+		}
 	}
 
 	var write func(io.Writer, *layout.Graph) error
@@ -124,24 +146,10 @@ func main() {
 		write = json.Write
 	case "txt", "text":
 		write = text.Write
+	case "graphml":
+		write = func(w io.Writer, graph *layout.Graph) error { return graphml.Write(w, graph) }
 	case "ans", "ansi":
-		var opts text.Options
-		switch *colors {
-		case "16":
-		case "truecolor", "24bit":
-			opts.Palette = text.TrueColor
-		default:
-			errorf("unknown colors %q", *colors)
-			os.Exit(1)
-		}
-		if *bg != "" {
-			opts.Background = parseColor(*bg)
-			if opts.Background == nil {
-				errorf("unknown background color %q", *bg)
-				os.Exit(1)
-			}
-		}
-		write = func(w io.Writer, graph *layout.Graph) error { return text.WriteColor(w, graph, opts) }
+		write = func(w io.Writer, graph *layout.Graph) error { return text.WriteColor(w, graph, textOpts) }
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)

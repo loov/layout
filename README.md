@@ -112,7 +112,7 @@ Other layouts and outputs:
 * `format/json` — plain coordinates for drawing the graph elsewhere.
 * `format/text` — Unicode box-drawing output for terminals; call `text.Prepare(graph)` before laying out. `text.WriteColor` adds colors in the terminal theme's basic colors, or exact 24-bit colors, optionally on a background.
 
-The same is available from the command line: `glay -l force -q fast -t txt|ans|json|svg|dot input.dot`; colored text takes `-colors 16|truecolor` and `-bg color`.
+The same is available from the command line: `glay -l force -q fast -t txt|ans|json|svg|dot|graphml input.dot`; colored text takes `-colors 16|truecolor` and `-bg color`.
 
 ## Quality
 
