@@ -25,26 +25,32 @@ func RankNetworkSimplex(graph *Graph) {
 	for i := range rep {
 		rep[i] = i
 	}
-	for _, group := range graph.SameRank {
-		for _, node := range group {
-			rep[node.ID] = rep[group[0].ID]
+	find := func(i int) int {
+		for rep[i] != i {
+			rep[i] = rep[rep[i]]
+			i = rep[i]
 		}
+		return i
 	}
 	unify := func(group Nodes) {
-		for _, node := range group[1:] {
-			r := rep[node.ID]
-			for i := range rep {
-				if rep[i] == r {
-					rep[i] = rep[group[0].ID]
-				}
-			}
+		if len(group) < 2 {
+			return
 		}
+		for _, node := range group[1:] {
+			rep[find(int(node.ID))] = find(int(group[0].ID))
+		}
+	}
+	for _, group := range graph.SameRank {
+		unify(group)
 	}
 	if len(graph.MinRank) > 0 {
 		unify(graph.MinRank)
 	}
 	if len(graph.MaxRank) > 0 {
 		unify(graph.MaxRank)
+	}
+	for i := range rep {
+		rep[i] = find(i)
 	}
 	verts := 0
 	index := make([]int, graph.NodeCount()) // contracted vertex index by node id
