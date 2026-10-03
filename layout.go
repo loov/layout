@@ -1070,6 +1070,7 @@ func spreadEnds(graph *Graph, minSep Length) {
 // layoutPinned keeps node positions and gives edges without a path a
 // straight line, labels without a position the middle of their path.
 func layoutPinned(graph *Graph) {
+	boxClusters(graph)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			if edge.From == edge.To {
@@ -1093,6 +1094,44 @@ func layoutPinned(graph *Graph) {
 			}
 			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X, 0})
 		}
+	}
+}
+
+// boxClusters gives clusters without a box one around their nodes and
+// nested clusters, padded, with a strip for the label on top and room for
+// its width, for layouts that place nodes without making room for clusters
+func boxClusters(graph *Graph) {
+	pad := max(graph.EdgePadding, graph.RowPadding/2)
+	byDepth := slices.Clone(graph.Clusters)
+	slices.SortStableFunc(byDepth, func(a, b *Cluster) int { return b.depth() - a.depth() })
+	for _, cluster := range byDepth {
+		if cluster.TopLeft != cluster.BottomRight {
+			continue // given
+		}
+		inf := Length(math.Inf(1))
+		tl, br := Vector{inf, inf}, Vector{-inf, -inf}
+		for _, node := range cluster.Nodes {
+			minvector(&tl, node.TopLeft())
+			maxvector(&br, node.BottomRight())
+		}
+		for _, inner := range graph.Clusters {
+			if inner.Parent == cluster {
+				minvector(&tl, inner.TopLeft)
+				maxvector(&br, inner.BottomRight)
+			}
+		}
+		if tl.X > br.X {
+			continue // nothing inside
+		}
+		tl, br = tl.Sub(Vector{pad, pad}), br.Add(Vector{pad, pad})
+		if cluster.Label != "" {
+			label := graph.textRadius(cluster.Label, "", graph.FontSize)
+			tl.Y -= 2 * label.Y
+			if grow := 2*(label.X+graph.EdgePadding) - (br.X - tl.X); grow > 0 {
+				tl.X, br.X = tl.X-grow/2, br.X+grow/2
+			}
+		}
+		cluster.TopLeft, cluster.BottomRight = tl, br
 	}
 }
 

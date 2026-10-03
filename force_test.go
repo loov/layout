@@ -72,3 +72,33 @@ func TestForcePreservesPinnedCentersAndPaths(t *testing.T) {
 		t.Fatalf("missing path was not computed: %v", missing.Path)
 	}
 }
+
+// TestForceClusterBoxes checks that force layouts box their clusters
+// around their nodes, and nested clusters inside their parent.
+func TestForceClusterBoxes(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Edge("a", "b")
+	graph.Edge("b", "c")
+	outer := &layout.Cluster{ID: "outer", Label: "outer", Nodes: []*layout.Node{graph.Node("a"), graph.Node("b"), graph.Node("c")}}
+	inner := &layout.Cluster{ID: "inner", Label: "inner", Nodes: []*layout.Node{graph.Node("a"), graph.Node("b")}, Parent: outer}
+	graph.Clusters = []*layout.Cluster{outer, inner}
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	inside := func(tl, br, otl, obr layout.Vector) bool {
+		return otl.X <= tl.X && otl.Y <= tl.Y && br.X <= obr.X && br.Y <= obr.Y
+	}
+	for _, cluster := range graph.Clusters {
+		if cluster.BottomRight.X <= cluster.TopLeft.X || cluster.BottomRight.Y <= cluster.TopLeft.Y {
+			t.Fatalf("%s has no box: %v %v", cluster.ID, cluster.TopLeft, cluster.BottomRight)
+		}
+		for _, node := range cluster.Nodes {
+			if !inside(node.TopLeft(), node.BottomRight(), cluster.TopLeft, cluster.BottomRight) {
+				t.Errorf("%s is outside %s", node.ID, cluster.ID)
+			}
+		}
+	}
+	if !inside(inner.TopLeft, inner.BottomRight, outer.TopLeft, outer.BottomRight) {
+		t.Errorf("inner %v %v is not inside outer %v %v", inner.TopLeft, inner.BottomRight, outer.TopLeft, outer.BottomRight)
+	}
+}
