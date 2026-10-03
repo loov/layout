@@ -176,7 +176,7 @@ func parsePoint(s string) (layout.Vector, bool) {
 }
 
 // parseSpline reads an edge pos: points separated by spaces, where "s,x,y"
-// and "e,x,y" are the start and end points
+// and "e,x,y" are the arrow tips at the start and end
 func parseSpline(s string) []layout.Vector {
 	var start, end *layout.Vector
 	var points []layout.Vector
@@ -198,13 +198,22 @@ func parseSpline(s string) []layout.Vector {
 			points = append(points, p)
 		}
 	}
+	// Repeated controls encode straight segments in our DOT output.
+	points = slices.Compact(points)
+	// The spline stops at the arrow base; replace the base with the tip,
+	// which lies on the line continuing the spline.
 	if start != nil {
+		if len(points) > 1 {
+			points = points[1:]
+		}
 		points = append([]layout.Vector{*start}, points...)
 	}
 	if end != nil {
+		if len(points) > 1 {
+			points = points[:len(points)-1]
+		}
 		points = append(points, *end)
 	}
-	// Repeated controls encode straight segments in our DOT output.
 	return slices.Compact(points)
 }
 

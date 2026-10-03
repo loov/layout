@@ -3,6 +3,8 @@ package dot
 import (
 	"fmt"
 	"io"
+	"math"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -60,14 +62,55 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 	for _, edge := range graph.Edges {
 		var attrs []string
+		head, tail := edge.ArrowHead, edge.ArrowTail
+		if head == layout.ArrowDefault && edge.Directed {
+			head = layout.ArrowNormal
+		}
+		hasHead := head != layout.ArrowDefault && head != layout.ArrowNone
+		hasTail := tail != layout.ArrowDefault && tail != layout.ArrowNone
 		if len(edge.Path) >= 2 {
+			// Graphviz ends the spline at the arrow base and gives the tip
+			// separately with "s," and "e,".
+			path := slices.Clone(edge.Path)
+			var ends []string
+			if hasTail {
+				ends = append(ends, "s,"+pt(path[0]))
+				path[0] = arrowBase(path[0], path[1])
+			}
+			if hasHead {
+				n := len(path) - 1
+				ends = append(ends, "e,"+pt(path[n]))
+				path[n] = arrowBase(path[n], path[n-1])
+			}
 			// Graphviz expects 3n+1 cubic Bezier control points. Repeating
 			// each segment's ends represents the polyline without bending it.
-			points := []string{pt(edge.Path[0])}
-			for i := 1; i < len(edge.Path); i++ {
-				points = append(points, pt(edge.Path[i-1]), pt(edge.Path[i]), pt(edge.Path[i]))
+			points := append(ends, pt(path[0]))
+			for i := 1; i < len(path); i++ {
+				points = append(points, pt(path[i-1]), pt(path[i]), pt(path[i]))
 			}
 			attrs = append(attrs, "pos="+quote(strings.Join(points, " ")))
+		}
+		dir := "none"
+		switch {
+		case hasHead && hasTail:
+			dir = "both"
+		case hasHead:
+			dir = "forward"
+		case hasTail:
+			dir = "back"
+		}
+		defaultDir := "none"
+		if graph.Directed {
+			defaultDir = "forward"
+		}
+		if dir != defaultDir {
+			attrs = append(attrs, "dir="+dir)
+		}
+		if hasHead && head != layout.ArrowNormal {
+			attrs = append(attrs, "arrowhead="+quote(string(head)))
+		}
+		if hasTail && tail != layout.ArrowNormal {
+			attrs = append(attrs, "arrowtail="+quote(string(tail)))
 		}
 		if edge.Label != "" {
 			attrs = append(attrs, "label="+quote(edge.Label), "lp="+quote(pt(edge.LabelPos)))
@@ -83,6 +126,21 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 	write("}\n")
 	return err
+}
+
+// arrowLength is the Graphviz arrow length at the default arrowsize.
+const arrowLength = 10 * layout.Point
+
+// arrowBase returns where an arrow with its tip at tip ends, moving toward
+// next by the arrow length but at most halfway, so both ends fit.
+func arrowBase(tip, next layout.Vector) layout.Vector {
+	d := next.Sub(tip)
+	n := layout.Length(math.Hypot(float64(d.X), float64(d.Y)))
+	if n == 0 {
+		return tip
+	}
+	t := min(arrowLength/n, 0.5)
+	return layout.Vector{X: tip.X + d.X*t, Y: tip.Y + d.Y*t}
 }
 
 // quote returns s as a dot string literal
