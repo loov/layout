@@ -1080,12 +1080,17 @@ func layoutPinned(graph *Graph) {
 		given[edge] = edge.LabelPos != (Vector{})
 	}
 	defer nudgeLabels(graph.Edges, graph.Nodes, graph.EdgePadding, 2*graph.RowPadding, given)
+	pairs := newPairs(graph)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			if edge.From == edge.To {
 				edge.Path = loopPath(edge, edge.From.Radius.X, edge.From.Radius.X, loops.next(edge), loops.count[edge.From])
 			} else {
-				from, to := edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)
+				// edges between the same nodes run side by side,
+				// shifted across the line between the nodes
+				shift := pairs.shift(edge, 2*graph.EdgePadding)
+				from := edge.From.outlineAlong(edge.From.Center.Add(shift), edge.To.Center.Add(shift))
+				to := edge.To.outlineAlong(edge.To.Center.Add(shift), edge.From.Center.Add(shift))
 				if edge.FromPort != CompassAuto {
 					from = edge.From.CompassPoint(edge.FromPort)
 				}
@@ -1293,6 +1298,52 @@ func reversePath(path []Vector) []Vector {
 }
 
 // loopPath draws a self-loop on the right side of the node
+// pairs numbers the edges between each pair of nodes, which run side by
+// side in pinned and force layouts
+type pairs struct {
+	order        map[*Node]int // keeps a pair's direction the same both ways
+	count, index map[[2]*Node]int
+}
+
+func newPairs(graph *Graph) *pairs {
+	p := &pairs{order: map[*Node]int{}, count: map[[2]*Node]int{}, index: map[[2]*Node]int{}}
+	for i, node := range graph.Nodes {
+		p.order[node] = i
+	}
+	for _, edge := range graph.Edges {
+		if edge.From != edge.To {
+			p.count[p.key(edge)]++
+		}
+	}
+	return p
+}
+
+func (p *pairs) key(edge *Edge) [2]*Node {
+	if p.order[edge.From] > p.order[edge.To] {
+		return [2]*Node{edge.To, edge.From}
+	}
+	return [2]*Node{edge.From, edge.To}
+}
+
+// shift returns the offset of the next edge between its nodes, spacing
+// apart, across the line from the first node of the pair to the second
+func (p *pairs) shift(edge *Edge, spacing Length) Vector {
+	key := p.key(edge)
+	n := p.count[key]
+	if n < 2 {
+		return Vector{}
+	}
+	k := p.index[key]
+	p.index[key]++
+	d := key[1].Center.Sub(key[0].Center)
+	length := Length(math.Hypot(float64(d.X), float64(d.Y)))
+	if length == 0 {
+		return Vector{}
+	}
+	offset := (Length(k) - Length(n-1)/2) * spacing / length
+	return Vector{X: -d.Y * offset, Y: d.X * offset}
+}
+
 // loopCount numbers the self-loops without ports of each node, which
 // stack down its side
 type loopCount struct {

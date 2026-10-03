@@ -102,3 +102,35 @@ func TestForceClusterBoxes(t *testing.T) {
 		t.Errorf("inner %v %v is not inside outer %v %v", inner.TopLeft, inner.BottomRight, outer.TopLeft, outer.BottomRight)
 	}
 }
+
+// TestForceParallelEdges checks that edges between the same nodes take
+// routes of their own, with labels apart, both ways and the same way.
+func TestForceParallelEdges(t *testing.T) {
+	for name, back := range map[string]bool{"opposite": true, "same": false} {
+		graph := layout.NewDigraph()
+		first := layout.NewEdge(graph.Node("a"), graph.Node("b"))
+		first.Label = "forward"
+		second := layout.NewEdge(graph.Node("a"), graph.Node("b"))
+		if back {
+			second = layout.NewEdge(graph.Node("b"), graph.Node("a"))
+		}
+		second.Label = "back"
+		graph.AddEdge(first)
+		graph.AddEdge(second)
+		if err := layout.Force(graph); err != nil {
+			t.Fatal(err)
+		}
+		a, b := first.Path, slices.Clone(second.Path)
+		if back {
+			slices.Reverse(b)
+		}
+		if slices.Equal(a, b) {
+			t.Errorf("%s: edges share the route %v", name, a)
+		}
+		la, lb := first, second
+		if math.Abs(float64(la.LabelPos.X-lb.LabelPos.X)) < float64(la.LabelRadius.X+lb.LabelRadius.X) &&
+			math.Abs(float64(la.LabelPos.Y-lb.LabelPos.Y)) < float64(la.LabelRadius.Y+lb.LabelRadius.Y) {
+			t.Errorf("%s: labels at %v and %v overlap", name, la.LabelPos, lb.LabelPos)
+		}
+	}
+}

@@ -203,6 +203,34 @@ func (node *Node) CompassPoint(c Compass) Vector {
 	return node.Boundary(Vector{node.Center.X + dir.X*node.Radius.X, node.Center.Y + dir.Y*node.Radius.Y})
 }
 
+// outlineAlong returns where the line from start, inside the node,
+// towards p leaves the node's outline, or the outline towards p from the
+// center when start is outside.
+func (node *Node) outlineAlong(start, p Vector) Vector {
+	inside := func(v Vector) bool {
+		dx, dy := float64(v.X-node.Center.X), float64(v.Y-node.Center.Y)
+		rx, ry := float64(node.Radius.X), float64(node.Radius.Y)
+		switch node.Shape {
+		case Box, Square, Record:
+			return math.Abs(dx) <= rx && math.Abs(dy) <= ry
+		}
+		return (dx/rx)*(dx/rx)+(dy/ry)*(dy/ry) <= 1
+	}
+	if !inside(start) || inside(p) {
+		return node.Boundary(p)
+	}
+	in, out := start, p
+	for range 32 {
+		mid := Vector{(in.X + out.X) / 2, (in.Y + out.Y) / 2}
+		if inside(mid) {
+			in = mid
+		} else {
+			out = mid
+		}
+	}
+	return in
+}
+
 // Boundary returns the point on the node outline where the ray from the
 // center towards p exits the node.
 func (node *Node) Boundary(p Vector) Vector {

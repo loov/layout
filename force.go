@@ -42,6 +42,16 @@ func Force(graph *Graph) error {
 		index[node] = i
 		pos[i] = [2]float64{rng.Float64() * side, rng.Float64() * side}
 	}
+	// edges between the same nodes pull as one, so that their labels
+	// have room; a labeled edge rests longer by its label
+	pairs := newPairs(graph)
+	rest := make([]float64, len(graph.Edges))
+	for i, edge := range graph.Edges {
+		rest[i] = k
+		if edge.Label != "" {
+			rest[i] += float64(2 * max(edge.LabelRadius.X, edge.LabelRadius.Y))
+		}
+	}
 
 	// float64 conversions below block FMA fusion, so the layout is
 	// identical across architectures (goldens are compared byte for byte)
@@ -68,7 +78,7 @@ func Force(graph *Graph) error {
 				disp[j][1] -= float64(dy * f)
 			}
 		}
-		for _, edge := range graph.Edges {
+		for e, edge := range graph.Edges {
 			i, j := index[edge.From], index[edge.To]
 			if i == j {
 				continue
@@ -78,7 +88,8 @@ func Force(graph *Graph) error {
 			if d < 1e-3 {
 				continue
 			}
-			f := d * edge.Weight / k // attraction d²/k, normalized by d
+			// attraction d²/rest, normalized by d
+			f := d * edge.Weight / rest[e] / float64(pairs.count[pairs.key(edge)])
 			disp[i][0] -= float64(dx * f)
 			disp[i][1] -= float64(dy * f)
 			disp[j][0] += float64(dx * f)
