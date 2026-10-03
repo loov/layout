@@ -11,16 +11,16 @@ type Shape string
 // Node shapes. Auto uses the graph default.
 const (
 	Auto    Shape = ""
-	None          = "none"
-	Box           = "box"
-	Square        = "square"
-	Circle        = "circle"
-	Ellipse       = "ellipse"
+	None    Shape = "none"
+	Box     Shape = "box"
+	Square  Shape = "square"
+	Circle  Shape = "circle"
+	Ellipse Shape = "ellipse"
 	// Record draws the label as a table of fields, see ParseRecord.
-	Record = "record"
+	Record Shape = "record"
 	// Dot is a small filled circle without a label, like Graphviz point;
 	// it marks where edges start or meet, such as an automaton's start.
-	Dot = "point"
+	Dot Shape = "point"
 )
 
 // Splines selects how edge paths are drawn.
