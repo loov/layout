@@ -51,11 +51,11 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
 	x0, y0 := c.col(node.Left()+inset), c.row(node.Top()+inset)
 	x1, y1 := c.col(node.Right()-inset), c.row(node.Bottom()-inset)
-	lines := strings.Split(plain(node.DefaultLabel()), "\n")
+	lines := strings.Split(draw.PlainLabel(node.DefaultLabel()), "\n")
 	// the box must hold the label and have distinct edges
 	if node.Shape != layout.Record {
 		for _, line := range lines {
-			x1 = max(x1, x0+width(line)+1)
+			x1 = max(x1, x0+draw.Columns(line)+1)
 		}
 	}
 	x1 = max(x1, x0+2)
@@ -63,7 +63,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	var rec *draw.Record
 	if node.Shape == layout.Record {
 		rec = layoutRecord(graph, node)
-		y1 = max(y1, y0+recordRows(rec)+1)
+		y1 = max(y1, y0+draw.RecordRows(rec)+1)
 	} else {
 		y1 = max(y1, y0+len(lines)+1)
 	}
@@ -106,7 +106,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		top = y0 + 1 // with the main path, along the first row
 	}
 	for i, line := range lines {
-		c.text((x0+x1+1-width(line))/2, top+i, line)
+		c.text((x0+x1+1-draw.Columns(line))/2, top+i, line)
 	}
 }
 
@@ -383,10 +383,10 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" {
-			lines := strings.Split(plain(edge.Label), "\n")
+			lines := strings.Split(draw.PlainLabel(edge.Label), "\n")
 			w := 0
 			for _, line := range lines {
-				w = max(w, width(line))
+				w = max(w, draw.Columns(line))
 			}
 			x, y := c.col(edge.LabelPos.X-edge.LabelRadius.X), c.row(edge.LabelPos.Y)-(len(lines)-1)/2
 			x, y = c.nearEdge(x, y, w, len(lines), paths[i])
@@ -399,7 +399,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for _, cluster := range graph.Clusters {
 		if cluster.Label != "" {
 			c.font = 0
-			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+strings.ReplaceAll(plain(cluster.Label), "\n", " ")+" ")
+			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")+" ")
 		}
 	}
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
+	"github.com/loov/layout/internal/draw"
 )
 
 func TestWrite(t *testing.T) {
@@ -17,7 +18,7 @@ func TestWrite(t *testing.T) {
 	graph.Edge("A", "C")
 	graph.Edge("B", "D")
 	graph.Edge("C", "D")
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +76,7 @@ func TestArrows(t *testing.T) {
 		if tc.sideways {
 			graph.RankDir = layout.LeftToRight
 		}
-		Prepare(graph)
+		graph.ForText = true
 		if err := layout.Hierarchical(graph); err != nil {
 			t.Fatal(err)
 		}
@@ -114,7 +115,7 @@ func TestLineStyles(t *testing.T) {
 		if tc.sideways {
 			graph.RankDir = layout.LeftToRight
 		}
-		Prepare(graph)
+		graph.ForText = true
 		if err := layout.Hierarchical(graph); err != nil {
 			t.Fatal(err)
 		}
@@ -153,7 +154,7 @@ func TestSidewaysEdgesApart(t *testing.T) {
 			graph.Edge(e[0], e[1]).Label = "x"
 			graph.Node(e[0]).Shape = layout.Circle
 		}
-		Prepare(graph)
+		graph.ForText = true
 		if err := layout.HierarchicalWith(graph, layout.Options{Align: layout.AlignLeft}); err != nil {
 			t.Fatal(err)
 		}
@@ -181,7 +182,7 @@ func TestOffCanvas(t *testing.T) {
 	graph.Node("A").Center = layout.Vector{X: 50, Y: -100}
 	graph.Node("B").Center = layout.Vector{X: 150, Y: 50}
 	graph.Edge("A", "B").FromPort = layout.East
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +205,7 @@ func TestDotFanOut(t *testing.T) {
 		for _, id := range []string{"a", "b", "c"}[:tc.edges] {
 			graph.Edge("s", id)
 		}
-		Prepare(graph)
+		graph.ForText = true
 		if err := layout.Hierarchical(graph); err != nil {
 			t.Fatal(err)
 		}
@@ -247,7 +248,7 @@ func TestLabelsBeforeOrigin(t *testing.T) {
 		edge.Label = e[2]
 		graph.AddEdge(edge)
 	}
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -270,7 +271,7 @@ func TestMultilineLabels(t *testing.T) {
 	rec.Shape = layout.Record
 	rec.Label = "first\nsecond"
 	graph.Edge("a", "b").Label = "one\ntwo"
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -289,7 +290,7 @@ func TestMultilineLabels(t *testing.T) {
 // render prepares, lays out and draws graph
 func render(t *testing.T, graph *layout.Graph) string {
 	t.Helper()
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -357,7 +358,7 @@ func TestOverlappingWideText(t *testing.T) {
 	var widths []int
 	for _, line := range strings.Split(got, "\n") {
 		if strings.Contains(line, "xyz") || strings.Count(line, "│") == 2 {
-			widths = append(widths, width(line))
+			widths = append(widths, draw.Columns(line))
 		}
 	}
 	if len(widths) < 2 || slices.Min(widths) != slices.Max(widths) {

@@ -249,7 +249,7 @@ func main() {
 	// layout
 	switch *outformat {
 	case "txt", "text", "ans", "ansi":
-		text.Prepare(graph)
+		graph.ForText = true
 	}
 	var opts layout.Options
 	switch *quality {

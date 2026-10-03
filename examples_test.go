@@ -287,7 +287,7 @@ func TestExamplesText(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
 			graph := build()
-			text.Prepare(graph)
+			graph.ForText = true
 			if err := layout.HierarchicalWith(graph, exampleOptions[name]); err != nil {
 				t.Fatal(err)
 			}

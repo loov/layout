@@ -46,7 +46,7 @@ func TestANSI16(t *testing.T) {
 func TestBackground(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.Edge("A", "B")
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}

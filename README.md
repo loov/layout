@@ -65,7 +65,7 @@ func main() {
 
 ![Output](./testdata/readme.svg)
 
-The same graph drawn for a terminal, with `text.Prepare(graph)` before laying out and `text.Write` instead of `svg.Write`:
+The same graph drawn for a terminal, with `graph.ForText = true` before laying out and `text.Write` instead of `svg.Write`:
 
 ```
                         ╭─────────╮

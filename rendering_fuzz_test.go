@@ -45,7 +45,7 @@ func FuzzRendering(f *testing.F) {
 			}
 		}
 		if data[0]&2 != 0 {
-			text.Prepare(graph)
+			graph.ForText = true
 		}
 		lay := layout.Hierarchical
 		if data[0]&1 != 0 {

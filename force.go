@@ -17,6 +17,9 @@ func Force(graph *Graph) error {
 	if err := graph.validate(); err != nil {
 		return err
 	}
+	if graph.ForText {
+		graph.prepareText()
+	}
 	graph.AssignMissingValues()
 	if graph.Pinned {
 		layoutPinned(graph)

@@ -85,14 +85,14 @@ func newCanvas(graph *layout.Graph) *canvas {
 	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
 	for _, edge := range graph.Edges {
-		for _, line := range strings.Split(plain(edge.Label), "\n") {
-			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+width(line)+1)
+		for _, line := range strings.Split(draw.PlainLabel(edge.Label), "\n") {
+			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+draw.Columns(line)+1)
 		}
 	}
 	for _, node := range graph.Nodes {
 		// boxes widen to their labels, see drawNode
-		label := plain(node.DefaultLabel())
-		c.w = max(c.w, c.col(node.Left())+textWidth(label)+2)
+		label := draw.PlainLabel(node.DefaultLabel())
+		c.w = max(c.w, c.col(node.Left())+draw.TextColumns(label)+2)
 		c.h = max(c.h, c.row(node.Top())+strings.Count(label, "\n")+3)
 	}
 	for _, cluster := range graph.Clusters {
@@ -210,7 +210,7 @@ func (c *canvas) hold(x, y int) {
 // clusterLabelWidth returns the columns from a cluster's left corner past
 // its label: the label between a space on each side, and the corners
 func clusterLabelWidth(cluster *layout.Cluster) int {
-	return width(strings.ReplaceAll(plain(cluster.Label), "\n", " ")) + 3
+	return draw.Columns(strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")) + 3
 }
 
 // unpair blanks the other half of a wide character in the cell at x, y
@@ -230,32 +230,6 @@ func (c *canvas) unpair(x, y int, before bool) {
 // covered marks the cell under the second column of a wide character,
 // which writing skips
 const covered = 0
-
-// width returns the columns s takes in a terminal: two for wide
-// characters, none for marks on the character before and for control
-// characters, which are not drawn
-func width(s string) int {
-	n := 0
-	for _, r := range s {
-		switch {
-		case draw.IsZeroWidth(r), unicode.IsControl(r):
-		case draw.IsWide(r):
-			n += 2
-		default:
-			n++
-		}
-	}
-	return n
-}
-
-// textWidth returns the columns of the widest line of s
-func textWidth(s string) int {
-	w := 0
-	for _, line := range strings.Split(s, "\n") {
-		w = max(w, width(line))
-	}
-	return w
-}
 
 // fill sets the background of the cells inside the rectangle, unless
 // color is the default
@@ -295,7 +269,7 @@ func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(la
 		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
 		lines := strings.Split(rec.Text, "\n")
 		for i, line := range lines {
-			c.text((x0+x1+1-width(line))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
+			c.text((x0+x1+1-draw.Columns(line))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
 		}
 		return
 	}
@@ -420,54 +394,4 @@ func layoutRecord(graph *layout.Graph, node *layout.Node) *draw.Record {
 		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, node.FontSize).X) }
 	}
 	return draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y), float64(graph.LineHeight), float64(node.FontSize), lineWidth)
-}
-
-// recordRows returns the rows the fields of a record need inside its
-// box: a row per line of text, and one per divider between fields
-// stacked vertically
-func recordRows(rec *draw.Record) int {
-	if len(rec.Fields) == 0 {
-		return strings.Count(rec.Text, "\n") + 1
-	}
-	rows := 0
-	for _, field := range rec.Fields {
-		if rec.Vertical {
-			rows += recordRows(field)
-		} else {
-			rows = max(rows, recordRows(field))
-		}
-	}
-	if rec.Vertical {
-		rows += len(rec.Fields) - 1
-	}
-	return rows
-}
-
-// reserveRecord widens a record node until each field holds its text
-// between the dividers. Fields share the width beyond their estimated
-// sizes evenly, so a field grows by the record's growth divided by the
-// fields beside it at each level.
-func reserveRecord(graph *layout.Graph, node *layout.Node, cellW layout.Length) {
-	if node.FontSize <= 0 {
-		// as the layout sizes the fields
-		node.FontSize = graph.FontSize
-		defer func() { node.FontSize = 0 }()
-	}
-	grow := layout.Length(0)
-	var walk func(rec *draw.Record, share layout.Length)
-	walk = func(rec *draw.Record, share layout.Length) {
-		if len(rec.Fields) == 0 {
-			need := layout.Length(textWidth(rec.Text)+2) * cellW
-			grow = max(grow, (need-layout.Length(rec.X1-rec.X0))*share)
-			return
-		}
-		if !rec.Vertical {
-			share *= layout.Length(len(rec.Fields))
-		}
-		for _, field := range rec.Fields {
-			walk(field, share)
-		}
-	}
-	walk(layoutRecord(graph, node), 1)
-	node.Radius.X += grow / 2
 }

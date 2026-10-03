@@ -189,6 +189,9 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 	if opts.OrderIterations <= 0 {
 		opts.OrderIterations = hier.DefaultOrderIterations
 	}
+	if graphdef.ForText {
+		graphdef.prepareText()
+	}
 	graphdef.AssignMissingValues()
 	if graphdef.Pinned {
 		layoutPinned(graphdef)

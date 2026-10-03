@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 func TestPlain(t *testing.T) {
@@ -19,8 +20,8 @@ func TestPlain(t *testing.T) {
 		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>": "a b\nc",
 		"<  spaced   <I>out</I>  >":                                         "spaced out",
 	} {
-		if got := plain(label); got != want {
-			t.Errorf("plain(%q) = %q, want %q", label, got, want)
+		if got := draw.PlainLabel(label); got != want {
+			t.Errorf("draw.PlainLabel(%q) = %q, want %q", label, got, want)
 		}
 	}
 }
@@ -32,7 +33,7 @@ func TestHTMLLabel(t *testing.T) {
 	node := graph.Node("a")
 	node.Shape = layout.Box
 	node.Label = "<<B>bold</B>>"
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +54,7 @@ func TestWideLabel(t *testing.T) {
 	node := graph.Node("a")
 	node.Shape = layout.Box
 	node.Label = "漢字漢字"
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +64,7 @@ func TestWideLabel(t *testing.T) {
 	}
 	var widths []int
 	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
-		widths = append(widths, width(strings.TrimSpace(line)))
+		widths = append(widths, draw.Columns(strings.TrimSpace(line)))
 	}
 	if len(widths) != 3 || widths[0] != widths[1] || widths[1] != widths[2] || widths[1] < 10 {
 		t.Errorf("box rows are %v columns wide, want at least 10 each:\n%s", widths, buf.String())
@@ -76,7 +77,7 @@ func TestClusterLabel(t *testing.T) {
 	graph := layout.NewDigraph()
 	label := "Extremely long cluster label spanning many characters"
 	graph.Clusters = []*layout.Cluster{{ID: "c", Label: label, Nodes: []*layout.Node{graph.Node("a")}}}
-	Prepare(graph)
+	graph.ForText = true
 	if err := layout.Hierarchical(graph); err != nil {
 		t.Fatal(err)
 	}
