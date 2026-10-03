@@ -238,6 +238,14 @@ var examples = map[string]func() *layout.Graph{
 	},
 }
 
+// exampleOptions are the layout options of examples that don't use the
+// defaults
+var exampleOptions = map[string]layout.Options{
+	// automata read best with the path from the start along one line
+	"regex":    {Align: layout.AlignLeft},
+	"regex_tb": {Align: layout.AlignLeft},
+}
+
 // regexDFA returns the automaton of the regex examples
 func regexDFA() *layout.Graph {
 	graph := layout.NewDigraph()
@@ -266,7 +274,7 @@ func regexDFA() *layout.Graph {
 func TestExamples(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
-			checkGolden(t, filepath.Join("testdata", name+".svg"), build())
+			checkGolden(t, filepath.Join("testdata", name+".svg"), build(), exampleOptions[name])
 		})
 	}
 }
@@ -280,7 +288,7 @@ func TestExamplesText(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			graph := build()
 			text.Prepare(graph)
-			if err := layout.Hierarchical(graph); err != nil {
+			if err := layout.HierarchicalWith(graph, exampleOptions[name]); err != nil {
 				t.Fatal(err)
 			}
 			var got bytes.Buffer
@@ -324,7 +332,7 @@ func TestGraphviz(t *testing.T) {
 			if len(graphs) != 1 {
 				t.Fatalf("expected one graph, got %d", len(graphs))
 			}
-			checkGolden(t, strings.TrimSuffix(file, ".gv")+".svg", graphs[0])
+			checkGolden(t, strings.TrimSuffix(file, ".gv")+".svg", graphs[0], layout.Options{})
 		})
 	}
 }
@@ -350,9 +358,9 @@ func TestWriteDot(t *testing.T) {
 	compareGolden(t, filepath.Join("testdata", "minimal.dot"), got.Bytes())
 }
 
-func checkGolden(t *testing.T, path string, graph *layout.Graph) {
+func checkGolden(t *testing.T, path string, graph *layout.Graph, opts layout.Options) {
 	t.Helper()
-	if err := layout.Hierarchical(graph); err != nil {
+	if err := layout.HierarchicalWith(graph, opts); err != nil {
 		t.Fatal(err)
 	}
 
@@ -465,7 +473,7 @@ func TestDiagnostics(t *testing.T) {
 	sort.Strings(names)
 	for _, name := range names {
 		graph := examples[name]()
-		if err := layout.Hierarchical(graph); err != nil {
+		if err := layout.HierarchicalWith(graph, exampleOptions[name]); err != nil {
 			t.Fatal(err)
 		}
 		d := layout.Diagnose(graph)
