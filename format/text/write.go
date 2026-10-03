@@ -48,14 +48,31 @@ const (
 	right
 )
 
-// box maps a direction mask to the line character with those arms.
-var box = [16]rune{
-	0: ' ', up: '│', down: '│', up | down: '│',
-	left: '─', right: '─', left | right: '─',
-	down | right: '┌', down | left: '┐', up | right: '└', up | left: '┘',
-	up | down | right: '├', up | down | left: '┤',
-	left | right | down: '┬', left | right | up: '┴',
-	up | down | left | right: '┼',
+// glyphs holds the line character for every combination of arm weights
+// (0 none, 1 light, 2 heavy), indexed by up*27 + down*9 + left*3 + right.
+var glyphs = []rune(" ╶╺╴─╼╸╾━╷┌┍┐┬┮┑┭┯╻┎┏┒┰┲┓┱┳╵└┕┘┴┶┙┵┷│├┝┤┼┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╂╊┫╉╋")
+
+// glyph returns the line character with the arms in lines, drawing the
+// arms in heavy heavy. A lone arm is drawn as a full straight line.
+func glyph(lines, heavy int) rune {
+	if lines&(lines-1) == 0 {
+		lines |= opposite(lines)
+		if heavy != 0 {
+			heavy = lines
+		}
+	}
+	i := 0
+	for _, arm := range []int{up, down, left, right} {
+		w := 0
+		if lines&arm != 0 {
+			w = 1
+		}
+		if heavy&arm != 0 {
+			w = 2
+		}
+		i = i*3 + w
+	}
+	return glyphs[i]
 }
 
 var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
@@ -63,15 +80,19 @@ var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
 type canvas struct {
 	w, h   int
 	cells  []rune
-	lines  []int  // direction mask per cell, for joining edge runs
-	solid  []bool // cells covered by a node; edges do not draw there
-	dashed bool   // straight runs drawn from now on are dashed
+	lines  []int    // direction mask per cell, for joining edge runs
+	heavy  []int    // arms that runs of different edges share
+	owner  [][4]int // edge that first drew each arm of a cell
+	solid  []bool   // cells covered by a node; edges do not draw there
+	dashed bool     // straight runs drawn from now on are dashed
+	edge   int      // edge drawn from now on, so that overlaps show
 }
 
 func (c *canvas) set(x, y int, r rune) {
 	if x >= 0 && x < c.w && y >= 0 && y < c.h {
 		c.cells[y*c.w+x] = r
 		c.lines[y*c.w+x] = 0
+		c.heavy[y*c.w+x] = 0
 	}
 }
 
@@ -80,14 +101,25 @@ func (c *canvas) line(x, y int, mask int) {
 		return
 	}
 	i := y*c.w + x
+	for arm := range 4 {
+		bit := 1 << arm
+		switch {
+		case mask&bit == 0:
+		case c.lines[i]&bit == 0:
+			c.owner[i][arm] = c.edge
+		case c.owner[i][arm] != c.edge:
+			c.heavy[i] |= bit
+		}
+	}
 	c.lines[i] |= mask
-	c.cells[i] = box[c.lines[i]]
+	c.cells[i] = glyph(c.lines[i], c.heavy[i])
 	if c.dashed {
+		heavy := c.heavy[i] != 0
 		switch c.lines[i] {
 		case up, down, up | down:
-			c.cells[i] = '┊'
+			c.cells[i] = map[bool]rune{false: '┊', true: '┋'}[heavy]
 		case left, right, left | right:
-			c.cells[i] = '┈'
+			c.cells[i] = map[bool]rune{false: '┈', true: '┉'}[heavy]
 		}
 	}
 }
@@ -225,10 +257,13 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
 	c.lines = make([]int, c.w*c.h)
+	c.heavy = make([]int, c.w*c.h)
+	c.owner = make([][4]int, c.w*c.h)
 	c.solid = make([]bool, c.w*c.h)
 
 	c.dashed = true
 	for _, cluster := range graph.Clusters {
+		c.edge++
 		c.frame(col(cluster.TopLeft.X), row(cluster.TopLeft.Y), col(cluster.BottomRight.X), row(cluster.BottomRight.Y))
 	}
 	c.dashed = false
@@ -299,6 +334,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		last := len(cells) - 1
 		cells[0] = border(cells[0], cells[1], edge.From)
 		cells[last] = border(cells[last], cells[last-1], edge.To)
+		c.edge++
 		c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
 		for i := 0; i+1 < len(cells); i++ {
 			c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
@@ -340,8 +376,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	for y := range grid {
 		grid[y] = c.cells[y*c.w : (y+1)*c.w]
 	}
-	grid = carve(grid, " │┊┆", 1)
-	grid = transpose(carve(transpose(grid), " ─┈┄", 2))
+	grid = carve(grid, " │┃┊┋┆", 1)
+	grid = transpose(carve(transpose(grid), " ─━┈┉┄", 2))
 
 	var out strings.Builder
 	for _, line := range grid {
