@@ -54,7 +54,11 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
-	if node.Shape != layout.Record {
+	var rec *layout.RecordField
+	if node.Shape == layout.Record {
+		rec = graph.LayoutRecord(node)
+		y1 = max(y1, y0+recordRows(rec)+1)
+	} else {
 		y1 = max(y1, y0+len(lines)+1)
 	}
 	c.boxes[node] = [4]int{x0, y0, x1, y1}
@@ -78,9 +82,14 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		style = "┌┐└┘─│"
 	}
 	c.rect(x0, y0, x1, y1, style)
-	if node.Shape == layout.Record {
-		inside := func(v layout.Length) int { return min(max(c.row(v), y0+1), y1-1) }
-		c.record(graph.LayoutRecord(node), node.TopLeft(), c.col, inside)
+	if rec != nil {
+		// fields at their share of the rows, which can be more than the
+		// node rounds to
+		inside := func(v layout.Length) int {
+			share := float64((v - node.Top()) / (node.Bottom() - node.Top()))
+			return y0 + int(math.Round(share*float64(y1-y0)))
+		}
+		c.record(rec, node.TopLeft(), c.col, inside)
 		return
 	}
 	top := (y0+y1)/2 - len(lines)/2
@@ -323,10 +332,17 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" {
-			x, y := c.col(edge.LabelPos.X-edge.LabelRadius.X), c.row(edge.LabelPos.Y)
-			x, y = c.nearEdge(x, y, len([]rune(edge.Label)), paths[i])
+			lines := strings.Split(edge.Label, "\n")
+			w := 0
+			for _, line := range lines {
+				w = max(w, len([]rune(line)))
+			}
+			x, y := c.col(edge.LabelPos.X-edge.LabelRadius.X), c.row(edge.LabelPos.Y)-(len(lines)-1)/2
+			x, y = c.nearEdge(x, y, w, len(lines), paths[i])
 			c.font = rgb(edge.FontColor)
-			c.text(x, y, edge.Label)
+			for k, line := range lines {
+				c.text(x, y+k, line)
+			}
 		}
 	}
 	for _, cluster := range graph.Clusters {
@@ -337,12 +353,13 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	}
 }
 
-// nearEdge moves a label n cells wide at x, y toward its edge, drawn along
+// nearEdge moves a label w cells wide and h tall at x, y toward its edge,
+// drawn along
 // path, while a blank row or more than one blank column separates them
 // and the cells it moves into are blank. The layout keeps labels an edge
 // padding from their edge, which is a whole row in text, and rounding can
 // leave a blank row between them.
-func (c *canvas) nearEdge(x, y, n int, path [][2]int) (int, int) {
+func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
 	var cells [][2]int
 	for i := 0; i+1 < len(path); i++ {
 		a, b := path[i], path[i+1]
@@ -358,25 +375,30 @@ func (c *canvas) nearEdge(x, y, n int, path [][2]int) (int, int) {
 	}
 	for range c.h + c.w {
 		// the nearest cell of the edge above or below the label, or
-		// beside it on its row, in blank cells between
+		// beside it on its rows, in blank cells between
 		dx, dy, gap := 0, 0, math.MaxInt
 		for _, p := range cells {
+			beside := p[1] >= y && p[1] < y+h
 			switch {
-			case p[0] >= x && p[0] < x+n && p[1] != y:
-				if d := abs(p[1]-y) - 1; d < gap {
-					dx, dy, gap = 0, sign(p[1]-y), d
+			case p[0] >= x && p[0] < x+w && p[1] < y:
+				if d := y - p[1] - 1; d < gap {
+					dx, dy, gap = 0, -1, d
 				}
-			case p[1] == y && p[0] < x:
+			case p[0] >= x && p[0] < x+w && p[1] >= y+h:
+				if d := p[1] - (y + h); d < gap {
+					dx, dy, gap = 0, 1, d
+				}
+			case beside && p[0] < x:
 				if d := x - p[0] - 2; d < gap { // one blank column is close
 					dx, dy, gap = -1, 0, d
 				}
-			case p[1] == y && p[0] >= x+n:
-				if d := p[0] - (x + n) - 1; d < gap {
+			case beside && p[0] >= x+w:
+				if d := p[0] - (x + w) - 1; d < gap {
 					dx, dy, gap = 1, 0, d
 				}
 			}
 		}
-		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dx, y+dy, n) {
+		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dx, y+dy, w, h) {
 			break
 		}
 		x, y = x+dx, y+dy
@@ -384,14 +406,16 @@ func (c *canvas) nearEdge(x, y, n int, path [][2]int) (int, int) {
 	return x, y
 }
 
-// blank reports whether the n cells from x along row y are empty
-func (c *canvas) blank(x, y, n int) bool {
-	if y < 0 || y >= c.h || x < 0 || x+n > c.w {
+// blank reports whether the w by h cells from x, y are empty
+func (c *canvas) blank(x, y, w, h int) bool {
+	if y < 0 || y+h > c.h || x < 0 || x+w > c.w {
 		return false
 	}
-	for i := y*c.w + x; i < y*c.w+x+n; i++ {
-		if c.cells[i] != ' ' || c.solid[i] {
-			return false
+	for row := y; row < y+h; row++ {
+		for i := row*c.w + x; i < row*c.w+x+w; i++ {
+			if c.cells[i] != ' ' || c.solid[i] {
+				return false
+			}
 		}
 	}
 	return true

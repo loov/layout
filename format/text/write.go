@@ -41,6 +41,14 @@ func Prepare(graph *layout.Graph) {
 	graph.NodePadding = graph.LineHeight * 2
 	graph.EdgePadding = graph.LineHeight
 
+	// text draws the dividers of records on rows of their own
+	for _, node := range graph.Nodes {
+		if node.Shape == layout.Record || node.Shape == layout.Auto && graph.Shape == layout.Record {
+			rows := recordRows(layout.ParseRecord(node.DefaultLabel()))
+			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*layout.Length(rows+1)/2)
+		}
+	}
+
 	// sideways, the main path runs along the top row of the nodes, with
 	// further edges a row each below it; the layout makes room for them
 	sideways := graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft

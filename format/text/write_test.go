@@ -259,3 +259,27 @@ func TestLabelsBeforeOrigin(t *testing.T) {
 		}
 	}
 }
+
+// TestMultilineLabels checks that labels with several lines are drawn a
+// line per row, inside record boxes and beside edges.
+func TestMultilineLabels(t *testing.T) {
+	graph := layout.NewDigraph()
+	rec := graph.Node("r")
+	rec.Shape = layout.Record
+	rec.Label = "first\nsecond"
+	graph.Edge("a", "b").Label = "one\ntwo"
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	for _, want := range []string{"│ first │", "│second │", "│ one", "│ two"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q:\n%s", want, got)
+		}
+	}
+}

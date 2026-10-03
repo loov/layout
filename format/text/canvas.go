@@ -52,7 +52,7 @@ type canvas struct {
 	w, h   int
 	cellW  layout.Length // size of a cell in graph units
 	cellH  layout.Length
-	origin layout.Vector // graph coordinates of the top left cell
+	origin layout.Vector           // graph coordinates of the top left cell
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	cells  []rune
 	fg, bg []uint32 // colors per cell, see rgb
@@ -82,8 +82,8 @@ func newCanvas(graph *layout.Graph) *canvas {
 	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
 	for _, edge := range graph.Edges {
-		if edge.Label != "" {
-			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+len([]rune(edge.Label))+1)
+		for _, line := range strings.Split(edge.Label, "\n") {
+			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+len([]rune(line))+1)
 		}
 	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
@@ -199,13 +199,17 @@ func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
 }
 
 // record draws field texts centered in their boxes with dividers between
-// sibling fields
+// sibling fields; row maps the top and bottom of fields to the rows of the
+// borders and dividers around them
 func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row func(layout.Length) int) {
 	if len(rec.Fields) == 0 {
 		x0, y0 := col(origin.X+rec.TopLeft.X), row(origin.Y+rec.TopLeft.Y)
 		x1, y1 := col(origin.X+rec.BottomRight.X), row(origin.Y+rec.BottomRight.Y)
-		r := []rune(rec.Text)
-		c.text((x0+x1+1-len(r))/2, (y0+y1)/2, rec.Text)
+		lines := strings.Split(rec.Text, "\n")
+		for i, line := range lines {
+			r := []rune(line)
+			c.text((x0+x1+1-len(r))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
+		}
 		return
 	}
 	// dividers first, so that field texts win when rows are too coarse
@@ -220,7 +224,7 @@ func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row 
 			}
 		} else {
 			x := col(origin.X + field.TopLeft.X)
-			for y := row(origin.Y + field.TopLeft.Y); y <= row(origin.Y+field.BottomRight.Y); y++ {
+			for y := row(origin.Y+field.TopLeft.Y) + 1; y < row(origin.Y+field.BottomRight.Y); y++ {
 				c.set(x, y, '│')
 			}
 		}
@@ -298,4 +302,25 @@ func sign(v int) int {
 		return -1
 	}
 	return 1
+}
+
+// recordRows returns the rows the fields of a record need inside its
+// box: a row per line of text, and one per divider between fields
+// stacked vertically
+func recordRows(rec *layout.RecordField) int {
+	if len(rec.Fields) == 0 {
+		return strings.Count(rec.Text, "\n") + 1
+	}
+	rows := 0
+	for _, field := range rec.Fields {
+		if rec.Vertical {
+			rows += recordRows(field)
+		} else {
+			rows = max(rows, recordRows(field))
+		}
+	}
+	if rec.Vertical {
+		rows += len(rec.Fields) - 1
+	}
+	return rows
 }
