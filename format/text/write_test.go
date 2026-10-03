@@ -235,3 +235,27 @@ func TestDotFanOut(t *testing.T) {
 		}
 	}
 }
+
+// TestLabelsBeforeOrigin checks that labels the layout nudges to
+// negative coordinates are drawn whole.
+func TestLabelsBeforeOrigin(t *testing.T) {
+	graph := layout.NewDigraph()
+	for _, e := range [][3]string{{"a", "b", "one"}, {"a", "b", "two"}, {"b", "a", "back"}} {
+		edge := layout.NewEdge(graph.Node(e[0]), graph.Node(e[1]))
+		edge.Label = e[2]
+		graph.AddEdge(edge)
+	}
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	for _, label := range []string{"one", "two", "back"} {
+		if !strings.Contains(buf.String(), label) {
+			t.Errorf("label %q is missing:\n%s", label, buf.String())
+		}
+	}
+}

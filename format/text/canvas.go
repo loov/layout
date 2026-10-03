@@ -52,6 +52,7 @@ type canvas struct {
 	w, h   int
 	cellW  layout.Length // size of a cell in graph units
 	cellH  layout.Length
+	origin layout.Vector // graph coordinates of the top left cell
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	cells  []rune
 	fg, bg []uint32 // colors per cell, see rgb
@@ -75,7 +76,10 @@ func newCanvas(graph *layout.Graph) *canvas {
 	if c.cellH <= 0 {
 		c.cellH = 16
 	}
-	_, size := graph.Bounds()
+	// the drawing can reach before the origin, with labels nudged there
+	// or pinned and force layouts; keep the usual margin otherwise
+	topLeft, size := graph.Bounds()
+	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
 	for _, edge := range graph.Edges {
 		if edge.Label != "" {
@@ -93,8 +97,8 @@ func newCanvas(graph *layout.Graph) *canvas {
 }
 
 // col and row return the cell column and row of graph coordinates
-func (c *canvas) col(v layout.Length) int { return int(v/c.cellW + 0.5) }
-func (c *canvas) row(v layout.Length) int { return int(v/c.cellH + 0.5) }
+func (c *canvas) col(v layout.Length) int { return int((v-c.origin.X)/c.cellW + 0.5) }
+func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 0.5) }
 
 func (c *canvas) set(x, y int, r rune) {
 	if x >= 0 && x < c.w && y >= 0 && y < c.h {
