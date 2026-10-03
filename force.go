@@ -18,6 +18,10 @@ func Force(graph *Graph) error {
 		return err
 	}
 	graph.AssignMissingValues()
+	if graph.Pinned {
+		layoutPinned(graph)
+		return nil
+	}
 	n := len(graph.Nodes)
 	if n == 0 {
 		return nil

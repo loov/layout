@@ -3,6 +3,7 @@ package layout_test
 import (
 	"bytes"
 	"math"
+	"slices"
 	"testing"
 
 	"github.com/loov/layout"
@@ -42,4 +43,32 @@ func TestForce(t *testing.T) {
 		t.Fatal(err)
 	}
 	compareGolden(t, "testdata/force.svg", got.Bytes())
+}
+
+func TestForcePreservesPinnedCentersAndPaths(t *testing.T) {
+	graph := layout.NewGraph()
+	graph.Pinned = true
+	existing := graph.Edge("a", "b")
+	missing := graph.Edge("b", "c")
+	centers := []layout.Vector{{100, 100}, {100, 200}, {200, 200}}
+	for i, node := range graph.Nodes {
+		node.Center = centers[i]
+	}
+	path := []layout.Vector{{100, 116}, {80, 150}, {100, 184}}
+	existing.Path = slices.Clone(path)
+	existing.Label, existing.LabelPos = "label", layout.Vector{80, 150}
+	if err := layout.Force(graph); err != nil {
+		t.Fatal(err)
+	}
+	for i, node := range graph.Nodes {
+		if node.Center != centers[i] {
+			t.Errorf("node %s moved to %v", node.ID, node.Center)
+		}
+	}
+	if !slices.Equal(existing.Path, path) || existing.LabelPos != (layout.Vector{80, 150}) {
+		t.Errorf("existing path or label moved: %v, %v", existing.Path, existing.LabelPos)
+	}
+	if len(missing.Path) != 2 {
+		t.Fatalf("missing path was not computed: %v", missing.Path)
+	}
 }
