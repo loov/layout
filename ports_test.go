@@ -58,3 +58,21 @@ func TestHierarchicalRestoresPortsOfRepeatedEdge(t *testing.T) {
 		t.Fatalf("FromPort = %q, want %q", e.FromPort, layout.East)
 	}
 }
+
+func TestStraightLineRoutingPreservesExplicitPorts(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft} {
+		t.Run(string(dir), func(t *testing.T) {
+			g := layout.NewDigraph()
+			g.RankDir, g.Splines = dir, layout.SplinesLine
+			e := g.Edge("a", "b")
+			e.MinLen, e.FromPort, e.ToPort = 2, layout.West, layout.East
+			if err := layout.Hierarchical(g); err != nil {
+				t.Fatal(err)
+			}
+			if len(e.Path) != 2 {
+				t.Fatalf("straight path has %d points", len(e.Path))
+			}
+			assertPortEndpoints(t, e)
+		})
+	}
+}

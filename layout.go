@@ -801,7 +801,14 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	if graphdef.Splines == SplinesLine {
 		for _, edge := range graphdef.Edges {
 			if edge.From != edge.To && len(edge.Path) > 2 {
-				edge.Path = []Vector{edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)}
+				from, to := edge.Path[0], edge.Path[len(edge.Path)-1]
+				if edge.FromPort == CompassAuto {
+					from = edge.From.Boundary(edge.To.Center)
+				}
+				if edge.ToPort == CompassAuto {
+					to = edge.To.Boundary(edge.From.Center)
+				}
+				edge.Path = []Vector{from, to}
 			}
 		}
 	}
