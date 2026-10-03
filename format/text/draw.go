@@ -54,6 +54,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
+	if node.Shape != layout.Record {
+		y1 = max(y1, y0+len(lines)+1)
+	}
 	c.boxes[node] = [4]int{x0, y0, x1, y1}
 	c.ink, c.font = rgb(node.LineColor), rgb(node.FontColor)
 	c.fill(x0, y0, x1, y1, rgb(node.FillColor))

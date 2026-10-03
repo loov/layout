@@ -1,5 +1,6 @@
 
-             ┌─Lorem─┐
+             ┌───────┐
+             │ Lorem │
              │ Ipsum │
              │Dolorem│
              └─┬─┬───┘
