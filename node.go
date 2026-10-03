@@ -89,7 +89,7 @@ func (graph *Graph) lineWidth(fontName string, fontSize Length) func(line string
 	if graph.MeasureText == nil {
 		return nil
 	}
-	return func(line string) float64 { return 2 * float64(graph.MeasureText(line, fontName, fontSize).X) }
+	return func(line string) float64 { return float64(graph.MeasureText(line, fontName, fontSize)) }
 }
 
 // TopLeft returns the top left corner of the node bounds.

@@ -277,15 +277,12 @@ func Example_pinned() {
 
 // MeasureText replaces the built-in text width estimate, for example
 // with measurements from the font the output will use. It returns the
-// half size of one line.
+// width of one line.
 func Example_measureText() {
 	graph := layout.NewDigraph()
-	graph.MeasureText = func(line, fontName string, fontSize layout.Length) layout.Vector {
+	graph.MeasureText = func(line, fontName string, fontSize layout.Length) layout.Length {
 		// a monospace font with characters 0.6 em wide
-		return layout.Vector{
-			X: layout.Length(len(line)) * fontSize * 0.6 / 2,
-			Y: fontSize / 2,
-		}
+		return layout.Length(len(line)) * fontSize * 0.6
 	}
 	graph.Edge("short", "a much longer label")
 

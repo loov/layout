@@ -165,7 +165,7 @@ func drawPoint(v layout.Vector) draw.Point { return draw.Point{X: float64(v.X), 
 func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *draw.Record {
 	var lineWidth func(string) float64
 	if graph.MeasureText != nil {
-		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, box.FontSize).X) }
+		lineWidth = func(line string) float64 { return float64(graph.MeasureText(line, node.FontName, box.FontSize)) }
 	}
 	return draw.LayoutRecord(box.Label, float64(box.Size.X), float64(box.Size.Y), float64(graph.LineHeight), float64(box.FontSize), lineWidth)
 }

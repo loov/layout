@@ -17,9 +17,10 @@ type Graph struct {
 	// top of its nodes. Options.ForText sets it for sideways layouts.
 	PackEdgeEnds bool
 
-	// MeasureText returns the half size of a single line of text in the
-	// given font. When nil, a built-in approximation is used.
-	MeasureText func(line string, fontName string, fontSize Length) Vector
+	// MeasureText returns the width of a single line of text in the
+	// given font; the height of a line is LineHeight. When nil, a
+	// built-in approximation is used.
+	MeasureText func(line string, fontName string, fontSize Length) Length
 
 	// Defaults for nodes and edges that leave the value unset
 	LineHeight Length
