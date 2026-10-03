@@ -1,8 +1,45 @@
-// Package dot parses the Graphviz dot file format into layout graphs.
+// Package dot parses the Graphviz dot file format into layout graphs and
+// writes laid out graphs back as dot.
 //
-// Node and edge attributes that map onto layout properties (label, shape,
-// colors, font, line width, tooltip, weight, minlen) are applied; rank=same subgraphs are
-// recorded in Graph.SameRank. Other attributes are ignored.
+// The parser reads these attributes; everything else is ignored without
+// an error.
+//
+//   - graph: rankdir, splines (polyline, line, ortho), nodesep, ranksep,
+//     bb
+//   - subgraph: rank (same, min, source, max, sink); for cluster
+//     subgraphs also label, color, pencolor, fillcolor, bgcolor and
+//     style=filled
+//   - node: label, shape, style, color, pencolor, fillcolor, fontcolor,
+//     fontname, fontsize, penwidth, width, height, fixedsize,
+//     peripheries, image, tooltip, pos
+//   - edge: label, style, color, pencolor, fontcolor, fontname, fontsize,
+//     penwidth, weight, minlen, dir, arrowhead, arrowtail, headport,
+//     tailport, tooltip, pos, lp
+//
+// When every node has a pos, the graph is marked layout.Graph.Pinned and
+// keeps those positions, like dot -n.
+//
+// Known gaps:
+//
+//   - Shapes other than box, rect, rectangle, square, circle,
+//     doublecircle, ellipse, oval, none, point, record and Mrecord use
+//     the graph default; that includes plaintext, plain and diamond.
+//     Mrecord draws with square corners.
+//   - Arrowheads other than normal, vee, dot, odot and none are not
+//     drawn.
+//   - Colors are names from the X11 scheme or #RRGGBB and #RRGGBBAA;
+//     HSV values, color lists and gradients are ignored.
+//   - Styles other than solid, dashed, dotted, bold and filled are
+//     ignored; style=invis still draws the element, and rounded and
+//     diagonals have no effect.
+//   - Ports name compass points only; a record field port such as
+//     "node:f0" attaches to the node as a whole.
+//   - minlen=0 is ignored; put such nodes in a rank=same subgraph.
+//   - The graph label, labels on subgraphs that are not clusters,
+//     xlabel, headlabel and taillabel are not drawn.
+//   - Layout controls such as constraint, group, ordering, compound with
+//     lhead and ltail, concentrate, newrank, size, ratio and rotate have
+//     no effect.
 package dot
 
 import (
