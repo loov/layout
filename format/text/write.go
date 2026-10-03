@@ -77,6 +77,34 @@ func glyph(lines, heavy int) rune {
 	return glyphs[i]
 }
 
+// marker draws an edge end marker for the segment from a to the end b,
+// which lies in cell end. It sits in the gap before the node when the run
+// there is straight, else on the node border.
+func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) {
+	dir := down
+	switch dx, dy := b.X-a.X, b.Y-a.Y; {
+	case dy < 0 && -dy >= absLength(dx):
+		dir = up
+	case dx > 0 && dx > absLength(dy):
+		dir = right
+	case dx < 0 && -dx > absLength(dy):
+		dir = left
+	}
+	r, ok := map[layout.Arrow]rune{
+		layout.ArrowNormal: arrow[dir],
+		layout.ArrowVee:    map[int]rune{up: '↑', down: '↓', left: '←', right: '→'}[dir],
+		layout.ArrowDot:    '●',
+		layout.ArrowODot:   '○',
+	}[style]
+	if !ok {
+		return
+	}
+	if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
+		end = [2]int{px, py}
+	}
+	c.set(end[0], end[1], r)
+}
+
 var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
 
 type canvas struct {
@@ -347,26 +375,12 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
 		}
 		c.dashed = false
-		if edge.Directed && edge.ArrowHead != layout.ArrowNone {
-			// the arrowhead points along the last segment; it sits in the
-			// gap before the node when the run there is straight, else on
-			// the node border
-			a, b := path[len(path)-2], path[len(path)-1]
-			dir := down
-			switch dx, dy := b.X-a.X, b.Y-a.Y; {
-			case dy < 0 && -dy >= absLength(dx):
-				dir = up
-			case dx > 0 && dx > absLength(dy):
-				dir = right
-			case dx < 0 && -dx > absLength(dy):
-				dir = left
-			}
-			end := cells[len(cells)-1]
-			if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
-				end = [2]int{px, py}
-			}
-			c.set(end[0], end[1], arrow[dir])
+		head := edge.ArrowHead
+		if head == layout.ArrowDefault && edge.Directed {
+			head = layout.ArrowNormal
 		}
+		c.marker(head, path[len(path)-2], path[len(path)-1], cells[len(cells)-1])
+		c.marker(edge.ArrowTail, path[1], path[0], cells[0])
 	}
 	for _, edge := range graph.Edges {
 		if edge.Label != "" {
@@ -383,8 +397,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	for y := range grid {
 		grid[y] = c.cells[y*c.w : (y+1)*c.w]
 	}
-	grid = carve(grid, " │┃┊┋┆", 1)
-	grid = transpose(carve(transpose(grid), " ─━┈┉┄", 2))
+	grid = carve(grid, " │┃┊┋┆", "▲▼●○", 1)
+	grid = transpose(carve(transpose(grid), " ─━┈┉┄", "◀▶●○", 2))
 
 	var out strings.Builder
 	for _, line := range grid {
@@ -398,7 +412,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 // carve removes rows that only continue straight lines or blanks and
 // repeat the row before them, keeping at most keep of every such run.
 // Removing them keeps the drawing connected, just tighter.
-func carve(grid [][]rune, straight string, keep int) [][]rune {
+func carve(grid [][]rune, straight, markers string, keep int) [][]rune {
 	out := grid[:0:0]
 	run := 0
 	for i, row := range grid {
@@ -409,7 +423,9 @@ func carve(grid [][]rune, straight string, keep int) [][]rune {
 				break
 			}
 		}
-		if plain && i > 0 && slices.Equal(row, grid[i-1]) {
+		// a marker on a run continues it like the line it sits on
+		same := func(r, prev rune) bool { return r == prev || r != ' ' && strings.ContainsRune(markers, prev) }
+		if plain && i > 0 && slices.EqualFunc(row, grid[i-1], same) {
 			run++
 		} else {
 			run = 0

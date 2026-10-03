@@ -47,3 +47,46 @@ func TestOverlap(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+func TestArrows(t *testing.T) {
+	markers := "▲▼◀▶↑↓←→●○"
+	for _, tc := range []struct {
+		head, tail layout.Arrow
+		sideways   bool   // lay out left to right
+		want       string // markers in reading order
+	}{
+		{layout.ArrowDefault, layout.ArrowDefault, false, "▼"},
+		{layout.ArrowNone, layout.ArrowNone, false, ""},
+		{layout.ArrowNormal, layout.ArrowNormal, false, "▲▼"},
+		{layout.ArrowVee, layout.ArrowVee, false, "↑↓"},
+		{layout.ArrowDot, layout.ArrowDot, false, "●●"},
+		{layout.ArrowODot, layout.ArrowODot, false, "○○"},
+		{layout.ArrowVee, layout.ArrowDot, false, "●↓"},
+		{layout.ArrowNormal, layout.ArrowNormal, true, "◀▶"},
+		{layout.ArrowVee, layout.ArrowVee, true, "←→"},
+	} {
+		graph := layout.NewDigraph()
+		edge := graph.Edge("A", "B")
+		edge.ArrowHead, edge.ArrowTail = tc.head, tc.tail
+		if tc.sideways {
+			graph.RankDir = layout.LeftToRight
+		}
+		Prepare(graph)
+		if err := layout.Hierarchical(graph); err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if err := Write(&buf, graph); err != nil {
+			t.Fatal(err)
+		}
+		got := strings.Map(func(r rune) rune {
+			if strings.ContainsRune(markers, r) {
+				return r
+			}
+			return -1
+		}, buf.String())
+		if got != tc.want {
+			t.Errorf("head %q tail %q: got markers %q, want %q\n%s", tc.head, tc.tail, got, tc.want, buf.String())
+		}
+	}
+}
