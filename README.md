@@ -20,9 +20,7 @@ go get -u github.com/loov/layout
 
 ## Usage
 
-Minimal usage:
-
-```
+```go
 package main
 
 import (
@@ -35,22 +33,76 @@ import (
 
 func main() {
     graph := layout.NewDigraph()
-    graph.Edge("A", "B")
-    graph.Edge("A", "C")
-    graph.Edge("B", "D")
-    graph.Edge("C", "D")
+    graph.Edge("checkout", "build")
+    graph.Edge("checkout", "lint")
+    graph.Edge("build", "unit")
+    graph.Edge("build", "integration")
+    graph.Edge("lint", "review").LineStyle = layout.Dashed
+    graph.Edge("unit", "review")
+    graph.Edge("integration", "review").Label = "slow"
+
+    approve := graph.Edge("review", "deploy")
+    approve.Label = "approve"
+    approve.LineColor = layout.RGB{G: 0x80}
+    graph.Node("review").Shape = layout.Box
+    graph.Node("deploy").FillColor = layout.RGB{R: 0x98, G: 0xFB, B: 0x98}
+
+    graph.Clusters = []*layout.Cluster{{
+        ID: "test", Label: "test",
+        Nodes:     []*layout.Node{graph.Node("unit"), graph.Node("integration")},
+        LineColor: layout.RGB{B: 0xFF},
+    }}
 
     if err := layout.Hierarchical(graph); err != nil {
         log.Fatal(err)
     }
-
     svg.Write(os.Stdout, graph)
 }
 ```
 
-![Output](./testdata/minimal.png)
+![Output](./testdata/readme.svg)
 
-See other examples in `examples` folder.
+The same graph drawn for a terminal, with `text.Prepare(graph)` before laying out and `text.Write` instead of `svg.Write`:
+
+```
+                      ╭────────╮
+                      │checkout│
+                      ╰────────╯
+                         │  │
+                   ╭─────╯  ╰───────────╮
+                   │                    │
+                   ▼                    ▼
+                ╭─────╮               ╭────╮
+                │build│               │lint│
+                ╰─────╯               ╰────╯
+                  │ │                   ┊
+           ╭──────╯ ╰──────╮            ┊
+           │               │            ┊
+┌ test ┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┐ ┊
+┊          │               │          ┊ ┊
+┊          ▼               ▼          ┊ ┊
+┊       ╭────╮       ╭───────────╮    ┊ ┊
+┊       │unit│       │integration│    ┊ ┊
+┊       ╰────╯       ╰───────────╯    ┊ ┊
+┊          │               │          ┊ ┊
+└┈┈┈┈┈┈┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┘ ┊
+           │               │            ┊
+           │               │ slow       ┊
+           │               │            ┊
+           ╰─────────────╮ │ ┌┈┈┈┈┈┈┈┈┈┈┘
+                         │ │ ┊
+                         ▼ ▼ ▼
+                       ┌──────┐
+                       │review│
+                       └──────┘
+                           │
+                           │ approve
+                           │
+                           ▼
+                       ╭──────╮
+                       │deploy│
+                       ╰──────╯
+```
 
 Other layouts and outputs:
 

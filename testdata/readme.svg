@@ -1,0 +1,28 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='245.24' height='464'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><rect class='cluster' x='0' y='176' width='206.16' height='64' fill='#FFFFFF' stroke='#0000FF'></rect><text text-anchor='middle' alignment-baseline='middle' x='103.08' y='184' font-size='14' fill='#000000'>test</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M121.825226,47.614693 L116.35261,58.807346 Q110.87999,70 105.40737,81.19265 L99.66491,92.937195 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M145.04836,46.325455 L157.92917,58.162727 Q170.81,70 183.69083,81.83727 L199.96744,96.79523 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M83.52123,122.650536 L76.52561,134.32527 Q69.52998,146 65.31991,158.9427 L51.77514,200.58232 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M101.07874,122.650536 L108.07436,134.32527 Q115.06999,146 119.28007,158.9427 L132.67825,200.13165 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M212.16,124 L212.16,135 Q212.16,146 212.16,157 L212.16,202.41692 Q212.16,216 210.66,229.5 L210.66,229.5 Q209.16,243 204.87831,255.89058 L199.54135,271.95816 Q192.22,294 174.4874,309 L156.75478,324 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M55.122166,230.32256 L81.657616,275.77194 Q92.299995,294 107.149994,309 L121.99999,324 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M137.84,232 L137.84,279 Q137.84,294 137.84,309 L137.84,324 '></path><text text-anchor='middle' alignment-baseline='middle' x='159.03' y='282' font-size='14' fill='#000000'>slow</text>
+<path class='edge' marker-end='url(#normal)' stroke='#008000' stroke-width='1' d='M137.84,356 L137.84,371 Q137.84,386 137.84,401 L137.84,416 '></path><text text-anchor='middle' alignment-baseline='middle' x='168.2' y='398' font-size='14' fill='#000000'>approve</text>
+<ellipse cx='129.45999' cy='32' rx='35' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='129.45999' y='32' font-size='14' fill='#000000'>checkout</text>
+<ellipse cx='92.29999' cy='108' rx='21.84' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='92.29999' y='108' font-size='14' fill='#000000'>build</text>
+<ellipse cx='212.16' cy='108' rx='17.08' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='212.16' y='108' font-size='14' fill='#000000'>lint</text>
+<ellipse cx='46.759995' cy='216' rx='18.76' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='46.759995' y='216' font-size='14' fill='#000000'>unit</text>
+<ellipse cx='137.84' cy='216' rx='40.32' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='137.84' y='216' font-size='14' fill='#000000'>integration</text>
+<rect x='109.49' y='324' width='56.7' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='137.84' y='340' font-size='14' fill='#000000'>review</text>
+<ellipse cx='137.84' cy='432' rx='27.16' ry='16' class='node' fill='#98FB98' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='137.84' y='432' font-size='14' fill='#000000'>deploy</text>
+</g></svg>

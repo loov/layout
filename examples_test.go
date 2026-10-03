@@ -20,6 +20,30 @@ import (
 var update = flag.Bool("update", false, "update testdata golden files")
 
 var examples = map[string]func() *layout.Graph{
+	// readme is the example in README.md; keep the two in sync
+	"readme": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("checkout", "build")
+		graph.Edge("checkout", "lint")
+		graph.Edge("build", "unit")
+		graph.Edge("build", "integration")
+		graph.Edge("lint", "review").LineStyle = layout.Dashed
+		graph.Edge("unit", "review")
+		graph.Edge("integration", "review").Label = "slow"
+
+		approve := graph.Edge("review", "deploy")
+		approve.Label = "approve"
+		approve.LineColor = layout.RGB{G: 0x80}
+		graph.Node("review").Shape = layout.Box
+		graph.Node("deploy").FillColor = layout.RGB{R: 0x98, G: 0xFB, B: 0x98}
+
+		graph.Clusters = []*layout.Cluster{{
+			ID: "test", Label: "test",
+			Nodes:     []*layout.Node{graph.Node("unit"), graph.Node("integration")},
+			LineColor: layout.RGB{B: 0xFF},
+		}}
+		return graph
+	},
 	"minimal": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.Edge("A", "B")
