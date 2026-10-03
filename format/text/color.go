@@ -150,7 +150,7 @@ func ansi16(color uint32, role role) int {
 	return base + [6]int{1, 3, 2, 6, 4, 5}[int(hue+0.5)%6]
 }
 
-// lightness returns// lightness returns the HSL lightness of a cell color, in [0, 1]
+// lightness returns the HSL lightness of a cell color, in [0, 1]
 func lightness(color uint32) float64 {
 	r, g, b := color>>16&0xFF, color>>8&0xFF, color&0xFF
 	return float64(max(r, g, b)+min(r, g, b)) / (2 * 0xFF)

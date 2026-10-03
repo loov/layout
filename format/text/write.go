@@ -76,6 +76,13 @@ func Prepare(graph *layout.Graph) {
 		// nodes in a rank are stacked down the rows, which are twice as
 		// tall as columns are wide; keep the same visual spacing
 		graph.NodePadding = graph.LineHeight / 2
+		// packing makes nodes taller; text draws circles as boxes either
+		// way, and a circle would widen as much
+		for _, node := range graph.Nodes {
+			if node.Shape == layout.Circle {
+				node.Shape = layout.Ellipse
+			}
+		}
 		return
 	}
 	// self-loops stack down the right side, each leaving and returning a
