@@ -63,3 +63,34 @@ func BenchmarkDecycle(b *testing.B) {
 		})
 	}
 }
+
+func TestDecyclePreservesAntiparallelMinimumLengths(t *testing.T) {
+	for _, tc := range []struct {
+		name                    string
+		forward, backward, want int32
+	}{
+		{"longer reverse", 2, 5, 5}, {"longer forward", 5, 2, 5},
+		{"default forward", 1, 0, 1}, {"default reverse", 0, 1, 1}, {"zero", 0, 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			graph := NewGraph()
+			a, b := graph.AddNode(), graph.AddNode()
+			graph.AddEdge(a, b)
+			graph.AddEdge(b, a)
+			graph.SetMinLen(a, b, tc.forward)
+			graph.SetMinLen(b, a, tc.backward)
+			Decycle(graph)
+			for _, src := range graph.Nodes {
+				for _, dst := range src.Out {
+					if got := graph.MinLen(src, dst); got != tc.want {
+						t.Fatalf("minimum length = %d, want %d", got, tc.want)
+					}
+				}
+			}
+			Rank(graph)
+			if span := max(a.Rank, b.Rank) - min(a.Rank, b.Rank); span < int(tc.want) {
+				t.Fatalf("rank span = %d, want >= %d", span, tc.want)
+			}
+		})
+	}
+}
