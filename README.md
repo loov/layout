@@ -59,7 +59,7 @@ Other layouts and outputs:
 * `format/json` — plain coordinates for drawing the graph elsewhere.
 * `format/text` — Unicode box-drawing output for terminals; call `text.Prepare(graph)` before laying out.
 
-The same is available from the command line: `glay -l force -q fast -t txt|json|svg|dot input.dot`.
+The same is available from the command line: `glay -l force -q fast -t txt|ans|json|svg|dot input.dot`.
 
 ## Quality
 

@@ -37,6 +37,7 @@ func TestOverlap(t *testing.T) {
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
 	c.lines = make([]int, c.w*c.h)
 	c.heavy = make([]int, c.w*c.h)
+	c.fg = make([]uint32, c.w*c.h)
 	c.owner = make([][4]int, c.w*c.h)
 	c.solid = make([]bool, c.w*c.h)
 	c.edge = 1

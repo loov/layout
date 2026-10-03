@@ -216,7 +216,8 @@ func TestExamples(t *testing.T) {
 }
 
 // TestExamplesText renders each example with ortho edges as text and
-// compares it to testdata/<name>.txt.
+// compares it to testdata/<name>.txt, and colored to testdata/<name>.ans
+// when the colors make a difference.
 func TestExamplesText(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
@@ -230,6 +231,20 @@ func TestExamplesText(t *testing.T) {
 				t.Fatal(err)
 			}
 			compareGolden(t, filepath.Join("testdata", name+".txt"), got.Bytes())
+
+			plain := bytes.Clone(got.Bytes())
+			got.Reset()
+			if err := text.WriteColor(&got, graph); err != nil {
+				t.Fatal(err)
+			}
+			path := filepath.Join("testdata", name+".ans")
+			if !bytes.Equal(got.Bytes(), plain) {
+				compareGolden(t, path, got.Bytes())
+			} else if *update {
+				_ = os.Remove(path)
+			} else if _, err := os.Stat(path); err == nil {
+				t.Errorf("%s is the same as the text output; run `go test -update`", path)
+			}
 		})
 	}
 }

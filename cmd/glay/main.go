@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|txt] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [input]
+//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -96,6 +96,8 @@ func main() {
 			*outformat = "json"
 		case ".txt":
 			*outformat = "txt"
+		case ".ans":
+			*outformat = "ans"
 		default:
 			*outformat = "svg"
 		}
@@ -118,6 +120,8 @@ func main() {
 		write = json.Write
 	case "txt", "text":
 		write = text.Write
+	case "ans", "ansi":
+		write = text.WriteColor
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)
@@ -215,7 +219,8 @@ func main() {
 	}
 
 	// layout
-	if *outformat == "txt" || *outformat == "text" {
+	switch *outformat {
+	case "txt", "text", "ans", "ansi":
 		text.Prepare(graph)
 	}
 	var opts layout.Options

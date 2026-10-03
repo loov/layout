@@ -1,11 +1,12 @@
 // Package text draws laid out graphs with Unicode box-drawing characters
-// for terminals. Edges are rasterized onto a character grid as horizontal
+// for terminals, optionally colored with ANSI escape codes. Edges are rasterized onto a character grid as horizontal
 // and vertical runs, so ortho splines look best; diagonal segments become
 // staircases. Call Prepare before laying out for output with room for
 // the runs; the extra room is carved away again when writing.
 package text
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"slices"
@@ -112,6 +113,9 @@ var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
 type canvas struct {
 	w, h   int
 	cells  []rune
+	fg, bg []uint32 // colors per cell, see rgb
+	ink    uint32   // color of lines and marks drawn from now on
+	font   uint32   // color of text drawn from now on
 	lines  []int    // direction mask per cell, for joining edge runs
 	heavy  []int    // arms that runs of different edges share
 	owner  [][4]int // edge that first drew each arm of a cell
@@ -123,6 +127,7 @@ type canvas struct {
 func (c *canvas) set(x, y int, r rune) {
 	if x >= 0 && x < c.w && y >= 0 && y < c.h {
 		c.cells[y*c.w+x] = r
+		c.fg[y*c.w+x] = c.ink
 		c.lines[y*c.w+x] = 0
 		c.heavy[y*c.w+x] = 0
 	}
@@ -145,6 +150,7 @@ func (c *canvas) line(x, y int, mask int) {
 	}
 	c.lines[i] |= mask
 	c.cells[i] = glyph(c.lines[i], c.heavy[i])
+	c.fg[i] = c.ink
 	if o := c.owner[i]; c.lines[i] == up|down|left|right && c.heavy[i] == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
 		c.cells[i] = '╂' // two edges crossing, not joining
 	} else if r, ok := rounded[c.cells[i]]; ok && !c.dashed {
@@ -179,9 +185,49 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 }
 
 func (c *canvas) text(x, y int, s string) {
+	ink := c.ink
+	c.ink = c.font
 	for i, r := range []rune(s) {
 		c.set(x+i, y, r)
 	}
+	c.ink = ink
+}
+
+// fill sets the background of the cells inside the rectangle, unless
+// color is the default
+func (c *canvas) fill(x0, y0, x1, y1 int, color uint32) {
+	if color == 0 {
+		return
+	}
+	for y := max(y0+1, 0); y < min(y1, c.h); y++ {
+		for x := max(x0+1, 0); x < min(x1, c.w); x++ {
+			c.bg[y*c.w+x] = color
+		}
+	}
+}
+
+// rgb packs a color for a cell: 0 is the terminal default, anything else
+// is 1<<24 | red<<16 | green<<8 | blue. Transparent colors are the default.
+func rgb(color layout.Color) uint32 {
+	if color == nil {
+		return 0
+	}
+	r, g, b, a := color.RGBA8()
+	if a == 0 {
+		return 0
+	}
+	return 1<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b)
+}
+
+// sgr returns the escape code that selects the colors fg and bg
+func sgr(fg, bg uint32) string {
+	code := func(color uint32, set, reset string) string {
+		if color == 0 {
+			return reset
+		}
+		return fmt.Sprintf("%s;2;%d;%d;%d", set, color>>16&0xFF, color>>8&0xFF, color&0xFF)
+	}
+	return "\x1b[" + code(fg, "38", "39") + ";" + code(bg, "48", "49") + "m"
 }
 
 func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
@@ -274,7 +320,14 @@ func sign(v int) int {
 
 // Write draws the laid out graph as text. One character cell is
 // graph.FontSize*0.55 wide and graph.LineHeight tall.
-func Write(w io.Writer, graph *layout.Graph) error {
+func Write(w io.Writer, graph *layout.Graph) error { return write(w, graph, false) }
+
+// WriteColor draws the graph like Write, with the colors set on nodes,
+// edges and clusters as 24-bit ANSI escape codes. Unset colors are left
+// to the terminal, except that lines and text on a fill default to black.
+func WriteColor(w io.Writer, graph *layout.Graph) error { return write(w, graph, true) }
+
+func write(w io.Writer, graph *layout.Graph, color bool) error {
 	cellW, cellH := graph.FontSize*0.55, graph.LineHeight
 	if cellW <= 0 {
 		cellW = 8
@@ -293,6 +346,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
+	c.fg = make([]uint32, c.w*c.h)
+	c.bg = make([]uint32, c.w*c.h)
 	c.lines = make([]int, c.w*c.h)
 	c.heavy = make([]int, c.w*c.h)
 	c.owner = make([][4]int, c.w*c.h)
@@ -300,8 +355,12 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 	c.dashed = true
 	for _, cluster := range graph.Clusters {
+		x0, y0 := col(cluster.TopLeft.X), row(cluster.TopLeft.Y)
+		x1, y1 := col(cluster.BottomRight.X), row(cluster.BottomRight.Y)
 		c.edge++
-		c.frame(col(cluster.TopLeft.X), row(cluster.TopLeft.Y), col(cluster.BottomRight.X), row(cluster.BottomRight.Y))
+		c.ink = rgb(cluster.LineColor)
+		c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))
+		c.frame(x0, y0, x1, y1)
 	}
 	c.dashed = false
 
@@ -319,6 +378,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		x1 = max(x1, x0+2)
 		y1 = max(y1, y0+2)
 		boxes[node] = [4]int{x0, y0, x1, y1}
+		c.ink, c.font = rgb(node.LineColor), rgb(node.FontColor)
+		c.fill(x0, y0, x1, y1, rgb(node.FillColor))
 		for y := y0; y <= y1; y++ {
 			for x := x0; x <= x1; x++ {
 				c.set(x, y, ' ')
@@ -377,6 +438,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		cells[0] = border(cells[0], cells[1], edge.From)
 		cells[last] = border(cells[last], cells[last-1], edge.To)
 		c.edge++
+		c.ink = rgb(edge.LineColor)
 		c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
 		for i := 0; i+1 < len(cells); i++ {
 			c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
@@ -410,25 +472,54 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 	for _, edge := range graph.Edges {
 		if edge.Label != "" {
+			c.font = rgb(edge.FontColor)
 			c.text(col(edge.LabelPos.X-edge.LabelRadius.X), row(edge.LabelPos.Y), edge.Label)
 		}
 	}
 	for _, cluster := range graph.Clusters {
 		if cluster.Label != "" {
+			c.font = 0
 			c.text(col(cluster.TopLeft.X)+1, row(cluster.TopLeft.Y), " "+cluster.Label+" ")
 		}
 	}
 
-	grid := make([][]rune, c.h)
+	grid := make([][]cell, c.h)
 	for y := range grid {
-		grid[y] = c.cells[y*c.w : (y+1)*c.w]
+		grid[y] = make([]cell, c.w)
+		for x := range grid[y] {
+			i := y*c.w + x
+			grid[y][x] = cell{c.cells[i], c.fg[i], c.bg[i]}
+		}
 	}
 	grid = carve(grid, " │┃┊┋┆", "▲▼●○", 1)
 	grid = transpose(carve(transpose(grid), " ─━┈┉┄", "◀▶●○", 2))
 
 	var out strings.Builder
 	for _, line := range grid {
-		out.WriteString(strings.TrimRight(string(line), " "))
+		end := len(line)
+		for end > 0 && line[end-1].r == ' ' && (!color || line[end-1].bg == 0) {
+			end--
+		}
+		var fg, bg uint32
+		for _, x := range line[:end] {
+			if color {
+				want := x.fg
+				switch {
+				case x.r == ' ':
+					want = fg // blanks show only the background
+				case want == 0 && x.bg != 0:
+					want = 1 << 24 // black on fills, as in SVG
+				}
+				if want != fg || x.bg != bg {
+					fg, bg = want, x.bg
+					out.WriteString(sgr(fg, bg))
+				}
+			}
+			out.WriteRune(x.r)
+		}
+		if fg != 0 || bg != 0 {
+			out.WriteString("\x1b[0m")
+		}
 		out.WriteByte('\n')
 	}
 	_, err := io.WriteString(w, out.String())
@@ -438,19 +529,19 @@ func Write(w io.Writer, graph *layout.Graph) error {
 // carve removes rows that only continue straight lines or blanks and
 // repeat the row before them, keeping at most keep of every such run.
 // Removing them keeps the drawing connected, just tighter.
-func carve(grid [][]rune, straight, markers string, keep int) [][]rune {
+func carve(grid [][]cell, straight, markers string, keep int) [][]cell {
 	out := grid[:0:0]
 	run := 0
 	for i, row := range grid {
 		plain := true
-		for _, r := range row {
-			if !strings.ContainsRune(straight, r) {
+		for _, x := range row {
+			if !strings.ContainsRune(straight, x.r) {
 				plain = false
 				break
 			}
 		}
 		// a marker on a run continues it like the line it sits on
-		same := func(r, prev rune) bool { return r == prev || r != ' ' && strings.ContainsRune(markers, prev) }
+		same := func(x, prev cell) bool { return x.r == prev.r || x.r != ' ' && strings.ContainsRune(markers, prev.r) }
 		if plain && i > 0 && slices.EqualFunc(row, grid[i-1], same) {
 			run++
 		} else {
@@ -463,13 +554,19 @@ func carve(grid [][]rune, straight, markers string, keep int) [][]rune {
 	return out
 }
 
-func transpose(grid [][]rune) [][]rune {
+// cell is a drawn character with its colors, see rgb
+type cell struct {
+	r      rune
+	fg, bg uint32
+}
+
+func transpose(grid [][]cell) [][]cell {
 	if len(grid) == 0 {
 		return nil
 	}
-	out := make([][]rune, len(grid[0]))
+	out := make([][]cell, len(grid[0]))
 	for x := range out {
-		out[x] = make([]rune, len(grid))
+		out[x] = make([]cell, len(grid))
 		for y := range grid {
 			out[x][y] = grid[y][x]
 		}
