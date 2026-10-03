@@ -184,32 +184,22 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 			jogs = slices.Delete(jogs, pick, pick+1)
 		}
 		jogs, channels[k] = ordered, ordered
-		var trackEnd []Length // right end of the last jog on each track
+		// each jog goes just below the jogs placed before that it comes
+		// within half a pad of; ends that close still turn apart
 		track := make([]int, len(jogs))
+		tracks := 0
 		for i, j := range jogs {
-			// below every overlapping jog placed before, then first fit
-			first := 0
 			for o := range i {
-				if jogs[o].x0 < j.x1+pad && j.x0 < jogs[o].x1+pad {
-					first = max(first, track[o]+1)
+				if jogs[o].x0 < j.x1+pad/2 && j.x0 < jogs[o].x1+pad/2 {
+					track[i] = max(track[i], track[o]+1)
 				}
 			}
-			track[i] = -1
-			for t := first; t < len(trackEnd); t++ {
-				if trackEnd[t]+pad <= j.x0 {
-					track[i], trackEnd[t] = t, j.x1
-					break
-				}
-			}
-			if track[i] < 0 {
-				track[i] = len(trackEnd)
-				trackEnd = append(trackEnd, j.x1)
-			}
+			tracks = max(tracks, track[i]+1)
 		}
 		top, bottom := rows[k][1], rows[k+1][0]
-		spacing := min(pad, (bottom-top)/Length(len(trackEnd)+1))
+		spacing := min(pad, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
-			j.y = (top+bottom)/2 + (Length(track[i])-Length(len(trackEnd)-1)/2)*spacing
+			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
 		}
 	}
 
