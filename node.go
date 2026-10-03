@@ -11,7 +11,10 @@ import (
 type Node struct {
 	ID string
 
-	Label string
+	// Label is the text drawn in the node; when empty, the ID is drawn
+	// instead, unless NoLabel is set
+	Label   string
+	NoLabel bool
 
 	Tooltip   string
 	FontName  string
@@ -59,12 +62,13 @@ func (node *Node) String() string {
 	return node.Label
 }
 
-// DefaultLabel returns the label, falling back to the id.
+// DefaultLabel returns the label, falling back to the id unless NoLabel
+// is set.
 func (node *Node) DefaultLabel() string {
 	if node.Shape == Dot {
 		return ""
 	}
-	if node.Label != "" {
+	if node.Label != "" || node.NoLabel {
 		return node.Label
 	}
 	return node.ID

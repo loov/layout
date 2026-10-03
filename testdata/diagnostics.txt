@@ -21,6 +21,6 @@ clust4       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=
 fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=3 labels=0 far=0 length=1844 area=217924
 nested       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=713 area=74528
 ortho        nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 wavy=2 back=1 labels=0 far=0 length=1370 area=99360
-switch       nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=5093 area=284512
+switch       nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=4815 area=253586
 unix         nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=1 wavy=0 back=0 labels=0 far=0 length=6184 area=803040
 world        nodes=0 through=0 near=1 crossings=54 shallow=4 overlaps=0 parallel=1 ends=0 shafts=0 jagged=3 bends=1 wavy=0 back=0 labels=0 far=0 length=13074 area=634609

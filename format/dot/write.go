@@ -52,7 +52,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			"width=" + inches(2*node.Radius.X),
 			"height=" + inches(2*node.Radius.Y),
 		}
-		if node.Label != "" {
+		if node.Label != "" || node.NoLabel {
 			attrs = append(attrs, "label="+quote(node.Label))
 		}
 		if node.Shape != layout.Auto {

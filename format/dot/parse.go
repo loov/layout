@@ -496,6 +496,7 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 			outlines.double = attr.Val == "doublecircle"
 		case "label":
 			setString(&node.Label, attr.Val)
+			node.NoLabel = attr.Val == ""
 		case "color":
 			setColor(&color, attr.Val)
 			setColor(&node.LineColor, attr.Val)

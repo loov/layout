@@ -1,11 +1,76 @@
 package layout_test
 
 import (
+	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/format/dot"
+	"github.com/loov/layout/format/graphml"
+	"github.com/loov/layout/format/svg"
+	"github.com/loov/layout/format/text"
 )
+
+// TestEmptyNodeLabel checks that a node with an explicitly empty label is
+// drawn without text, rather than with its id, but still gets a size.
+func TestEmptyNodeLabel(t *testing.T) {
+	graphs, err := dot.ParseString(`digraph { blank_node [label=""]; plain_node; blank_node -> plain_node }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := graphs[0]
+	blank, plain := graph.Node("blank_node"), graph.Node("plain_node")
+	if got := blank.DefaultLabel(); got != "" {
+		t.Errorf("label=\"\" gives label %q", got)
+	}
+	if got := plain.DefaultLabel(); got != "plain_node" {
+		t.Errorf("no label gives label %q, want the id", got)
+	}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	if blank.Radius.X <= 0 || blank.Radius.Y <= 0 {
+		t.Errorf("empty label node has radius %v", blank.Radius)
+	}
+
+	writers := map[string]func(*bytes.Buffer) error{
+		"svg":     func(b *bytes.Buffer) error { return svg.Write(b, graph) },
+		"text":    func(b *bytes.Buffer) error { return text.Write(b, graph) },
+		"graphml": func(b *bytes.Buffer) error { return graphml.Write(b, graph) },
+	}
+	for name, write := range writers {
+		var out bytes.Buffer
+		if err := write(&out); err != nil {
+			t.Fatal(err)
+		}
+		// svg and graphml also have the id as an attribute, look for text
+		shown := func(id string) bool {
+			if name == "text" {
+				return strings.Contains(out.String(), id)
+			}
+			return strings.Contains(out.String(), ">"+id+"<")
+		}
+		if shown("blank_node") {
+			t.Errorf("%s shows the id of the node with an empty label:\n%s", name, out.String())
+		}
+		if !shown("plain_node") {
+			t.Errorf("%s misses the id of the unlabeled node:\n%s", name, out.String())
+		}
+	}
+
+	var out bytes.Buffer
+	if err := dot.Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	again, err := dot.ParseString(out.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := again[0].Node("blank_node").DefaultLabel(); got != "" {
+		t.Errorf("written as dot, the empty label became %q:\n%s", got, out.String())
+	}
+}
 
 // TestLabelsApart checks that labels near a crowded node don't cover each
 // other when no spot is clear of every edge.
