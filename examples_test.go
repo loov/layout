@@ -44,6 +44,15 @@ var examples = map[string]func() *layout.Graph{
 		}}
 		return graph
 	},
+	// regex is a DFA for -?[0-9]+(\.[0-9]+)?, drawn left to right like
+	// automata usually are: a start arrow, edge labels on every edge,
+	// self-loops and accepting states
+	"regex": func() *layout.Graph {
+		graph := regexDFA()
+		graph.RankDir = layout.LeftToRight
+		return graph
+	},
+	"regex_tb": regexDFA,
 	"minimal": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		graph.Edge("A", "B")
@@ -227,6 +236,29 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "A")
 		return graph
 	},
+}
+
+// regexDFA returns the automaton of the regex examples
+func regexDFA() *layout.Graph {
+	graph := layout.NewDigraph()
+	graph.Node("start").Shape = layout.None
+	for _, id := range []string{"s0", "s1", "s2", "s3", "s4"} {
+		graph.Node(id).Shape = layout.Circle
+	}
+	for _, id := range []string{"s2", "s4"} {
+		accept := graph.Node(id)
+		accept.FillColor = layout.RGB{R: 0x98, G: 0xFB, B: 0x98}
+		accept.LineStyle = layout.Bold
+	}
+	graph.Edge("start", "s0")
+	graph.Edge("s0", "s1").Label = "-"
+	graph.Edge("s0", "s2").Label = "0-9"
+	graph.Edge("s1", "s2").Label = "0-9"
+	graph.Edge("s2", "s2").Label = "0-9"
+	graph.Edge("s2", "s3").Label = "."
+	graph.Edge("s3", "s4").Label = "0-9"
+	graph.Edge("s4", "s4").Label = "0-9"
+	return graph
 }
 
 // TestExamples renders each example and compares it to testdata/<name>.svg.

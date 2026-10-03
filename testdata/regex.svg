@@ -1,0 +1,31 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='509.63995' height='123'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M59.68,59 L70.68,59 Q81.68,59 92.68,59 L103.68,59 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M134.8028,53.77495 L147.79007,49.28774 Q160.2,45 172.7893,41.271675 L185.37862,37.54335 '></path><text text-anchor='middle' alignment-baseline='middle' x='160.59512' y='60.186436' font-size='14' fill='#000000'>-</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M133.1462,67.64069 L146.6731,76.32035 Q160.2,85 176.27213,85 L180.45999,85 Q200.72,85 220.98001,85 L224.62,85 Q248.52,85 263.01794,65.99947 L282.63507,40.289883 '></path><text text-anchor='middle' alignment-baseline='middle' x='212.72' y='99' font-size='14' fill='#000000'>0-9</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M216.23845,36.895847 L232.37923,40.94792 Q248.52,45 264.57834,40.632668 L280.8808,36.198944 '></path><text text-anchor='middle' alignment-baseline='middle' x='246.10556' y='27.378586' font-size='14' fill='#000000'>0-9</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M289.16458,46.310837 L288.5205,72.00251 Q288.32,80 296.32,80 L296.32,80 Q304.32,80 304.1195,72.00251 L303.47543,46.310837 '></path><text text-anchor='middle' alignment-baseline='middle' x='308.32' y='94' font-size='14' fill='#000000'>0-9</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M310.00494,40.289883 L326.52133,52.050983 Q336.28,59 348.26,59 L360.24,59 '></path><text text-anchor='middle' alignment-baseline='middle' x='336.49622' y='71.57819' font-size='14' fill='#000000'>.</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M392.24,59 L408.13998,59 Q424.03998,59 437.88406,51.180107 L457.90878,39.869076 '></path><text text-anchor='middle' alignment-baseline='middle' x='435.9491' y='72.28471' font-size='14' fill='#000000'>0-9</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M464.68454,46.310837 L464.04047,72.00251 Q463.83997,80 471.83997,80 L471.83997,80 Q479.83997,80 479.63947,72.00251 L478.9954,46.310837 '></path><text text-anchor='middle' alignment-baseline='middle' x='483.83997' y='94' font-size='14' fill='#000000'>0-9</text>
+<g x='16' y='43' width='43.68' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></g><text text-anchor='middle' alignment-baseline='middle' x='37.84' y='59' font-size='14' fill='#000000'>start</text>
+<circle cx='119.68' cy='59' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='119.68' y='59' font-size='14' fill='#000000'>s0</text>
+<circle cx='200.72' cy='33' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='200.72' y='33' font-size='14' fill='#000000'>s1</text>
+<circle cx='296.32' cy='32' r='16' class='node' fill='#98FB98' stroke='#000000' stroke-width='2'></circle><text text-anchor='middle' alignment-baseline='middle' x='296.32' y='32' font-size='14' fill='#000000'>s2</text>
+<circle cx='376.24' cy='59' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='376.24' y='59' font-size='14' fill='#000000'>s3</text>
+<circle cx='471.83997' cy='32' r='16' class='node' fill='#98FB98' stroke='#000000' stroke-width='2'></circle><text text-anchor='middle' alignment-baseline='middle' x='471.83997' y='32' font-size='14' fill='#000000'>s4</text>
+</g></svg>
