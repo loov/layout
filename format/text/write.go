@@ -52,6 +52,8 @@ const (
 // (0 none, 1 light, 2 heavy), indexed by up*27 + down*9 + left*3 + right.
 var glyphs = []rune(" ╶╺╴─╼╸╾━╷┌┍┐┬┮┑┭┯╻┎┏┒┰┲┓┱┳╵└┕┘┴┶┙┵┷│├┝┤┼┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╂╊┫╉╋")
 
+var rounded = map[rune]rune{'┌': '╭', '┐': '╮', '└': '╰', '┘': '╯'}
+
 // glyph returns the line character with the arms in lines, drawing the
 // arms in heavy heavy. A lone arm is drawn as a full straight line.
 func glyph(lines, heavy int) rune {
@@ -113,6 +115,11 @@ func (c *canvas) line(x, y int, mask int) {
 	}
 	c.lines[i] |= mask
 	c.cells[i] = glyph(c.lines[i], c.heavy[i])
+	if o := c.owner[i]; c.lines[i] == up|down|left|right && c.heavy[i] == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
+		c.cells[i] = '╂' // two edges crossing, not joining
+	} else if r, ok := rounded[c.cells[i]]; ok && !c.dashed {
+		c.cells[i] = r // bends of edges, unlike cluster frames, are round
+	}
 	if c.dashed {
 		heavy := c.heavy[i] != 0
 		switch c.lines[i] {
