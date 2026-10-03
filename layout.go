@@ -123,6 +123,25 @@ var (
 	Quality = Options{OrderIterations: 96}
 )
 
+// compassInRankFrame maps a physical port into the top-to-bottom frame.
+func compassInRankFrame(port Compass, dir RankDir) Compass {
+	compass := [...]Compass{North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest}
+	i := slices.Index(compass[:], port)
+	if i < 0 {
+		return port // automatic and center ports do not change
+	}
+	switch dir {
+	case LeftToRight:
+		return compass[(14-i)%8]
+	case RightToLeft:
+		return compass[(i+6)%8]
+	case BottomToTop:
+		return compass[(12-i)%8]
+	default:
+		return port
+	}
+}
+
 // HierarchicalWith is Hierarchical with explicit options.
 func HierarchicalWith(graphdef *Graph, opts Options) error {
 	if err := graphdef.validate(); err != nil {
@@ -136,6 +155,24 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		layoutPinned(graphdef)
 		return nil
 	}
+
+	// Compass directions are physical directions, so map them into the
+	// temporary rank frame and restore the caller's values afterward.
+	// Keyed by edge so that an edge listed twice is mapped only once.
+	ports := make(map[*Edge][2]Compass, len(graphdef.Edges))
+	for _, edge := range graphdef.Edges {
+		if _, ok := ports[edge]; ok {
+			continue
+		}
+		ports[edge] = [2]Compass{edge.FromPort, edge.ToPort}
+		edge.FromPort = compassInRankFrame(edge.FromPort, graphdef.RankDir)
+		edge.ToPort = compassInRankFrame(edge.ToPort, graphdef.RankDir)
+	}
+	defer func() {
+		for edge, port := range ports {
+			edge.FromPort, edge.ToPort = port[0], port[1]
+		}
+	}()
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
 	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
