@@ -37,6 +37,7 @@ func Prepare(graph *layout.Graph) {
 	}
 	graph.RowPadding = graph.LineHeight * layout.Length(math.Min(rows, 8))
 	graph.NodePadding = graph.LineHeight * 2
+	graph.EdgePadding = graph.LineHeight
 }
 
 // line direction bits of a cell
@@ -232,6 +233,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 	c.dashed = false
 
+	boxes := map[*layout.Node][4]int{}
 	for _, node := range graph.Nodes {
 		x0, y0 := col(node.Left()), row(node.Top())
 		x1, y1 := col(node.Right()), row(node.Bottom())
@@ -244,6 +246,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 		x1 = max(x1, x0+2)
 		y1 = max(y1, y0+2)
+		boxes[node] = [4]int{x0, y0, x1, y1}
 		for y := y0; y <= y1; y++ {
 			for x := x0; x <= x1; x++ {
 				c.set(x, y, ' ')
@@ -280,6 +283,22 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		for i, p := range path {
 			cells[i] = [2]int{col(p.X), row(p.Y)}
 		}
+		// every shape is drawn as a box, so ends on a rounder outline
+		// move out to the box border they face
+		border := func(end, next [2]int, node *layout.Node) [2]int {
+			b := boxes[node]
+			if end[0] > b[0] && end[0] < b[2] && end[1] > b[1] && end[1] < b[3] {
+				if next[1] < end[1] {
+					end[1] = b[1]
+				} else if next[1] > end[1] {
+					end[1] = b[3]
+				}
+			}
+			return end
+		}
+		last := len(cells) - 1
+		cells[0] = border(cells[0], cells[1], edge.From)
+		cells[last] = border(cells[last], cells[last-1], edge.To)
 		c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
 		for i := 0; i+1 < len(cells); i++ {
 			c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
