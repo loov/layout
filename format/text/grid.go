@@ -9,6 +9,7 @@ import (
 type cell struct {
 	r      rune
 	fg, bg uint32
+	keep   bool // inside a node or of text, see canvas.keep
 }
 
 // grid returns the drawn cells by row
@@ -18,7 +19,7 @@ func (c *canvas) grid() [][]cell {
 		grid[y] = make([]cell, c.w)
 		for x := range grid[y] {
 			i := y*c.w + x
-			grid[y][x] = cell{c.cells[i], c.fg[i], c.bg[i]}
+			grid[y][x] = cell{c.cells[i], c.fg[i], c.bg[i], c.keep[i]}
 		}
 	}
 	return grid
@@ -26,14 +27,15 @@ func (c *canvas) grid() [][]cell {
 
 // carve removes rows that only continue straight lines or blanks and
 // repeat the row before them, keeping at most keep of every such run.
-// Removing them keeps the drawing connected, just tighter.
+// Removing them keeps the drawing connected, just tighter. Rows through
+// nodes or text stay, so that their blanks keep their size.
 func carve(grid [][]cell, straight, markers string, keep int) [][]cell {
 	out := grid[:0:0]
 	run := 0
 	for i, row := range grid {
 		plain := true
 		for _, x := range row {
-			if !strings.ContainsRune(straight, x.r) {
+			if x.keep || !strings.ContainsRune(straight, x.r) {
 				plain = false
 				break
 			}

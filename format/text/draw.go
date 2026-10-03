@@ -75,6 +75,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 			if x >= 0 && x < c.w && y >= 0 && y < c.h {
 				c.solid[y*c.w+x] = true
 			}
+			if x > x0 && x < x1 && y > y0 && y < y1 {
+				c.hold(x, y) // blanks inside a box are part of it
+			}
 		}
 	}
 	style := "╭╮╰╯─│"

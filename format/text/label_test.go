@@ -3,6 +3,7 @@ package text
 import (
 	"bytes"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode"
@@ -85,6 +86,28 @@ func TestClusterLabel(t *testing.T) {
 	}
 	if !strings.Contains(buf.String(), "┌ "+label+" ") {
 		t.Errorf("label is cut:\n%s", buf.String())
+	}
+}
+
+// TestBlanksInLabels checks that carving keeps the blank columns and rows
+// inside labels and boxes.
+func TestBlanksInLabels(t *testing.T) {
+	graph := layout.NewDigraph()
+	wide := graph.Node("a")
+	wide.Label, wide.Radius.X = "x            y", 108
+	graph.Node("b").Label = "top\n\n\n\nbottom"
+	graph.Edge("c", "d").Label = "p      q"
+	got := render(t, graph)
+	for _, want := range []string{"x            y", "p      q"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("want %q:\n%s", want, got)
+		}
+	}
+	lines := strings.Split(got, "\n")
+	top := slices.IndexFunc(lines, func(s string) bool { return strings.Contains(s, "top") })
+	bottom := slices.IndexFunc(lines, func(s string) bool { return strings.Contains(s, "bottom") })
+	if bottom-top != 4 {
+		t.Errorf("want 3 blank lines between top and bottom, got %d:\n%s", bottom-top-1, got)
 	}
 }
 

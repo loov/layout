@@ -63,6 +63,7 @@ type canvas struct {
 	heavy  []int    // arms that runs of different edges share
 	owner  [][4]int // edge that first drew each arm of a cell
 	solid  []bool   // cells covered by a node; edges do not draw there
+	keep   []bool   // cells inside nodes and of text, which carving keeps
 	dashed bool     // straight runs drawn from now on are dashed
 	edge   int      // edge drawn from now on, so that overlaps show
 }
@@ -105,6 +106,7 @@ func newCanvas(graph *layout.Graph) *canvas {
 	c.heavy = make([]int, c.w*c.h)
 	c.owner = make([][4]int, c.w*c.h)
 	c.solid = make([]bool, c.w*c.h)
+	c.keep = make([]bool, c.w*c.h)
 	return c
 }
 
@@ -185,13 +187,23 @@ func (c *canvas) text(x, y int, s string) {
 		case layout.IsWide(r):
 			c.set(x, y, r)
 			c.set(x+1, y, covered)
+			c.hold(x, y)
+			c.hold(x+1, y)
 			x += 2
 		default:
 			c.set(x, y, r)
+			c.hold(x, y)
 			x++
 		}
 	}
 	c.ink = ink
+}
+
+// hold keeps the cell at x, y from being carved away
+func (c *canvas) hold(x, y int) {
+	if x >= 0 && x < c.w && y >= 0 && y < c.h {
+		c.keep[y*c.w+x] = true
+	}
 }
 
 // clusterLabelWidth returns the columns from a cluster's left corner past
