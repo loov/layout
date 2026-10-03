@@ -1,4 +1,4 @@
-# layout [![GoDoc](https://godoc.org/github.com/loov/layout?status.svg)](https://godoc.org/github.com/loov/layout)
+# layout [![Go Reference](https://pkg.go.dev/badge/github.com/loov/layout.svg)](https://pkg.go.dev/github.com/loov/layout)
 
 layout draws graphs in pure Go.
 
