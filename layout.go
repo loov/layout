@@ -1163,12 +1163,17 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 			placed = append(placed, edge)
 		}
 	}
-	clear := func(edge *Edge, at Vector) bool {
+	// clearOf reports whether a label of edge at at stays clear of nodes,
+	// placed labels and, with lines, every edge path
+	clearOf := func(edge *Edge, at Vector, lines bool) bool {
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
 		tl := at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y})
 		br := at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})
 		for _, path := range paths {
+			if !lines {
+				break
+			}
 			for i := 0; i+1 < len(path); i++ {
 				if segmentHitsRect(path[i], path[i+1], tl, br) {
 					return false
@@ -1189,6 +1194,7 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 		}
 		return true
 	}
+	clear := func(edge *Edge, at Vector) bool { return clearOf(edge, at, true) }
 	for _, edge := range edges {
 		if edge.Label == "" || len(edge.Path) < 2 || keep[edge] {
 			continue
@@ -1227,12 +1233,12 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 		}
 		// slide along the own path, nearest spot first, trying both sides
 		found := false
+		type spot struct {
+			at   Vector
+			dist float64
+		}
+		var spots []spot
 		if !clear(edge, edge.LabelPos) {
-			type spot struct {
-				at   Vector
-				dist float64
-			}
-			var spots []spot
 			base, _ := nearestOnPath(own, edge.LabelPos)
 			for i := 0; i+1 < len(own) && !found; i++ {
 				a, b := own[i], own[i+1]
@@ -1267,6 +1273,16 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edg
 			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
 				if at := edge.LabelPos.Add(Vector{dir.X * d, dir.Y * d}); near(at) && clear(edge, at) {
 					edge.LabelPos, found = at, true
+					break
+				}
+			}
+		}
+		// nowhere clear: crossing another edge reads better than covering
+		// another label or a node
+		if !found && !clearOf(edge, edge.LabelPos, false) {
+			for _, s := range spots {
+				if clearOf(edge, s.at, false) {
+					edge.LabelPos = s.at
 					break
 				}
 			}
