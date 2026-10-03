@@ -807,10 +807,11 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	for _, flat := range positionedGraph.Flat {
 		sourcedef, targetdef := reverse[flat[0].ID], reverse[flat[1].ID]
 		path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
-		if flat[1].Pos-flat[0].Pos > 1 {
+		if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) > 1 {
 			top := min(sourcedef.Top(), targetdef.Top())
+			lo, hi := min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
 			for _, node := range byRank[flat[0].Rank] {
-				if node.Center.X > sourcedef.Center.X && node.Center.X < targetdef.Center.X {
+				if node.Center.X > lo && node.Center.X < hi {
 					top = min(top, node.Top())
 				}
 			}
