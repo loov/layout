@@ -49,7 +49,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	// the box must hold the label and have distinct edges
 	if node.Shape != layout.Record {
 		for _, line := range lines {
-			x1 = max(x1, x0+len([]rune(line))+1)
+			x1 = max(x1, x0+width(line)+1)
 		}
 	}
 	x1 = max(x1, x0+2)
@@ -97,8 +97,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		top = y0 + 1 // with the main path, along the first row
 	}
 	for i, line := range lines {
-		r := []rune(line)
-		c.text((x0+x1+1-len(r))/2, top+i, line)
+		c.text((x0+x1+1-width(line))/2, top+i, line)
 	}
 }
 
@@ -335,7 +334,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 			lines := strings.Split(plain(edge.Label), "\n")
 			w := 0
 			for _, line := range lines {
-				w = max(w, len([]rune(line)))
+				w = max(w, width(line))
 			}
 			x, y := c.col(edge.LabelPos.X-edge.LabelRadius.X), c.row(edge.LabelPos.Y)-(len(lines)-1)/2
 			x, y = c.nearEdge(x, y, w, len(lines), paths[i])

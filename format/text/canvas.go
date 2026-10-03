@@ -83,7 +83,7 @@ func newCanvas(graph *layout.Graph) *canvas {
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
 	for _, edge := range graph.Edges {
 		for _, line := range strings.Split(plain(edge.Label), "\n") {
-			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+len([]rune(line))+1)
+			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+width(line)+1)
 		}
 	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
@@ -163,10 +163,40 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 func (c *canvas) text(x, y int, s string) {
 	ink := c.ink
 	c.ink = c.font
-	for i, r := range []rune(s) {
-		c.set(x+i, y, r)
+	for _, r := range s {
+		switch {
+		case layout.IsZeroWidth(r):
+			// a cell holds one character; marks on it are dropped
+		case layout.IsWide(r):
+			c.set(x, y, r)
+			c.set(x+1, y, covered)
+			x += 2
+		default:
+			c.set(x, y, r)
+			x++
+		}
 	}
 	c.ink = ink
+}
+
+// covered marks the cell under the second column of a wide character,
+// which writing skips
+const covered = 0
+
+// width returns the columns s takes in a terminal: two for wide
+// characters, none for marks on the character before
+func width(s string) int {
+	n := 0
+	for _, r := range s {
+		switch {
+		case layout.IsZeroWidth(r):
+		case layout.IsWide(r):
+			n += 2
+		default:
+			n++
+		}
+	}
+	return n
 }
 
 // fill sets the background of the cells inside the rectangle, unless
@@ -207,8 +237,7 @@ func (c *canvas) record(rec *layout.RecordField, origin layout.Vector, col, row 
 		x1, y1 := col(origin.X+rec.BottomRight.X), row(origin.Y+rec.BottomRight.Y)
 		lines := strings.Split(rec.Text, "\n")
 		for i, line := range lines {
-			r := []rune(line)
-			c.text((x0+x1+1-len(r))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
+			c.text((x0+x1+1-width(line))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
 		}
 		return
 	}

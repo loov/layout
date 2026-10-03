@@ -92,7 +92,9 @@ func encode(grid [][]cell, opts *Options) string {
 				f, b = want, bs[i]
 				out.WriteString("\x1b[" + f + ";" + b + "m")
 			}
-			out.WriteRune(x.r)
+			if x.r != covered {
+				out.WriteRune(x.r)
+			}
 		}
 		if f != "39" || b != "49" {
 			out.WriteString("\x1b[0m")

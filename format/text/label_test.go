@@ -41,3 +41,27 @@ func TestHTMLLabel(t *testing.T) {
 		t.Errorf("want bold in a whole box:\n%s", got)
 	}
 }
+
+// TestWideLabel checks that a label of wide characters fills two columns
+// per character, so that the box around it lines up.
+func TestWideLabel(t *testing.T) {
+	graph := layout.NewDigraph()
+	node := graph.Node("a")
+	node.Shape = layout.Box
+	node.Label = "漢字漢字"
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	var widths []int
+	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
+		widths = append(widths, width(strings.TrimSpace(line)))
+	}
+	if len(widths) != 3 || widths[0] != widths[1] || widths[1] != widths[2] || widths[1] != 10 {
+		t.Errorf("box rows are %v columns wide, want 10 each:\n%s", widths, buf.String())
+	}
+}
