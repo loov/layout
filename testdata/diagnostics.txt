@@ -12,13 +12,13 @@ multi        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 rankdir      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=369 area=20126
 readme       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=781 area=99032
 record       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=91 area=21856
-regex        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=2 length=634 area=40036
-regex_tb     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=2 length=657 area=42217
+regex        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=2 length=641 area=42936
+regex_tb     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=2 length=663 area=45482
 weighted     nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=181 area=9216
 abstract     nodes=0 through=0 near=2 crossings=62 shallow=12 overlaps=1 parallel=3 ends=0 shafts=0 jagged=2 bends=2 wavy=4 back=0 labels=0 far=0 length=12400 area=641985
 alf          nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=1418 area=401793
 clust4       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=1094 area=99360
-fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=3 labels=0 far=0 length=1940 area=198516
+fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=3 labels=0 far=0 length=1949 area=233862
 nested       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=713 area=74528
 ortho        nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 wavy=2 back=1 labels=0 far=0 length=1370 area=99360
 switch       nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=5093 area=284512

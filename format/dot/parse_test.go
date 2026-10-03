@@ -102,3 +102,16 @@ func TestPointShape(t *testing.T) {
 		t.Errorf("point radius = %v, want a small dot", start.Radius)
 	}
 }
+
+func TestDoubleCircle(t *testing.T) {
+	graphs, err := ParseString(`digraph { a [shape=doublecircle]; b [shape=doublecircle peripheries=1]; c [peripheries=3 shape=doublecircle]; }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[string]int{"a": 2, "b": 1, "c": 3} {
+		node := graphs[0].Node(id)
+		if node.Shape != layout.Circle || node.Peripheries != want {
+			t.Errorf("%s: shape %q peripheries %d, want circle with %d", id, node.Shape, node.Peripheries, want)
+		}
+	}
+}

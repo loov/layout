@@ -57,11 +57,13 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		}
 	}
 	style := "╭╮╰╯─│"
-	switch node.Shape {
-	case layout.Box, layout.Square, layout.Record:
-		style = "┌┐└┘─│"
-	case layout.None:
+	switch {
+	case node.Shape == layout.None:
 		style = "      "
+	case node.Peripheries > 1:
+		style = "╔╗╚╝═║" // like double circles, of any shape
+	case node.Shape == layout.Box, node.Shape == layout.Square, node.Shape == layout.Record:
+		style = "┌┐└┘─│"
 	}
 	c.rect(x0, y0, x1, y1, style)
 	if node.Shape == layout.Record {
@@ -139,11 +141,12 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 		return
 	}
 	i := end[1]*c.w + end[0]
+	double := node.Peripheries > 1
 	switch {
 	case end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
-		c.cells[i] = '┤'
+		c.cells[i] = map[bool]rune{false: '┤', true: '╢'}[double]
 	case end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
-		c.cells[i] = '├'
+		c.cells[i] = map[bool]rune{false: '├', true: '╟'}[double]
 	}
 }
 

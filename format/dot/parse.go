@@ -452,11 +452,15 @@ func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
 
 func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 	var color layout.Color
-	filled := false
+	filled, double, peripheries := false, false, false
 	defer func() {
 		// style=filled without fillcolor fills with the outline color
 		if filled && node.FillColor == nil && color != nil {
 			node.FillColor = color
+		}
+		// doublecircle is a circle with two outlines unless set otherwise
+		if double && !peripheries {
+			node.Peripheries = 2
 		}
 	}()
 	for _, attr := range attrs {
@@ -468,12 +472,13 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 			node.FixedSize = attr.Val == "true" || attr.Val == "shape"
 		case "peripheries":
 			if n, err := strconv.Atoi(attr.Val); err == nil {
-				node.Peripheries = n
+				node.Peripheries, peripheries = n, true
 			}
 		case "image":
 			setString(&node.Image, attr.Val)
 		case "shape":
 			setShape(&node.Shape, attr.Val)
+			double = attr.Val == "doublecircle"
 		case "label":
 			setString(&node.Label, attr.Val)
 		case "color":
@@ -632,7 +637,7 @@ func setShape(t *layout.Shape, value string) {
 		*t = layout.Box
 	case "square":
 		*t = layout.Square
-	case "circle":
+	case "circle", "doublecircle":
 		*t = layout.Circle
 	case "ellipse", "oval":
 		*t = layout.Ellipse

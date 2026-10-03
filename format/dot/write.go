@@ -58,6 +58,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		if node.Shape != layout.Auto {
 			attrs = append(attrs, "shape="+quote(string(node.Shape)))
 		}
+		if node.Peripheries > 1 {
+			attrs = append(attrs, fmt.Sprintf("peripheries=%d", node.Peripheries))
+		}
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
 	for _, edge := range graph.Edges {

@@ -248,7 +248,7 @@ func regexDFA() *layout.Graph {
 	for _, id := range []string{"s2", "s4"} {
 		accept := graph.Node(id)
 		accept.FillColor = layout.RGB{R: 0x98, G: 0xFB, B: 0x98}
-		accept.LineStyle = layout.Bold
+		accept.Peripheries = 2
 	}
 	graph.Edge("start", "s0")
 	graph.Edge("s0", "s1").Label = "-"
