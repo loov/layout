@@ -432,7 +432,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 	// nodes with self-loops need room on their right for the loop and
 	// its label
-	loopWidth := 2 * graphdef.NodePadding
+	loopWidth := graphdef.NodePadding
 	loopHeight := min(loopWidth, graphdef.RowPadding)
 	loopExtra := map[*Node]Length{}
 	loopLeft := map[*Node]Length{} // loops with ports may also pass the left side
