@@ -53,6 +53,7 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		edge    *Edge
 		start   bool
 		towards Length
+		x       Length // where the end attaches before spreading
 	}
 	type side struct {
 		node   *Node
@@ -69,19 +70,33 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		down := edge.Path[0].Y < edge.Path[len(edge.Path)-1].Y
 		if edge.FromPort == CompassAuto {
 			k := side{edge.From, down}
-			ends[k] = append(ends[k], end{edge, true, edge.Path[1].X})
+			ends[k] = append(ends[k], end{edge, true, edge.Path[1].X, edge.Path[0].X})
 		}
 		if edge.ToPort == CompassAuto {
 			k := side{edge.To, !down}
-			ends[k] = append(ends[k], end{edge, false, edge.Path[len(edge.Path)-2].X})
+			ends[k] = append(ends[k], end{edge, false, edge.Path[len(edge.Path)-2].X, edge.Path[len(edge.Path)-1].X})
 		}
 	}
 	for k, list := range ends {
 		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
 		spacing := min(2*pad, 2*k.node.Radius.X/Length(len(list)+1))
+		// ends whose route already runs straight across the side keep
+		// that x, so the edge needs no jog; the rest take evenly spread slots
+		center, reach := k.node.Center.X, k.node.Radius.X-spacing/2
+		want := make([]Length, len(list))
+		weight := make([]float64, len(list))
 		for i, e := range list {
-			x := k.node.Center.X + (Length(i)-Length(len(list)-1)/2)*spacing
-			p := outline(k.node, x, k.bottom)
+			want[i], weight[i] = center+(Length(i)-Length(len(list)-1)/2)*spacing, 1
+			if e.towards == e.x && absLength(e.x-center) <= reach {
+				want[i], weight[i] = e.x, 1e9
+			}
+		}
+		xs := separate(want, weight, spacing, center-reach, center+reach)
+		for i, e := range list {
+			if weight[i] > 1 && absLength(xs[i]-want[i]) < spacing/1e3 {
+				xs[i] = want[i] // undo rounding, the run must stay exactly vertical
+			}
+			p := outline(k.node, xs[i], k.bottom)
 			if e.start {
 				e.edge.Path[0] = p
 			} else {
@@ -201,4 +216,34 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 			}
 		}
 	}
+}
+
+// separate moves the ordered positions want as little as possible, by
+// weighted squared distance, so that neighbors are at least gap apart and
+// all lie within [lo, hi]. Shifting position i by i*gap turns the gaps
+// into an order constraint, solved by pooling adjacent violators.
+func separate(want []Length, weight []float64, gap, lo, hi Length) []Length {
+	type block struct {
+		sum, weight float64
+		n           int
+	}
+	var blocks []block
+	for i, x := range want {
+		blocks = append(blocks, block{(float64(x) - float64(i)*float64(gap)) * weight[i], weight[i], 1})
+		for len(blocks) > 1 {
+			a, b := blocks[len(blocks)-2], blocks[len(blocks)-1]
+			if a.sum/a.weight <= b.sum/b.weight {
+				break
+			}
+			blocks = append(blocks[:len(blocks)-2], block{a.sum + b.sum, a.weight + b.weight, a.n + b.n})
+		}
+	}
+	xs := make([]Length, 0, len(want))
+	for _, b := range blocks {
+		y := min(max(b.sum/b.weight, float64(lo)), float64(hi-Length(len(want)-1)*gap))
+		for range b.n {
+			xs = append(xs, Length(y+float64(len(xs))*float64(gap)))
+		}
+	}
+	return xs
 }
