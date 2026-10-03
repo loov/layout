@@ -443,8 +443,7 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 				edge.FromPort = sourcePort
 				edge.ToPort = targetPort
 
-				applyEdgeAttrs(edge, context.edgeAttrs)
-				applyEdgeAttrs(edge, edgeStmt.Attrs)
+				applyEdgeAttrs(edge, slices.Concat(context.edgeAttrs, edgeStmt.Attrs))
 
 				context.Graph.Edges = append(context.Graph.Edges, edge)
 			}
@@ -547,7 +546,29 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 // nodes to a hierarchical layout
 const maxMinLen = 1000
 
+// applyEdgeAttrs applies all attributes of an edge, defaults first.
+// Explicit arrowhead and arrowtail win over the arrows dir implies,
+// wherever they appear.
 func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
+	var head, tail layout.Arrow
+	defer func() {
+		switch lastAttr(attrs, "dir") {
+		case "back":
+			edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNormal
+		case "both":
+			edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNormal
+		case "none":
+			edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNone
+		case "forward":
+			edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNone
+		}
+		if head != "" {
+			edge.ArrowHead = head
+		}
+		if tail != "" {
+			edge.ArrowTail = tail
+		}
+	}()
 	for _, attr := range attrs {
 		switch attr.Key {
 		case "weight":
@@ -571,21 +592,10 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 			setColor(&edge.LineColor, attr.Val)
 		case "fontcolor":
 			setColor(&edge.FontColor, attr.Val)
-		case "dir":
-			switch attr.Val {
-			case "back":
-				edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNormal
-			case "both":
-				edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNormal
-			case "none":
-				edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNone
-			case "forward":
-				edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNone
-			}
 		case "arrowhead":
-			edge.ArrowHead = layout.Arrow(attr.Val)
+			head = layout.Arrow(attr.Val)
 		case "arrowtail":
-			edge.ArrowTail = layout.Arrow(attr.Val)
+			tail = layout.Arrow(attr.Val)
 		case "headport":
 			edge.ToPort = layout.Compass(attr.Val)
 		case "tailport":

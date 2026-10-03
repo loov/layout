@@ -198,3 +198,24 @@ func TestSolidStyleOverridesInheritedStyle(t *testing.T) {
 		t.Errorf("edge style = %q, want solid", got)
 	}
 }
+
+func TestExplicitArrowsWinOverDir(t *testing.T) {
+	for _, tc := range []struct {
+		src        string
+		head, tail layout.Arrow
+	}{
+		{`digraph { a -> b [arrowhead=vee, dir=both] }`, layout.ArrowVee, layout.ArrowNormal},
+		{`digraph { a -> b [dir=both, arrowtail=dot] }`, layout.ArrowNormal, layout.ArrowDot},
+		{`digraph { edge [arrowhead=odot]; a -> b [dir=forward] }`, layout.ArrowODot, layout.ArrowNone},
+		{`digraph { edge [dir=back]; a -> b [arrowtail=vee] }`, layout.ArrowNone, layout.ArrowVee},
+	} {
+		graphs, err := ParseString(tc.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		e := graphs[0].Edges[0]
+		if e.ArrowHead != tc.head || e.ArrowTail != tc.tail {
+			t.Errorf("%s: arrows %q, %q, want %q, %q", tc.src, e.ArrowHead, e.ArrowTail, tc.head, tc.tail)
+		}
+	}
+}
