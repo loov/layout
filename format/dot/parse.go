@@ -182,10 +182,10 @@ func (context *parserContext) pin() {
 	}
 }
 
-// notePos remembers nodes that got a pos attribute
+// notePos remembers nodes that got a valid pos attribute
 func (context *parserContext) notePos(node *layout.Node, attrs []*ast.Attr) {
 	for _, attr := range attrs {
-		if attr.Key == "pos" {
+		if _, ok := parsePoint(attr.Val); ok && attr.Key == "pos" {
 			context.positioned[node] = true
 		}
 	}

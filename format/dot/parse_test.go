@@ -174,3 +174,13 @@ func TestNonFiniteNumbersAreIgnored(t *testing.T) {
 		t.Errorf("minlen = %d", e.MinLen)
 	}
 }
+
+func TestInvalidPosDoesNotPin(t *testing.T) {
+	graphs, err := ParseString(`digraph { a [pos="bad"]; b [pos="1,x"]; a -> b }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if graphs[0].Pinned {
+		t.Fatal("graph with invalid positions is pinned")
+	}
+}
