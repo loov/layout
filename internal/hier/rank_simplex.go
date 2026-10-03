@@ -10,7 +10,8 @@ import "math"
 // up on the same rank; MinRank and MaxRank nodes are contracted with an
 // artificial source or sink connected to every other vertex, which other
 // vertices may share a rank with, as with Graphviz rank=min and rank=max. Edges that
-// would contradict those constraints are ignored here and end up flat or
+// would contradict those constraints, including one edge of every cycle
+// that contracting the groups closes, are ignored here and end up flat or
 // backwards; see Rank. The graph must be acyclic.
 //
 // Pivots are incremental: cut values are updated along the tree path
@@ -50,39 +51,62 @@ func RankNetworkSimplex(graph *Graph) {
 	if len(graph.MaxRank) > 0 {
 		unify(graph.MaxRank)
 	}
-	for i := range rep {
-		rep[i] = find(i)
-	}
-	verts := 0
-	index := make([]int, graph.NodeCount()) // contracted vertex index by node id
-	for i := range index {
-		index[i] = -1
-	}
-	for _, node := range graph.Nodes {
-		if index[rep[node.ID]] < 0 {
-			index[rep[node.ID]] = verts
-			verts++
+	var (
+		verts, source, sink int
+		index               []int // contracted vertex index by node id
+		edges               []rankEdge
+	)
+	contract := func() {
+		verts, index = 0, make([]int, graph.NodeCount())
+		for i := range index {
+			index[i] = -1
 		}
-		index[node.ID] = index[rep[node.ID]]
+		for _, node := range graph.Nodes {
+			r := find(int(node.ID))
+			if index[r] < 0 {
+				index[r] = verts
+				verts++
+			}
+			index[node.ID] = index[r]
+		}
+		source, sink = -1, -1
+		if len(graph.MinRank) > 0 {
+			source = index[graph.MinRank[0].ID]
+		}
+		if len(graph.MaxRank) > 0 {
+			sink = index[graph.MaxRank[0].ID]
+		}
+		edges = edges[:0]
+		for _, src := range graph.Nodes {
+			for _, dst := range src.Out {
+				u, v := index[src.ID], index[dst.ID]
+				if u == v || v == source || u == sink {
+					continue // inside a group, or contradicting a min/max pin
+				}
+				edges = append(edges, rankEdge{int32(u), int32(v), graph.Weight(src, dst), graph.MinLen(src, dst)})
+			}
+		}
 	}
-
-	source, sink := -1, -1
-	if len(graph.MinRank) > 0 {
-		source = index[graph.MinRank[0].ID]
+	contract()
+	// contracting groups can close cycles; a cycle of edges that may be
+	// flat puts its vertices on one rank, any other cycle contradicts the
+	// groups and loses an edge
+	if comp, count := flatComponents(verts, edges); count < verts {
+		first := make([]*Node, count)
+		for _, node := range graph.Nodes {
+			if c := comp[index[node.ID]]; first[c] == nil {
+				first[c] = node
+			} else {
+				unify(Nodes{first[c], node})
+			}
+		}
+		contract()
 	}
-	if len(graph.MaxRank) > 0 {
-		sink = index[graph.MaxRank[0].ID]
-	}
+	edges = dropBackEdges(verts, edges)
 
 	s := &simplex{n: int32(verts)}
-	for _, src := range graph.Nodes {
-		for _, dst := range src.Out {
-			u, v := index[src.ID], index[dst.ID]
-			if u == v || v == source || u == sink {
-				continue // inside a group, or contradicting a min/max pin
-			}
-			s.addEdge(int32(u), int32(v), graph.Weight(src, dst), graph.MinLen(src, dst))
-		}
+	for _, e := range edges {
+		s.addEdge(e.tail, e.head, e.weight, e.minlen)
 	}
 	// zero weight edges keep the artificial source first and sink last
 	for v := range verts {
@@ -98,6 +122,104 @@ func RankNetworkSimplex(graph *Graph) {
 	for _, node := range graph.Nodes {
 		node.Rank = int(s.rank[index[node.ID]])
 	}
+}
+
+// rankEdge is an edge between contracted vertices
+type rankEdge struct {
+	tail, head int32
+	weight     float32
+	minlen     int32
+}
+
+// flatComponents numbers the strongly connected components made by the
+// edges that may be flat, returning the component of every vertex and the
+// number of components
+func flatComponents(n int, edges []rankEdge) (comp []int32, count int) {
+	out := make([][]int32, n)
+	for _, e := range edges {
+		if e.minlen <= 0 {
+			out[e.tail] = append(out[e.tail], e.head)
+		}
+	}
+	comp = make([]int32, n)
+	order, low := make([]int32, n), make([]int32, n)
+	for v := range comp {
+		comp[v] = -1
+	}
+	var stack []int32
+	next := int32(0)
+	var visit func(v int32)
+	visit = func(v int32) {
+		next++
+		order[v], low[v] = next, next
+		stack = append(stack, v)
+		for _, w := range out[v] {
+			if order[w] == 0 {
+				visit(w)
+				low[v] = min(low[v], low[w])
+			} else if comp[w] < 0 {
+				low[v] = min(low[v], order[w])
+			}
+		}
+		if low[v] == order[v] {
+			for {
+				w := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				comp[w] = int32(count)
+				if w == v {
+					break
+				}
+			}
+			count++
+		}
+	}
+	for v := range n {
+		if order[v] == 0 {
+			visit(int32(v))
+		}
+	}
+	return comp, count
+}
+
+// dropBackEdges removes the back edges of a depth first search, leaving
+// the edges acyclic
+func dropBackEdges(n int, edges []rankEdge) []rankEdge {
+	out := make([][]int32, n)
+	for i, e := range edges {
+		out[e.tail] = append(out[e.tail], int32(i))
+	}
+	const (
+		unseen = iota
+		active
+		done
+	)
+	state := make([]int8, n)
+	back := make([]bool, len(edges))
+	var visit func(v int32)
+	visit = func(v int32) {
+		state[v] = active
+		for _, i := range out[v] {
+			switch w := edges[i].head; state[w] {
+			case active:
+				back[i] = true
+			case unseen:
+				visit(w)
+			}
+		}
+		state[v] = done
+	}
+	for v := range n {
+		if state[v] == unseen {
+			visit(int32(v))
+		}
+	}
+	kept := edges[:0]
+	for i, e := range edges {
+		if !back[i] {
+			kept = append(kept, e)
+		}
+	}
+	return kept
 }
 
 // simplex holds the network simplex state as flat arrays (structure of
