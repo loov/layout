@@ -339,6 +339,9 @@ func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) bool
 		end = [2]int{px, py}
 	}
 	c.set(end[0], end[1], r)
+	if end[0] >= 0 && end[0] < c.w && end[1] >= 0 && end[1] < c.h {
+		c.solid[end[1]*c.w+end[0]] = true // later runs don't erase it
+	}
 	return true
 }
 

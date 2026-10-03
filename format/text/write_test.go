@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
 )
 
 func TestWrite(t *testing.T) {
@@ -324,5 +325,24 @@ func TestLabelsFitBoxes(t *testing.T) {
 		if !regexp.MustCompile(tc.want).MatchString(got) {
 			t.Errorf("%q: fields overflow:\n%s", tc.label, got)
 		}
+	}
+}
+
+// renderDot parses src and draws it like glay -t txt does
+func renderDot(t *testing.T, src string) string {
+	t.Helper()
+	graphs, err := dot.ParseString(src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return render(t, graphs[0])
+}
+
+// TestMarkerKept checks that an edge drawn later doesn't erase the
+// arrowhead of an earlier one.
+func TestMarkerKept(t *testing.T) {
+	got := renderDot(t, `digraph { a [pos="0,0"]; b [shape=point,pos="0,200"]; a -> b; b -> b }`)
+	if !strings.Contains(got, "▲") {
+		t.Errorf("the arrowhead of a -> b is missing:\n%s", got)
 	}
 }
