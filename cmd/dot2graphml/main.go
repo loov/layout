@@ -25,39 +25,31 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	var in io.Reader = os.Stdin
-	var out io.Writer = os.Stdout
-
+	var graphs []*layout.Graph
+	var err error
 	if len(args) >= 1 {
-		filename := args[0]
-		file, err := os.Open(filename)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to open %v", filename)
-			os.Exit(1)
-			return
-		}
-		in = file
-		defer file.Close()
+		graphs, err = dot.ParseFile(args[0])
+	} else {
+		graphs, err = dot.Parse(os.Stdin)
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "failed to parse input:", err)
+		os.Exit(1)
+		return
 	}
 
+	// the output is created only after parsing, as it may be the input
+	var out io.Writer = os.Stdout
 	if len(args) >= 2 {
 		filename := args[1]
 		file, err := os.Create(filename)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to create %v", filename)
+			fmt.Fprintf(os.Stderr, "failed to create %v: %v\n", filename, err)
 			os.Exit(1)
 			return
 		}
 		out = file
 		defer file.Close()
-	}
-
-	graphs, err := dot.Parse(in)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		fmt.Fprintln(os.Stderr, "failed to parse input")
-		os.Exit(1)
-		return
 	}
 
 	for _, graph := range graphs {
