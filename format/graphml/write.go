@@ -58,8 +58,7 @@ func Convert(graph *layout.Graph) *Graph {
 		outedge := Edge{}
 		outedge.Source = edge.From.ID
 		outedge.Target = edge.To.ID
-		if edge.Directed != graph.Directed {
-			directed := edge.Directed
+		if directed := edgeDirected(edge); directed != graph.Directed {
 			outedge.Directed = &directed
 		}
 		addAttr(&outedge.Attrs, "d3", edge.Label)
@@ -69,6 +68,23 @@ func Convert(graph *layout.Graph) *Graph {
 	}
 
 	return out
+}
+
+// edgeDirected reports whether an edge is drawn directed: an arrow at the
+// head only, as with dot's dir=forward, makes it directed and no arrows
+// make it undirected. Arrows at the tail cannot be told apart in GraphML
+// and keep Edge.Directed.
+func edgeDirected(edge *layout.Edge) bool {
+	if edge.ArrowTail != layout.ArrowDefault && edge.ArrowTail != layout.ArrowNone {
+		return edge.Directed
+	}
+	switch edge.ArrowHead {
+	case layout.ArrowDefault:
+		return edge.Directed
+	case layout.ArrowNone:
+		return false
+	}
+	return true
 }
 
 func addAttr(attrs *[]Attr, key, value string) {
