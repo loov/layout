@@ -62,6 +62,7 @@ func parse(file *ast.File, err error) (_ []*layout.Graph, failed error) {
 
 // unquoteStmts strips dot quotes from every identifier and attribute
 // value, so "a" and a name the same node and shape="box" reads as box.
+// Labels keep their quotes and escapes for expandLabel.
 func unquoteStmts(stmts []ast.Stmt) {
 	for _, stmt := range stmts {
 		switch stmt := stmt.(type) {
@@ -77,7 +78,7 @@ func unquoteStmts(stmts []ast.Stmt) {
 		case *ast.AttrStmt:
 			unquoteAttrs(stmt.Attrs)
 		case *ast.Attr:
-			stmt.Val = unquote(stmt.Val)
+			unquoteAttrs([]*ast.Attr{stmt})
 		case *ast.Subgraph:
 			stmt.ID = unquote(stmt.ID)
 			unquoteStmts(stmt.Stmts)
@@ -97,7 +98,9 @@ func unquoteVertex(v ast.Vertex) {
 
 func unquoteAttrs(attrs []*ast.Attr) {
 	for _, attr := range attrs {
-		attr.Val = unquote(attr.Val)
+		if attr.Key != "label" {
+			attr.Val = unquote(attr.Val)
+		}
 	}
 }
 
@@ -111,6 +114,19 @@ func unquote(s string) string {
 }
 
 var unescape = strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n")
+
+// expandLabel interprets a label value. In quoted strings \n, \l and \r
+// break lines and names replace their escapes, given as pairs such as
+// `\N`, node.ID; other escapes are kept for record labels. A final line
+// break only ends the last line, as in Graphviz. HTML labels and plain
+// ids are returned as they are.
+func expandLabel(raw string, names ...string) string {
+	if len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' {
+		return raw
+	}
+	escapes := append([]string{`\\`, `\`, `\"`, `"`, `\n`, "\n", `\l`, "\n", `\r`, "\n"}, names...)
+	return strings.TrimSuffix(strings.NewReplacer(escapes...).Replace(raw[1:len(raw)-1]), "\n")
+}
 
 // parserContext holds the attribute defaults in effect for a (sub)graph
 type parserContext struct {
@@ -332,7 +348,7 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 		for _, attr := range subgraphAttrs(src.Stmts) {
 			switch attr.Key {
 			case "label":
-				setString(&cluster.Label, attr.Val)
+				setString(&cluster.Label, expandLabel(attr.Val, `\G`, src.ID))
 			case "color":
 				setColor(&color, attr.Val)
 				setColor(&cluster.LineColor, attr.Val)
@@ -371,7 +387,7 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 		node = context.Graph.Node(id)
 		node.Label = node.ID // dot's default label is the id, label="" is empty
 		context.outlines[node] = &outlines{}
-		applyNodeAttrs(node, context.nodeAttrs, context.outlines[node])
+		applyNodeAttrs(context.Graph.ID, node, context.nodeAttrs, context.outlines[node])
 		context.notePos(node, context.nodeAttrs)
 	}
 	if !slices.Contains(context.touched, node) {
@@ -421,7 +437,7 @@ func lastAttr(attrs []*ast.Attr, key string) string {
 
 func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
 	node := context.ensureNode(src.Node.ID)
-	applyNodeAttrs(node, src.Attrs, context.outlines[node])
+	applyNodeAttrs(context.Graph.ID, node, src.Attrs, context.outlines[node])
 	context.notePos(node, src.Attrs)
 	return node
 }
@@ -443,7 +459,7 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 				edge.FromPort = sourcePort
 				edge.ToPort = targetPort
 
-				applyEdgeAttrs(edge, slices.Concat(context.edgeAttrs, edgeStmt.Attrs))
+				applyEdgeAttrs(context.Graph.ID, edge, slices.Concat(context.edgeAttrs, edgeStmt.Attrs))
 
 				context.Graph.Edges = append(context.Graph.Edges, edge)
 			}
@@ -476,9 +492,9 @@ func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
 	}
 }
 
-// applyNodeAttrs applies attrs to node; outlines carries what earlier
-// assignments to the node set
-func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
+// applyNodeAttrs applies attrs to node of the graph named graphID;
+// outlines carries what earlier assignments to the node set
+func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 	var color layout.Color
 	filled := false
 	defer func() {
@@ -511,8 +527,8 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 			setShape(&node.Shape, attr.Val)
 			outlines.double = attr.Val == "doublecircle"
 		case "label":
-			setString(&node.Label, attr.Val)
-			node.NoLabel = attr.Val == ""
+			setString(&node.Label, expandLabel(attr.Val, `\N`, node.ID, `\G`, graphID))
+			node.NoLabel = node.Label == ""
 		case "color":
 			setColor(&color, attr.Val)
 			setColor(&node.LineColor, attr.Val)
@@ -546,10 +562,10 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 // nodes to a hierarchical layout
 const maxMinLen = 1000
 
-// applyEdgeAttrs applies all attributes of an edge, defaults first.
-// Explicit arrowhead and arrowtail win over the arrows dir implies,
-// wherever they appear.
-func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
+// applyEdgeAttrs applies all attributes of an edge of the graph named
+// graphID, defaults first. Explicit arrowhead and arrowtail win over the
+// arrows dir implies, wherever they appear.
+func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 	var head, tail layout.Arrow
 	defer func() {
 		switch lastAttr(attrs, "dir") {
@@ -587,7 +603,11 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 				edge.LabelPos = p
 			}
 		case "label":
-			setString(&edge.Label, attr.Val)
+			name := edge.From.ID + "--" + edge.To.ID
+			if edge.Directed {
+				name = edge.From.ID + "->" + edge.To.ID
+			}
+			setString(&edge.Label, expandLabel(attr.Val, `\E`, name, `\T`, edge.From.ID, `\H`, edge.To.ID, `\G`, graphID))
 		case "color":
 			setColor(&edge.LineColor, attr.Val)
 		case "fontcolor":
