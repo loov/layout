@@ -2,6 +2,7 @@ package dot
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/loov/layout"
 	"os/exec"
 	"slices"
@@ -180,6 +181,78 @@ func TestWriteQuotesShape(t *testing.T) {
 	if len(graphs[0].Nodes) != 1 {
 		t.Fatalf("shape injected nodes:\n%s", &out)
 	}
+}
+
+func TestWriteParseRoundTrip(t *testing.T) {
+	g := layout.NewDigraph()
+	a, b := g.Node("a"), g.Node("b")
+	a.Label = "<<b>bold</b>>"
+	a.LineColor, a.FillColor, a.FontColor = layout.RGB{R: 0xFF}, layout.RGBA{G: 0xFF, A: 0x80}, layout.RGB{B: 0xFF}
+	a.LineStyle, a.LineWidth = layout.Dashed, 2
+	b.Label = "<a>]; evil [label=<x>"
+	e := g.Edge("a", "b")
+	e.Label = "<<i>e</i>>"
+	e.LineColor, e.FontColor, e.LineStyle, e.LineWidth = layout.RGB{R: 1, G: 2, B: 3}, layout.RGB{R: 4}, layout.Dotted, 3
+	e.FromPort, e.ToPort = layout.East, layout.North
+	outer := &layout.Cluster{ID: "cluster_outer", Label: "<<u>outer</u>>", Nodes: []*layout.Node{a, b}, LineColor: layout.RGB{R: 9}, FillColor: layout.RGB{G: 9}}
+	inner := &layout.Cluster{ID: "inner", Label: "in", Nodes: []*layout.Node{b}, Parent: outer}
+	g.Clusters = []*layout.Cluster{outer, inner}
+	var out bytes.Buffer
+	if err := Write(&out, g); err != nil {
+		t.Fatal(err)
+	}
+	graphs, err := Parse(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatalf("%v\n%s", err, &out)
+	}
+	got := graphs[0]
+	if len(got.Nodes) != 2 {
+		t.Fatalf("got %d nodes\n%s", len(got.Nodes), &out)
+	}
+	ga, gb, ge := got.Node("a"), got.Node("b"), got.Edges[0]
+	colors := func(cs ...layout.Color) (s []string) {
+		for _, c := range cs {
+			s = append(s, rgba(c))
+		}
+		return s
+	}
+	for _, tc := range []struct {
+		name      string
+		got, want any
+	}{
+		{"node label", ga.Label, a.Label},
+		{"unbalanced label", strings.TrimPrefix(gb.Label, literalMark), b.Label},
+		{"node colors", colors(ga.LineColor, ga.FillColor, ga.FontColor), colors(a.LineColor, a.FillColor, a.FontColor)},
+		{"node line", [2]any{ga.LineStyle, ga.LineWidth}, [2]any{a.LineStyle, a.LineWidth}},
+		{"edge label", ge.Label, e.Label},
+		{"edge colors", colors(ge.LineColor, ge.FontColor), colors(e.LineColor, e.FontColor)},
+		{"edge line", [2]any{ge.LineStyle, ge.LineWidth}, [2]any{e.LineStyle, e.LineWidth}},
+		{"ports", [2]any{ge.FromPort, ge.ToPort}, [2]any{e.FromPort, e.ToPort}},
+		{"clusters", len(got.Clusters), 2},
+	} {
+		if fmt.Sprint(tc.got) != fmt.Sprint(tc.want) {
+			t.Errorf("%s = %v, want %v", tc.name, tc.got, tc.want)
+		}
+	}
+	if len(got.Clusters) == 2 {
+		o, i := got.Clusters[0], got.Clusters[1]
+		if o.Label != outer.Label || rgba(o.LineColor) != rgba(outer.LineColor) || rgba(o.FillColor) != rgba(outer.FillColor) || len(o.Nodes) != 2 {
+			t.Errorf("outer cluster = %+v", o)
+		}
+		if i.Label != "in" || i.Parent != o || len(i.Nodes) != 1 || i.Nodes[0].ID != "b" {
+			t.Errorf("inner cluster = %+v", i)
+		}
+	}
+	if t.Failed() {
+		t.Log(&out)
+	}
+}
+
+func rgba(c layout.Color) string {
+	if c == nil {
+		return "nil"
+	}
+	return fmt.Sprint(c.RGBA8())
 }
 
 func TestWriteBoundsContainNegativePositions(t *testing.T) {

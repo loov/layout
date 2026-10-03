@@ -13,7 +13,8 @@ import (
 
 // Write writes the graph as dot with the computed layout: nodes carry
 // pos, width and height, edges carry pos with cubic controls for their
-// paths. The output can be rendered by Graphviz with "neato -n2".
+// paths. Labels, colors, line styles, ports and clusters are kept. The
+// output can be rendered by Graphviz with "neato -n2".
 //
 // Coordinates are in points with the y axis pointing up, as in Graphviz.
 func Write(w io.Writer, graph *layout.Graph) error {
@@ -56,7 +57,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			"height=" + inches(2*node.Radius.Y),
 		}
 		if node.Label != "" || node.NoLabel {
-			attrs = append(attrs, "label="+quote(node.Label))
+			attrs = append(attrs, "label="+labelID(node.Label))
 		}
 		if node.Shape != layout.Auto {
 			attrs = append(attrs, "shape="+quote(string(node.Shape)))
@@ -64,6 +65,10 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		if node.Peripheries > 1 {
 			attrs = append(attrs, fmt.Sprintf("peripheries=%d", node.Peripheries))
 		}
+		if node.FillColor != nil {
+			attrs = append(attrs, "fillcolor="+colorID(node.FillColor))
+		}
+		attrs = append(attrs, lineAttrs(node.LineColor, node.FontColor, node.LineWidth, node.LineStyle, node.FillColor != nil)...)
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
 	for _, edge := range graph.Edges {
@@ -119,19 +124,119 @@ func Write(w io.Writer, graph *layout.Graph) error {
 			attrs = append(attrs, "arrowtail="+quote(string(tail)))
 		}
 		if edge.Label != "" {
-			attrs = append(attrs, "label="+quote(edge.Label), "lp="+quote(pt(edge.LabelPos)))
+			attrs = append(attrs, "label="+labelID(edge.Label), "lp="+quote(pt(edge.LabelPos)))
 		}
 		if edge.Weight != 1 {
 			attrs = append(attrs, "weight="+strconv.FormatFloat(edge.Weight, 'g', -1, 64))
 		}
+		if edge.FromPort != layout.CompassAuto {
+			attrs = append(attrs, "tailport="+quote(string(edge.FromPort)))
+		}
+		if edge.ToPort != layout.CompassAuto {
+			attrs = append(attrs, "headport="+quote(string(edge.ToPort)))
+		}
+		attrs = append(attrs, lineAttrs(edge.LineColor, edge.FontColor, edge.LineWidth, edge.LineStyle, false)...)
 		if len(attrs) == 0 {
 			write("\t%s %s %s;\n", quote(edge.From.ID), arrow, quote(edge.To.ID))
 			continue
 		}
 		write("\t%s %s %s [%s];\n", quote(edge.From.ID), arrow, quote(edge.To.ID), strings.Join(attrs, ", "))
 	}
+	var writeCluster func(cluster *layout.Cluster, indent string)
+	writeCluster = func(cluster *layout.Cluster, indent string) {
+		// Graphviz draws only subgraphs named cluster* as clusters
+		id := cluster.ID
+		if id == "" {
+			id = strconv.Itoa(slices.Index(graph.Clusters, cluster))
+		}
+		if !strings.HasPrefix(id, "cluster") {
+			id = "cluster_" + id
+		}
+		write("%ssubgraph %s {\n", indent, quote(id))
+		if cluster.Label != "" {
+			write("%s\tlabel=%s;\n", indent, labelID(cluster.Label))
+		}
+		if cluster.LineColor != nil {
+			write("%s\tcolor=%s;\n", indent, colorID(cluster.LineColor))
+		}
+		if cluster.FillColor != nil {
+			write("%s\tbgcolor=%s;\n", indent, colorID(cluster.FillColor))
+		}
+		for _, inner := range graph.Clusters {
+			if inner.Parent == cluster {
+				writeCluster(inner, indent+"\t")
+			}
+		}
+		for _, node := range cluster.Nodes {
+			write("%s\t%s;\n", indent, quote(node.ID))
+		}
+		write("%s}\n", indent)
+	}
+	for _, cluster := range graph.Clusters {
+		if cluster.Parent == nil {
+			writeCluster(cluster, "\t")
+		}
+	}
 	write("}\n")
 	return err
+}
+
+// lineAttrs returns the color, fontcolor, penwidth and style attributes
+// of a node or edge; filled adds the filled style
+func lineAttrs(line, font layout.Color, width layout.Length, style layout.LineStyle, filled bool) []string {
+	var attrs, styles []string
+	if line != nil {
+		attrs = append(attrs, "color="+colorID(line))
+	}
+	if font != nil {
+		attrs = append(attrs, "fontcolor="+colorID(font))
+	}
+	if width != layout.Point {
+		attrs = append(attrs, "penwidth="+strconv.FormatFloat(float64(width/layout.Point), 'g', -1, 64))
+	}
+	if filled {
+		styles = append(styles, "filled")
+	}
+	if style != layout.Solid {
+		styles = append(styles, string(style))
+	}
+	if len(styles) > 0 {
+		attrs = append(attrs, "style="+quote(strings.Join(styles, ",")))
+	}
+	return attrs
+}
+
+// colorID returns color as a quoted "#rrggbb" or "#rrggbbaa"
+func colorID(color layout.Color) string {
+	r, g, b, a := color.RGBA8()
+	if a == 0xFF {
+		return fmt.Sprintf(`"#%02x%02x%02x"`, r, g, b)
+	}
+	return fmt.Sprintf(`"#%02x%02x%02x%02x"`, r, g, b, a)
+}
+
+// labelID returns a label as a dot HTML string when it is HTML-like with
+// nesting angle brackets, which keep it in one piece, and quoted otherwise
+func labelID(label string) string {
+	if !layout.IsHTMLLabel(label) {
+		return quote(label)
+	}
+	depth := 0
+	for i, c := range label {
+		switch c {
+		case '<':
+			depth++
+		case '>':
+			depth--
+			if depth == 0 && i != len(label)-1 {
+				return quote(label)
+			}
+		}
+	}
+	if depth != 0 {
+		return quote(label)
+	}
+	return label
 }
 
 // arrowLength is the Graphviz arrow length at the default arrowsize.
