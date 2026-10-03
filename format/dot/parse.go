@@ -53,6 +53,9 @@ func parse(file *ast.File, err error) (_ []*layout.Graph, failed error) {
 		unquoteStmts(graphStmt.Stmts)
 		parser := &parserContext{positioned: map[*layout.Node]bool{}, outlines: map[*layout.Node]*outlines{}}
 		parser.Graph = layout.NewGraph()
+		if graphStmt.Strict {
+			parser.strict = map[[2]*layout.Node]*strictEdge{}
+		}
 		parser.parse(graphStmt)
 		graphs = append(graphs, parser.Graph)
 	}
@@ -151,6 +154,17 @@ type parserContext struct {
 
 	positioned map[*layout.Node]bool // nodes with a pos attribute
 	outlines   map[*layout.Node]*outlines
+
+	// strict holds the edges of a strict graph by their ends; nil when
+	// the graph allows multi-edges
+	strict map[[2]*layout.Node]*strictEdge
+}
+
+// strictEdge is an edge of a strict graph with every attribute assigned
+// to it so far, as later statements for the same ends merge into it
+type strictEdge struct {
+	edge  *layout.Edge
+	attrs []*ast.Attr
 }
 
 // outlines is what decides a node's peripheries over all of its
@@ -339,7 +353,7 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 // count as touched in this context too.
 func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 	start := len(context.Graph.Clusters)
-	subcontext := &parserContext{positioned: context.positioned, outlines: context.outlines}
+	subcontext := &parserContext{positioned: context.positioned, outlines: context.outlines, strict: context.strict}
 	subcontext.Graph = context.Graph
 	subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
 	subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
@@ -467,6 +481,9 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 		targetPort := vertexPort(to.Vertex)
 		for _, source := range sources {
 			for _, target := range targets {
+				if context.mergeStrict(source, target, sourcePort, targetPort, edgeStmt.Attrs) {
+					continue
+				}
 				edge := layout.NewEdge(source, target)
 
 				edge.Directed = to.Directed
@@ -475,7 +492,11 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 				edge.FromPort = sourcePort
 				edge.ToPort = targetPort
 
-				applyEdgeAttrs(context.Graph.ID, edge, slices.Concat(context.edgeAttrs, edgeStmt.Attrs))
+				attrs := slices.Concat(context.edgeAttrs, edgeStmt.Attrs)
+				applyEdgeAttrs(context.Graph.ID, edge, attrs)
+				if context.strict != nil {
+					context.strict[[2]*layout.Node{source, target}] = &strictEdge{edge, attrs}
+				}
 
 				context.Graph.Edges = append(context.Graph.Edges, edge)
 			}
@@ -485,6 +506,30 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 		sourcePort = targetPort
 		to = to.To
 	}
+}
+
+// mergeStrict merges an edge statement between source and target into
+// the existing edge between them in a strict graph, in either direction
+// when undirected. It reports whether there was one. As in Graphviz, the
+// statement's attributes apply but defaults set since do not.
+func (context *parserContext) mergeStrict(source, target *layout.Node, sourcePort, targetPort layout.Compass, attrs []*ast.Attr) bool {
+	prev, ok := context.strict[[2]*layout.Node{source, target}]
+	if !ok && !context.Graph.Directed {
+		prev, ok = context.strict[[2]*layout.Node{target, source}]
+		sourcePort, targetPort = targetPort, sourcePort
+	}
+	if !ok {
+		return false
+	}
+	if sourcePort != layout.CompassAuto {
+		prev.edge.FromPort = sourcePort
+	}
+	if targetPort != layout.CompassAuto {
+		prev.edge.ToPort = targetPort
+	}
+	prev.attrs = append(prev.attrs, attrs...)
+	applyEdgeAttrs(context.Graph.ID, prev.edge, prev.attrs)
+	return true
 }
 
 // vertexPort returns the compass point of a node vertex, if any. Named

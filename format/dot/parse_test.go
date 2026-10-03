@@ -3,6 +3,7 @@ package dot
 import (
 	"fmt"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/loov/layout"
@@ -286,6 +287,30 @@ func TestPorts(t *testing.T) {
 		e := graphs[0].Edges[0]
 		if e.FromPort != tc.from || e.ToPort != tc.to {
 			t.Errorf("%s: ports %q, %q, want %q, %q", tc.src, e.FromPort, e.ToPort, tc.from, tc.to)
+		}
+	}
+}
+
+func TestStrictGraphsMergeEdges(t *testing.T) {
+	for _, tc := range []struct {
+		src   string
+		edges int
+	}{
+		{`strict digraph { a -> b [color=red]; a -> b [label=x]; b -> a }`, 2},
+		{`strict graph { a -- b [color=red]; b -- a [label=x]; a -- a; a -- a }`, 2},
+		{`digraph { a -> b; a -> b }`, 2},
+	} {
+		graphs, err := ParseString(tc.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		g := graphs[0]
+		if len(g.Edges) != tc.edges {
+			t.Errorf("%s: %d edges, want %d", tc.src, len(g.Edges), tc.edges)
+			continue
+		}
+		if e := g.Edges[0]; tc.edges == 2 && strings.HasPrefix(tc.src, "strict") && (e.Label != "x" || e.LineColor == nil) {
+			t.Errorf("%s: attributes not merged: label %q, color %v", tc.src, e.Label, e.LineColor)
 		}
 	}
 }
