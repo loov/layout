@@ -11,13 +11,24 @@ import (
 	"github.com/loov/layout"
 )
 
-// Write writes the graph as dot with the computed layout: nodes carry
-// pos, width and height, edges carry pos with cubic controls for their
-// paths. Labels, colors, line styles, ports and clusters are kept. The
-// output can be rendered by Graphviz with "neato -n2".
+// Write writes the graphs as dot with the computed layout, one after
+// another: nodes carry pos, width and height, edges carry pos with cubic
+// controls for their paths. Labels, colors, line styles, ports and
+// clusters are kept. The output can be rendered by Graphviz with
+// "neato -n2".
 //
 // Coordinates are in points with the y axis pointing up, as in Graphviz.
-func Write(w io.Writer, graph *layout.Graph) error {
+func Write(w io.Writer, graphs ...*layout.Graph) error {
+	for _, graph := range graphs {
+		if err := writeGraph(w, graph); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// writeGraph writes one graph, see Write
+func writeGraph(w io.Writer, graph *layout.Graph) error {
 	var err error
 	write := func(format string, args ...any) {
 		if err == nil {

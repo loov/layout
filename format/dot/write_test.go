@@ -277,3 +277,21 @@ func TestWriteBoundsContainNegativePositions(t *testing.T) {
 		}
 	}
 }
+
+func TestWriteSeveralGraphs(t *testing.T) {
+	a, b := layout.NewDigraph(), layout.NewGraph()
+	a.ID, b.ID = "first", "second"
+	a.Edge("x", "y")
+	b.Edge("y", "z")
+	var out bytes.Buffer
+	if err := Write(&out, a, b); err != nil {
+		t.Fatal(err)
+	}
+	graphs, err := ParseString(out.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(graphs) != 2 || graphs[0].ID != "first" || graphs[1].ID != "second" || graphs[1].Directed {
+		t.Fatalf("got %d graphs from:\n%s", len(graphs), out.String())
+	}
+}

@@ -141,7 +141,7 @@ func main() {
 	case "svg":
 		write = svg.Write
 	case "dot":
-		write = dot.Write
+		write = func(w io.Writer, graph *layout.Graph) error { return dot.Write(w, graph) }
 	case "json":
 		write = json.Write
 	case "txt", "text":

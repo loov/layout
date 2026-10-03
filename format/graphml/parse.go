@@ -52,6 +52,12 @@ func ParseFile(path string) ([]*layout.Graph, error) {
 	return Parse(file)
 }
 
+// ParseString parses a GraphML document from s and returns every
+// top-level graph in it, see Parse.
+func ParseString(s string) ([]*layout.Graph, error) {
+	return Parse(strings.NewReader(s))
+}
+
 func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string, directed bool) error {
 	// a nested graph without edgedefault inherits the enclosing default
 	if src.EdgeDefault != "" {
