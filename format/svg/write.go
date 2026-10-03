@@ -145,11 +145,6 @@ func roundedPath(path []layout.Vector, radius, maxDeviation layout.Length) strin
 	return line.String()
 }
 
-// Write renders the laid out graph as an SVG document.
-//
-// Nodes are drawn according to their shape and colors, edges as rounded
-// polylines along Edge.Path with an arrowhead on directed edges. Labels
-// wrapped in <...> are emitted as inline HTML.
 // markerID returns the marker definition for an arrow style, or "" for
 // none; styles without a marker of their own draw a normal arrowhead
 func markerID(arrow layout.Arrow) string {
@@ -241,6 +236,11 @@ func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius 
 	svg.write("</foreignObject>")
 }
 
+// Write renders the laid out graph as an SVG document.
+//
+// Nodes are drawn according to their shape and colors, edges as rounded
+// polylines along Edge.Path with an arrowhead on directed edges. Labels
+// wrapped in <...> are emitted as inline HTML.
 func Write(w io.Writer, graph *layout.Graph) error {
 	svg := &writer{}
 	svg.w = w

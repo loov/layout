@@ -26,6 +26,7 @@ type Graph struct {
 	Clusters []Cluster `json:"clusters,omitempty"`
 }
 
+// Node is a node with its center at X, Y and its full Width and Height.
 type Node struct {
 	ID     string  `json:"id"`
 	Label  string  `json:"label,omitempty"`
@@ -36,6 +37,8 @@ type Node struct {
 	Height float64 `json:"height"`
 }
 
+// Edge is an edge drawn through the points of Path. LabelPos is the
+// center of the label, when the edge has one.
 type Edge struct {
 	From     string       `json:"from"`
 	To       string       `json:"to"`
@@ -45,6 +48,9 @@ type Edge struct {
 	LabelPos *[2]float64  `json:"labelPos,omitempty"`
 }
 
+// Cluster is the box drawn around Nodes, given by their IDs. Unlike
+// Node, X and Y are the top left corner. Parent is the ID of the
+// enclosing cluster, if any.
 type Cluster struct {
 	ID     string   `json:"id"`
 	Label  string   `json:"label,omitempty"`
