@@ -1,5 +1,7 @@
 package layout
 
+import "math"
+
 // Layout is a computed drawing of a Graph. Nodes, Edges and Clusters are
 // index-aligned with the graph's: Nodes[i] is where Graph.Nodes[i] goes.
 type Layout struct {
@@ -89,7 +91,31 @@ func indexOf[T comparable](items []T) map[T]int {
 // Bounds returns the bounding box of all nodes, clusters, edge paths and
 // labels.
 func (l *Layout) Bounds() (min, max Vector) {
-	return l.work().Bounds()
+	inf := Length(math.Inf(1))
+	min, max = Vector{inf, inf}, Vector{-inf, -inf}
+	for _, box := range l.Nodes {
+		minvector(&min, box.TopLeft())
+		maxvector(&max, box.BottomRight())
+	}
+	for _, box := range l.Clusters {
+		minvector(&min, box.TopLeft)
+		maxvector(&max, box.BottomRight)
+	}
+	for i, path := range l.Edges {
+		for _, p := range path.Path {
+			minvector(&min, p)
+			maxvector(&max, p)
+		}
+		if l.Graph.Edges[i].Label != "" {
+			half := Vector{path.LabelSize.X / 2, path.LabelSize.Y / 2}
+			minvector(&min, path.LabelCenter.Sub(half))
+			maxvector(&max, path.LabelCenter.Add(half))
+		}
+	}
+	if min.X > max.X { // nothing to bound
+		return Vector{}, Vector{}
+	}
+	return min, max
 }
 
 // TopLeft returns the top left corner of the box.
