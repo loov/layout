@@ -149,15 +149,36 @@ func orderClusters(graph *Graph) {
 		return
 	}
 	graph.assignPos()
+	// bary is the mean position of a node's neighbors in the ranks above
+	// and below, which decides on which side of a cluster a node at the
+	// cluster's mean position goes
+	bary := func(node *Node) float64 {
+		sum, n := 0.0, 0
+		for _, adj := range [2]Nodes{node.In, node.Out} {
+			for _, other := range adj {
+				sum += float64(other.Pos)
+				n++
+			}
+		}
+		if n == 0 {
+			return float64(node.Pos)
+		}
+		return sum / float64(n)
+	}
 	for _, layer := range graph.ByRank {
-		// cluster key: mean position of its nodes in this layer, for
-		// the cluster and each enclosing cluster
-		sum := map[*Cluster]float64{}
-		count := map[*Cluster]int{}
+		// cluster key: mean position and neighbor position of its nodes in
+		// this layer, for the cluster and each enclosing cluster; borders
+		// only count for the position
+		sum, near := map[*Cluster]float64{}, map[*Cluster]float64{}
+		count, nearCount := map[*Cluster]int{}, map[*Cluster]int{}
 		for _, node := range layer {
 			for c := node.Cluster; c != nil; c = c.Parent {
 				sum[c] += float64(node.Pos)
 				count[c]++
+				if borderSide(node) == 0 {
+					near[c] += bary(node)
+					nearCount[c]++
+				}
 			}
 		}
 		// node key: means from the outermost cluster inward, then the
@@ -166,24 +187,26 @@ func orderClusters(graph *Graph) {
 		for i, node := range layer {
 			var key []float64
 			for c := node.Cluster; c != nil; c = c.Parent {
-				key = append(key, sum[c]/float64(count[c]))
+				key = append(key, near[c]/float64(max(nearCount[c], 1)), sum[c]/float64(count[c]))
 			}
 			slices.Reverse(key)
 			last := float64(node.Pos)
 			if side := borderSide(node); side != 0 {
 				last = math.Inf(side)
 			}
-			keys[i] = append(key, last)
+			keys[i] = append(key, last, bary(node))
 		}
 		index := make(map[*Node]int, len(layer))
 		for i, node := range layer {
 			index[node] = i
 		}
-		// keys compare on their common prefix; a tie keeps the current order
+		// a node outside a cluster whose position ties with the cluster's
+		// mean goes to the side of its neighbors, and with those tied too
+		// before all of the cluster, never among its nodes; equal keys
+		// keep the current order
 		sort.SliceStable(layer, func(i, k int) bool {
 			a, b := index[layer[i]], index[layer[k]]
-			n := min(len(keys[a]), len(keys[b]))
-			if c := slices.Compare(keys[a][:n], keys[b][:n]); c != 0 {
+			if c := slices.Compare(keys[a], keys[b]); c != 0 {
 				return c < 0
 			}
 			if sa, sb := borderSide(layer[i]), borderSide(layer[k]); sa != sb {
