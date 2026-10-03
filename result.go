@@ -98,6 +98,12 @@ func (box NodeBox) TopLeft() Vector { return Vector{box.Left(), box.Top()} }
 // BottomRight returns the bottom right corner of the box.
 func (box NodeBox) BottomRight() Vector { return Vector{box.Right(), box.Bottom()} }
 
+// TopCenter returns the middle of the top side of the box.
+func (box NodeBox) TopCenter() Vector { return Vector{box.Center.X, box.Top()} }
+
+// BottomCenter returns the middle of the bottom side of the box.
+func (box NodeBox) BottomCenter() Vector { return Vector{box.Center.X, box.Bottom()} }
+
 // Left returns the x coordinate of the left side of the box.
 func (box NodeBox) Left() Length { return box.Center.X - box.Size.X/2 }
 
