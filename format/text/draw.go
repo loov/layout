@@ -13,6 +13,11 @@ import (
 func (c *canvas) drawCluster(cluster *layout.Cluster) {
 	x0, y0 := c.col(cluster.TopLeft.X), c.row(cluster.TopLeft.Y)
 	x1, y1 := c.col(cluster.BottomRight.X), c.row(cluster.BottomRight.Y)
+	if cluster.Label != "" {
+		// the label fits, spaced, between the corners; estimates of its
+		// width can fall a few cells short
+		x1 = max(x1, x0+clusterLabelWidth(cluster))
+	}
 	c.edge++
 	c.ink = rgb(cluster.LineColor)
 	c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))

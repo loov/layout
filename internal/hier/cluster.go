@@ -16,6 +16,9 @@ type Cluster struct {
 	// and positioning aligns them vertically.
 	Left, Right      Nodes
 	MinRank, MaxRank int
+	// MinWidth is the least width of the box around the borders, such as
+	// for a label
+	MinWidth float32
 }
 
 // AddClusterBorders creates border nodes for every cluster and assigns
@@ -233,6 +236,13 @@ func AlignClusterBorders(graph *Graph) {
 			for i := range cluster.Left {
 				minLeft = min(minLeft, cluster.Left[i].Center.X)
 				maxRight = max(maxRight, cluster.Right[i].Center.X)
+			}
+			if len(cluster.Left) > 0 {
+				// widen to the least width by moving both borders out, so
+				// that the members stay centered
+				width := maxRight + cluster.Right[0].Radius.X - (minLeft - cluster.Left[0].Radius.X)
+				grow := max(0, cluster.MinWidth-width)
+				minLeft, maxRight = minLeft-grow/2, maxRight+grow/2
 			}
 			for i := range cluster.Left {
 				left, right := cluster.Left[i], cluster.Right[i]

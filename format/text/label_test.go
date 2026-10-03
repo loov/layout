@@ -65,3 +65,22 @@ func TestWideLabel(t *testing.T) {
 		t.Errorf("box rows are %v columns wide, want 10 each:\n%s", widths, buf.String())
 	}
 }
+
+// TestClusterLabel checks that a long cluster label is drawn whole on the
+// top of its frame.
+func TestClusterLabel(t *testing.T) {
+	graph := layout.NewDigraph()
+	label := "Extremely long cluster label spanning many characters"
+	graph.Clusters = []*layout.Cluster{{ID: "c", Label: label, Nodes: []*layout.Node{graph.Node("a")}}}
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(buf.String(), "┌ "+label+" ") {
+		t.Errorf("label is cut:\n%s", buf.String())
+	}
+}

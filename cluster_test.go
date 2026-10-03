@@ -30,3 +30,24 @@ func TestClusterExcludesPassingEdges(t *testing.T) {
 		}
 	}
 }
+
+// TestClusterFitsLabel checks that a cluster is at least as wide as its
+// label across the top, and that its members stay inside it.
+func TestClusterFitsLabel(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Clusters = []*layout.Cluster{{ID: "c", Label: "Extremely long cluster label spanning many characters", Nodes: []*layout.Node{graph.Node("a")}}}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	cluster, a := graph.Clusters[0], graph.Node("a")
+	// most characters are about half an em wide, spaces and narrow
+	// letters less
+	if width := cluster.BottomRight.X - cluster.TopLeft.X; width < Length(len(cluster.Label))*graph.FontSize*0.45 {
+		t.Errorf("cluster is %v wide, too narrow for its label", width)
+	}
+	if a.Left() < cluster.TopLeft.X || a.Right() > cluster.BottomRight.X {
+		t.Errorf("a at %v-%v outside the cluster at %v-%v", a.Left(), a.Right(), cluster.TopLeft.X, cluster.BottomRight.X)
+	}
+}
+
+type Length = layout.Length

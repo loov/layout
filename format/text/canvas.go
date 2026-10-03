@@ -86,6 +86,11 @@ func newCanvas(graph *layout.Graph) *canvas {
 			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+width(line)+1)
 		}
 	}
+	for _, cluster := range graph.Clusters {
+		if cluster.Label != "" {
+			c.w = max(c.w, c.col(cluster.TopLeft.X)+clusterLabelWidth(cluster)+1)
+		}
+	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
 	c.fg = make([]uint32, c.w*c.h)
 	c.bg = make([]uint32, c.w*c.h)
@@ -177,6 +182,12 @@ func (c *canvas) text(x, y int, s string) {
 		}
 	}
 	c.ink = ink
+}
+
+// clusterLabelWidth returns the columns from a cluster's left corner past
+// its label: the label between a space on each side, and the corners
+func clusterLabelWidth(cluster *layout.Cluster) int {
+	return width(strings.ReplaceAll(plain(cluster.Label), "\n", " ")) + 3
 }
 
 // covered marks the cell under the second column of a wide character,

@@ -147,11 +147,14 @@ var (
 	Quality = Options{OrderIterations: 96}
 )
 
+// sideways reports whether ranks run left or right
+func sideways(dir RankDir) bool { return dir == LeftToRight || dir == RightToLeft }
+
 // labelSide is the side of an edge, in the top to bottom frame, that its
 // label goes on: right of downward edges, and above sideways ones, which
 // is the left in the frame
 func labelSide(dir RankDir) float32 {
-	if dir == LeftToRight || dir == RightToLeft {
+	if sideways(dir) {
 		return -1
 	}
 	return 1
@@ -534,6 +537,11 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	clusters := map[*Cluster]*hier.Cluster{}
 	for _, clusterdef := range graphdef.Clusters {
 		cluster := &hier.Cluster{}
+		if clusterdef.Label != "" && !sideways(graphdef.RankDir) {
+			// room for the label across the top, with padding beside it;
+			// sideways the label runs along the ranks
+			cluster.MinWidth = float32(2*graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).X + 2*graphdef.EdgePadding)
+		}
 		for _, nodedef := range clusterdef.Nodes {
 			cluster.Members.Append(filledGraph.Nodes[nodes[nodedef]])
 		}
