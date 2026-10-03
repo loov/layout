@@ -6,6 +6,7 @@
 package dot
 
 import (
+	"errors"
 	"io"
 	"math"
 	"slices"
@@ -27,11 +28,24 @@ func ParseFile(path string) ([]*layout.Graph, error) { return parse(dot.ParseFil
 // ParseString parses dot from s and returns every graph it contains.
 func ParseString(s string) ([]*layout.Graph, error) { return parse(dot.ParseString(s)) }
 
+// parseError is panicked by the parser on input it cannot represent and
+// returned by parse
+type parseError struct{ error }
+
 // parse converts a parsed dot file into layout graphs
-func parse(file *ast.File, err error) ([]*layout.Graph, error) {
+func parse(file *ast.File, err error) (_ []*layout.Graph, failed error) {
 	if err != nil {
 		return nil, err
 	}
+	defer func() {
+		if r := recover(); r != nil {
+			perr, ok := r.(parseError)
+			if !ok {
+				panic(r)
+			}
+			failed = perr.error
+		}
+	}()
 
 	graphs := []*layout.Graph{}
 	for _, graphStmt := range file.Graphs {
@@ -349,6 +363,9 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 }
 
 func (context *parserContext) ensureNode(id string) *layout.Node {
+	if id == "" {
+		panic(parseError{errors.New("dot: empty node id")})
+	}
 	node, exists := context.Graph.NodeByID[id]
 	if !exists {
 		node = context.Graph.Node(id)

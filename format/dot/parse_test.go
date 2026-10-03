@@ -138,3 +138,11 @@ func TestDoubleCircleDefaults(t *testing.T) {
 		}
 	}
 }
+
+func TestEmptyNodeIDIsAnError(t *testing.T) {
+	for _, src := range []string{`digraph { "" -> a }`, `digraph { a -> "" }`, `graph { "" [label=x] }`} {
+		if _, err := ParseString(src); err == nil {
+			t.Errorf("%s: no error", src)
+		}
+	}
+}
