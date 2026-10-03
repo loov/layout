@@ -312,14 +312,14 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 			cluster.FillColor = color
 		}
 	}
-	switch {
-	case hasAttr(src.Stmts, "rank", "same"):
+	switch lastAttr(src.Stmts, "rank") {
+	case "same":
 		if len(subcontext.touched) > 1 {
 			context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
 		}
-	case hasAttr(src.Stmts, "rank", "min"), hasAttr(src.Stmts, "rank", "source"):
+	case "min", "source":
 		context.Graph.MinRank = append(context.Graph.MinRank, subcontext.touched...)
-	case hasAttr(src.Stmts, "rank", "max"), hasAttr(src.Stmts, "rank", "sink"):
+	case "max", "sink":
 		context.Graph.MaxRank = append(context.Graph.MaxRank, subcontext.touched...)
 	}
 	return subcontext
@@ -355,13 +355,16 @@ func subgraphAttrs(stmts []ast.Stmt) []*ast.Attr {
 	return attrs
 }
 
-func hasAttr(stmts []ast.Stmt, key, val string) bool {
-	for _, stmt := range stmts {
-		if attr, ok := stmt.(*ast.Attr); ok && attr.Key == key && attr.Val == val {
-			return true
+// lastAttr returns the value of the last key set directly on a subgraph,
+// since later assignments override earlier ones in Graphviz.
+func lastAttr(stmts []ast.Stmt, key string) string {
+	val := ""
+	for _, attr := range subgraphAttrs(stmts) {
+		if attr.Key == key {
+			val = attr.Val
 		}
 	}
-	return false
+	return val
 }
 
 func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
