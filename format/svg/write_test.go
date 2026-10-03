@@ -138,3 +138,31 @@ func TestUnknownArrowDrawsNormal(t *testing.T) {
 		}
 	}
 }
+
+// TestInvisible checks that invisible nodes, edges and clusters are left
+// out of the drawing.
+func TestInvisible(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Node("hidden").Invisible = true
+	graph.Edge("hidden", "a")
+	graph.Edge("a", "b").Invisible = true
+	graph.Edge("a", "b").Label = "secret"
+	graph.Clusters = []*layout.Cluster{{ID: "c", Nodes: []*layout.Node{graph.Node("b")}, Invisible: true}}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	svg := out.String()
+	if got := strings.Count(svg, "class='node'"); got != 2 {
+		t.Errorf("drew %d nodes, want 2", got)
+	}
+	if got := strings.Count(svg, "class='edge'"); got != 1 {
+		t.Errorf("drew %d edges, want 1", got)
+	}
+	if strings.Contains(svg, "class='cluster'") || strings.Contains(svg, "secret") {
+		t.Errorf("drew an invisible cluster or label:\n%s", svg)
+	}
+}

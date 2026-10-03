@@ -8,7 +8,7 @@
 //     bb
 //   - subgraph: rank (same, min, source, max, sink); for cluster
 //     subgraphs also label, color, pencolor, fillcolor, bgcolor and
-//     style=filled
+//     style (filled, invis)
 //   - node: label, shape, style, color, pencolor, fillcolor, fontcolor,
 //     fontname, fontsize, penwidth, width, height, fixedsize,
 //     peripheries, image, tooltip, pos
@@ -29,9 +29,8 @@
 //     normal arrowhead.
 //   - Colors are names from the X11 scheme or #RRGGBB and #RRGGBBAA;
 //     HSV values, color lists and gradients are ignored.
-//   - Styles other than solid, dashed, dotted, bold and filled are
-//     ignored; style=invis still draws the element, and rounded and
-//     diagonals have no effect.
+//   - Styles other than solid, dashed, dotted, bold, filled and invis
+//     are ignored; rounded and diagonals have no effect.
 //   - Ports name compass points only; a record field port such as
 //     "node:f0" attaches to the node as a whole.
 //   - minlen=0 is ignored; put such nodes in a rank=same subgraph.
@@ -442,6 +441,7 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 				setColor(&cluster.FillColor, attr.Val)
 			case "style":
 				filled = strings.Contains(attr.Val, "filled")
+				cluster.Invisible = hasStyle(attr.Val, "invis")
 			}
 		}
 		if filled && cluster.FillColor == nil {
@@ -646,6 +646,7 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		switch attr.Key {
 		case "style":
 			filled = strings.Contains(attr.Val, "filled")
+			node.Invisible = hasStyle(attr.Val, "invis")
 			setLineStyle(&node.LineStyle, attr.Val)
 		case "fixedsize":
 			node.FixedSize = attr.Val == "true" || attr.Val == "shape"
@@ -727,6 +728,7 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 				edge.MinLen = min(n, maxMinLen)
 			}
 		case "style":
+			edge.Invisible = hasStyle(attr.Val, "invis")
 			setLineStyle(&edge.LineStyle, attr.Val)
 		case "pos":
 			edge.Path = parseSpline(attr.Val)
@@ -820,6 +822,16 @@ func setLength(t *layout.Length, value string, unit layout.Length) {
 	if v, ok := parseFloat(value, unit); ok {
 		*t = layout.Length(v)
 	}
+}
+
+// hasStyle reports whether the comma separated style list contains name
+func hasStyle(value, name string) bool {
+	for s := range strings.SplitSeq(value, ",") {
+		if strings.TrimSpace(s) == name {
+			return true
+		}
+	}
+	return false
 }
 
 // setLineStyle picks the stroke style out of a comma separated style list

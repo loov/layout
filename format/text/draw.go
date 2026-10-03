@@ -31,11 +31,15 @@ func (c *canvas) drawCluster(cluster *layout.Cluster) {
 const peripheryGap = 4 * layout.Point
 
 // drawNode draws a node as a box that holds its label, and marks the box
-// solid so that edges don't draw over it
+// solid so that edges don't draw over it; an invisible node only keeps
+// its box clear
 func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	if node.Shape == layout.PointShape {
 		x, y := c.col(node.Center.X), c.row(node.Center.Y)
 		c.boxes[node] = [4]int{x, y, x, y}
+		if node.Invisible {
+			return
+		}
 		c.ink = rgb(node.LineColor)
 		if node.FillColor != nil {
 			c.ink = rgb(node.FillColor)
@@ -69,7 +73,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	c.boxes[node] = [4]int{x0, y0, x1, y1}
 	c.ink, c.font = rgb(node.LineColor), rgb(node.FontColor)
-	c.fill(x0, y0, x1, y1, rgb(node.FillColor))
+	if !node.Invisible {
+		c.fill(x0, y0, x1, y1, rgb(node.FillColor))
+	}
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			c.set(x, y, ' ')
@@ -80,6 +86,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 				c.hold(x, y) // blanks inside a box are part of it
 			}
 		}
+	}
+	if node.Invisible {
+		return
 	}
 	style := "╭╮╰╯─│"
 	switch {
@@ -354,7 +363,7 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 // join draws the box border of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
-	if node.Shape == layout.None || node.Shape == layout.PointShape {
+	if node.Shape == layout.None || node.Shape == layout.PointShape || node.Invisible {
 		return // no border to join
 	}
 	if end[0] < 0 || end[0] >= c.w || end[1] < 0 || end[1] >= c.h {
@@ -382,7 +391,7 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 // are the cells of the edges
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
-		if edge.Label != "" {
+		if edge.Label != "" && !edge.Invisible {
 			lines := strings.Split(draw.PlainLabel(edge.Label), "\n")
 			w := 0
 			for _, line := range lines {
@@ -397,7 +406,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 		}
 	}
 	for _, cluster := range graph.Clusters {
-		if cluster.Label != "" {
+		if cluster.Label != "" && !cluster.Invisible {
 			c.font = 0
 			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")+" ")
 		}

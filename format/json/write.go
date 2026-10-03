@@ -27,6 +27,8 @@ type Graph struct {
 }
 
 // Node is a node with its center at X, Y and its full Width and Height.
+// Invisible elements take part in the layout but are not meant to be
+// drawn.
 type Node struct {
 	ID     string  `json:"id"`
 	Label  string  `json:"label,omitempty"`
@@ -35,6 +37,8 @@ type Node struct {
 	Y      float64 `json:"y"`
 	Width  float64 `json:"width"`
 	Height float64 `json:"height"`
+
+	Invisible bool `json:"invisible,omitempty"`
 }
 
 // Edge is an edge drawn through the points of Path. LabelPos is the
@@ -46,6 +50,8 @@ type Edge struct {
 	Label    string       `json:"label,omitempty"`
 	Path     [][2]float64 `json:"path"`
 	LabelPos *[2]float64  `json:"labelPos,omitempty"`
+
+	Invisible bool `json:"invisible,omitempty"`
 }
 
 // Cluster is the box drawn around Nodes, given by their IDs. Unlike
@@ -60,6 +66,8 @@ type Cluster struct {
 	Y      float64  `json:"y"`
 	Width  float64  `json:"width"`
 	Height float64  `json:"height"`
+
+	Invisible bool `json:"invisible,omitempty"`
 }
 
 // Convert builds the JSON shape of a laid out graph.
@@ -76,10 +84,11 @@ func Convert(graph *layout.Graph) Graph {
 			ID: node.ID, Label: node.Label, Shape: string(node.Shape),
 			X: float64(node.Center.X), Y: float64(node.Center.Y),
 			Width: float64(2 * node.Radius.X), Height: float64(2 * node.Radius.Y),
+			Invisible: node.Invisible,
 		})
 	}
 	for _, edge := range graph.Edges {
-		e := Edge{From: edge.From.ID, To: edge.To.ID, Directed: edge.Directed, Label: edge.Label, Path: [][2]float64{}}
+		e := Edge{From: edge.From.ID, To: edge.To.ID, Directed: edge.Directed, Label: edge.Label, Path: [][2]float64{}, Invisible: edge.Invisible}
 		for _, p := range edge.Path {
 			e.Path = append(e.Path, [2]float64{float64(p.X), float64(p.Y)})
 		}
@@ -89,7 +98,7 @@ func Convert(graph *layout.Graph) Graph {
 		out.Edges = append(out.Edges, e)
 	}
 	for _, cluster := range graph.Clusters {
-		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{},
+		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
 			X: float64(cluster.TopLeft.X), Y: float64(cluster.TopLeft.Y),
 			Width:  float64(cluster.BottomRight.X - cluster.TopLeft.X),
 			Height: float64(cluster.BottomRight.Y - cluster.TopLeft.Y)}

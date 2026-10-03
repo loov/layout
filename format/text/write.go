@@ -28,18 +28,24 @@ func WriteColor(w io.Writer, graph *layout.Graph, opts Options) error {
 func write(w io.Writer, graph *layout.Graph, opts *Options) error {
 	c := newCanvas(graph)
 	for _, cluster := range graph.Clusters {
-		c.drawCluster(cluster)
+		if !cluster.Invisible {
+			c.drawCluster(cluster)
+		}
 	}
 	for _, node := range graph.Nodes {
 		c.drawNode(graph, node)
 	}
 	paths := make([][][2]int, len(graph.Edges))
 	for i, edge := range graph.Edges {
-		paths[i] = c.edgeCells(edge)
+		if !edge.Invisible {
+			paths[i] = c.edgeCells(edge)
+		}
 	}
 	c.spreadSides(graph.Edges, paths)
 	for i, edge := range graph.Edges {
-		c.drawEdge(edge, paths[i])
+		if !edge.Invisible {
+			c.drawEdge(edge, paths[i])
+		}
 	}
 	c.drawLabels(graph, paths)
 

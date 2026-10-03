@@ -376,3 +376,26 @@ func TestDiagonalEnds(t *testing.T) {
 		t.Errorf("want the edge to leave a down and reach b down:\n%s", got)
 	}
 }
+
+// TestInvisible checks that invisible nodes and edges leave blank room.
+func TestInvisible(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.ForText = true
+	graph.Node("hidden").Invisible = true
+	graph.Edge("hidden", "a")
+	edge := graph.Edge("a", "secret")
+	edge.Invisible = true
+	edge.Label = "label"
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	got := buf.String()
+	if strings.Contains(got, "hidden") || strings.Contains(got, "label") || strings.Count(got, "▼") != 1 {
+		t.Errorf("drew an invisible node or edge:\n%s", got)
+	}
+	t.Log("\n" + got)
+}

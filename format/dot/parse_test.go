@@ -1,6 +1,7 @@
 package dot
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strings"
@@ -344,4 +345,43 @@ func TestPlaintextShape(t *testing.T) {
 			t.Errorf("%s: shape = %q, want %q", id, got, layout.None)
 		}
 	}
+}
+
+// TestInvisible checks that style=invis hides nodes, edges and clusters
+// and survives writing the graph back as dot.
+func TestInvisible(t *testing.T) {
+	graphs, err := ParseString(`digraph {
+		subgraph cluster_x { style=invis; a }
+		a [style="dashed,invis"]
+		a -> b [style=invis]
+		b -> c
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := func(graph *layout.Graph) {
+		t.Helper()
+		if !graph.Node("a").Invisible || graph.Node("b").Invisible {
+			t.Errorf("node invisible: a=%v b=%v", graph.Node("a").Invisible, graph.Node("b").Invisible)
+		}
+		if !graph.Edges[0].Invisible || graph.Edges[1].Invisible {
+			t.Errorf("edge invisible: %v %v", graph.Edges[0].Invisible, graph.Edges[1].Invisible)
+		}
+		if !graph.Clusters[0].Invisible {
+			t.Error("cluster is visible")
+		}
+	}
+	check(graphs[0])
+	if err := layout.Hierarchical(graphs[0]); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := Write(&out, graphs[0]); err != nil {
+		t.Fatal(err)
+	}
+	again, err := ParseString(out.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	check(again[0])
 }

@@ -80,7 +80,7 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		if node.FillColor != nil {
 			attrs = append(attrs, "fillcolor="+colorID(node.FillColor))
 		}
-		attrs = append(attrs, lineAttrs(node.LineColor, node.FontColor, node.LineWidth, node.LineStyle, node.FillColor != nil)...)
+		attrs = append(attrs, lineAttrs(node.LineColor, node.FontColor, node.LineWidth, node.LineStyle, node.FillColor != nil, node.Invisible)...)
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
 	for _, edge := range graph.Edges {
@@ -147,7 +147,7 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		if edge.ToPort != layout.CompassAuto {
 			attrs = append(attrs, "headport="+quote(string(edge.ToPort)))
 		}
-		attrs = append(attrs, lineAttrs(edge.LineColor, edge.FontColor, edge.LineWidth, edge.LineStyle, false)...)
+		attrs = append(attrs, lineAttrs(edge.LineColor, edge.FontColor, edge.LineWidth, edge.LineStyle, false, edge.Invisible)...)
 		if len(attrs) == 0 {
 			write("\t%s %s %s;\n", quote(edge.From.ID), arrow, quote(edge.To.ID))
 			continue
@@ -174,6 +174,9 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		if cluster.FillColor != nil {
 			write("%s\tbgcolor=%s;\n", indent, colorID(cluster.FillColor))
 		}
+		if cluster.Invisible {
+			write("%s\tstyle=invis;\n", indent)
+		}
 		for _, inner := range graph.Clusters {
 			if inner.Parent == cluster {
 				writeCluster(inner, indent+"\t")
@@ -194,8 +197,8 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 }
 
 // lineAttrs returns the color, fontcolor, penwidth and style attributes
-// of a node or edge; filled adds the filled style
-func lineAttrs(line, font layout.Color, width layout.Length, style layout.LineStyle, filled bool) []string {
+// of a node or edge; filled and invisible add the filled and invis styles
+func lineAttrs(line, font layout.Color, width layout.Length, style layout.LineStyle, filled, invisible bool) []string {
 	var attrs, styles []string
 	if line != nil {
 		attrs = append(attrs, "color="+colorID(line))
@@ -211,6 +214,9 @@ func lineAttrs(line, font layout.Color, width layout.Length, style layout.LineSt
 	}
 	if style != layout.Solid {
 		styles = append(styles, string(style))
+	}
+	if invisible {
+		styles = append(styles, "invis")
 	}
 	if len(styles) > 0 {
 		attrs = append(attrs, "style="+quote(strings.Join(styles, ",")))

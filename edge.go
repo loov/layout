@@ -24,6 +24,9 @@ type Edge struct {
 	LineWidth Length
 	LineColor Color
 	LineStyle LineStyle
+	// Invisible keeps the edge in the layout but leaves it out of the
+	// drawing, like Graphviz style=invis.
+	Invisible bool
 
 	// computed in layouting
 	Path        []Vector

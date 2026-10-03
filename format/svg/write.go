@@ -252,6 +252,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 	svg.startG()
 	for _, cluster := range graph.Clusters {
+		if cluster.Invisible {
+			continue
+		}
 		svg.write("<rect class='cluster' x='%v' y='%v' width='%v' height='%v'",
 			cluster.TopLeft.X, cluster.TopLeft.Y,
 			cluster.BottomRight.X-cluster.TopLeft.X, cluster.BottomRight.Y-cluster.TopLeft.Y)
@@ -266,6 +269,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 
 	for _, edge := range graph.Edges {
+		if edge.Invisible {
+			continue
+		}
 		if len(edge.Path) == 0 {
 			// TODO: log invalid path
 			continue
@@ -303,6 +309,9 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	}
 
 	for _, node := range graph.Nodes {
+		if node.Invisible {
+			continue
+		}
 		svgtag := svg.writeShape(node, node.Radius)
 		svg.write(" class='node'")
 

@@ -12,6 +12,9 @@ type Cluster struct {
 
 	LineColor Color
 	FillColor Color
+	// Invisible keeps the cluster in the layout but leaves it out of the
+	// drawing, like Graphviz style=invis.
+	Invisible bool
 
 	// computed in layouting
 	TopLeft, BottomRight Vector

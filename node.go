@@ -38,6 +38,9 @@ type Node struct {
 	FixedSize bool
 	// Image is a URL drawn inside the node
 	Image string
+	// Invisible keeps the node in the layout but leaves it out of the
+	// drawing, like Graphviz style=invis.
+	Invisible bool
 
 	// computed in layouting
 	Center Vector
