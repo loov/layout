@@ -22,9 +22,9 @@
 // Known gaps:
 //
 //   - Shapes other than box, rect, rectangle, square, circle,
-//     doublecircle, ellipse, oval, none, point, record and Mrecord use
-//     the graph default; that includes plaintext, plain and diamond.
-//     Mrecord draws with square corners.
+//     doublecircle, ellipse, oval, none, plaintext, plain, point, record
+//     and Mrecord use the graph default; that includes diamond. Mrecord
+//     draws with square corners.
 //   - Arrowheads other than normal, vee, dot, odot and none are not
 //     drawn.
 //   - Colors are names from the X11 scheme or #RRGGBB and #RRGGBBAA;
@@ -848,7 +848,7 @@ func setShape(t *layout.Shape, value string) {
 		*t = layout.Circle
 	case "ellipse", "oval":
 		*t = layout.Ellipse
-	case "none":
+	case "none", "plaintext", "plain":
 		*t = layout.None
 	case "point":
 		*t = layout.PointShape

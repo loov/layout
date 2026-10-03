@@ -331,3 +331,17 @@ func TestQuotedHTMLID(t *testing.T) {
 		t.Errorf("HTML id gives a plain label %q", label)
 	}
 }
+
+// TestPlaintextShape checks that plaintext and plain nodes draw without
+// an outline, as in Graphviz.
+func TestPlaintextShape(t *testing.T) {
+	graphs, err := ParseString(`digraph { a [shape=plaintext]; b [shape=plain] }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"a", "b"} {
+		if got := graphs[0].Node(id).Shape; got != layout.None {
+			t.Errorf("%s: shape = %q, want %q", id, got, layout.None)
+		}
+	}
+}
