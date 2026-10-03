@@ -312,15 +312,16 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 			cluster.FillColor = color
 		}
 	}
-	switch lastAttr(src.Stmts, "rank") {
+	// rank set on an enclosing graph before this subgraph is inherited
+	switch lastAttr(subcontext.allAttrs, "rank") {
 	case "same":
 		if len(subcontext.touched) > 1 {
 			context.Graph.SameRank = append(context.Graph.SameRank, subcontext.touched)
 		}
 	case "min", "source":
-		context.Graph.MinRank = append(context.Graph.MinRank, subcontext.touched...)
+		context.Graph.MinRank = appendMissing(context.Graph.MinRank, subcontext.touched)
 	case "max", "sink":
-		context.Graph.MaxRank = append(context.Graph.MaxRank, subcontext.touched...)
+		context.Graph.MaxRank = appendMissing(context.Graph.MaxRank, subcontext.touched)
 	}
 	return subcontext
 }
@@ -355,11 +356,22 @@ func subgraphAttrs(stmts []ast.Stmt) []*ast.Attr {
 	return attrs
 }
 
-// lastAttr returns the value of the last key set directly on a subgraph,
-// since later assignments override earlier ones in Graphviz.
-func lastAttr(stmts []ast.Stmt, key string) string {
+// appendMissing appends the nodes that are not yet in list, so that nested
+// subgraphs inheriting a rank do not repeat their nodes.
+func appendMissing(list, nodes []*layout.Node) []*layout.Node {
+	for _, node := range nodes {
+		if !slices.Contains(list, node) {
+			list = append(list, node)
+		}
+	}
+	return list
+}
+
+// lastAttr returns the value of the last assignment to key, since later
+// assignments override earlier ones in Graphviz.
+func lastAttr(attrs []*ast.Attr, key string) string {
 	val := ""
-	for _, attr := range subgraphAttrs(stmts) {
+	for _, attr := range attrs {
 		if attr.Key == key {
 			val = attr.Val
 		}

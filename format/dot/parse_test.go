@@ -54,3 +54,28 @@ func TestSubgraphRankUsesLastAssignment(t *testing.T) {
 		})
 	}
 }
+
+func TestSubgraphRankIsInheritedFromEnclosingGraph(t *testing.T) {
+	for _, tc := range []struct {
+		src    string
+		groups [3]int
+	}{
+		{"digraph { rank=same; {a; b} a -> b }", [3]int{1, 0, 0}},
+		{"digraph { graph [rank=same]; {a; b} a -> b }", [3]int{1, 0, 0}},
+		{"digraph { {a; b} rank=same; a -> b }", [3]int{0, 0, 0}},
+		{"digraph { {rank=min; {a; b}} a -> c; b -> c }", [3]int{0, 2, 0}},
+		{"digraph { {rank=max; {rank=same; a; b}} a -> b }", [3]int{1, 0, 2}},
+	} {
+		t.Run(tc.src, func(t *testing.T) {
+			graphs, err := ParseString(tc.src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			g := graphs[0]
+			got := [3]int{len(g.SameRank), len(g.MinRank), len(g.MaxRank)}
+			if got != tc.groups {
+				t.Fatalf("rank groups = %v, want %v", got, tc.groups)
+			}
+		})
+	}
+}
