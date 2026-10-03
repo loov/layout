@@ -108,6 +108,7 @@ Other layouts and outputs:
 
 * `layout.Force(graph)` — force-directed layout for undirected or cyclic graphs.
 * `layout.HierarchicalWith(graph, layout.Fast)` or `layout.Quality` — trade crossings for time.
+* `layout.Options{Align: layout.AlignLeft}` or `AlignRight` — pack the layout to one side, with nodes over their first or last neighbor, instead of centering them.
 * `format/json` — plain coordinates for drawing the graph elsewhere.
 * `format/text` — Unicode box-drawing output for terminals; call `text.Prepare(graph)` before laying out. `text.WriteColor` adds colors in the terminal theme's basic colors, or exact 24-bit colors, optionally on a background.
 

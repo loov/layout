@@ -5,16 +5,50 @@ import (
 	"slices"
 )
 
+// Align picks how Position spreads nodes along their ranks.
+type Align int
+
+const (
+	// Balanced centers nodes among their neighbors, from the median of
+	// the four Brandes-Köpf layouts
+	Balanced Align = iota
+	// Left lines nodes up with their first neighbor in the rank above
+	// and packs them to the left
+	Left
+	// Right lines nodes up with their last neighbor in the rank above
+	// and packs them to the right
+	Right
+)
+
 // Position assigns node centers: rows by rank height, columns by
-// Brandes-Köpf. With straighten, virtual nodes of long edges move so that
-// the edges run diagonally; orthogonal routing wants them where
-// Brandes-Köpf aligns them, in line with an end, to save bends.
-func Position(graph *Graph, straighten bool) {
+// Brandes-Köpf as align picks. With straighten, virtual nodes of long
+// edges move so that the edges run diagonally; orthogonal routing wants
+// them where Brandes-Köpf aligns them, in line with an end, to save bends.
+func Position(graph *Graph, straighten bool, align Align) {
 	PositionInitial(graph)
 	if len(graph.Nodes) == 0 {
 		return
 	}
 
+	switch align {
+	case Left, Right:
+		xs := brandesKoepf(graph, true, align == Left)
+		for _, node := range graph.Nodes {
+			node.Center.X = xs[node.ID]
+		}
+	default:
+		positionBalanced(graph)
+	}
+	if straighten {
+		StraightenChains(graph)
+	}
+	flushLeft(graph)
+	AlignClusterBorders(graph)
+}
+
+// positionBalanced sets x to the average of the two median x of the four
+// Brandes-Köpf layouts, after lining them up with the narrowest one
+func positionBalanced(graph *Graph) {
 	// four alignments: up/down x left/right
 	var xs [4][]float32
 	for i := range xs {
@@ -47,11 +81,6 @@ func Position(graph *Graph, straighten bool) {
 		slices.Sort(v)
 		node.Center.X = (v[1] + v[2]) / 2
 	}
-	if straighten {
-		StraightenChains(graph)
-	}
-	flushLeft(graph)
-	AlignClusterBorders(graph)
 }
 
 // StraightenChains moves virtual nodes towards the midpoint of their

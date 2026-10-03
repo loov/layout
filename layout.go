@@ -115,7 +115,24 @@ type Options struct {
 	// NoRankBalance keeps nodes that could go on several ranks at the
 	// topmost one instead of spreading them over the least crowded ranks.
 	NoRankBalance bool
+	// Align shifts nodes along their ranks, see Align constants.
+	Align Align
 }
+
+// Align picks how nodes are spread along their ranks. In left-to-right
+// and right-to-left layouts, left is the top and right the bottom.
+type Align int
+
+const (
+	// AlignBalanced centers nodes among their neighbors.
+	AlignBalanced Align = iota
+	// AlignLeft puts nodes over their first neighbor in the rank before
+	// and packs the layout to the left.
+	AlignLeft
+	// AlignRight puts nodes over their last neighbor in the rank before
+	// and packs the layout to the right.
+	AlignRight
+)
 
 // Presets for Options: Fast trades crossings for speed on large graphs,
 // Quality spends more sweeps looking for a better order.
@@ -580,7 +597,8 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 	// position nodes
 	positionedGraph := orderedGraph
-	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho)
+	align := map[Align]hier.Align{AlignBalanced: hier.Balanced, AlignLeft: hier.Left, AlignRight: hier.Right}[opts.Align]
+	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, align)
 
 	// assign final positions; loop nodes were widened symmetrically,
 	// shift them left so the extra room is on the right

@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-colors 16|truecolor] [-bg color] [input]
+//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-align balanced|left|right] [-colors 16|truecolor] [-bg color] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -39,6 +39,7 @@ var (
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
 	algorithm = flag.String("l", "hierarchical", "layout algorithm: hierarchical, force")
+	align     = flag.String("align", "balanced", "hierarchical node alignment along the ranks: balanced, left, right (top, bottom when sideways)")
 	colors    = flag.String("colors", "16", "ans colors: 16 follows the terminal theme, truecolor keeps them exact")
 	bg        = flag.String("bg", "", "ans background for the whole drawing, as a color name or #RRGGBB")
 
@@ -251,6 +252,16 @@ func main() {
 		opts = layout.Quality
 	default:
 		errorf("unknown preset %q", *quality)
+		os.Exit(1)
+	}
+	switch *align {
+	case "balanced":
+	case "left", "top":
+		opts.Align = layout.AlignLeft
+	case "right", "bottom":
+		opts.Align = layout.AlignRight
+	default:
+		errorf("unknown alignment %q", *align)
 		os.Exit(1)
 	}
 	switch *algorithm {
