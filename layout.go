@@ -1180,12 +1180,9 @@ func loopPath(edge *Edge, width, height Length) []Vector {
 	up := Vector{X: node.Right(), Y: node.Center.Y - node.Radius.Y/2}
 	down := Vector{X: node.Right(), Y: node.Center.Y + node.Radius.Y/2}
 	if edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
-		return []Vector{
-			node.Boundary(up),
-			{X: right, Y: up.Y},
-			{X: right, Y: down.Y},
-			node.Boundary(down),
-		}
+		// leave and return horizontally from where the outline is
+		from, to := node.Boundary(up), node.Boundary(down)
+		return []Vector{from, {X: right, Y: from.Y}, {X: right, Y: to.Y}, to}
 	}
 
 	// With ports, leave each end straight out to the node box grown by
