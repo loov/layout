@@ -4,7 +4,7 @@ import "math"
 
 // Color is anything that can be expressed as 8-bit RGBA.
 type Color interface {
-	// RGBA returns the non-alpha-premultiplied red, green, blue and alpha values
+	// RGBA8 returns the non-alpha-premultiplied red, green, blue and alpha values
 	// for the color. Each value ranges within [0, 0xff].
 	RGBA8() (r, g, b, a uint8)
 }
