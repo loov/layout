@@ -225,18 +225,20 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		swapRadii()
 	}
 	defer func() {
+		// mirror within the bounds, measured in the frame, so that flipped
+		// layouts keep their margins
+		lo, hi := graphdef.Bounds()
 		if sideways {
 			swapRadii()
 		}
-		_, size := graphdef.Bounds()
 		transform := func(p Vector) Vector {
 			switch graphdef.RankDir {
 			case LeftToRight:
 				return Vector{X: p.Y, Y: p.X}
 			case RightToLeft:
-				return Vector{X: size.Y - p.Y, Y: p.X}
+				return Vector{X: lo.Y + hi.Y - p.Y, Y: p.X}
 			case BottomToTop:
-				return Vector{X: p.X, Y: size.Y - p.Y}
+				return Vector{X: p.X, Y: lo.Y + hi.Y - p.Y}
 			}
 			return p
 		}
