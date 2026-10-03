@@ -2,6 +2,7 @@ package dot
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/loov/layout"
@@ -144,5 +145,32 @@ func TestEmptyNodeIDIsAnError(t *testing.T) {
 		if _, err := ParseString(src); err == nil {
 			t.Errorf("%s: no error", src)
 		}
+	}
+}
+
+func TestNonFiniteNumbersAreIgnored(t *testing.T) {
+	graphs, err := ParseString(`digraph {
+		nodesep=nan; ranksep=inf;
+		a [width=inf, height="1e308", fontsize=NaN, penwidth="-Inf"];
+		a -> b [weight=nan, penwidth=infinity, fontsize="1e400", lp="nan,1", minlen=99999999];
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := graphs[0]
+	a, e := g.Node("a"), g.Edges[0]
+	for name, v := range map[string]layout.Length{
+		"nodesep": g.NodePadding, "ranksep": g.RowPadding,
+		"width": a.Radius.X, "height": a.Radius.Y,
+		"node fontsize": a.FontSize, "node penwidth": a.LineWidth,
+		"weight": layout.Length(e.Weight), "edge penwidth": e.LineWidth,
+		"edge fontsize": e.FontSize, "lp": e.LabelPos.X,
+	} {
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+			t.Errorf("%s = %v", name, v)
+		}
+	}
+	if e.MinLen > 1000 {
+		t.Errorf("minlen = %d", e.MinLen)
 	}
 }

@@ -161,8 +161,8 @@ func (context *parserContext) pin() {
 	for _, attr := range context.allAttrs {
 		if attr.Key == "bb" {
 			if corners := strings.Split(attr.Val, ","); len(corners) == 4 {
-				if h, err := strconv.ParseFloat(corners[3], 64); err == nil {
-					top = layout.Length(h) * layout.Point
+				if h, ok := parseFloat(corners[3], layout.Point); ok {
+					top = layout.Length(h)
 				}
 			}
 		}
@@ -197,9 +197,9 @@ func parsePoint(s string) (layout.Vector, bool) {
 	if !ok {
 		return layout.Vector{}, false
 	}
-	fx, errx := strconv.ParseFloat(x, 64)
-	fy, erry := strconv.ParseFloat(y, 64)
-	return layout.Vector{X: layout.Length(fx) * layout.Point, Y: layout.Length(fy) * layout.Point}, errx == nil && erry == nil
+	fx, okx := parseFloat(x, layout.Point)
+	fy, oky := parseFloat(y, layout.Point)
+	return layout.Vector{X: layout.Length(fx), Y: layout.Length(fy)}, okx && oky
 }
 
 // parseSpline reads an edge pos: points separated by spaces, where "s,x,y"
@@ -543,6 +543,10 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 	}
 }
 
+// maxMinLen bounds minlen, since every rank an edge spans adds virtual
+// nodes to a hierarchical layout
+const maxMinLen = 1000
+
 func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 	for _, attr := range attrs {
 		switch attr.Key {
@@ -551,7 +555,7 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		case "minlen":
 			// minlen=0, meaning "same rank", is not supported; use rank=same
 			if n, err := strconv.Atoi(attr.Val); err == nil && n > 0 {
-				edge.MinLen = n
+				edge.MinLen = min(n, maxMinLen)
 			}
 		case "style":
 			setLineStyle(&edge.LineStyle, attr.Val)
@@ -636,17 +640,23 @@ func setColor(t *layout.Color, value string) {
 	}
 }
 
-func setFloat(t *float64, value string) {
+// parseFloat parses a number and scales it by unit; NaN and values that
+// are infinite once scaled are rejected like unparsable ones
+func parseFloat(value string, unit layout.Length) (float64, bool) {
 	v, err := strconv.ParseFloat(value, 64)
-	if err == nil {
+	v *= float64(unit)
+	return v, err == nil && !math.IsNaN(v) && !math.IsInf(v, 0)
+}
+
+func setFloat(t *float64, value string) {
+	if v, ok := parseFloat(value, 1); ok {
 		*t = v
 	}
 }
 
 func setLength(t *layout.Length, value string, unit layout.Length) {
-	v, err := strconv.ParseFloat(value, 64)
-	if err == nil {
-		*t = layout.Length(v) * unit
+	if v, ok := parseFloat(value, unit); ok {
+		*t = layout.Length(v)
 	}
 }
 
