@@ -41,8 +41,8 @@ func Prepare(graph *layout.Graph) {
 	graph.EdgePadding = graph.LineHeight
 
 	// edges sideways and self-loops leave and enter nodes on their left
-	// and right, which are only a few rows tall; make nodes tall enough
-	// for a row per edge end on the busier side with a row between them
+	// and right, which are only a few rows tall; make nodes just tall
+	// enough for a row per edge end on the busier side
 	sideways := graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft
 	ins, outs, loops := map[*layout.Node]int{}, map[*layout.Node]int{}, map[*layout.Node]int{}
 	for _, edge := range graph.Edges {
@@ -54,12 +54,20 @@ func Prepare(graph *layout.Graph) {
 		}
 	}
 	for _, node := range graph.Nodes {
-		n := 2 * loops[node] // loops go right, or below when sideways
-		if sideways {
-			n = max(ins[node], outs[node])
+		var rows layout.Length // half height, in rows
+		switch n := max(ins[node], outs[node]); {
+		case sideways && n > 1:
+			// an edge that runs straight stays at the center row and the
+			// others may all go to one side of it, a row each; drawing
+			// gives each end its own row
+			rows = layout.Length(n)
+		case !sideways && loops[node] > 0:
+			// loop ends are half the half height off the center, a row
+			// above and below it with two rows
+			rows = 2
 		}
-		if n > 1 {
-			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*(layout.Length(n)+0.5))
+		if rows > 0 {
+			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*rows)
 			if node.Shape == layout.Circle {
 				// drawn as a box either way; a circle would widen as much
 				node.Shape = layout.Ellipse
@@ -89,8 +97,13 @@ func write(w io.Writer, graph *layout.Graph, opts *Options) error {
 	for _, node := range graph.Nodes {
 		c.drawNode(graph, node)
 	}
-	for _, edge := range graph.Edges {
-		c.drawEdge(edge)
+	paths := make([][][2]int, len(graph.Edges))
+	for i, edge := range graph.Edges {
+		paths[i] = c.edgeCells(edge)
+	}
+	c.spreadSides(graph.Edges, paths)
+	for i, edge := range graph.Edges {
+		c.drawEdge(edge, paths[i])
 	}
 	c.drawLabels(graph)
 

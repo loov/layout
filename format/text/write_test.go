@@ -138,25 +138,35 @@ func TestLineStyles(t *testing.T) {
 }
 
 // TestSidewaysEdgesApart checks that edges on the side of a node in a
-// sideways layout get rows of their own instead of sharing one.
+// sideways layout get rows of their own between its borders, instead of
+// sharing one or running along a border.
 func TestSidewaysEdgesApart(t *testing.T) {
-	graph := layout.NewDigraph()
-	graph.RankDir = layout.LeftToRight
-	graph.Edge("a", "b")
-	graph.Edge("a", "c")
-	graph.Edge("a", "d")
-	Prepare(graph)
-	if err := layout.Hierarchical(graph); err != nil {
-		t.Fatal(err)
-	}
-	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
-		t.Fatal(err)
-	}
-	if strings.ContainsAny(buf.String(), "━┃┮┶┾┥┝┑┙┕┍") {
-		t.Errorf("edges share a run:\n%s", buf.String())
-	}
-	if got := strings.Count(buf.String(), "▶"); got != 3 {
-		t.Errorf("got %d arrowheads, want 3:\n%s", got, buf.String())
+	for name, edges := range map[string][][2]string{
+		"fan out":  {{"a", "b"}, {"a", "c"}, {"a", "d"}},
+		"straight": {{"s0", "s1"}, {"s0", "s2"}, {"s1", "s2"}},
+	} {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		for _, e := range edges {
+			graph.Edge(e[0], e[1]).Label = "x"
+			graph.Node(e[0]).Shape = layout.Circle
+		}
+		Prepare(graph)
+		if err := layout.HierarchicalWith(graph, layout.Options{Align: layout.AlignLeft}); err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if err := Write(&buf, graph); err != nil {
+			t.Fatal(err)
+		}
+		got := buf.String()
+		// heavy lines are shared runs; a line beside a box corner runs
+		// along the border
+		if strings.ContainsAny(got, "━┃┮┶┾┥┝┑┙┕┍") || strings.Contains(got, "╯─") || strings.Contains(got, "╮─") {
+			t.Errorf("%s: edges share a run or run along a border:\n%s", name, got)
+		}
+		if n := strings.Count(got, "▶"); n != len(edges) {
+			t.Errorf("%s: got %d arrowheads, want %d:\n%s", name, n, len(edges), got)
+		}
 	}
 }

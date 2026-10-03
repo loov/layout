@@ -1,6 +1,9 @@
 package text
 
 import (
+	"cmp"
+	"math"
+	"slices"
 	"strings"
 
 	"github.com/loov/layout"
@@ -77,20 +80,128 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 }
 
-// drawEdge draws the path of an edge with its end markers; the nodes
-// must be drawn first
-func (c *canvas) drawEdge(edge *layout.Edge) {
-	path := edge.Path
-	if len(path) < 2 {
-		return
+// edgeCells returns the cells of the path of an edge, with its ends on
+// the borders of the node boxes; the nodes must be drawn first
+func (c *canvas) edgeCells(edge *layout.Edge) [][2]int {
+	if len(edge.Path) < 2 {
+		return nil
 	}
-	cells := make([][2]int, len(path))
-	for i, p := range path {
+	cells := make([][2]int, len(edge.Path))
+	for i, p := range edge.Path {
 		cells[i] = [2]int{c.col(p.X), c.row(p.Y)}
 	}
 	last := len(cells) - 1
 	cells[0] = c.border(cells[0], cells[1], edge.From)
 	cells[last] = c.border(cells[last], cells[last-1], edge.To)
+	return cells
+}
+
+// spreadSides gives every edge end on the left or right side of a box a
+// row of its own between the borders, as close to where it rounded as
+// the others allow. The layout spreads ends a row or so apart, but
+// rounds them to rows independently of the box, so ends could share a
+// row or land on a border. An end whose run goes on straight keeps its
+// row if it can; a moved end takes the bend before it along.
+func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
+	type end struct {
+		path   [][2]int
+		i, j   int  // the end and the bend before it
+		fixed  bool // the run goes on straight past the bend
+		toward int  // the row the edge heads for past the bend
+	}
+	type side struct {
+		node  *layout.Node
+		right bool
+	}
+	sides := map[side][]end{}
+	for k, path := range paths {
+		if len(path) < 2 {
+			continue
+		}
+		last := len(path) - 1
+		for _, e := range []struct {
+			i, j, k int
+			node    *layout.Node
+		}{{0, 1, 2, edges[k].From}, {last, last - 1, last - 2, edges[k].To}} {
+			b := c.boxes[e.node]
+			at, bend := path[e.i], path[e.j]
+			right := bend[0] > b[2]
+			if b[3]-b[1] < 2 || at[1] != bend[1] || at[1] < b[1] || at[1] > b[3] || !right && bend[0] >= b[0] {
+				continue // not along a row from beside the box
+			}
+			// on the side, also where a rounder outline curves inside
+			path[e.i][0] = map[bool]int{false: b[0], true: b[2]}[right]
+			end := end{path: path, i: e.i, j: e.j, fixed: true, toward: at[1]}
+			if e.k >= 0 && e.k < len(path) {
+				end.fixed = path[e.k][1] == bend[1]
+				end.toward = path[e.k][1]
+			}
+			key := side{e.node, right}
+			sides[key] = append(sides[key], end)
+		}
+	}
+	for key, ends := range sides {
+		b := c.boxes[key.node]
+		lo, hi := b[1]+1, b[3]-1
+		if len(ends) > hi-lo+1 {
+			continue // no room; keep them as they are
+		}
+		slices.SortStableFunc(ends, func(a, b end) int {
+			return cmp.Or(cmp.Compare(a.path[a.i][1], b.path[b.i][1]), cmp.Compare(a.toward, b.toward))
+		})
+		want := make([]int, len(ends))
+		fixed := make([]bool, len(ends))
+		for n, e := range ends {
+			want[n], fixed[n] = e.path[e.i][1], e.fixed
+		}
+		for n, row := range spreadRows(want, fixed, lo, hi) {
+			e := ends[n]
+			e.path[e.i][1], e.path[e.j][1] = row, row
+		}
+	}
+}
+
+// spreadRows moves the ordered rows want as little as possible so that
+// each gets its own row within [lo, hi], with fixed rows moving only
+// when they must. Shifting row n by n turns this into ordering, solved
+// by pooling adjacent violators.
+func spreadRows(want []int, fixed []bool, lo, hi int) []int {
+	type block struct {
+		sum, weight float64
+		n           int
+	}
+	var blocks []block
+	for n, row := range want {
+		weight := 1.0
+		if fixed[n] {
+			weight = 1e6
+		}
+		blocks = append(blocks, block{float64(row-n) * weight, weight, 1})
+		for len(blocks) > 1 {
+			a, b := blocks[len(blocks)-2], blocks[len(blocks)-1]
+			if a.sum/a.weight <= b.sum/b.weight {
+				break
+			}
+			blocks = append(blocks[:len(blocks)-2], block{a.sum + b.sum, a.weight + b.weight, a.n + b.n})
+		}
+	}
+	rows := make([]int, 0, len(want))
+	for _, b := range blocks {
+		first := min(max(int(math.Round(b.sum/b.weight)), lo), hi-len(want)+1)
+		for range b.n {
+			rows = append(rows, first+len(rows))
+		}
+	}
+	return rows
+}
+
+// drawEdge draws an edge along its cells, with its end markers
+func (c *canvas) drawEdge(edge *layout.Edge, cells [][2]int) {
+	if len(cells) < 2 {
+		return
+	}
+	path := edge.Path
+	last := len(cells) - 1
 	c.edge++
 	c.ink = rgb(edge.LineColor)
 	c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
