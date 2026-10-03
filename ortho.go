@@ -17,6 +17,8 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		x0, x1 Length
 		xin    Length // x where the edge enters the channel from above
 		y      Length
+		next   *jog // second step of a jog split in two, on a lower track
+		split  bool // this is the second step
 	}
 	channels := make([][]*jog, len(rows))
 
@@ -136,13 +138,20 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 		if len(jogs) == 0 {
 			continue
 		}
-		// a rightward jog exiting at the same x where a leftward jog
-		// enters would run down its stub; then the leftward group goes on top
-		rightOnTop := true
+		// a rightward and a leftward jog over the same span run down each
+		// other's stubs on any tracks; split the rightward one into two
+		// steps that cross the leftward one in the middle
 		for _, r := range jogs {
+			if r.xin != r.x0 || r.next != nil {
+				continue
+			}
 			for _, l := range jogs {
-				if r.xin == r.x0 && l.xin == l.x1 && r.x1 == l.x1 {
-					rightOnTop = false
+				if l.xin == l.x1 && l.x0 == r.x0 && l.x1 == r.x1 {
+					mid := (r.x0 + r.x1) / 2
+					r.next = &jog{edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true}
+					r.x1 = mid
+					jogs = append(jogs, r.next)
+					break
 				}
 			}
 		}
@@ -150,13 +159,31 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 			a, b := jogs[i], jogs[j]
 			ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 			if ra != rb {
-				return ra == rightOnTop
+				return ra
 			}
 			if ra {
 				return a.xin > b.xin
 			}
 			return a.xin < b.xin
 		})
+		// a jog entering where another exits goes above it, or the exit
+		// would run down its stub; otherwise keep the sorted order
+		above := func(a, b *jog) bool {
+			return b == a.next || !a.split && b.next == nil && a.xin == b.x0+b.x1-b.xin
+		}
+		ordered := make([]*jog, 0, len(jogs))
+		for len(jogs) > 0 {
+			pick := 0 // on a cycle
+			for i, j := range jogs {
+				if !slices.ContainsFunc(jogs, func(o *jog) bool { return above(o, j) }) {
+					pick = i
+					break
+				}
+			}
+			ordered = append(ordered, jogs[pick])
+			jogs = slices.Delete(jogs, pick, pick+1)
+		}
+		jogs, channels[k] = ordered, ordered
 		var trackEnd []Length // right end of the last jog on each track
 		track := make([]int, len(jogs))
 		for i, j := range jogs {
@@ -197,8 +224,17 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 	for edge, js := range byEdge {
 		sort.Slice(js, func(a, b int) bool { return js[a].index > js[b].index })
 		for _, j := range js {
+			if j.split {
+				continue
+			}
 			a, b := edge.Path[j.index], edge.Path[j.index+1]
-			edge.Path = slices.Insert(edge.Path, j.index+1, Vector{a.X, j.y}, Vector{b.X, j.y})
+			steps := []Vector{{a.X, j.y}, {b.X, j.y}}
+			if n := j.next; n != nil && a.Y < b.Y {
+				steps = []Vector{{a.X, j.y}, {n.xin, j.y}, {n.xin, n.y}, {b.X, n.y}}
+			} else if n != nil {
+				steps = []Vector{{a.X, n.y}, {n.xin, n.y}, {n.xin, j.y}, {b.X, j.y}}
+			}
+			edge.Path = slices.Insert(edge.Path, j.index+1, steps...)
 		}
 	}
 
