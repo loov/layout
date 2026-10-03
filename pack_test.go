@@ -17,18 +17,19 @@ func TestPackEdgeEnds(t *testing.T) {
 	main := graph.Edge("a", "b")
 	graph.Edge("b", "c")
 	side := graph.Edge("a", "c")
-	if err := layout.HierarchicalWith(graph, layout.Options{Align: layout.AlignLeft}); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{Align: layout.AlignLeft})
+	if err != nil {
 		t.Fatal(err)
 	}
-	a := graph.Node("a")
-	want := a.Top() + graph.EdgePadding
-	for _, p := range main.Path {
+	a := l.Node(graph.Node("a"))
+	want := a.Top() + l.Graph.EdgePadding
+	for _, p := range l.Edge(main).Path {
 		if p.Y != want {
-			t.Errorf("a -> b at y %v, want straight at %v: %v", p.Y, want, main.Path)
+			t.Errorf("a -> b at y %v, want straight at %v: %v", p.Y, want, l.Edge(main).Path)
 			break
 		}
 	}
-	if y := side.Path[0].Y; y <= want || y >= a.Bottom() {
+	if y := l.Edge(side).Path[0].Y; y <= want || y >= a.Bottom() {
 		t.Errorf("a -> c leaves a at y %v, want below %v and inside a", y, want)
 	}
 }
@@ -48,16 +49,18 @@ func TestPackEdgeEndsRepeat(t *testing.T) {
 		}
 		var first layout.Vector
 		for run := range 3 {
-			if err := layout.Hierarchical(graph); err != nil {
+			l, err := layout.Hierarchical(graph, layout.Options{})
+			if err != nil {
 				t.Fatal(err)
 			}
-			if a.Radius.X != a.Radius.Y {
-				t.Errorf("%v run %d: circle radius %v", dir, run, a.Radius)
+			size := l.Node(a).Size
+			if size.X != size.Y {
+				t.Errorf("%v run %d: circle size %v", dir, run, size)
 			}
 			if run == 0 {
-				first = a.Radius
-			} else if a.Radius != first {
-				t.Errorf("%v run %d: radius %v, was %v", dir, run, a.Radius, first)
+				first = size
+			} else if size != first {
+				t.Errorf("%v run %d: size %v, was %v", dir, run, size, first)
 			}
 		}
 	}

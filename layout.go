@@ -45,8 +45,6 @@ func (graph *lgraph) AssignMissingValues() {
 			node.FontSize = graph.FontSize
 		}
 
-		node.Radius = node.Radius.Sub(node.pad)
-		node.pad = Vector{}
 		if node.Shape == PointShape && node.Radius.X <= 0 && node.Radius.Y <= 0 {
 			node.Radius = Vector{pointRadius, pointRadius}
 		}
@@ -109,10 +107,16 @@ func (graph *lgraph) AssignMissingValues() {
 // cycles are broken, nodes are assigned to ranks, ordered within ranks to
 // reduce crossings, positioned, and finally edge paths are computed.
 //
-// It sets Node.Center and Edge.Path. It fails when an edge refers to a
-// node that is not part of the graph.
-func Hierarchical(graphdef *Graph) error {
-	return HierarchicalWith(graphdef, Options{})
+// The graph is not modified. It fails when an edge refers to a node that
+// is not part of the graph.
+func Hierarchical(graph *Graph, opts Options) (*Layout, error) {
+	if err := graph.validate(); err != nil {
+		return nil, err
+	}
+	work := newWorkGraph(graph)
+	work.ForText = opts.ForText
+	hierarchical(work, opts)
+	return work.result(), nil
 }
 
 // Options tunes the hierarchical layout. The zero value gives the defaults.
@@ -125,6 +129,10 @@ type Options struct {
 	NoRankBalance bool
 	// Align shifts nodes along their ranks, see Align constants.
 	Align Align
+	// ForText lays the graph out for format/text: ortho splines, rows
+	// between ranks for the horizontal runs and arrowheads, and nodes
+	// sized in character cells. Layout.Graph has the changed settings.
+	ForText bool
 }
 
 // Align picks how nodes are spread along their ranks. In left-to-right
@@ -181,17 +189,6 @@ func compassInRankFrame(port Compass, dir RankDir) Compass {
 	}
 }
 
-// HierarchicalWith is Hierarchical with explicit options.
-func HierarchicalWith(graphdef *Graph, opts Options) error {
-	if err := graphdef.validate(); err != nil {
-		return err
-	}
-	work := newWorkGraph(graphdef)
-	hierarchical(work, opts)
-	work.copyBack()
-	return nil
-}
-
 // hierarchical lays out the working copy of a validated graph.
 func hierarchical(graphdef *lgraph, opts Options) {
 	if opts.OrderIterations <= 0 {
@@ -210,18 +207,11 @@ func hierarchical(graphdef *lgraph, opts Options) {
 	edges := uniqueEdges(graphdef.Edges)
 
 	// Compass directions are physical directions, so map them into the
-	// temporary rank frame and restore the caller's values afterward.
-	ports := make(map[*ledge][2]Compass, len(edges))
+	// rank frame the layout works in.
 	for _, edge := range edges {
-		ports[edge] = [2]Compass{edge.FromPort, edge.ToPort}
 		edge.FromPort = compassInRankFrame(edge.FromPort, graphdef.RankDir)
 		edge.ToPort = compassInRankFrame(edge.ToPort, graphdef.RankDir)
 	}
-	defer func() {
-		for edge, port := range ports {
-			edge.FromPort, edge.ToPort = port[0], port[1]
-		}
-	}()
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
 	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
@@ -262,12 +252,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 			for i, p := range edge.Path {
 				edge.Path[i] = transform(p)
 			}
-			if edge.Label == "" {
-				// unused, and kept from drifting over repeated layouts
-				edge.LabelPos = Vector{}
-			} else {
-				edge.LabelPos = transform(edge.LabelPos)
-			}
+			edge.LabelPos = transform(edge.LabelPos)
 		}
 		for _, cluster := range graphdef.Clusters {
 			a, b := transform(cluster.TopLeft), transform(cluster.BottomRight)
@@ -333,10 +318,10 @@ func (graph *Graph) validate() error {
 		switch {
 		case node == nil:
 			return fmt.Errorf("node %d is nil", i)
-		case !finite(node.Radius.X, node.Radius.Y, node.FontSize, node.LineWidth):
-			return fmt.Errorf("node %v: radius, font size or line width is not finite", node)
-		case graph.Pinned && !finite(node.Center.X, node.Center.Y):
-			return fmt.Errorf("node %v: center %v is not finite", node, node.Center)
+		case !finite(node.MinSize.X, node.MinSize.Y, node.FontSize, node.LineWidth):
+			return fmt.Errorf("node %v: size, font size or line width is not finite", node)
+		case node.Pos != nil && !finite(node.Pos.X, node.Pos.Y):
+			return fmt.Errorf("node %v: position %v is not finite", node, *node.Pos)
 		}
 		known[node] = true
 	}
@@ -354,14 +339,12 @@ func (graph *Graph) validate() error {
 			return fmt.Errorf("edge %v: weight, font size or line width is not finite", edge)
 		case edge.MinLen > maxMinLen:
 			return fmt.Errorf("edge %v: minimum length %d is over %d", edge, edge.MinLen, maxMinLen)
-		case graph.Pinned && !finite(edge.LabelPos.X, edge.LabelPos.Y):
-			return fmt.Errorf("edge %v: label position %v is not finite", edge, edge.LabelPos)
+		case edge.LabelPos != nil && !finite(edge.LabelPos.X, edge.LabelPos.Y):
+			return fmt.Errorf("edge %v: label position %v is not finite", edge, *edge.LabelPos)
 		}
-		if graph.Pinned {
-			for _, p := range edge.Path {
-				if !finite(p.X, p.Y) {
-					return fmt.Errorf("edge %v: path point %v is not finite", edge, p)
-				}
+		for _, p := range edge.Pos {
+			if !finite(p.X, p.Y) {
+				return fmt.Errorf("edge %v: path point %v is not finite", edge, p)
 			}
 		}
 	}
@@ -402,9 +385,6 @@ func (graph *Graph) validate() error {
 	for _, cluster := range graph.Clusters {
 		if err := group(fmt.Sprintf("cluster %q", cluster.ID), cluster.Nodes); err != nil {
 			return err
-		}
-		if graph.Pinned && !finite(cluster.TopLeft.X, cluster.TopLeft.Y, cluster.BottomRight.X, cluster.BottomRight.Y) {
-			return fmt.Errorf("cluster %q: box is not finite", cluster.ID)
 		}
 		depth := 0
 		for parent := cluster.Parent; parent != nil; parent = parent.Parent {
@@ -1213,9 +1193,7 @@ func layoutPinned(graph *lgraph) {
 
 // boxClusters boxes clusters around their nodes and nested clusters,
 // padded, with a strip for the label on top and room for its width, for
-// layouts that place nodes without making room for clusters. A box that
-// already encloses its contents is kept as given; any other, such as one
-// left from an earlier layout of moved nodes, is replaced.
+// layouts that place nodes without making room for clusters.
 func boxClusters(graph *lgraph) {
 	pad := max(graph.EdgePadding, graph.RowPadding/2)
 	byDepth := slices.Clone(graph.Clusters)
@@ -1235,11 +1213,6 @@ func boxClusters(graph *lgraph) {
 		}
 		if tl.X > br.X {
 			continue // nothing inside
-		}
-		if cluster.TopLeft != cluster.BottomRight &&
-			cluster.TopLeft.X <= tl.X && cluster.TopLeft.Y <= tl.Y &&
-			br.X <= cluster.BottomRight.X && br.Y <= cluster.BottomRight.Y {
-			continue // given
 		}
 		tl, br = tl.Sub(Vector{pad, pad}), br.Add(Vector{pad, pad})
 		if cluster.Label != "" {

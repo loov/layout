@@ -16,8 +16,8 @@
 //     penwidth, weight, minlen, dir, arrowhead, arrowtail, headport,
 //     tailport, tooltip, pos, lp
 //
-// When every node has a pos, the graph is marked layout.Graph.Pinned and
-// keeps those positions, like dot -n.
+// When every node has a pos, the positions go into layout.Node.Pos and
+// layout keeps them, like dot -n.
 //
 // Known gaps:
 //
@@ -239,8 +239,8 @@ func (context *parserContext) parse(src *ast.Graph) {
 	context.pin()
 }
 
-// pin marks the graph as positioned when every node has a pos and flips
-// the y axis from dot's upwards to ours.
+// pin flips the y axis of the positions from dot's upwards to ours when
+// every node has a pos; layout then keeps them.
 func (context *parserContext) pin() {
 	graph := context.Graph
 	if len(graph.Nodes) == 0 {
@@ -251,7 +251,7 @@ func (context *parserContext) pin() {
 		if !context.positioned[node] {
 			return
 		}
-		top = max(top, node.Center.Y+node.Radius.Y)
+		top = max(top, node.Pos.Y+node.MinSize.Y/2)
 	}
 	// the bounding box, when present, gives the exact extent; mirroring
 	// within it keeps coordinates in place
@@ -266,17 +266,16 @@ func (context *parserContext) pin() {
 			}
 		}
 	}
-	graph.Pinned = true
 	flip := func(v *layout.Vector) { v.Y = top - v.Y }
 	for _, node := range graph.Nodes {
-		flip(&node.Center)
+		flip(node.Pos)
 	}
 	for _, edge := range graph.Edges {
-		for i := range edge.Path {
-			flip(&edge.Path[i])
+		for i := range edge.Pos {
+			flip(&edge.Pos[i])
 		}
-		if edge.LabelPos != (layout.Vector{}) {
-			flip(&edge.LabelPos)
+		if edge.LabelPos != nil {
+			flip(edge.LabelPos)
 		}
 	}
 }
@@ -678,14 +677,14 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		case "fillcolor":
 			setColor(&node.FillColor, attr.Val)
 		case "width":
-			setLength(&node.Radius.X, attr.Val, layout.Inch*0.5)
+			setLength(&node.MinSize.X, attr.Val, layout.Inch)
 		case "height":
-			setLength(&node.Radius.Y, attr.Val, layout.Inch*0.5)
+			setLength(&node.MinSize.Y, attr.Val, layout.Inch)
 		case "tooltip":
 			setString(&node.Tooltip, attr.Val)
 		case "pos":
 			if p, ok := parsePoint(attr.Val); ok {
-				node.Center = p
+				node.Pos = &p
 			}
 		}
 	}
@@ -731,10 +730,10 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 			edge.Invisible = hasStyle(attr.Val, "invis")
 			setLineStyle(&edge.LineStyle, attr.Val)
 		case "pos":
-			edge.Path = parseSpline(attr.Val)
+			edge.Pos = parseSpline(attr.Val)
 		case "lp":
 			if p, ok := parsePoint(attr.Val); ok {
-				edge.LabelPos = p
+				edge.LabelPos = &p
 			}
 		case "label":
 			name := edge.From.ID + "--" + edge.To.ID

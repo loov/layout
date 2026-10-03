@@ -44,21 +44,24 @@ func FuzzRendering(f *testing.F) {
 				edge.Label = labels[int(b>>3)%len(labels)]
 			}
 		}
-		if data[0]&2 != 0 {
-			graph.ForText = true
+		forText := data[0]&2 != 0
+		lay := func(graph *layout.Graph) (*layout.Layout, error) {
+			return layout.Hierarchical(graph, layout.Options{ForText: forText})
 		}
-		lay := layout.Hierarchical
 		if data[0]&1 != 0 {
-			lay = layout.Force
+			lay = func(graph *layout.Graph) (*layout.Layout, error) {
+				return layout.Force(graph, layout.ForceOptions{ForText: forText})
+			}
 		}
-		if err := lay(graph); err != nil {
+		l, err := lay(graph)
+		if err != nil {
 			t.Fatal(err)
 		}
 		write := svg.Write
-		if data[0]&2 != 0 {
+		if forText {
 			write = text.Write
 		}
-		if err := write(io.Discard, graph); err != nil {
+		if err := write(io.Discard, l); err != nil {
 			t.Fatal(err)
 		}
 	})

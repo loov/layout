@@ -12,24 +12,24 @@ import (
 	"github.com/loov/layout/internal/draw"
 )
 
-// Write writes the graphs as dot with the computed layout, one after
-// another: nodes carry pos, width and height, edges carry pos with cubic
-// controls for their paths. Labels, colors, line styles, ports and
-// clusters are kept. The output can be rendered by Graphviz with
-// "neato -n2".
+// Write writes the laid out graphs as dot, one after another: nodes
+// carry pos, width and height, edges carry pos with cubic controls for
+// their paths. Labels, colors, line styles, ports and clusters are kept.
+// The output can be rendered by Graphviz with "neato -n2".
 //
 // Coordinates are in points with the y axis pointing up, as in Graphviz.
-func Write(w io.Writer, graphs ...*layout.Graph) error {
-	for _, graph := range graphs {
-		if err := writeGraph(w, graph); err != nil {
+func Write(w io.Writer, layouts ...*layout.Layout) error {
+	for _, l := range layouts {
+		if err := writeGraph(w, l); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// writeGraph writes one graph, see Write
-func writeGraph(w io.Writer, graph *layout.Graph) error {
+// writeGraph writes one laid out graph, see Write
+func writeGraph(w io.Writer, l *layout.Layout) error {
+	graph := l.Graph
 	var err error
 	write := func(format string, args ...any) {
 		if err == nil {
@@ -38,7 +38,7 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 	}
 
 	// the drawing starts at the origin unless it reaches before it
-	lo, hi := graph.Bounds()
+	lo, hi := l.Bounds()
 	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
 	// mirroring within the bounding box keeps coordinates in place
 	flipY := func(v layout.Vector) layout.Vector { return layout.Vector{X: v.X, Y: lo.Y + hi.Y - v.Y} }
@@ -62,17 +62,18 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		write("\trankdir=%s;\n", graph.RankDir)
 	}
 	write("\tbb=\"%s,%s\";\n", pt(layout.Vector{X: lo.X, Y: hi.Y}), pt(layout.Vector{X: hi.X, Y: lo.Y}))
-	for _, node := range graph.Nodes {
+	for i, node := range graph.Nodes {
+		box := l.Nodes[i]
 		attrs := []string{
-			"pos=" + quote(pt(node.Center)),
-			"width=" + inches(2*node.Radius.X),
-			"height=" + inches(2*node.Radius.Y),
+			"pos=" + quote(pt(box.Center)),
+			"width=" + inches(box.Size.X),
+			"height=" + inches(box.Size.Y),
 		}
 		if node.Label != "" || node.NoLabel {
 			attrs = append(attrs, "label="+labelID(node.Label))
 		}
-		if node.Shape != layout.Auto {
-			attrs = append(attrs, "shape="+quote(string(node.Shape)))
+		if box.Shape != layout.Auto {
+			attrs = append(attrs, "shape="+quote(string(box.Shape)))
 		}
 		if node.Peripheries > 1 {
 			attrs = append(attrs, fmt.Sprintf("peripheries=%d", node.Peripheries))
@@ -83,7 +84,8 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		attrs = append(attrs, lineAttrs(node.LineColor, node.FontColor, node.LineWidth, node.LineStyle, node.FillColor != nil, node.Invisible)...)
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
-	for _, edge := range graph.Edges {
+	for i, edge := range graph.Edges {
+		at := l.Edges[i]
 		var attrs []string
 		head, tail := edge.ArrowHead, edge.ArrowTail
 		if head == layout.ArrowDefault && edge.Directed {
@@ -91,10 +93,10 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 		}
 		hasHead := head != layout.ArrowDefault && head != layout.ArrowNone
 		hasTail := tail != layout.ArrowDefault && tail != layout.ArrowNone
-		if len(edge.Path) >= 2 {
+		if len(at.Path) >= 2 {
 			// Graphviz ends the spline at the arrow base and gives the tip
 			// separately with "s," and "e,".
-			path := slices.Clone(edge.Path)
+			path := slices.Clone(at.Path)
 			var ends []string
 			if hasTail {
 				ends = append(ends, "s,"+pt(path[0]))
@@ -136,7 +138,7 @@ func writeGraph(w io.Writer, graph *layout.Graph) error {
 			attrs = append(attrs, "arrowtail="+quote(string(tail)))
 		}
 		if edge.Label != "" {
-			attrs = append(attrs, "label="+labelID(edge.Label), "lp="+quote(pt(edge.LabelPos)))
+			attrs = append(attrs, "label="+labelID(edge.Label), "lp="+quote(pt(at.LabelCenter)))
 		}
 		if edge.Weight != 1 {
 			attrs = append(attrs, "weight="+strconv.FormatFloat(edge.Weight, 'g', -1, 64))

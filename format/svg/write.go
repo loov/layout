@@ -162,23 +162,23 @@ func drawPoint(v layout.Vector) draw.Point { return draw.Point{X: float64(v.X), 
 
 // layoutRecord computes the record fields of a node, measuring text as
 // the layout did
-func layoutRecord(graph *layout.Graph, node *layout.Node) *draw.Record {
+func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *draw.Record {
 	var lineWidth func(string) float64
 	if graph.MeasureText != nil {
-		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, node.FontSize).X) }
+		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, box.FontSize).X) }
 	}
-	return draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y), float64(graph.LineHeight), float64(node.FontSize), lineWidth)
+	return draw.LayoutRecord(box.Label, float64(box.Size.X), float64(box.Size.Y), float64(graph.LineHeight), float64(box.FontSize), lineWidth)
 }
 
 // writeRecord draws record fields: separators between sub-fields and
 // centered text in leaf fields
-func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *draw.Record, origin layout.Vector) {
+func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox, rec *draw.Record, origin layout.Vector) {
 	if len(rec.Fields) == 0 {
 		center := layout.Vector{
 			X: origin.X + layout.Length(rec.X0+rec.X1)/2,
 			Y: origin.Y + layout.Length(rec.Y0+rec.Y1)/2,
 		}
-		svg.writeText(graph, rec.Text, center, node.FontSize, node.FontName, node.FontColor)
+		svg.writeText(graph, rec.Text, center, box.FontSize, node.FontName, node.FontColor)
 		return
 	}
 	for i, field := range rec.Fields {
@@ -194,7 +194,7 @@ func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, rec *draw
 			svg.write("<line x1='%v' y1='%v' x2='%v' y2='%v' stroke='%v' stroke-width='%v'/>",
 				origin.X+a.X, origin.Y+a.Y, origin.X+b.X, origin.Y+b.Y, dkcolor(node.LineColor), node.LineWidth)
 		}
-		svg.writeRecord(graph, node, field, origin)
+		svg.writeRecord(graph, node, box, field, origin)
 	}
 }
 
@@ -239,40 +239,43 @@ func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius 
 // Write renders the laid out graph as an SVG document.
 //
 // Nodes are drawn according to their shape and colors, edges as rounded
-// polylines along Edge.Path with an arrowhead on directed edges. Labels
+// polylines along their path with an arrowhead on directed edges. Labels
 // wrapped in <...> are emitted as inline HTML.
-func Write(w io.Writer, graph *layout.Graph) error {
+func Write(w io.Writer, l *layout.Layout) error {
 	svg := &writer{}
 	svg.w = w
+	graph := l.Graph
 
-	topLeft, bottomRight := graph.Bounds()
+	topLeft, bottomRight := l.Bounds()
 	svg.start(min(topLeft.X, 0), min(topLeft.Y, 0), bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
 	svg.writeStyle()
 	svg.writeDefs()
 
 	svg.startG()
-	for _, cluster := range graph.Clusters {
+	for i, cluster := range graph.Clusters {
 		if cluster.Invisible {
 			continue
 		}
+		box := l.Clusters[i]
 		svg.write("<rect class='cluster' x='%v' y='%v' width='%v' height='%v'",
-			cluster.TopLeft.X, cluster.TopLeft.Y,
-			cluster.BottomRight.X-cluster.TopLeft.X, cluster.BottomRight.Y-cluster.TopLeft.Y)
+			box.TopLeft.X, box.TopLeft.Y,
+			box.BottomRight.X-box.TopLeft.X, box.BottomRight.Y-box.TopLeft.Y)
 		svg.write(" fill='%v'", ltcolor(cluster.FillColor))
 		svg.write(" stroke='%v'", dkcolor(cluster.LineColor))
 		svg.write("></rect>")
 		if cluster.Label != "" {
-			center := layout.Vector{X: (cluster.TopLeft.X + cluster.BottomRight.X) / 2, Y: cluster.TopLeft.Y + graph.LineHeight/2}
-			radius := layout.Vector{X: (cluster.BottomRight.X - cluster.TopLeft.X) / 2, Y: graph.LineHeight / 2}
+			center := layout.Vector{X: (box.TopLeft.X + box.BottomRight.X) / 2, Y: box.TopLeft.Y + graph.LineHeight/2}
+			radius := layout.Vector{X: (box.BottomRight.X - box.TopLeft.X) / 2, Y: graph.LineHeight / 2}
 			svg.writeLabel(graph, cluster.Label, center, radius, graph.FontSize, "", nil)
 		}
 	}
 
-	for _, edge := range graph.Edges {
+	for i, edge := range graph.Edges {
 		if edge.Invisible {
 			continue
 		}
-		if len(edge.Path) == 0 {
+		path := l.Edges[i]
+		if len(path.Path) == 0 {
 			// TODO: log invalid path
 			continue
 		}
@@ -295,7 +298,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		if graph.Splines == layout.SplinesPolyline || graph.Splines == layout.SplinesOrtho {
 			radius = 0
 		}
-		svg.write(" d='%v'>", roundedPath(edge.Path, radius, graph.EdgePadding))
+		svg.write(" d='%v'>", roundedPath(path.Path, radius, graph.EdgePadding))
 
 		if edge.Tooltip != "" {
 			svg.write("<title>%v</title>", escapeString(edge.Tooltip))
@@ -304,19 +307,22 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write("</path>")
 
 		if edge.Label != "" {
-			svg.writeLabel(graph, edge.Label, edge.LabelPos, edge.LabelRadius, edge.FontSize, edge.FontName, edge.FontColor)
+			labelRadius := layout.Vector{X: path.LabelSize.X / 2, Y: path.LabelSize.Y / 2}
+			svg.writeLabel(graph, edge.Label, path.LabelCenter, labelRadius, path.FontSize, edge.FontName, edge.FontColor)
 		}
 	}
 
-	for _, node := range graph.Nodes {
+	for i, node := range graph.Nodes {
 		if node.Invisible {
 			continue
 		}
-		svgtag := svg.writeShape(node, node.Radius)
+		box := l.Nodes[i]
+		radius := layout.Vector{X: box.Size.X / 2, Y: box.Size.Y / 2}
+		svgtag := svg.writeShape(box, radius)
 		svg.write(" class='node'")
 
 		fill := ltcolor(node.FillColor)
-		if node.Shape == layout.PointShape && node.FillColor == nil {
+		if box.Shape == layout.PointShape && node.FillColor == nil {
 			fill = dkcolor(node.LineColor) // points are solid
 		}
 		svg.write(" fill='%v'", fill)
@@ -332,7 +338,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		// extra peripheries are inset outlines without fill
 		for i := 1; i < node.Peripheries; i++ {
 			inset := layout.Length(i) * peripheryGap
-			svg.writeShape(node, node.Radius.Add(layout.Vector{X: -inset, Y: -inset}))
+			svg.writeShape(box, radius.Add(layout.Vector{X: -inset, Y: -inset}))
 			svg.write(" fill='none'")
 			svg.write(" stroke='%v'", dkcolor(node.LineColor))
 			svg.writeStroke(node.LineWidth, node.LineStyle)
@@ -341,15 +347,15 @@ func Write(w io.Writer, graph *layout.Graph) error {
 
 		if node.Image != "" {
 			svg.write("<image href='%v' x='%v' y='%v' width='%v' height='%v' preserveAspectRatio='xMidYMid meet'/>",
-				escapeString(node.Image), node.Left(), node.Top(), 2*node.Radius.X, 2*node.Radius.Y)
+				escapeString(node.Image), box.Left(), box.Top(), box.Size.X, box.Size.Y)
 		}
 
-		if node.Shape == layout.Record {
-			svg.writeRecord(graph, node, layoutRecord(graph, node), node.TopLeft())
+		if box.Shape == layout.Record {
+			svg.writeRecord(graph, node, box, layoutRecord(graph, node, box), box.TopLeft())
 			continue
 		}
-		if label := node.DefaultLabel(); label != "" {
-			svg.writeLabel(graph, label, node.Center, node.Radius, node.FontSize, node.FontName, node.FontColor)
+		if box.Label != "" {
+			svg.writeLabel(graph, box.Label, box.Center, radius, box.FontSize, node.FontName, node.FontColor)
 		}
 	}
 	svg.finishG()
@@ -363,9 +369,9 @@ const peripheryGap = 4 * layout.Point
 
 // writeShape opens the node's shape element with the given half size and
 // returns the tag name; attributes can follow.
-func (svg *writer) writeShape(node *layout.Node, radius layout.Vector) string {
-	c := node.Center
-	switch node.Shape {
+func (svg *writer) writeShape(box layout.NodeBox, radius layout.Vector) string {
+	c := box.Center
+	switch box.Shape {
 	case layout.Ellipse, layout.Auto:
 		svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'", c.X, c.Y, radius.X, radius.Y)
 		return "ellipse"

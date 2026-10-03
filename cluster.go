@@ -1,7 +1,7 @@
 package layout
 
-// Cluster is a group of nodes drawn inside a common box. The box corners
-// are computed by layouting.
+// Cluster is a group of nodes drawn inside a common box. Layout leaves it
+// unchanged; the computed box is in Layout.Clusters.
 type Cluster struct {
 	ID    string
 	Label string
@@ -15,7 +15,4 @@ type Cluster struct {
 	// Invisible keeps the cluster in the layout but leaves it out of the
 	// drawing, like Graphviz style=invis.
 	Invisible bool
-
-	// computed in layouting
-	TopLeft, BottomRight Vector
 }

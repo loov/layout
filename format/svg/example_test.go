@@ -11,10 +11,11 @@ import (
 func ExampleWrite() {
 	graph := layout.NewDigraph()
 	graph.Edge("a", "b").Label = "next"
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := svg.Write(os.Stdout, graph); err != nil {
+	if err := svg.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:

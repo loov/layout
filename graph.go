@@ -1,7 +1,5 @@
 package layout
 
-import "math"
-
 // Graph is a set of nodes and edges together with the default styling
 // used for nodes that don't specify their own.
 type Graph struct {
@@ -16,7 +14,7 @@ type Graph struct {
 	// from its start, the left or the top when sideways, an edge padding
 	// apart, instead of around the center, and lines nodes up at their
 	// first end: the main path of a sideways layout then runs along the
-	// top of its nodes. ForText sets it for sideways layouts.
+	// top of its nodes. Options.ForText sets it for sideways layouts.
 	PackEdgeEnds bool
 
 	// MeasureText returns the half size of a single line of text in the
@@ -34,17 +32,6 @@ type Graph struct {
 	NodePadding Length
 	RowPadding  Length
 	EdgePadding Length
-
-	// ForText lays the graph out for format/text: Hierarchical and Force
-	// then switch to ortho splines, leave rows between ranks for the
-	// horizontal runs and arrowheads, and size nodes in character cells.
-	// They change Splines, the paddings, PackEdgeEnds and node sizes.
-	ForText bool
-
-	// Pinned means every node already has a Center (for example from a
-	// dot "pos" attribute); layouting then keeps them and only computes
-	// missing edge paths, like dot -n.
-	Pinned bool
 
 	// NodeByID indexes Nodes by ID. Node and AddNode keep the two in
 	// sync; a node appended to Nodes directly is missing from NodeByID,
@@ -147,34 +134,4 @@ func maxvector(a *Vector, b Vector) {
 	if b.Y > a.Y {
 		a.Y = b.Y
 	}
-}
-
-// Bounds returns the bounding box of all nodes and edge paths.
-func (graph *Graph) Bounds() (min, max Vector) {
-	inf := Length(math.Inf(1))
-	min, max = Vector{inf, inf}, Vector{-inf, -inf}
-	for _, node := range graph.Nodes {
-		minvector(&min, node.TopLeft())
-		maxvector(&max, node.BottomRight())
-	}
-
-	for _, cluster := range graph.Clusters {
-		minvector(&min, cluster.TopLeft)
-		maxvector(&max, cluster.BottomRight)
-	}
-	for _, edge := range graph.Edges {
-		for _, p := range edge.Path {
-			minvector(&min, p)
-			maxvector(&max, p)
-		}
-		if edge.Label != "" {
-			minvector(&min, Vector{edge.LabelPos.X - edge.LabelRadius.X, edge.LabelPos.Y - edge.LabelRadius.Y})
-			maxvector(&max, Vector{edge.LabelPos.X + edge.LabelRadius.X, edge.LabelPos.Y + edge.LabelRadius.Y})
-		}
-	}
-
-	if min.X > max.X { // nothing to bound
-		return Vector{}, Vector{}
-	}
-	return
 }

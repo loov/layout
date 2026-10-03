@@ -16,30 +16,33 @@ func TestForce(t *testing.T) {
 	for _, e := range [][2]string{{"A", "B"}, {"B", "C"}, {"C", "D"}, {"D", "E"}, {"E", "A"}, {"A", "F"}} {
 		graph.Edge(e[0], e[1])
 	}
-	if err := layout.Force(graph); err != nil {
+	l, err := layout.Force(graph, layout.ForceOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, a := range graph.Nodes {
-		if a.Center.X < a.Radius.X || a.Center.Y < a.Radius.Y {
-			t.Errorf("%v is outside the drawing at %v", a, a.Center)
+	for i, a := range graph.Nodes {
+		ab := l.Nodes[i]
+		if ab.Left() < 0 || ab.Top() < 0 {
+			t.Errorf("%v is outside the drawing at %v", a, ab.Center)
 		}
-		for _, b := range graph.Nodes {
+		for j, b := range graph.Nodes {
 			if a == b {
 				continue
 			}
-			d := math.Hypot(float64(a.Center.X-b.Center.X), float64(a.Center.Y-b.Center.Y))
-			if d < float64(a.Radius.X+b.Radius.X) {
+			bb := l.Nodes[j]
+			d := math.Hypot(float64(ab.Center.X-bb.Center.X), float64(ab.Center.Y-bb.Center.Y))
+			if d < float64(ab.Size.X+bb.Size.X)/2 {
 				t.Errorf("%v and %v overlap, distance %.1f", a, b, d)
 			}
 		}
 	}
-	for _, edge := range graph.Edges {
-		if len(edge.Path) != 2 {
+	for i, edge := range graph.Edges {
+		if len(l.Edges[i].Path) != 2 {
 			t.Errorf("%v has no path", edge)
 		}
 	}
 	var got bytes.Buffer
-	if err := svg.Write(&got, graph); err != nil {
+	if err := svg.Write(&got, l); err != nil {
 		t.Fatal(err)
 	}
 	compareGolden(t, "testdata/force.svg", got.Bytes())
@@ -47,29 +50,29 @@ func TestForce(t *testing.T) {
 
 func TestForcePreservesPinnedCentersAndPaths(t *testing.T) {
 	graph := layout.NewGraph()
-	graph.Pinned = true
 	existing := graph.Edge("a", "b")
 	missing := graph.Edge("b", "c")
 	centers := []layout.Vector{{100, 100}, {100, 200}, {200, 200}}
 	for i, node := range graph.Nodes {
-		node.Center = centers[i]
+		node.Pos = &centers[i]
 	}
 	path := []layout.Vector{{100, 116}, {80, 150}, {100, 184}}
-	existing.Path = slices.Clone(path)
-	existing.Label, existing.LabelPos = "label", layout.Vector{80, 150}
-	if err := layout.Force(graph); err != nil {
+	existing.Pos = slices.Clone(path)
+	existing.Label, existing.LabelPos = "label", &layout.Vector{80, 150}
+	l, err := layout.Force(graph, layout.ForceOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	for i, node := range graph.Nodes {
-		if node.Center != centers[i] {
-			t.Errorf("node %s moved to %v", node.ID, node.Center)
+		if l.Nodes[i].Center != centers[i] {
+			t.Errorf("node %s moved to %v", node.ID, l.Nodes[i].Center)
 		}
 	}
-	if !slices.Equal(existing.Path, path) || existing.LabelPos != (layout.Vector{80, 150}) {
-		t.Errorf("existing path or label moved: %v, %v", existing.Path, existing.LabelPos)
+	if got := l.Edge(existing); !slices.Equal(got.Path, path) || got.LabelCenter != (layout.Vector{80, 150}) {
+		t.Errorf("existing path or label moved: %v, %v", got.Path, got.LabelCenter)
 	}
-	if len(missing.Path) != 2 {
-		t.Fatalf("missing path was not computed: %v", missing.Path)
+	if got := l.Edge(missing).Path; len(got) != 2 {
+		t.Fatalf("missing path was not computed: %v", got)
 	}
 }
 
@@ -82,24 +85,27 @@ func TestForceClusterBoxes(t *testing.T) {
 	outer := &layout.Cluster{ID: "outer", Label: "outer", Nodes: []*layout.Node{graph.Node("a"), graph.Node("b"), graph.Node("c")}}
 	inner := &layout.Cluster{ID: "inner", Label: "inner", Nodes: []*layout.Node{graph.Node("a"), graph.Node("b")}, Parent: outer}
 	graph.Clusters = []*layout.Cluster{outer, inner}
-	if err := layout.Force(graph); err != nil {
+	l, err := layout.Force(graph, layout.ForceOptions{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	inside := func(tl, br, otl, obr layout.Vector) bool {
 		return otl.X <= tl.X && otl.Y <= tl.Y && br.X <= obr.X && br.Y <= obr.Y
 	}
 	for _, cluster := range graph.Clusters {
-		if cluster.BottomRight.X <= cluster.TopLeft.X || cluster.BottomRight.Y <= cluster.TopLeft.Y {
-			t.Fatalf("%s has no box: %v %v", cluster.ID, cluster.TopLeft, cluster.BottomRight)
+		box := l.Cluster(cluster)
+		if box.BottomRight.X <= box.TopLeft.X || box.BottomRight.Y <= box.TopLeft.Y {
+			t.Fatalf("%s has no box: %v %v", cluster.ID, box.TopLeft, box.BottomRight)
 		}
 		for _, node := range cluster.Nodes {
-			if !inside(node.TopLeft(), node.BottomRight(), cluster.TopLeft, cluster.BottomRight) {
+			if n := l.Node(node); !inside(n.TopLeft(), n.BottomRight(), box.TopLeft, box.BottomRight) {
 				t.Errorf("%s is outside %s", node.ID, cluster.ID)
 			}
 		}
 	}
-	if !inside(inner.TopLeft, inner.BottomRight, outer.TopLeft, outer.BottomRight) {
-		t.Errorf("inner %v %v is not inside outer %v %v", inner.TopLeft, inner.BottomRight, outer.TopLeft, outer.BottomRight)
+	in, out := l.Cluster(inner), l.Cluster(outer)
+	if !inside(in.TopLeft, in.BottomRight, out.TopLeft, out.BottomRight) {
+		t.Errorf("inner %v %v is not inside outer %v %v", in.TopLeft, in.BottomRight, out.TopLeft, out.BottomRight)
 	}
 }
 
@@ -117,20 +123,21 @@ func TestForceParallelEdges(t *testing.T) {
 		second.Label = "back"
 		graph.AddEdge(first)
 		graph.AddEdge(second)
-		if err := layout.Force(graph); err != nil {
+		l, err := layout.Force(graph, layout.ForceOptions{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		a, b := first.Path, slices.Clone(second.Path)
+		la, lb := l.Edge(first), l.Edge(second)
+		a, b := la.Path, slices.Clone(lb.Path)
 		if back {
 			slices.Reverse(b)
 		}
 		if slices.Equal(a, b) {
 			t.Errorf("%s: edges share the route %v", name, a)
 		}
-		la, lb := first, second
-		if math.Abs(float64(la.LabelPos.X-lb.LabelPos.X)) < float64(la.LabelRadius.X+lb.LabelRadius.X) &&
-			math.Abs(float64(la.LabelPos.Y-lb.LabelPos.Y)) < float64(la.LabelRadius.Y+lb.LabelRadius.Y) {
-			t.Errorf("%s: labels at %v and %v overlap", name, la.LabelPos, lb.LabelPos)
+		if math.Abs(float64(la.LabelCenter.X-lb.LabelCenter.X)) < float64(la.LabelSize.X+lb.LabelSize.X)/2 &&
+			math.Abs(float64(la.LabelCenter.Y-lb.LabelCenter.Y)) < float64(la.LabelSize.Y+lb.LabelSize.Y)/2 {
+			t.Errorf("%s: labels at %v and %v overlap", name, la.LabelCenter, lb.LabelCenter)
 		}
 	}
 }

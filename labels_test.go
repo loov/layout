@@ -27,16 +27,17 @@ func TestEmptyNodeLabel(t *testing.T) {
 	if got := plain.DefaultLabel(); got != "plain_node" {
 		t.Errorf("no label gives label %q, want the id", got)
 	}
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
-	if blank.Radius.X <= 0 || blank.Radius.Y <= 0 {
-		t.Errorf("empty label node has radius %v", blank.Radius)
+	if size := l.Node(blank).Size; size.X <= 0 || size.Y <= 0 {
+		t.Errorf("empty label node has size %v", size)
 	}
 
 	writers := map[string]func(*bytes.Buffer) error{
-		"svg":     func(b *bytes.Buffer) error { return svg.Write(b, graph) },
-		"text":    func(b *bytes.Buffer) error { return text.Write(b, graph) },
+		"svg":     func(b *bytes.Buffer) error { return svg.Write(b, l) },
+		"text":    func(b *bytes.Buffer) error { return text.Write(b, l) },
 		"graphml": func(b *bytes.Buffer) error { return graphml.Write(b, graph) },
 	}
 	for name, write := range writers {
@@ -60,7 +61,7 @@ func TestEmptyNodeLabel(t *testing.T) {
 	}
 
 	var out bytes.Buffer
-	if err := dot.Write(&out, graph); err != nil {
+	if err := dot.Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	again, err := dot.ParseString(out.String())
@@ -88,14 +89,16 @@ func TestLabelsApart(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := graphs[0]
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	abs := func(v layout.Length) layout.Length { return max(v, -v) }
 	for i, a := range graph.Edges {
-		for _, b := range graph.Edges[i+1:] {
-			if abs(a.LabelPos.X-b.LabelPos.X) < a.LabelRadius.X+b.LabelRadius.X && abs(a.LabelPos.Y-b.LabelPos.Y) < a.LabelRadius.Y+b.LabelRadius.Y {
-				t.Errorf("labels %s at %v and %s at %v overlap", a.Label, a.LabelPos, b.Label, b.LabelPos)
+		for j, b := range graph.Edges[i+1:] {
+			pa, pb := l.Edges[i], l.Edges[i+1+j]
+			if abs(pa.LabelCenter.X-pb.LabelCenter.X) < (pa.LabelSize.X+pb.LabelSize.X)/2 && abs(pa.LabelCenter.Y-pb.LabelCenter.Y) < (pa.LabelSize.Y+pb.LabelSize.Y)/2 {
+				t.Errorf("labels %s at %v and %s at %v overlap", a.Label, pa.LabelCenter, b.Label, pb.LabelCenter)
 			}
 		}
 	}

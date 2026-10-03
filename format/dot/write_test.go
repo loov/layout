@@ -14,11 +14,12 @@ import (
 func TestWritePolylineRoundTrip(t *testing.T) {
 	g := layout.NewDigraph()
 	e := g.Edge("a", "b")
-	e.From.Center, e.To.Center = layout.Vector{X: 50, Y: 50}, layout.Vector{X: 150, Y: 150}
-	e.From.Radius, e.To.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
-	e.Path = []layout.Vector{{X: 60, Y: 50}, {X: 150, Y: 50}, {X: 150, Y: 140}}
+	e.From.Pos, e.To.Pos = &layout.Vector{X: 50, Y: 50}, &layout.Vector{X: 150, Y: 150}
+	e.From.MinSize, e.To.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
+	e.From.FixedSize, e.To.FixedSize = true, true
+	e.Pos = []layout.Vector{{X: 60, Y: 50}, {X: 150, Y: 50}, {X: 150, Y: 140}}
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	_, edgeAttrs, ok := strings.Cut(out.String(), " -> ")
@@ -40,8 +41,8 @@ func TestWritePolylineRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := graphs[0].Edges[0].Path; !slices.Equal(got, e.Path) {
-		t.Fatalf("path changed: %v, want %v", got, e.Path)
+	if got := graphs[0].Edges[0].Pos; !slices.Equal(got, e.Pos) {
+		t.Fatalf("path changed: %v, want %v", got, e.Pos)
 	}
 }
 
@@ -56,11 +57,12 @@ func TestWritePathsAreAcceptedByGraphviz(t *testing.T) {
 	} {
 		g := layout.NewDigraph()
 		e := g.Edge("a", "b")
-		e.From.Center, e.To.Center = layout.Vector{X: 50, Y: 50}, layout.Vector{X: 150, Y: 150}
-		e.From.Radius, e.To.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
-		e.Path = path
+		e.From.Pos, e.To.Pos = &layout.Vector{X: 50, Y: 50}, &layout.Vector{X: 150, Y: 150}
+		e.From.MinSize, e.To.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
+		e.From.FixedSize, e.To.FixedSize = true, true
+		e.Pos = path
 		var out, diagnostics bytes.Buffer
-		if err := Write(&out, g); err != nil {
+		if err := Write(&out, layoutOf(t, g)); err != nil {
 			t.Fatal(err)
 		}
 		cmd := exec.Command(neato, "-n2", "-Tsvg")
@@ -90,19 +92,20 @@ func TestWriteArrowsRoundTripAndRenderInGraphviz(t *testing.T) {
 			g := layout.NewDigraph()
 			e := g.Edge("a", "b")
 			e.Directed, e.ArrowHead, e.ArrowTail = tc.directed, tc.head, tc.tail
-			e.From.Center, e.To.Center = layout.Vector{X: 50, Y: 50}, layout.Vector{X: 150, Y: 150}
-			e.From.Radius, e.To.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
-			e.Path = []layout.Vector{{X: 60, Y: 50}, {X: 150, Y: 50}, {X: 150, Y: 140}}
+			e.From.Pos, e.To.Pos = &layout.Vector{X: 50, Y: 50}, &layout.Vector{X: 150, Y: 150}
+			e.From.MinSize, e.To.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
+			e.From.FixedSize, e.To.FixedSize = true, true
+			e.Pos = []layout.Vector{{X: 60, Y: 50}, {X: 150, Y: 50}, {X: 150, Y: 140}}
 			var out bytes.Buffer
-			if err := Write(&out, g); err != nil {
+			if err := Write(&out, layoutOf(t, g)); err != nil {
 				t.Fatal(err)
 			}
 			graphs, err := Parse(bytes.NewReader(out.Bytes()))
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := graphs[0].Edges[0].Path; !slices.Equal(got, e.Path) {
-				t.Fatalf("path changed: %v, want %v\n%s", got, e.Path, &out)
+			if got := graphs[0].Edges[0].Pos; !slices.Equal(got, e.Pos) {
+				t.Fatalf("path changed: %v, want %v\n%s", got, e.Pos, &out)
 			}
 
 			neato, err := exec.LookPath("neato")
@@ -128,7 +131,7 @@ func TestWriteQuotesArrowNames(t *testing.T) {
 	e := g.Edge("a", "b")
 	e.ArrowHead, e.ArrowTail = `x]; evil [label="y`, `z]; evil2 [label="w`
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	graphs, err := Parse(bytes.NewReader(out.Bytes()))
@@ -150,7 +153,7 @@ func TestWriteEscapesRoundTrip(t *testing.T) {
 	e.To.Label = `literal \n and "quotes"`
 	e.Label = `C:\dir\"x"`
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	graphs, err := Parse(bytes.NewReader(out.Bytes()))
@@ -172,7 +175,7 @@ func TestWriteQuotesShape(t *testing.T) {
 	g := layout.NewDigraph()
 	g.Node("a").Shape = `box]; evil [label="x`
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	graphs, err := Parse(bytes.NewReader(out.Bytes()))
@@ -199,7 +202,7 @@ func TestWriteParseRoundTrip(t *testing.T) {
 	inner := &layout.Cluster{ID: "inner", Label: "in", Nodes: []*layout.Node{b}, Parent: outer}
 	g.Clusters = []*layout.Cluster{outer, inner}
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	graphs, err := Parse(bytes.NewReader(out.Bytes()))
@@ -259,10 +262,11 @@ func rgba(c layout.Color) string {
 func TestWriteBoundsContainNegativePositions(t *testing.T) {
 	g := layout.NewDigraph()
 	e := g.Edge("a", "b")
-	e.From.Center, e.To.Center = layout.Vector{X: -100, Y: -50}, layout.Vector{X: 50, Y: 80}
-	e.From.Radius, e.To.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
+	e.From.Pos, e.To.Pos = &layout.Vector{X: -100, Y: -50}, &layout.Vector{X: 50, Y: 80}
+	e.From.MinSize, e.To.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
+	e.From.FixedSize, e.To.FixedSize = true, true
 	var out bytes.Buffer
-	if err := Write(&out, g); err != nil {
+	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), `bb="-110.00,-60.00,60.00,90.00"`) {
@@ -273,8 +277,8 @@ func TestWriteBoundsContainNegativePositions(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, node := range graphs[0].Nodes {
-		if node.Center != g.Nodes[i].Center {
-			t.Errorf("%s moved to %v, want %v", node.ID, node.Center, g.Nodes[i].Center)
+		if *node.Pos != *g.Nodes[i].Pos {
+			t.Errorf("%s moved to %v, want %v", node.ID, *node.Pos, *g.Nodes[i].Pos)
 		}
 	}
 }
@@ -285,7 +289,7 @@ func TestWriteSeveralGraphs(t *testing.T) {
 	a.Edge("x", "y")
 	b.Edge("y", "z")
 	var out bytes.Buffer
-	if err := Write(&out, a, b); err != nil {
+	if err := Write(&out, layoutOf(t, a), layoutOf(t, b)); err != nil {
 		t.Fatal(err)
 	}
 	graphs, err := ParseString(out.String())
@@ -295,4 +299,14 @@ func TestWriteSeveralGraphs(t *testing.T) {
 	if len(graphs) != 2 || graphs[0].ID != "first" || graphs[1].ID != "second" || graphs[1].Directed {
 		t.Fatalf("got %d graphs from:\n%s", len(graphs), out.String())
 	}
+}
+
+// layoutOf lays out g, keeping the positions and paths it pins
+func layoutOf(t *testing.T, g *layout.Graph) *layout.Layout {
+	t.Helper()
+	l, err := layout.Hierarchical(g, layout.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return l
 }

@@ -55,16 +55,17 @@ func main() {
         LineColor: layout.RGB{B: 0xFF},
     }}
 
-    if err := layout.Hierarchical(graph); err != nil {
+    l, err := layout.Hierarchical(graph, layout.Options{})
+    if err != nil {
         log.Fatal(err)
     }
-    svg.Write(os.Stdout, graph)
+    svg.Write(os.Stdout, l)
 }
 ```
 
 ![Output](./testdata/readme.svg)
 
-The same graph drawn for a terminal, with `graph.ForText = true` before laying out and `text.Write` instead of `svg.Write`:
+The same graph drawn for a terminal, laid out with `layout.Options{ForText: true}` and written with `text.Write` instead of `svg.Write`:
 
 ```
                         ╭─────────╮
@@ -108,7 +109,7 @@ The same graph drawn for a terminal, with `graph.ForText = true` before laying o
 
 Other layouts and outputs:
 
-* `layout.Force(graph)` — force-directed layout for undirected or cyclic graphs.
+* `layout.Force(graph, layout.ForceOptions{})` — force-directed layout for undirected or cyclic graphs.
 * `format/json` — plain coordinates for drawing the graph elsewhere.
 
 The same is available from the command line: `glay -l force -q fast -t txt|ans|json|svg|dot|graphml input.dot`; colored text takes `-colors 16|truecolor` and `-bg color`.

@@ -1,6 +1,7 @@
 package layout
 
-// Edge connects two nodes. Path is filled in by layouting.
+// Edge connects two nodes. Layout leaves it unchanged; the computed path
+// is in Layout.Edges.
 type Edge struct {
 	Directed bool
 	From, To *Node
@@ -28,10 +29,10 @@ type Edge struct {
 	// drawing, like Graphviz style=invis.
 	Invisible bool
 
-	// computed in layouting
-	Path        []Vector
-	LabelPos    Vector // center of the label, when Label is set
-	LabelRadius Vector // half size of the label
+	// Pos and LabelPos are the path and label center an edge keeps in a
+	// pinned graph, see Node.Pos.
+	Pos      []Vector
+	LabelPos *Vector
 }
 
 // NewEdge creates an edge from one node to another with default styling.

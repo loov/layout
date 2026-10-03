@@ -13,10 +13,11 @@ import (
 func ExampleWrite() {
 	graph := layout.NewDigraph()
 	graph.Edge("a", "b")
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := json.Write(os.Stdout, graph); err != nil {
+	if err := json.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -66,10 +67,11 @@ func ExampleWrite() {
 func ExampleConvert() {
 	graph := layout.NewDigraph()
 	graph.Edge("a", "b")
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	converted := json.Convert(graph)
+	converted := json.Convert(l)
 	for _, node := range converted.Nodes {
 		fmt.Printf("%s: %vx%v at %v,%v\n", node.ID, node.Width, node.Height, node.X, node.Y)
 	}

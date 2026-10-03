@@ -18,12 +18,12 @@ func TestWrite(t *testing.T) {
 	graph.Edge("A", "C")
 	graph.Edge("B", "D")
 	graph.Edge("C", "D")
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	got := buf.String()
@@ -77,12 +77,12 @@ func TestArrows(t *testing.T) {
 		if tc.sideways {
 			graph.RankDir = layout.LeftToRight
 		}
-		graph.ForText = true
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
 			t.Fatal(err)
 		}
 		var buf bytes.Buffer
-		if err := Write(&buf, graph); err != nil {
+		if err := Write(&buf, l); err != nil {
 			t.Fatal(err)
 		}
 		got := strings.Map(func(r rune) rune {
@@ -116,12 +116,12 @@ func TestLineStyles(t *testing.T) {
 		if tc.sideways {
 			graph.RankDir = layout.LeftToRight
 		}
-		graph.ForText = true
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
 			t.Fatal(err)
 		}
 		var buf bytes.Buffer
-		if err := Write(&buf, graph); err != nil {
+		if err := Write(&buf, l); err != nil {
 			t.Fatal(err)
 		}
 		// the run between the boxes, past the box sides
@@ -155,12 +155,12 @@ func TestSidewaysEdgesApart(t *testing.T) {
 			graph.Edge(e[0], e[1]).Label = "x"
 			graph.Node(e[0]).Shape = layout.Circle
 		}
-		graph.ForText = true
-		if err := layout.HierarchicalWith(graph, layout.Options{Align: layout.AlignLeft}); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{Align: layout.AlignLeft, ForText: true})
+		if err != nil {
 			t.Fatal(err)
 		}
 		var buf bytes.Buffer
-		if err := Write(&buf, graph); err != nil {
+		if err := Write(&buf, l); err != nil {
 			t.Fatal(err)
 		}
 		got := buf.String()
@@ -179,16 +179,15 @@ func TestSidewaysEdgesApart(t *testing.T) {
 // writing index outside the canvas.
 func TestOffCanvas(t *testing.T) {
 	graph := layout.NewDigraph()
-	graph.Pinned = true
-	graph.Node("A").Center = layout.Vector{X: 50, Y: -100}
-	graph.Node("B").Center = layout.Vector{X: 150, Y: 50}
+	graph.Node("A").Pos = &layout.Vector{X: 50, Y: -100}
+	graph.Node("B").Pos = &layout.Vector{X: 150, Y: 50}
 	graph.Edge("A", "B").FromPort = layout.East
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -206,12 +205,12 @@ func TestDotFanOut(t *testing.T) {
 		for _, id := range []string{"a", "b", "c"}[:tc.edges] {
 			graph.Edge("s", id)
 		}
-		graph.ForText = true
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
 			t.Fatal(err)
 		}
 		var buf bytes.Buffer
-		if err := Write(&buf, graph); err != nil {
+		if err := Write(&buf, l); err != nil {
 			t.Fatal(err)
 		}
 		lines := strings.Split(buf.String(), "\n")
@@ -249,12 +248,12 @@ func TestLabelsBeforeOrigin(t *testing.T) {
 		edge.Label = e[2]
 		graph.AddEdge(edge)
 	}
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	for _, label := range []string{"one", "two", "back"} {
@@ -272,12 +271,12 @@ func TestMultilineLabels(t *testing.T) {
 	rec.Shape = layout.Record
 	rec.Label = "first\nsecond"
 	graph.Edge("a", "b").Label = "one\ntwo"
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	got := buf.String()
@@ -291,12 +290,12 @@ func TestMultilineLabels(t *testing.T) {
 // render prepares, lays out and draws graph
 func render(t *testing.T, graph *layout.Graph) string {
 	t.Helper()
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	return buf.String()
@@ -380,17 +379,17 @@ func TestDiagonalEnds(t *testing.T) {
 // TestInvisible checks that invisible nodes and edges leave blank room.
 func TestInvisible(t *testing.T) {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	graph.Node("hidden").Invisible = true
 	graph.Edge("hidden", "a")
 	edge := graph.Edge("a", "secret")
 	edge.Invisible = true
 	edge.Label = "label"
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	got := buf.String()

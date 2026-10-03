@@ -286,13 +286,14 @@ func TestExamples(t *testing.T) {
 func TestExamplesText(t *testing.T) {
 	for name, build := range examples {
 		t.Run(name, func(t *testing.T) {
-			graph := build()
-			graph.ForText = true
-			if err := layout.HierarchicalWith(graph, exampleOptions[name]); err != nil {
+			opts := exampleOptions[name]
+			opts.ForText = true
+			l, err := layout.Hierarchical(build(), opts)
+			if err != nil {
 				t.Fatal(err)
 			}
 			var got bytes.Buffer
-			if err := text.Write(&got, graph); err != nil {
+			if err := text.Write(&got, l); err != nil {
 				t.Fatal(err)
 			}
 			compareGolden(t, filepath.Join("testdata", name+".txt"), got.Bytes())
@@ -300,7 +301,7 @@ func TestExamplesText(t *testing.T) {
 			plain := bytes.Clone(got.Bytes())
 			for suffix, palette := range map[string]text.Palette{".ans": text.ANSI16, ".truecolor.ans": text.TrueColor} {
 				got.Reset()
-				if err := text.WriteColor(&got, graph, text.Options{Palette: palette}); err != nil {
+				if err := text.WriteColor(&got, l, text.Options{Palette: palette}); err != nil {
 					t.Fatal(err)
 				}
 				path := filepath.Join("testdata", name+suffix)
@@ -340,11 +341,12 @@ func TestGraphviz(t *testing.T) {
 // TestWriteDot checks the dot writer against testdata/minimal.dot.
 func TestWriteDot(t *testing.T) {
 	graph := examples["minimal"]()
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var got bytes.Buffer
-	if err := dot.Write(&got, graph); err != nil {
+	if err := dot.Write(&got, l); err != nil {
 		t.Fatal(err)
 	}
 	// round trip: the output must parse again with the same nodes and edges
@@ -360,12 +362,13 @@ func TestWriteDot(t *testing.T) {
 
 func checkGolden(t *testing.T, path string, graph *layout.Graph, opts layout.Options) {
 	t.Helper()
-	if err := layout.HierarchicalWith(graph, opts); err != nil {
+	l, err := layout.Hierarchical(graph, opts)
+	if err != nil {
 		t.Fatal(err)
 	}
 
 	var got bytes.Buffer
-	if err := svg.Write(&got, graph); err != nil {
+	if err := svg.Write(&got, l); err != nil {
 		t.Fatal(err)
 	}
 	compareGolden(t, path, got.Bytes())
@@ -394,24 +397,25 @@ func TestHierarchicalErrors(t *testing.T) {
 	graph := layout.NewDigraph()
 	stray := layout.NewNode("stray")
 	graph.AddEdge(layout.NewEdge(graph.Node("A"), stray))
-	if err := layout.Hierarchical(graph); err == nil {
+	if _, err := layout.Hierarchical(graph, layout.Options{}); err == nil {
 		t.Error("expected an error for an edge to a node outside the graph")
 	}
 	graph = layout.NewDigraph()
 	graph.AddEdge(&layout.Edge{From: graph.Node("A")})
-	if err := layout.Hierarchical(graph); err == nil {
+	if _, err := layout.Hierarchical(graph, layout.Options{}); err == nil {
 		t.Error("expected an error for a nil endpoint")
 	}
 }
 
-func TestHierarchicalWith(t *testing.T) {
+func TestHierarchicalOptions(t *testing.T) {
 	// more iterations and no balancing must still give a valid layout
 	graph := examples["complex"]()
-	if err := layout.HierarchicalWith(graph, layout.Options{OrderIterations: 100, NoRankBalance: true}); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{OrderIterations: 100, NoRankBalance: true})
+	if err != nil {
 		t.Fatal(err)
 	}
-	for _, edge := range graph.Edges {
-		if len(edge.Path) < 2 {
+	for i, edge := range graph.Edges {
+		if len(l.Edges[i].Path) < 2 {
 			t.Errorf("edge %v has no path", edge)
 		}
 	}
@@ -425,11 +429,12 @@ func TestPinned(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := graphs[0]
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := dot.Write(&out, graph); err != nil {
+	if err := dot.Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	parsed, err := dot.Parse(bytes.NewReader(out.Bytes()))
@@ -437,27 +442,31 @@ func TestPinned(t *testing.T) {
 		t.Fatal(err)
 	}
 	pinned := parsed[0]
-	if !pinned.Pinned {
-		t.Fatal("expected graph to be pinned")
+	for _, node := range pinned.Nodes {
+		if node.Pos == nil {
+			t.Fatalf("expected node %v to be pinned", node)
+		}
 	}
-	if err := layout.Hierarchical(pinned); err != nil {
+	again, err := layout.Hierarchical(pinned, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	near := func(a, b layout.Vector) bool {
 		return math.Abs(float64(a.X-b.X)) < 0.05 && math.Abs(float64(a.Y-b.Y)) < 0.05
 	}
-	for _, node := range graph.Nodes {
-		if got := pinned.NodeByID[node.ID]; !near(got.Center, node.Center) {
-			t.Errorf("node %v moved from %v to %v", node.ID, node.Center, got.Center)
+	for i, node := range graph.Nodes {
+		want, got := l.Nodes[i].Center, again.Node(pinned.NodeByID[node.ID]).Center
+		if !near(got, want) {
+			t.Errorf("node %v moved from %v to %v", node.ID, want, got)
 		}
 	}
 	for i, edge := range graph.Edges {
-		got := pinned.Edges[i]
-		if len(got.Path) != len(edge.Path) || !near(got.Path[0], edge.Path[0]) || !near(got.Path[len(got.Path)-1], edge.Path[len(edge.Path)-1]) {
-			t.Errorf("edge %v path changed: %v -> %v", edge, edge.Path, got.Path)
+		want, got := l.Edges[i], again.Edges[i]
+		if len(got.Path) != len(want.Path) || !near(got.Path[0], want.Path[0]) || !near(got.Path[len(got.Path)-1], want.Path[len(want.Path)-1]) {
+			t.Errorf("edge %v path changed: %v -> %v", edge, want.Path, got.Path)
 		}
-		if edge.Label != "" && !near(got.LabelPos, edge.LabelPos) {
-			t.Errorf("edge %v label moved from %v to %v", edge, edge.LabelPos, got.LabelPos)
+		if edge.Label != "" && !near(got.LabelCenter, want.LabelCenter) {
+			t.Errorf("edge %v label moved from %v to %v", edge, want.LabelCenter, got.LabelCenter)
 		}
 	}
 }
@@ -473,10 +482,11 @@ func TestDiagnostics(t *testing.T) {
 	sort.Strings(names)
 	for _, name := range names {
 		graph := examples[name]()
-		if err := layout.HierarchicalWith(graph, exampleOptions[name]); err != nil {
+		l, err := layout.Hierarchical(graph, exampleOptions[name])
+		if err != nil {
 			t.Fatal(err)
 		}
-		d := layout.Diagnose(graph)
+		d := layout.Diagnose(l)
 		fmt.Fprintf(&out, "%-12s %v\n", name, d)
 		for _, line := range d.Details {
 			t.Logf("%s: %s", name, line)
@@ -488,10 +498,11 @@ func TestDiagnostics(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := layout.Hierarchical(graphs[0]); err != nil {
+		l, err := layout.Hierarchical(graphs[0], layout.Options{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		d := layout.Diagnose(graphs[0])
+		d := layout.Diagnose(l)
 		fmt.Fprintf(&out, "%-12s %v\n", strings.TrimSuffix(filepath.Base(file), ".gv"), d)
 		for _, line := range d.Details {
 			t.Logf("%s: %s", filepath.Base(file), line)

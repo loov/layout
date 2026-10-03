@@ -18,29 +18,31 @@ func Example() {
 	graph.Edge("B", "D")
 	graph.Edge("C", "D")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := svg.Write(os.Stdout, graph); err != nil {
+	if err := svg.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// Hierarchical sets Node.Center and Edge.Path, which are all a custom
-// renderer needs.
+// Hierarchical returns where each node and edge goes, which is all a
+// custom renderer needs.
 func ExampleHierarchical() {
 	graph := layout.NewDigraph()
 	graph.Edge("A", "B")
 	graph.Edge("A", "C")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	for _, node := range graph.Nodes {
-		fmt.Printf("%s at %v,%v\n", node.ID, node.Center.X, node.Center.Y)
+	for i, node := range graph.Nodes {
+		fmt.Printf("%s at %v,%v\n", node.ID, l.Nodes[i].Center.X, l.Nodes[i].Center.Y)
 	}
-	for _, edge := range graph.Edges {
-		fmt.Printf("%v through %v\n", edge, edge.Path)
+	for i, edge := range graph.Edges {
+		fmt.Printf("%v through %v\n", edge, l.Edges[i].Path)
 	}
 	// Output:
 	// A at 64,32
@@ -52,19 +54,20 @@ func ExampleHierarchical() {
 
 // Fast spends fewer sweeps on reducing crossings, for large graphs;
 // Quality spends more. Align packs the nodes to one side.
-func ExampleHierarchicalWith() {
+func ExampleOptions() {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	graph.Edge("root", "a")
 	graph.Edge("root", "b")
 	graph.Edge("a", "leaf")
 
 	opts := layout.Fast
 	opts.Align = layout.AlignLeft
-	if err := layout.HierarchicalWith(graph, opts); err != nil {
+	opts.ForText = true
+	l, err := layout.Hierarchical(graph, opts)
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -92,11 +95,12 @@ func ExampleForce() {
 	graph.Edge("b", "c")
 	graph.Edge("c", "a")
 
-	if err := layout.Force(graph); err != nil {
+	l, err := layout.Force(graph, layout.ForceOptions{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	for _, edge := range graph.Edges {
-		fmt.Printf("%v: %d points\n", edge, len(edge.Path))
+	for i, edge := range graph.Edges {
+		fmt.Printf("%v: %d points\n", edge, len(l.Edges[i].Path))
 	}
 	// Output:
 	// a->b: 2 points
@@ -104,18 +108,18 @@ func ExampleForce() {
 	// c->a: 2 points
 }
 
-// ForText lays the graph out for drawing on a character grid.
+// Options.ForText lays the graph out for drawing on a character grid.
 func Example_text() {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	graph.Edge("fetch", "parse")
 	graph.Edge("parse", "render").Label = "ok"
 	graph.Edge("parse", "report").Label = "error"
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -141,15 +145,15 @@ func Example_text() {
 // RankDir turns the layout sideways.
 func Example_rankDir() {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	graph.RankDir = layout.LeftToRight
 	graph.Edge("idle", "running")
 	graph.Edge("running", "done")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -162,7 +166,6 @@ func Example_rankDir() {
 // together.
 func Example_clusters() {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	graph.Edge("client", "api")
 	graph.Edge("api", "db")
 	graph.Edge("api", "cache")
@@ -172,10 +175,11 @@ func Example_clusters() {
 		Nodes: []*layout.Node{graph.Node("db"), graph.Node("cache")},
 	}}
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -204,16 +208,16 @@ func Example_clusters() {
 // rows and columns.
 func Example_records() {
 	graph := layout.NewDigraph()
-	graph.ForText = true
 	user := graph.Node("user")
 	user.Shape = layout.Record
 	user.Label = "User|{id|name}"
 	graph.Edge("user", "session")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -238,11 +242,12 @@ func Example_ranks() {
 	graph.SameRank = [][]*layout.Node{{graph.Node("b"), graph.Node("x")}}
 	graph.MaxRank = []*layout.Node{graph.Node("y")}
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
 	for _, id := range []string{"b", "x", "c", "y"} {
-		fmt.Printf("%s at y=%v\n", id, graph.Node(id).Center.Y)
+		fmt.Printf("%s at y=%v\n", id, l.Node(graph.Node(id)).Center.Y)
 	}
 	// Output:
 	// b at y=96
@@ -251,20 +256,20 @@ func Example_ranks() {
 	// y at y=160
 }
 
-// A pinned graph keeps the given node positions and only routes the
-// edges, like dot -n.
+// When every node has a Pos, layout keeps the positions and only routes
+// the edges, like dot -n.
 func Example_pinned() {
 	graph := layout.NewDigraph()
-	graph.Pinned = true
-	graph.Node("a").Center = layout.Vector{X: 0, Y: 0}
-	graph.Node("b").Center = layout.Vector{X: 200, Y: 100}
+	graph.Node("a").Pos = &layout.Vector{X: 0, Y: 0}
+	graph.Node("b").Pos = &layout.Vector{X: 200, Y: 100}
 	graph.Edge("a", "b")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(graph.Node("b").Center)
-	fmt.Println(len(graph.Edges[0].Path) > 0)
+	fmt.Println(l.Node(graph.Node("b")).Center)
+	fmt.Println(len(l.Edges[0].Path) > 0)
 	// Output:
 	// {200 100}
 	// true
@@ -284,11 +289,12 @@ func Example_measureText() {
 	}
 	graph.Edge("short", "a much longer label")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	for _, node := range graph.Nodes {
-		fmt.Printf("%q is %v wide\n", node.ID, 2*node.Radius.X)
+	for i, node := range graph.Nodes {
+		fmt.Printf("%q is %v wide\n", node.ID, l.Nodes[i].Size.X)
 	}
 	// Output:
 	// "short" is 56 wide
@@ -314,10 +320,11 @@ func Example_styling() {
 	fail.ArrowHead = layout.ArrowVee
 	fail.FromPort = layout.East
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := svg.Write(os.Stdout, graph); err != nil {
+	if err := svg.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -331,10 +338,11 @@ func ExampleDiagnose() {
 	graph.Edge("a", "c")
 	graph.Edge("b", "d")
 
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	diag := layout.Diagnose(graph)
+	diag := layout.Diagnose(l)
 	fmt.Println("node overlaps:", diag.NodeOverlaps)
 	fmt.Println("edge crossings:", diag.EdgeCrossings)
 	// Output:

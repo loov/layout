@@ -42,11 +42,12 @@ func TestWriteIsWellFormedXML(t *testing.T) {
 	graph.Node("b").Label = "x\x01y"
 	graph.Node("b").Tooltip = "t\x02￾"
 	graph.Edge("a", "b").Label = "<<u>e</u>&amp;<br>z\x0b>"
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := Write(&out, graph); err != nil {
+	if err := Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	dec := xml.NewDecoder(&out)
@@ -76,11 +77,12 @@ func TestColorsKeepAlpha(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.Node("a").FillColor = layout.RGBA{R: 0xFF, A: 0x80}
 	graph.Node("b").LineColor = layout.RGB{G: 0xFF}
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out strings.Builder
-	if err := Write(&out, graph); err != nil {
+	if err := Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"fill='rgba(255,0,0,0.502)'", "stroke='#00FF00'"} {
@@ -93,11 +95,12 @@ func TestColorsKeepAlpha(t *testing.T) {
 func TestHTMLClusterLabel(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.Clusters = []*layout.Cluster{{ID: "c", Label: "<<b>bold</b>>", Nodes: []*layout.Node{graph.Node("a")}}}
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out strings.Builder
-	if err := Write(&out, graph); err != nil {
+	if err := Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(out.String(), "<b>bold</b></body></foreignObject>") || strings.Contains(out.String(), "&lt;b&gt;") {
@@ -125,11 +128,12 @@ func TestUnknownArrowDrawsNormal(t *testing.T) {
 	graph := layout.NewDigraph()
 	edge := graph.Edge("a", "b")
 	edge.ArrowHead, edge.ArrowTail = "diamond", "tee"
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := Write(&out, graph); err != nil {
+	if err := Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	for _, want := range []string{"marker-end='url(#normal)'", "marker-start='url(#normal)'"} {
@@ -148,11 +152,12 @@ func TestInvisible(t *testing.T) {
 	graph.Edge("a", "b").Invisible = true
 	graph.Edge("a", "b").Label = "secret"
 	graph.Clusters = []*layout.Cluster{{ID: "c", Nodes: []*layout.Node{graph.Node("b")}, Invisible: true}}
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	if err := Write(&out, graph); err != nil {
+	if err := Write(&out, l); err != nil {
 		t.Fatal(err)
 	}
 	svg := out.String()

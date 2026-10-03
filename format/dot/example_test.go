@@ -21,12 +21,11 @@ func Example() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	graph := graphs[0]
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graphs[0], layout.Options{ForText: true})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := text.Write(os.Stdout, graph); err != nil {
+	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:
@@ -70,7 +69,7 @@ func ExampleParseFile() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := layout.Hierarchical(graphs[0]); err != nil {
+	if _, err := layout.Hierarchical(graphs[0], layout.Options{}); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -80,10 +79,11 @@ func ExampleParseFile() {
 func ExampleWrite() {
 	graph := layout.NewDigraph()
 	graph.Edge("a", "b")
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	if err := dot.Write(os.Stdout, graph); err != nil {
+	if err := dot.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
 	// Output:

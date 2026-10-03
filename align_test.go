@@ -26,10 +26,11 @@ func TestAlign(t *testing.T) {
 		if tc.sideways {
 			graph.RankDir = layout.LeftToRight
 		}
-		if err := layout.HierarchicalWith(graph, layout.Options{Align: tc.align}); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{Align: tc.align})
+		if err != nil {
 			t.Fatal(err)
 		}
-		parent, child := graph.Node("a").Center, graph.Node(tc.over).Center
+		parent, child := l.Node(graph.Node("a")).Center, l.Node(graph.Node(tc.over)).Center
 		along, childAlong := parent.X, child.X
 		if tc.sideways {
 			along, childAlong = parent.Y, child.Y
@@ -48,10 +49,11 @@ func TestAlignFanIn(t *testing.T) {
 		graph.Edge("a", "d")
 		graph.Edge("b", "d")
 		graph.Edge("c", "d")
-		if err := layout.HierarchicalWith(graph, layout.Options{Align: align}); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{Align: align})
+		if err != nil {
 			t.Fatal(err)
 		}
-		if d, p := graph.Node("d").Center.X, graph.Node(over).Center.X; d != p {
+		if d, p := l.Node(graph.Node("d")).Center.X, l.Node(graph.Node(over)).Center.X; d != p {
 			t.Errorf("align %v: d at x %v, want under %s at %v", align, d, over, p)
 		}
 	}

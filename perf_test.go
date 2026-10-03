@@ -18,7 +18,7 @@ func TestPerf(t *testing.T) {
 	}
 	graph := randomGraph(n, 1)
 	start := time.Now()
-	if err := layout.Hierarchical(graph); err != nil {
+	if _, err := layout.Hierarchical(graph, layout.Options{}); err != nil {
 		t.Fatal(err)
 	}
 	fmt.Println("nodes", n, "edges", len(graph.Edges), "took", time.Since(start))

@@ -92,7 +92,8 @@ func TestPointShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := graphs[0]
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	start := graph.Node("start")
@@ -102,8 +103,8 @@ func TestPointShape(t *testing.T) {
 	if label := start.DefaultLabel(); label != "" {
 		t.Errorf("point has label %q, want none", label)
 	}
-	if start.Radius.X > 4*layout.Point || start.Radius.Y > 4*layout.Point {
-		t.Errorf("point radius = %v, want a small dot", start.Radius)
+	if size := l.Node(start).Size; size.X > 8*layout.Point || size.Y > 8*layout.Point {
+		t.Errorf("point size = %v, want a small dot", size)
 	}
 }
 
@@ -164,14 +165,17 @@ func TestNonFiniteNumbersAreIgnored(t *testing.T) {
 	a, e := g.Node("a"), g.Edges[0]
 	for name, v := range map[string]layout.Length{
 		"nodesep": g.NodePadding, "ranksep": g.RowPadding,
-		"width": a.Radius.X, "height": a.Radius.Y,
+		"width": a.MinSize.X, "height": a.MinSize.Y,
 		"node fontsize": a.FontSize, "node penwidth": a.LineWidth,
 		"weight": layout.Length(e.Weight), "edge penwidth": e.LineWidth,
-		"edge fontsize": e.FontSize, "lp": e.LabelPos.X,
+		"edge fontsize": e.FontSize,
 	} {
 		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
 			t.Errorf("%s = %v", name, v)
 		}
+	}
+	if e.LabelPos != nil {
+		t.Errorf("lp = %v", *e.LabelPos)
 	}
 	if e.MinLen > 1000 {
 		t.Errorf("minlen = %d", e.MinLen)
@@ -183,8 +187,10 @@ func TestInvalidPosDoesNotPin(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if graphs[0].Pinned {
-		t.Fatal("graph with invalid positions is pinned")
+	for _, node := range graphs[0].Nodes {
+		if node.Pos != nil {
+			t.Fatalf("node %v has position %v from an invalid pos", node, *node.Pos)
+		}
 	}
 }
 
@@ -372,11 +378,8 @@ func TestInvisible(t *testing.T) {
 		}
 	}
 	check(graphs[0])
-	if err := layout.Hierarchical(graphs[0]); err != nil {
-		t.Fatal(err)
-	}
 	var out bytes.Buffer
-	if err := Write(&out, graphs[0]); err != nil {
+	if err := Write(&out, layoutOf(t, graphs[0])); err != nil {
 		t.Fatal(err)
 	}
 	again, err := ParseString(out.String())

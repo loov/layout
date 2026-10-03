@@ -33,12 +33,12 @@ func TestHTMLLabel(t *testing.T) {
 	node := graph.Node("a")
 	node.Shape = layout.Box
 	node.Label = "<<B>bold</B>>"
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	got := buf.String()
@@ -54,12 +54,12 @@ func TestWideLabel(t *testing.T) {
 	node := graph.Node("a")
 	node.Shape = layout.Box
 	node.Label = "漢字漢字"
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	var widths []int
@@ -77,12 +77,12 @@ func TestClusterLabel(t *testing.T) {
 	graph := layout.NewDigraph()
 	label := "Extremely long cluster label spanning many characters"
 	graph.Clusters = []*layout.Cluster{{ID: "c", Label: label, Nodes: []*layout.Node{graph.Node("a")}}}
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(buf.String(), "┌ "+label+" ") {
@@ -95,7 +95,7 @@ func TestClusterLabel(t *testing.T) {
 func TestBlanksInLabels(t *testing.T) {
 	graph := layout.NewDigraph()
 	wide := graph.Node("a")
-	wide.Label, wide.Radius.X = "x            y", 108
+	wide.Label, wide.MinSize.X = "x            y", 216
 	graph.Node("b").Label = "top\n\n\n\nbottom"
 	graph.Edge("c", "d").Label = "p      q"
 	got := render(t, graph)

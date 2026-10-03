@@ -15,10 +15,11 @@ func TestLoopLeavesHorizontally(t *testing.T) {
 		graph := layout.NewDigraph()
 		graph.Node("a").Shape = shape
 		loop := graph.Edge("a", "a")
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		p := loop.Path
+		p := l.Edge(loop).Path
 		if len(p) != 4 || p[0].Y != p[1].Y || p[2].Y != p[3].Y {
 			t.Errorf("%s: loop path %v, want horizontal ends", shape, p)
 		}
@@ -33,10 +34,11 @@ func TestLoopNodeLinesUp(t *testing.T) {
 		graph.Edge("a", "b")
 		graph.Edge("b", "b")
 		graph.Edge("b", "c")
-		if err := layout.HierarchicalWith(graph, layout.Options{Align: align}); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{Align: align})
+		if err != nil {
 			t.Fatal(err)
 		}
-		a, b, c := graph.Node("a").Center.X, graph.Node("b").Center.X, graph.Node("c").Center.X
+		a, b, c := l.Node(graph.Node("a")).Center.X, l.Node(graph.Node("b")).Center.X, l.Node(graph.Node("c")).Center.X
 		if a != b || b != c {
 			t.Errorf("align %v: a, b, c at x %v, %v, %v, want one line", align, a, b, c)
 		}
@@ -46,24 +48,35 @@ func TestLoopNodeLinesUp(t *testing.T) {
 // TestLoopsApart checks that several self-loops of a node take routes of
 // their own, with labels apart, in hierarchical and force layouts.
 func TestLoopsApart(t *testing.T) {
-	for name, run := range map[string]func(*layout.Graph) error{"hierarchical": layout.Hierarchical, "force": layout.Force} {
+	for name, run := range algorithms {
 		graph := layout.NewDigraph()
 		for _, label := range []string{"first", "second"} {
 			edge := layout.NewEdge(graph.Node("a"), graph.Node("a"))
 			edge.Label = label
 			graph.AddEdge(edge)
 		}
-		if err := run(graph); err != nil {
+		l, err := run(graph)
+		if err != nil {
 			t.Fatal(err)
 		}
-		a, b := graph.Edges[0], graph.Edges[1]
+		a, b := l.Edges[0], l.Edges[1]
 		if slices.Equal(a.Path, b.Path) {
 			t.Errorf("%s: loops share the route %v", name, a.Path)
 		}
-		if gap := absLength(a.LabelPos.Y - b.LabelPos.Y); gap < a.LabelRadius.Y+b.LabelRadius.Y {
-			t.Errorf("%s: labels at %v and %v overlap", name, a.LabelPos, b.LabelPos)
+		if gap := absLength(a.LabelCenter.Y - b.LabelCenter.Y); gap < (a.LabelSize.Y+b.LabelSize.Y)/2 {
+			t.Errorf("%s: labels at %v and %v overlap", name, a.LabelCenter, b.LabelCenter)
 		}
 	}
 }
 
 func absLength(v layout.Length) layout.Length { return max(v, -v) }
+
+// algorithms lays out a graph with each algorithm and default options
+var algorithms = map[string]func(*layout.Graph) (*layout.Layout, error){
+	"hierarchical": func(graph *layout.Graph) (*layout.Layout, error) {
+		return layout.Hierarchical(graph, layout.Options{})
+	},
+	"force": func(graph *layout.Graph) (*layout.Layout, error) {
+		return layout.Force(graph, layout.ForceOptions{})
+	},
+}

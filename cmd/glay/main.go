@@ -136,20 +136,20 @@ func main() {
 		}
 	}
 
-	var write func(io.Writer, *layout.Graph) error
+	var write func(io.Writer, *layout.Layout) error
 	switch *outformat {
 	case "svg":
 		write = svg.Write
 	case "dot":
-		write = func(w io.Writer, graph *layout.Graph) error { return dot.Write(w, graph) }
+		write = func(w io.Writer, l *layout.Layout) error { return dot.Write(w, l) }
 	case "json":
 		write = json.Write
 	case "txt", "text":
 		write = text.Write
 	case "graphml":
-		write = func(w io.Writer, graph *layout.Graph) error { return graphml.Write(w, graph) }
+		write = func(w io.Writer, l *layout.Layout) error { return graphml.Write(w, l.Graph) }
 	case "ans", "ansi":
-		write = func(w io.Writer, graph *layout.Graph) error { return text.WriteColor(w, graph, textOpts) }
+		write = func(w io.Writer, l *layout.Layout) error { return text.WriteColor(w, l, textOpts) }
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)
@@ -247,10 +247,6 @@ func main() {
 	}
 
 	// layout
-	switch *outformat {
-	case "txt", "text", "ans", "ansi":
-		graph.ForText = true
-	}
 	var opts layout.Options
 	switch *quality {
 	case "":
@@ -272,11 +268,16 @@ func main() {
 		errorf("unknown alignment %q", *align)
 		os.Exit(1)
 	}
+	switch *outformat {
+	case "txt", "text", "ans", "ansi":
+		opts.ForText = true
+	}
+	var result *layout.Layout
 	switch *algorithm {
 	case "hierarchical":
-		err = layout.HierarchicalWith(graph, opts)
+		result, err = layout.Hierarchical(graph, opts)
 	case "force":
-		err = layout.Force(graph)
+		result, err = layout.Force(graph, layout.ForceOptions{ForText: opts.ForText})
 	default:
 		err = fmt.Errorf("unknown algorithm %q", *algorithm)
 	}
@@ -301,7 +302,7 @@ func main() {
 		out = file
 	}
 
-	err = write(out, graph)
+	err = write(out, result)
 
 	if err != nil {
 		errorf("writing %q failed: %v", output, err)

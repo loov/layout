@@ -11,16 +11,22 @@ import (
 // undirected and cyclic graphs where ranks make no sense. Edges are drawn
 // as straight segments between node boundaries.
 //
-// It sets Node.Center and Edge.Path and fails when an edge refers to a
-// node that is not part of the graph.
-func Force(graphdef *Graph) error {
-	if err := graphdef.validate(); err != nil {
-		return err
+// The graph is not modified. It fails when an edge refers to a node that
+// is not part of the graph.
+func Force(graph *Graph, opts ForceOptions) (*Layout, error) {
+	if err := graph.validate(); err != nil {
+		return nil, err
 	}
-	work := newWorkGraph(graphdef)
+	work := newWorkGraph(graph)
+	work.ForText = opts.ForText
 	force(work)
-	work.copyBack()
-	return nil
+	return work.result(), nil
+}
+
+// ForceOptions tunes the force-directed layout.
+type ForceOptions struct {
+	// ForText lays the graph out for format/text, see Options.ForText.
+	ForText bool
 }
 
 // force lays out the working copy of a validated graph.
@@ -160,9 +166,6 @@ func force(graph *lgraph) {
 	}
 	for _, edge := range graph.Edges {
 		edge.Path, edge.LabelPos = nil, Vector{}
-	}
-	for _, cluster := range graph.Clusters {
-		cluster.TopLeft, cluster.BottomRight = Vector{}, Vector{}
 	}
 	layoutPinned(graph)
 }

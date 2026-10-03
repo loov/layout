@@ -14,10 +14,11 @@ func TestRankDirMargins(t *testing.T) {
 		graph := layout.NewDigraph()
 		graph.RankDir = dir
 		graph.Edge("a", "this is a very very very long label node")
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		return graph.Bounds()
+		return l.Bounds()
 	}
 	near := func(a, b layout.Vector) bool {
 		return math.Abs(float64(a.X-b.X)) < 1e-3 && math.Abs(float64(a.Y-b.Y)) < 1e-3
@@ -44,19 +45,21 @@ func TestRankDirDuplicateEdge(t *testing.T) {
 		edge := graph.Edge("a", "b")
 		edge.Label = "label"
 		graph.AddEdge(edge)
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		inside := func(node *layout.Node, p layout.Vector) bool {
+		inside := func(node layout.NodeBox, p layout.Vector) bool {
 			const tolerance = 0.01
 			return p.X > node.Left()-tolerance && p.X < node.Right()+tolerance &&
 				p.Y > node.Top()-tolerance && p.Y < node.Bottom()+tolerance
 		}
-		if !inside(edge.From, edge.Path[0]) || !inside(edge.To, edge.Path[len(edge.Path)-1]) {
-			t.Errorf("%v: path %v does not connect %v at %v and %v at %v", dir, edge.Path, edge.From, edge.From.Center, edge.To, edge.To.Center)
+		from, to, path := l.Node(edge.From), l.Node(edge.To), l.Edge(edge)
+		if !inside(from, path.Path[0]) || !inside(to, path.Path[len(path.Path)-1]) {
+			t.Errorf("%v: path %v does not connect %v at %v and %v at %v", dir, path.Path, edge.From, from.Center, edge.To, to.Center)
 		}
-		min, max := graph.Bounds()
-		if pos := edge.LabelPos; pos.X < min.X || pos.X > max.X || pos.Y < min.Y || pos.Y > max.Y {
+		min, max := l.Bounds()
+		if pos := path.LabelCenter; pos.X < min.X || pos.X > max.X || pos.Y < min.Y || pos.Y > max.Y {
 			t.Errorf("%v: label at %v outside the drawing %v-%v", dir, pos, min, max)
 		}
 	}
@@ -73,14 +76,16 @@ func TestRankDirRepeat(t *testing.T) {
 		graph.Edge("e", "f")
 		var first []layout.Vector
 		for run := range 3 {
-			if err := layout.Hierarchical(graph); err != nil {
+			l, err := layout.Hierarchical(graph, layout.Options{})
+			if err != nil {
 				t.Fatal(err)
 			}
 			for i, edge := range graph.Edges {
+				pos := l.Edges[i].LabelCenter
 				if run == 0 {
-					first = append(first, edge.LabelPos)
-				} else if edge.LabelPos != first[i] {
-					t.Errorf("%v run %d: %v label at %v, was %v", dir, run, edge, edge.LabelPos, first[i])
+					first = append(first, pos)
+				} else if pos != first[i] {
+					t.Errorf("%v run %d: %v label at %v, was %v", dir, run, edge, pos, first[i])
 				}
 			}
 		}

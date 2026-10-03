@@ -16,22 +16,25 @@ func TestFlatEdgesAvoidNodes(t *testing.T) {
 	graph.Edge("c", "a")
 	graph.Edge("b", "c")
 	graph.Edge("d", "b")
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	for _, edge := range graph.Edges {
-		for i := 0; i+1 < len(edge.Path); i++ {
-			p, q := edge.Path[i], edge.Path[i+1]
+		path := l.Edge(edge).Path
+		for i := 0; i+1 < len(path); i++ {
+			p, q := path[i], path[i+1]
 			for _, node := range graph.Nodes {
 				if node == edge.From || node == edge.To {
 					continue
 				}
+				box := l.Node(node)
 				const steps = 64
 				for s := range steps + 1 {
 					f := layout.Length(s) / steps
 					x, y := p.X+(q.X-p.X)*f, p.Y+(q.Y-p.Y)*f
-					if x > node.Left() && x < node.Right() && y > node.Top() && y < node.Bottom() {
-						t.Fatalf("%v passes through %v: %v", edge, node, edge.Path)
+					if x > box.Left() && x < box.Right() && y > box.Top() && y < box.Bottom() {
+						t.Fatalf("%v passes through %v: %v", edge, node, path)
 					}
 				}
 			}
@@ -47,15 +50,17 @@ func TestFlatArcsStack(t *testing.T) {
 	for _, e := range [][2]string{{"a", "d"}, {"c", "a"}, {"b", "c"}, {"d", "b"}} {
 		graph.Edge(e[0], e[1])
 	}
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	heights := map[layout.Length]string{}
 	for _, edge := range graph.Edges {
-		if len(edge.Path) != 4 {
+		path := l.Edge(edge).Path
+		if len(path) != 4 {
 			continue // adjacent nodes, no arc
 		}
-		y := edge.Path[1].Y
+		y := path[1].Y
 		if other, ok := heights[y]; ok {
 			t.Errorf("arcs of %v and %s both run at y %v", edge, other, y)
 		}

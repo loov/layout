@@ -12,11 +12,12 @@ func TestRoundTrip(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.Edge("A", "B").Label = "x"
 	graph.Edge("A", "C")
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
 		t.Fatal(err)
 	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	var got Graph
@@ -31,10 +32,14 @@ func TestRoundTrip(t *testing.T) {
 func TestNegativePositions(t *testing.T) {
 	graph := layout.NewDigraph()
 	a, b := graph.Node("a"), graph.Node("b")
-	a.Center, b.Center = layout.Vector{X: -100, Y: -50}, layout.Vector{X: 50, Y: 80}
-	a.Radius, b.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
+	a.Pos, b.Pos = &layout.Vector{X: -100, Y: -50}, &layout.Vector{X: 50, Y: 80}
+	a.MinSize, b.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	var buf bytes.Buffer
-	if err := Write(&buf, graph); err != nil {
+	if err := Write(&buf, l); err != nil {
 		t.Fatal(err)
 	}
 	var got struct{ X, Y, Width, Height float64 }

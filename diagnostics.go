@@ -68,14 +68,15 @@ func (diag Diagnostics) String() string {
 		diag.JaggedEdges, diag.BendyEdges, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area)
 }
 
-// Diagnose computes Diagnostics for a laid out graph.
-func Diagnose(graph *Graph) Diagnostics {
+// Diagnose computes Diagnostics for a layout.
+func Diagnose(l *Layout) Diagnostics {
+	graph := l.work()
 	var diag Diagnostics
 	const eps = 1e-3
 
 	type segment struct {
 		a, b Vector
-		edge *Edge
+		edge *ledge
 	}
 	var segments []segment
 	for _, edge := range graph.Edges {
@@ -88,7 +89,7 @@ func Diagnose(graph *Graph) Diagnostics {
 		}
 	}
 
-	boxes := func(node *Node) (tl, br Vector) {
+	boxes := func(node *lnode) (tl, br Vector) {
 		return Vector{node.Left(), node.Top()}, Vector{node.Right(), node.Bottom()}
 	}
 	overlap := func(tl1, br1, tl2, br2 Vector) bool {
@@ -107,8 +108,8 @@ func Diagnose(graph *Graph) Diagnostics {
 	}
 
 	type edgeNode struct {
-		edge *Edge
-		node *Node
+		edge *ledge
+		node *lnode
 	}
 	through := map[edgeNode]bool{}
 	near := map[edgeNode]bool{}
@@ -172,7 +173,7 @@ func Diagnose(graph *Graph) Diagnostics {
 		// the other; touching at an end does not count
 		return d1*d2 < -eps && d3*d4 < -eps, false
 	}
-	type edgePair struct{ a, b *Edge }
+	type edgePair struct{ a, b *ledge }
 	overlaps := map[edgePair]bool{}
 	parallel := map[edgePair]bool{}
 	for i, p := range segments {
@@ -223,7 +224,7 @@ func Diagnose(graph *Graph) Diagnostics {
 			return inner, Vector{tip.X + (inner.X-tip.X)*0.05, tip.Y + (inner.Y-tip.Y)*0.05}
 		}
 		// the tip itself inside the node counts too
-		inside := func(p Vector, node *Node) bool { return segmentHitsNode(p, p, node, -0.5) }
+		inside := func(p Vector, node *lnode) bool { return segmentHitsNode(p, p, node, -0.5) }
 		if a, b := trim(path[1], path[0]); segmentHitsNode(a, b, edge.From, -eps) || inside(path[0], edge.From) {
 			diag.Shafts++
 			diag.Details = append(diag.Details, fmt.Sprintf("edge %v starts inside node %v", edge, edge.From))
@@ -236,7 +237,7 @@ func Diagnose(graph *Graph) Diagnostics {
 
 	// ends closer than an arrowhead stack their arrowheads
 	type endpoint struct {
-		edge *Edge
+		edge *ledge
 		p    Vector
 	}
 	var ends []endpoint
@@ -333,7 +334,7 @@ func Diagnose(graph *Graph) Diagnostics {
 
 	type box struct{ tl, br Vector }
 	var labels []box
-	var labelEdges []*Edge
+	var labelEdges []*ledge
 	for _, edge := range graph.Edges {
 		if edge.Label == "" {
 			continue
@@ -369,7 +370,7 @@ func Diagnose(graph *Graph) Diagnostics {
 
 // segmentHitsNode reports whether segment ab enters the node's outline
 // grown by pad (negative shrinks, so touching does not count).
-func segmentHitsNode(a, b Vector, node *Node, pad Length) bool {
+func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	switch node.Shape {
 	case Box, Square, Record, None:
 		return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})

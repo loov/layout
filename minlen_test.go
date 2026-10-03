@@ -14,10 +14,11 @@ func TestMinLen(t *testing.T) {
 		graph := layout.NewDigraph()
 		edge := graph.Edge("A", "B")
 		edge.MinLen = minlen
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{})
+		if err != nil {
 			t.Fatal(err)
 		}
-		return graph.NodeByID["B"].Center.Y - graph.NodeByID["A"].Center.Y
+		return l.Node(graph.NodeByID["B"]).Center.Y - l.Node(graph.NodeByID["A"]).Center.Y
 	}
 
 	one := span(0) // default

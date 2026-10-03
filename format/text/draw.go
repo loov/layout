@@ -11,9 +11,9 @@ import (
 )
 
 // drawCluster draws the dashed frame and fill of a cluster
-func (c *canvas) drawCluster(cluster *layout.Cluster) {
-	x0, y0 := c.col(cluster.TopLeft.X), c.row(cluster.TopLeft.Y)
-	x1, y1 := c.col(cluster.BottomRight.X), c.row(cluster.BottomRight.Y)
+func (c *canvas) drawCluster(cluster *layout.Cluster, box layout.ClusterBox) {
+	x0, y0 := c.col(box.TopLeft.X), c.row(box.TopLeft.Y)
+	x1, y1 := c.col(box.BottomRight.X), c.row(box.BottomRight.Y)
 	if cluster.Label != "" {
 		// the label fits, spaced, between the corners; estimates of its
 		// width can fall a few cells short
@@ -34,8 +34,9 @@ const peripheryGap = 4 * layout.Point
 // solid so that edges don't draw over it; an invisible node only keeps
 // its box clear
 func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
-	if node.Shape == layout.PointShape {
-		x, y := c.col(node.Center.X), c.row(node.Center.Y)
+	box := c.l.Node(node)
+	if box.Shape == layout.PointShape {
+		x, y := c.col(box.Center.X), c.row(box.Center.Y)
 		c.boxes[node] = [4]int{x, y, x, y}
 		if node.Invisible {
 			return
@@ -53,11 +54,11 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	// a double outline takes the cells of a single one, so the room the
 	// layout reserves for extra outlines stays outside the box
 	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
-	x0, y0 := c.col(node.Left()+inset), c.row(node.Top()+inset)
-	x1, y1 := c.col(node.Right()-inset), c.row(node.Bottom()-inset)
-	lines := strings.Split(draw.PlainLabel(node.DefaultLabel()), "\n")
+	x0, y0 := c.col(box.Left()+inset), c.row(box.Top()+inset)
+	x1, y1 := c.col(box.Right()-inset), c.row(box.Bottom()-inset)
+	lines := strings.Split(draw.PlainLabel(box.Label), "\n")
 	// the box must hold the label and have distinct edges
-	if node.Shape != layout.Record {
+	if box.Shape != layout.Record {
 		for _, line := range lines {
 			x1 = max(x1, x0+draw.Columns(line)+1)
 		}
@@ -65,8 +66,8 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
 	var rec *draw.Record
-	if node.Shape == layout.Record {
-		rec = layoutRecord(graph, node)
+	if box.Shape == layout.Record {
+		rec = layoutRecord(graph, node, box)
 		y1 = max(y1, y0+draw.RecordRows(rec)+1)
 	} else {
 		y1 = max(y1, y0+len(lines)+1)
@@ -92,11 +93,11 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	style := "╭╮╰╯─│"
 	switch {
-	case node.Shape == layout.None:
+	case box.Shape == layout.None:
 		style = "      "
 	case node.Peripheries > 1:
 		style = "╔╗╚╝═║" // like double circles, of any shape
-	case node.Shape == layout.Box, node.Shape == layout.Square, node.Shape == layout.Record:
+	case box.Shape == layout.Box, box.Shape == layout.Square, box.Shape == layout.Record:
 		style = "┌┐└┘─│"
 	}
 	c.rect(x0, y0, x1, y1, style)
@@ -104,10 +105,10 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		// fields at their share of the rows, which can be more than the
 		// node rounds to
 		inside := func(v layout.Length) int {
-			share := float64((v - node.Top()) / (node.Bottom() - node.Top()))
+			share := float64((v - box.Top()) / (box.Bottom() - box.Top()))
 			return y0 + int(math.Round(share*float64(y1-y0)))
 		}
-		c.record(rec, node.TopLeft(), c.col, inside)
+		c.record(rec, box.TopLeft(), c.col, inside)
 		return
 	}
 	top := (y0 + y1 + 1 - len(lines)) / 2
@@ -121,12 +122,12 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 
 // edgeCells returns the cells of the path of an edge, with its ends on
 // the borders of the node boxes; the nodes must be drawn first
-func (c *canvas) edgeCells(edge *layout.Edge) [][2]int {
-	if len(edge.Path) < 2 {
+func (c *canvas) edgeCells(edge *layout.Edge, path []layout.Vector) [][2]int {
+	if len(path) < 2 {
 		return nil
 	}
-	cells := make([][2]int, len(edge.Path))
-	for i, p := range edge.Path {
+	cells := make([][2]int, len(path))
+	for i, p := range path {
 		cells[i] = [2]int{c.col(p.X), c.row(p.Y)}
 	}
 	last := len(cells) - 1
@@ -185,7 +186,7 @@ func (c *canvas) across(cells [][2]int, from, to *layout.Node) [][2]int {
 // instead, so that edges fanning out of a dot leave it on separate sides
 // rather than sharing a run
 func (c *canvas) atDot(cells [][2]int, i, j, k int, node *layout.Node) {
-	if node.Shape != layout.PointShape {
+	if c.l.Node(node).Shape != layout.PointShape {
 		return
 	}
 	b := c.boxes[node]
@@ -315,11 +316,10 @@ func spreadRows(want []int, fixed []bool, lo, hi int) []int {
 }
 
 // drawEdge draws an edge along its cells, with its end markers
-func (c *canvas) drawEdge(edge *layout.Edge, cells [][2]int) {
+func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]int) {
 	if len(cells) < 2 {
 		return
 	}
-	path := edge.Path
 	last := len(cells) - 1
 	c.edge++
 	c.ink = rgb(edge.LineColor)
@@ -363,7 +363,7 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 // join draws the box border of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
-	if node.Shape == layout.None || node.Shape == layout.PointShape || node.Invisible {
+	if c.l.Node(node).Shape == layout.None || c.l.Node(node).Shape == layout.PointShape || node.Invisible {
 		return // no border to join
 	}
 	if end[0] < 0 || end[0] >= c.w || end[1] < 0 || end[1] >= c.h {
@@ -392,12 +392,13 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" && !edge.Invisible {
+			at := c.l.Edges[i]
 			lines := strings.Split(draw.PlainLabel(edge.Label), "\n")
 			w := 0
 			for _, line := range lines {
 				w = max(w, draw.Columns(line))
 			}
-			x, y := c.col(edge.LabelPos.X-edge.LabelRadius.X), c.row(edge.LabelPos.Y)-(len(lines)-1)/2
+			x, y := c.col(at.LabelCenter.X-at.LabelSize.X/2), c.row(at.LabelCenter.Y)-(len(lines)-1)/2
 			x, y = c.nearEdge(x, y, w, len(lines), paths[i])
 			c.font = rgb(edge.FontColor)
 			for k, line := range lines {
@@ -405,10 +406,11 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 			}
 		}
 	}
-	for _, cluster := range graph.Clusters {
+	for i, cluster := range graph.Clusters {
 		if cluster.Label != "" && !cluster.Invisible {
 			c.font = 0
-			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")+" ")
+			box := c.l.Clusters[i]
+			c.text(c.col(box.TopLeft.X)+1, c.row(box.TopLeft.Y), " "+strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")+" ")
 		}
 	}
 }

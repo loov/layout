@@ -46,8 +46,8 @@ func TestANSI16(t *testing.T) {
 func TestBackground(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.Edge("A", "B")
-	graph.ForText = true
-	if err := layout.Hierarchical(graph); err != nil {
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct {
@@ -58,7 +58,7 @@ func TestBackground(t *testing.T) {
 		{Options{Background: layout.RGB{}, Palette: TrueColor}, "\x1b[39;48;2;0;0;0m"},
 	} {
 		var buf bytes.Buffer
-		if err := WriteColor(&buf, graph, tc.opts); err != nil {
+		if err := WriteColor(&buf, l, tc.opts); err != nil {
 			t.Fatal(err)
 		}
 		lines := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")

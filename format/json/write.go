@@ -71,37 +71,41 @@ type Cluster struct {
 }
 
 // Convert builds the JSON shape of a laid out graph.
-func Convert(graph *layout.Graph) Graph {
-	lo, hi := graph.Bounds()
+func Convert(l *layout.Layout) Graph {
+	graph := l.Graph
+	lo, hi := l.Bounds()
 	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
 	out := Graph{ID: graph.ID, Directed: graph.Directed,
 		X: float64(lo.X), Y: float64(lo.Y),
 		Width:  float64(hi.X + graph.NodePadding - lo.X),
 		Height: float64(hi.Y + graph.RowPadding - lo.Y),
 		Nodes:  []Node{}, Edges: []Edge{}}
-	for _, node := range graph.Nodes {
+	for i, node := range graph.Nodes {
+		box := l.Nodes[i]
 		out.Nodes = append(out.Nodes, Node{
-			ID: node.ID, Label: node.Label, Shape: string(node.Shape),
-			X: float64(node.Center.X), Y: float64(node.Center.Y),
-			Width: float64(2 * node.Radius.X), Height: float64(2 * node.Radius.Y),
+			ID: node.ID, Label: node.Label, Shape: string(box.Shape),
+			X: float64(box.Center.X), Y: float64(box.Center.Y),
+			Width: float64(box.Size.X), Height: float64(box.Size.Y),
 			Invisible: node.Invisible,
 		})
 	}
-	for _, edge := range graph.Edges {
+	for i, edge := range graph.Edges {
+		at := l.Edges[i]
 		e := Edge{From: edge.From.ID, To: edge.To.ID, Directed: edge.Directed, Label: edge.Label, Path: [][2]float64{}, Invisible: edge.Invisible}
-		for _, p := range edge.Path {
+		for _, p := range at.Path {
 			e.Path = append(e.Path, [2]float64{float64(p.X), float64(p.Y)})
 		}
 		if edge.Label != "" {
-			e.LabelPos = &[2]float64{float64(edge.LabelPos.X), float64(edge.LabelPos.Y)}
+			e.LabelPos = &[2]float64{float64(at.LabelCenter.X), float64(at.LabelCenter.Y)}
 		}
 		out.Edges = append(out.Edges, e)
 	}
-	for _, cluster := range graph.Clusters {
+	for i, cluster := range graph.Clusters {
+		box := l.Clusters[i]
 		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
-			X: float64(cluster.TopLeft.X), Y: float64(cluster.TopLeft.Y),
-			Width:  float64(cluster.BottomRight.X - cluster.TopLeft.X),
-			Height: float64(cluster.BottomRight.Y - cluster.TopLeft.Y)}
+			X: float64(box.TopLeft.X), Y: float64(box.TopLeft.Y),
+			Width:  float64(box.BottomRight.X - box.TopLeft.X),
+			Height: float64(box.BottomRight.Y - box.TopLeft.Y)}
 		if cluster.Parent != nil {
 			c.Parent = cluster.Parent.ID
 		}
@@ -114,8 +118,8 @@ func Convert(graph *layout.Graph) Graph {
 }
 
 // Write writes the laid out graph as indented JSON.
-func Write(w io.Writer, graph *layout.Graph) error {
+func Write(w io.Writer, l *layout.Layout) error {
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
-	return enc.Encode(Convert(graph))
+	return enc.Encode(Convert(l))
 }

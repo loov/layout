@@ -6,8 +6,8 @@ import (
 	"github.com/loov/layout/internal/draw"
 )
 
-// Node is a vertex in a graph. Radius is half the node size; Center is
-// filled in by layouting.
+// Node is a vertex in a graph. Layout leaves it unchanged; the computed
+// position and size are in Layout.Nodes.
 type Node struct {
 	ID string
 
@@ -29,12 +29,9 @@ type Node struct {
 
 	Shape     Shape
 	FillColor Color
-	// Radius is the minimum half size; the label can grow it unless
-	// FixedSize is set
-	Radius Vector
-	// pad is the padding layouting added to Radius, for extra peripheries
-	// and packed edge ends, removed again before the next layout
-	pad       Vector
+	// MinSize is the minimum width and height; the label can grow the
+	// node unless FixedSize is set
+	MinSize   Vector
 	FixedSize bool
 	// Image is a URL drawn inside the node
 	Image string
@@ -42,8 +39,10 @@ type Node struct {
 	// drawing, like Graphviz style=invis.
 	Invisible bool
 
-	// computed in layouting
-	Center Vector
+	// Pos pins the center of the node. When every node of the graph has
+	// a Pos, layout keeps them and only routes the edges that have no
+	// Pos of their own, like dot -n; otherwise Pos is ignored.
+	Pos *Vector
 }
 
 // NewNode creates a node with the given id and default styling.
@@ -94,32 +93,32 @@ func (graph *Graph) lineWidth(fontName string, fontSize Length) func(line string
 }
 
 // TopLeft returns the top left corner of the node bounds.
-func (node *Node) TopLeft() Vector { return Vector{node.Left(), node.Top()} }
+func (node *lnode) TopLeft() Vector { return Vector{node.Left(), node.Top()} }
 
 // BottomRight returns the bottom right corner of the node bounds.
-func (node *Node) BottomRight() Vector { return Vector{node.Right(), node.Bottom()} }
+func (node *lnode) BottomRight() Vector { return Vector{node.Right(), node.Bottom()} }
 
 // TopCenter returns the middle of the top edge of the node bounds.
-func (node *Node) TopCenter() Vector { return Vector{node.Center.X, node.Top()} }
+func (node *lnode) TopCenter() Vector { return Vector{node.Center.X, node.Top()} }
 
 // BottomCenter returns the middle of the bottom edge of the node bounds.
-func (node *Node) BottomCenter() Vector { return Vector{node.Center.X, node.Bottom()} }
+func (node *lnode) BottomCenter() Vector { return Vector{node.Center.X, node.Bottom()} }
 
 // Left returns the x coordinate of the left side of the node bounds.
-func (node *Node) Left() Length { return node.Center.X - node.Radius.X }
+func (node *lnode) Left() Length { return node.Center.X - node.Radius.X }
 
 // Top returns the y coordinate of the top side of the node bounds.
-func (node *Node) Top() Length { return node.Center.Y - node.Radius.Y }
+func (node *lnode) Top() Length { return node.Center.Y - node.Radius.Y }
 
 // Right returns the x coordinate of the right side of the node bounds.
-func (node *Node) Right() Length { return node.Center.X + node.Radius.X }
+func (node *lnode) Right() Length { return node.Center.X + node.Radius.X }
 
 // Bottom returns the y coordinate of the bottom side of the node bounds.
-func (node *Node) Bottom() Length { return node.Center.Y + node.Radius.Y }
+func (node *lnode) Bottom() Length { return node.Center.Y + node.Radius.Y }
 
 // CompassPoint returns the point on the node outline at the compass
 // direction, or the center for Center and CompassAuto.
-func (node *Node) CompassPoint(c Compass) Vector {
+func (node *lnode) CompassPoint(c Compass) Vector {
 	var dir Vector
 	switch c {
 	case North:
@@ -147,7 +146,7 @@ func (node *Node) CompassPoint(c Compass) Vector {
 // outlineAlong returns where the line from start, inside the node,
 // towards p leaves the node's outline, or the outline towards p from the
 // center when start is outside.
-func (node *Node) outlineAlong(start, p Vector) Vector {
+func (node *lnode) outlineAlong(start, p Vector) Vector {
 	inside := func(v Vector) bool {
 		dx, dy := float64(v.X-node.Center.X), float64(v.Y-node.Center.Y)
 		rx, ry := float64(node.Radius.X), float64(node.Radius.Y)
@@ -174,7 +173,7 @@ func (node *Node) outlineAlong(start, p Vector) Vector {
 
 // Boundary returns the point on the node outline where the ray from the
 // center towards p exits the node.
-func (node *Node) Boundary(p Vector) Vector {
+func (node *lnode) Boundary(p Vector) Vector {
 	dx, dy := float64(p.X-node.Center.X), float64(p.Y-node.Center.Y)
 	if dx == 0 && dy == 0 {
 		return node.Center

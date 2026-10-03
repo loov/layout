@@ -54,7 +54,8 @@ type canvas struct {
 	w, h   int
 	cellW  layout.Length // size of a cell in graph units
 	cellH  layout.Length
-	origin layout.Vector           // graph coordinates of the top left cell
+	origin layout.Vector // graph coordinates of the top left cell
+	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	cells  []rune
 	fg, bg []uint32 // colors per cell, see rgb
@@ -71,8 +72,9 @@ type canvas struct {
 
 // newCanvas returns an empty canvas that fits the graph. One character
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
-func newCanvas(graph *layout.Graph) *canvas {
-	c := &canvas{cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}}
+func newCanvas(l *layout.Layout) *canvas {
+	graph := l.Graph
+	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}}
 	if c.cellW <= 0 {
 		c.cellW = 8
 	}
@@ -81,23 +83,25 @@ func newCanvas(graph *layout.Graph) *canvas {
 	}
 	// the drawing can reach before the origin, with labels nudged there
 	// or pinned and force layouts; keep the usual margin otherwise
-	topLeft, size := graph.Bounds()
+	topLeft, size := l.Bounds()
 	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
-	for _, edge := range graph.Edges {
+	for i, edge := range graph.Edges {
+		path := l.Edges[i]
 		for _, line := range strings.Split(draw.PlainLabel(edge.Label), "\n") {
-			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+draw.Columns(line)+1)
+			c.w = max(c.w, c.col(path.LabelCenter.X-path.LabelSize.X/2)+draw.Columns(line)+1)
 		}
 	}
-	for _, node := range graph.Nodes {
+	for i := range graph.Nodes {
+		box := l.Nodes[i]
 		// boxes widen to their labels, see drawNode
-		label := draw.PlainLabel(node.DefaultLabel())
-		c.w = max(c.w, c.col(node.Left())+draw.TextColumns(label)+2)
-		c.h = max(c.h, c.row(node.Top())+strings.Count(label, "\n")+3)
+		label := draw.PlainLabel(box.Label)
+		c.w = max(c.w, c.col(box.Left())+draw.TextColumns(label)+2)
+		c.h = max(c.h, c.row(box.Top())+strings.Count(label, "\n")+3)
 	}
-	for _, cluster := range graph.Clusters {
+	for i, cluster := range graph.Clusters {
 		if cluster.Label != "" {
-			c.w = max(c.w, c.col(cluster.TopLeft.X)+clusterLabelWidth(cluster)+1)
+			c.w = max(c.w, c.col(l.Clusters[i].TopLeft.X)+clusterLabelWidth(cluster)+1)
 		}
 	}
 	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
@@ -390,10 +394,10 @@ func sign(v int) int {
 
 // layoutRecord computes the record fields of a node, measuring text as
 // the layout did
-func layoutRecord(graph *layout.Graph, node *layout.Node) *draw.Record {
+func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *draw.Record {
 	var lineWidth func(string) float64
 	if graph.MeasureText != nil {
-		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, node.FontSize).X) }
+		lineWidth = func(line string) float64 { return 2 * float64(graph.MeasureText(line, node.FontName, box.FontSize).X) }
 	}
-	return draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y), float64(graph.LineHeight), float64(node.FontSize), lineWidth)
+	return draw.LayoutRecord(box.Label, float64(box.Size.X), float64(box.Size.Y), float64(graph.LineHeight), float64(box.FontSize), lineWidth)
 }

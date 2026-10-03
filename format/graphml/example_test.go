@@ -38,10 +38,11 @@ func ExampleParseString() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := layout.Hierarchical(graphs[0]); err != nil {
+	l, err := layout.Hierarchical(graphs[0], layout.Options{})
+	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(graphs[0].Node("b").Center)
+	fmt.Println(l.Node(graphs[0].Node("b")).Center)
 	// Output:
 	// {38.96 96}
 }
@@ -51,7 +52,7 @@ func ExampleParseFile() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := layout.Hierarchical(graphs[0]); err != nil {
+	if _, err := layout.Hierarchical(graphs[0], layout.Options{}); err != nil {
 		log.Fatal(err)
 	}
 }

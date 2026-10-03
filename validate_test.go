@@ -17,22 +17,21 @@ func TestValidateNumbers(t *testing.T) {
 		"node padding":  func(g *layout.Graph) { g.NodePadding = nan },
 		"row padding":   func(g *layout.Graph) { g.RowPadding = inf },
 		"edge padding":  func(g *layout.Graph) { g.EdgePadding = nan },
-		"node radius":   func(g *layout.Graph) { g.Nodes[0].Radius.X = inf },
+		"node size":     func(g *layout.Graph) { g.Nodes[0].MinSize.X = inf },
 		"node font":     func(g *layout.Graph) { g.Nodes[0].FontSize = nan },
 		"node line":     func(g *layout.Graph) { g.Nodes[0].LineWidth = inf },
-		"pinned center": func(g *layout.Graph) { g.Pinned = true; g.Nodes[0].Center.Y = nan },
-		"pinned path":   func(g *layout.Graph) { g.Pinned = true; g.Edges[0].Path = []layout.Vector{{0, 0}, {inf, 0}} },
-		"pinned label":  func(g *layout.Graph) { g.Pinned = true; g.Edges[0].LabelPos.X = nan },
-		"pinned cluster": func(g *layout.Graph) {
-			g.Pinned = true
-			g.Clusters = []*layout.Cluster{{Nodes: g.Nodes, TopLeft: layout.Vector{-inf, -inf}, BottomRight: layout.Vector{inf, inf}}}
-		},
-		"edge weight": func(g *layout.Graph) { g.Edges[0].Weight = math.NaN() },
-		"edge font":   func(g *layout.Graph) { g.Edges[0].FontSize = inf },
-		"edge line":   func(g *layout.Graph) { g.Edges[0].LineWidth = nan },
-		"edge minlen": func(g *layout.Graph) { g.Edges[0].MinLen = 100000000 },
+		"pinned center": func(g *layout.Graph) { g.Nodes[0].Pos = &layout.Vector{X: 0, Y: nan} },
+		"pinned path":   func(g *layout.Graph) { g.Edges[0].Pos = []layout.Vector{{0, 0}, {inf, 0}} },
+		"pinned label":  func(g *layout.Graph) { g.Edges[0].LabelPos = &layout.Vector{X: nan} },
+		"edge weight":   func(g *layout.Graph) { g.Edges[0].Weight = math.NaN() },
+		"edge font":     func(g *layout.Graph) { g.Edges[0].FontSize = inf },
+		"edge line":     func(g *layout.Graph) { g.Edges[0].LineWidth = nan },
+		"edge minlen":   func(g *layout.Graph) { g.Edges[0].MinLen = 100000000 },
 	} {
-		for _, lay := range []func(*layout.Graph) error{layout.Hierarchical, layout.Force} {
+		for _, lay := range []func(*layout.Graph) error{
+			func(g *layout.Graph) error { _, err := layout.Hierarchical(g, layout.Options{}); return err },
+			func(g *layout.Graph) error { _, err := layout.Force(g, layout.ForceOptions{}); return err },
+		} {
 			graph := layout.NewDigraph()
 			graph.Edge("a", "b")
 			spoil(graph)

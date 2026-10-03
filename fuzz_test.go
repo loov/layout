@@ -78,24 +78,25 @@ func FuzzHierarchical(f *testing.F) {
 			}
 		}
 		graph.Clusters = clusters
-		if err := layout.Hierarchical(graph); err != nil {
+		l, err := layout.Hierarchical(graph, layout.Options{})
+		if err != nil {
 			return // validation errors are fine
 		}
-		for _, node := range graph.Nodes {
-			if !finite(node.Center) {
-				t.Fatalf("node %v at %v", node.ID, node.Center)
+		for i, node := range graph.Nodes {
+			if !finite(l.Nodes[i].Center) {
+				t.Fatalf("node %v at %v", node.ID, l.Nodes[i].Center)
 			}
 		}
-		for _, edge := range graph.Edges {
-			for _, p := range edge.Path {
+		for i, edge := range graph.Edges {
+			for _, p := range l.Edges[i].Path {
 				if !finite(p) {
-					t.Fatalf("edge %v -> %v path %v", edge.From.ID, edge.To.ID, edge.Path)
+					t.Fatalf("edge %v -> %v path %v", edge.From.ID, edge.To.ID, l.Edges[i].Path)
 				}
 			}
 		}
-		for _, cluster := range clusters {
-			if !finite(cluster.TopLeft) || !finite(cluster.BottomRight) {
-				t.Fatalf("cluster %v box %v %v", cluster.ID, cluster.TopLeft, cluster.BottomRight)
+		for i, cluster := range clusters {
+			if box := l.Clusters[i]; !finite(box.TopLeft) || !finite(box.BottomRight) {
+				t.Fatalf("cluster %v box %v %v", cluster.ID, box.TopLeft, box.BottomRight)
 			}
 		}
 	})
