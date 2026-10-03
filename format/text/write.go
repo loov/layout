@@ -90,7 +90,7 @@ func write(w io.Writer, graph *layout.Graph, opts *Options) error {
 	for i, edge := range graph.Edges {
 		c.drawEdge(edge, paths[i])
 	}
-	c.drawLabels(graph)
+	c.drawLabels(graph, paths)
 
 	grid := c.grid()
 	grid = carve(grid, " │┃┊┋┆", "▲▼●○", 1)
