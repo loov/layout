@@ -92,4 +92,31 @@ func TestClusterSiblingsDontInterleave(t *testing.T) {
 	checkSiblingClusters(t, graph)
 }
 
+// TestClusterNeighborsAlign checks that two clusters side by side, each
+// pushing the other while lining up its borders, settle at a sane width.
+func TestClusterNeighborsAlign(t *testing.T) {
+	graph := layout.NewDigraph()
+	for _, e := range [][2]string{{"n6", "n0"}, {"n1", "n2"}, {"n7", "n5"}, {"n6", "n1"}, {"n6", "n5"}, {"n5", "n1"}, {"n1", "n5"}, {"n4", "n1"}, {"n7", "n3"}, {"n7", "n2"}, {"n3", "n2"}, {"n1", "n0"}, {"n7", "n0"}, {"n7", "n0"}, {"n4", "n2"}} {
+		graph.AddEdge(layout.NewEdge(graph.Node(e[0]), graph.Node(e[1])))
+	}
+	graph.Clusters = []*layout.Cluster{
+		{ID: "A", Nodes: []*layout.Node{graph.Node("n0"), graph.Node("n2"), graph.Node("n4")}},
+		{ID: "B", Nodes: []*layout.Node{graph.Node("n7"), graph.Node("n5")}},
+	}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	checkSiblingClusters(t, graph)
+	// every node side by side, with room to spare
+	var total Length
+	for _, node := range graph.Nodes {
+		total += 2 * node.Radius.X
+	}
+	for _, cluster := range graph.Clusters {
+		if width := cluster.BottomRight.X - cluster.TopLeft.X; width > total {
+			t.Errorf("cluster %s is %v wide, want at most %v", cluster.ID, width, total)
+		}
+	}
+}
+
 type Length = layout.Length

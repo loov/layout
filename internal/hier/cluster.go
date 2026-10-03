@@ -227,49 +227,105 @@ func orderClusters(graph *Graph) {
 	}
 }
 
-// AlignClusterBorders shifts nodes outward so that every cluster's left
-// borders share one x coordinate and so do its right borders. Must run
-// after positioning.
+// AlignClusterBorders moves every cluster's left borders to the leftmost
+// of them and its right borders to the rightmost, widened on both sides to
+// MinWidth, so that each side shares one x coordinate. Nodes in the way are
+// pushed aside: one pass pushes right and one pushes left, and nodes end
+// up at the mean of both, which keeps the borders aligned and the nodes
+// apart as both passes do. Must run after positioning.
 func AlignClusterBorders(graph *Graph) {
 	if len(graph.Clusters) == 0 {
 		return
 	}
-	graph.assignPos()
-	for range 10 {
-		moved := false
+	type gap struct {
+		to  ID
+		min float32
+	}
+	n := graph.NodeCount()
+	// class merges the borders on one side of a cluster into one position,
+	// which wants to be at target and stays gap.min left of gap.to
+	class := make([]ID, n)
+	target := make([]float32, n)
+	// clusters whose order contradicts another's across ranks can't line
+	// up, they stay as they are
+	stuck := map[*Cluster]bool{}
+	for {
+		for _, node := range graph.Nodes {
+			class[node.ID], target[node.ID] = node.ID, node.Center.X
+		}
+		gaps := make([][]gap, n)
 		for _, cluster := range graph.Clusters {
+			if stuck[cluster] || len(cluster.Left) == 0 {
+				continue
+			}
+			left, right := cluster.Left[0], cluster.Right[0]
 			minLeft, maxRight := float32(math.Inf(1)), float32(math.Inf(-1))
 			for i := range cluster.Left {
+				class[cluster.Left[i].ID], class[cluster.Right[i].ID] = left.ID, right.ID
 				minLeft = min(minLeft, cluster.Left[i].Center.X)
 				maxRight = max(maxRight, cluster.Right[i].Center.X)
 			}
-			if len(cluster.Left) > 0 {
-				// widen to the least width by moving both borders out, so
-				// that the members stay centered
-				width := maxRight + cluster.Right[0].Radius.X - (minLeft - cluster.Left[0].Radius.X)
-				grow := max(0, cluster.MinWidth-width)
-				minLeft, maxRight = minLeft-grow/2, maxRight+grow/2
+			// widen to the least width by moving both borders out, so that
+			// the members stay centered
+			grow := max(0, cluster.MinWidth-(maxRight+right.Radius.X-minLeft+left.Radius.X))
+			target[left.ID], target[right.ID] = minLeft-grow/2, maxRight+grow/2
+			if cluster.MinWidth > 0 {
+				gaps[left.ID] = append(gaps[left.ID], gap{right.ID, cluster.MinWidth - left.Radius.X - right.Radius.X})
 			}
-			for i := range cluster.Left {
-				left, right := cluster.Left[i], cluster.Right[i]
-				layer := graph.ByRank[left.Rank]
-				if d := left.Center.X - minLeft; d > 0 {
-					for _, node := range layer[:left.Pos+1] {
-						node.Center.X -= d
-					}
-					moved = true
-				}
-				if d := maxRight - right.Center.X; d > 0 {
-					for _, node := range layer[right.Pos:] {
-						node.Center.X += d
-					}
-					moved = true
+		}
+		for _, layer := range graph.ByRank {
+			for i := 1; i < len(layer); i++ {
+				a, b := layer[i-1], layer[i]
+				gaps[class[a.ID]] = append(gaps[class[a.ID]], gap{class[b.ID], a.Radius.X + b.Radius.X})
+			}
+		}
+
+		// topological order of the classes
+		indeg := make([]int, n)
+		for _, out := range gaps {
+			for _, g := range out {
+				indeg[g.to]++
+			}
+		}
+		var order []ID
+		for _, node := range graph.Nodes {
+			if class[node.ID] == node.ID && indeg[node.ID] == 0 {
+				order = append(order, node.ID)
+			}
+		}
+		for i := 0; i < len(order); i++ {
+			for _, g := range gaps[order[i]] {
+				if indeg[g.to]--; indeg[g.to] == 0 {
+					order = append(order, g.to)
 				}
 			}
 		}
-		if !moved {
-			break
+		cyclic := false
+		for _, cluster := range graph.Clusters {
+			if !stuck[cluster] && len(cluster.Left) > 0 && (indeg[cluster.Left[0].ID] > 0 || indeg[cluster.Right[0].ID] > 0) {
+				stuck[cluster], cyclic = true, true
+			}
 		}
+		if cyclic {
+			continue
+		}
+
+		right, left := slices.Clone(target), slices.Clone(target)
+		for _, v := range order {
+			for _, g := range gaps[v] {
+				right[g.to] = max(right[g.to], right[v]+g.min)
+			}
+		}
+		for _, v := range slices.Backward(order) {
+			for _, g := range gaps[v] {
+				left[v] = min(left[v], left[g.to]-g.min)
+			}
+		}
+		for _, node := range graph.Nodes {
+			c := class[node.ID]
+			node.Center.X = (left[c] + right[c]) / 2
+		}
+		break
 	}
 	flushLeft(graph)
 }
