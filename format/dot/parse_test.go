@@ -314,3 +314,19 @@ func TestStrictGraphsMergeEdges(t *testing.T) {
 		}
 	}
 }
+
+// TestQuotedHTMLID checks that a node whose quoted id reads as HTML gets a
+// default label that isn't HTML, while an HTML id stays HTML.
+func TestQuotedHTMLID(t *testing.T) {
+	graphs, err := ParseString(`digraph { "<init>" -> b; <<B>bold</B>> -> c; }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := graphs[0]
+	if label := graph.Node("<init>").DefaultLabel(); layout.IsHTMLLabel(label) {
+		t.Errorf("quoted id gives an HTML label %q", label)
+	}
+	if label := graph.Node("<<B>bold</B>>").DefaultLabel(); !layout.IsHTMLLabel(label) {
+		t.Errorf("HTML id gives a plain label %q", label)
+	}
+}

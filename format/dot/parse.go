@@ -50,8 +50,9 @@ func parse(file *ast.File, err error) (_ []*layout.Graph, failed error) {
 	graphs := []*layout.Graph{}
 	for _, graphStmt := range file.Graphs {
 		graphStmt.ID = unquote(graphStmt.ID)
-		unquoteStmts(graphStmt.Stmts)
-		parser := &parserContext{positioned: map[*layout.Node]bool{}, outlines: map[*layout.Node]*outlines{}}
+		literal := map[string]bool{}
+		unquoteStmts(graphStmt.Stmts, literal)
+		parser := &parserContext{positioned: map[*layout.Node]bool{}, outlines: map[*layout.Node]*outlines{}, literal: literal}
 		parser.Graph = layout.NewGraph()
 		if graphStmt.Strict {
 			parser.strict = map[[2]*layout.Node]*strictEdge{}
@@ -65,17 +66,19 @@ func parse(file *ast.File, err error) (_ []*layout.Graph, failed error) {
 
 // unquoteStmts strips dot quotes from every identifier and attribute
 // value, so "a" and a name the same node and shape="box" reads as box.
-// Labels keep their quotes and escapes for expandLabel.
-func unquoteStmts(stmts []ast.Stmt) {
+// Labels keep their quotes and escapes for expandLabel. Quoted node ids
+// that read as HTML, such as "<init>", go into literal, so that their
+// default label stays text.
+func unquoteStmts(stmts []ast.Stmt, literal map[string]bool) {
 	for _, stmt := range stmts {
 		switch stmt := stmt.(type) {
 		case *ast.NodeStmt:
-			stmt.Node.ID = unquote(stmt.Node.ID)
+			stmt.Node.ID = unquoteID(stmt.Node.ID, literal)
 			unquoteAttrs(stmt.Attrs)
 		case *ast.EdgeStmt:
-			unquoteVertex(stmt.From)
+			unquoteVertex(stmt.From, literal)
 			for to := stmt.To; to != nil; to = to.To {
-				unquoteVertex(to.Vertex)
+				unquoteVertex(to.Vertex, literal)
 			}
 			unquoteAttrs(stmt.Attrs)
 		case *ast.AttrStmt:
@@ -84,18 +87,27 @@ func unquoteStmts(stmts []ast.Stmt) {
 			unquoteAttrs([]*ast.Attr{stmt})
 		case *ast.Subgraph:
 			stmt.ID = unquote(stmt.ID)
-			unquoteStmts(stmt.Stmts)
+			unquoteStmts(stmt.Stmts, literal)
 		}
 	}
 }
 
-func unquoteVertex(v ast.Vertex) {
+// unquoteID unquotes a node id, noting quoted ids that read as HTML
+func unquoteID(id string, literal map[string]bool) string {
+	unquoted := unquote(id)
+	if unquoted != id && layout.IsHTMLLabel(unquoted) {
+		literal[unquoted] = true
+	}
+	return unquoted
+}
+
+func unquoteVertex(v ast.Vertex, literal map[string]bool) {
 	switch v := v.(type) {
 	case *ast.Node:
-		v.ID = unquote(v.ID)
+		v.ID = unquoteID(v.ID, literal)
 	case *ast.Subgraph:
 		v.ID = unquote(v.ID)
-		unquoteStmts(v.Stmts)
+		unquoteStmts(v.Stmts, literal)
 	}
 }
 
@@ -153,6 +165,7 @@ type parserContext struct {
 	touched []*layout.Node // nodes referenced in this (sub)graph
 
 	positioned map[*layout.Node]bool // nodes with a pos attribute
+	literal    map[string]bool       // quoted node ids that read as HTML
 	outlines   map[*layout.Node]*outlines
 
 	// strict holds the edges of a strict graph by their ends; nil when
@@ -356,7 +369,7 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 // count as touched in this context too.
 func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 	start := len(context.Graph.Clusters)
-	subcontext := &parserContext{positioned: context.positioned, outlines: context.outlines, strict: context.strict}
+	subcontext := &parserContext{positioned: context.positioned, outlines: context.outlines, strict: context.strict, literal: context.literal}
 	subcontext.Graph = context.Graph
 	subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
 	subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
@@ -419,6 +432,9 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 	if !exists {
 		node = context.Graph.Node(id)
 		node.Label = node.ID // dot's default label is the id, label="" is empty
+		if context.literal[id] {
+			node.Label = literalMark + id
+		}
 		context.outlines[node] = &outlines{}
 		applyNodeAttrs(context.Graph.ID, node, context.nodeAttrs, context.outlines[node])
 		context.notePos(node, context.nodeAttrs)
@@ -808,4 +824,3 @@ func setShape(t *layout.Shape, value string) {
 func setString(t *string, value string) {
 	*t = value
 }
-
