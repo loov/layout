@@ -39,3 +39,20 @@ func TestAlign(t *testing.T) {
 		}
 	}
 }
+
+// TestAlignFanIn checks that left and right alignment put a node under
+// its first or last parent, not the median one.
+func TestAlignFanIn(t *testing.T) {
+	for align, over := range map[layout.Align]string{layout.AlignLeft: "a", layout.AlignRight: "c"} {
+		graph := layout.NewDigraph()
+		graph.Edge("a", "d")
+		graph.Edge("b", "d")
+		graph.Edge("c", "d")
+		if err := layout.HierarchicalWith(graph, layout.Options{Align: align}); err != nil {
+			t.Fatal(err)
+		}
+		if d, p := graph.Node("d").Center.X, graph.Node(over).Center.X; d != p {
+			t.Errorf("align %v: d at x %v, want under %s at %v", align, d, over, p)
+		}
+	}
+}

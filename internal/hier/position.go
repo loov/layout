@@ -32,7 +32,7 @@ func Position(graph *Graph, straighten bool, align Align) {
 
 	switch align {
 	case Left, Right:
-		xs := brandesKoepf(graph, true, align == Left)
+		xs := brandesKoepf(graph, true, align == Left, true)
 		for _, node := range graph.Nodes {
 			node.Center.X = xs[node.ID]
 		}
@@ -53,7 +53,7 @@ func positionBalanced(graph *Graph) {
 	var xs [4][]float32
 	for i := range xs {
 		up, left := i < 2, i%2 == 0
-		xs[i] = brandesKoepf(graph, up, left)
+		xs[i] = brandesKoepf(graph, up, left, false)
 	}
 
 	// align layouts to the narrowest one, then take the average of the two medians
@@ -142,8 +142,9 @@ func PositionInitial(graph *Graph) {
 
 // brandesKoepf computes x coordinates for one of the four alignment directions.
 // up: align to neighbors in the rank above (otherwise below);
-// left: compact towards the left (otherwise right).
-func brandesKoepf(graph *Graph, up, left bool) []float32 {
+// left: compact towards the left (otherwise right);
+// first: align to the first neighbor towards that side, not the median.
+func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
 	n := graph.NodeCount()
 
 	// orient the problem so that we always align "up" and compact "left"
@@ -223,7 +224,13 @@ func brandesKoepf(graph *Graph, up, left bool) []float32 {
 			if d == 0 {
 				continue
 			}
-			for m := (d - 1) / 2; m <= d/2; m++ {
+			// the median neighbors, or the first one towards the side
+			// the layout packs to
+			lo, hi := (d-1)/2, d/2
+			if first {
+				lo, hi = 0, 0
+			}
+			for m := lo; m <= hi; m++ {
 				if align[v.ID] != v {
 					break
 				}
