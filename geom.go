@@ -18,9 +18,9 @@ const (
 	Ellipse Shape = "ellipse"
 	// Record draws the label as a table of fields, see ParseRecord.
 	Record Shape = "record"
-	// Dot is a small filled circle without a label, like Graphviz point;
+	// PointShape is a small filled circle without a label, like Graphviz point;
 	// it marks where edges start or meet, such as an automaton's start.
-	Dot Shape = "point"
+	PointShape Shape = "point"
 )
 
 // Splines selects how edge paths are drawn.

@@ -25,7 +25,7 @@ func FuzzRendering(f *testing.F) {
 		label = label[:min(len(label), 128)]
 		graph := layout.NewDigraph()
 		graph.RankDir = []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft}[int(data[0]>>2)%4]
-		shapes := []layout.Shape{layout.Box, layout.Ellipse, layout.Circle, layout.None, layout.Dot, layout.Record}
+		shapes := []layout.Shape{layout.Box, layout.Ellipse, layout.Circle, layout.None, layout.PointShape, layout.Record}
 		labels := []string{label, "first\nsecond", "<" + label + ">", "<p> " + label + "|{left|right}", "漢字", "é 👩‍💻"}
 		ports := []layout.Compass{layout.CompassAuto, layout.North, layout.South, layout.East, layout.West}
 		for i := range int(data[1])%8 + 1 {

@@ -52,7 +52,7 @@ func Prepare(graph *layout.Graph) {
 		if shape == layout.Auto {
 			shape = graph.Shape
 		}
-		if shape == layout.Dot {
+		if shape == layout.PointShape {
 			continue
 		}
 		if node.Radius.X <= 0 {

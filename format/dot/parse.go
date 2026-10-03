@@ -813,7 +813,7 @@ func setShape(t *layout.Shape, value string) {
 	case "none":
 		*t = layout.None
 	case "point":
-		*t = layout.Dot
+		*t = layout.PointShape
 	case "record", "Mrecord":
 		*t = layout.Record
 	default:

@@ -65,7 +65,7 @@ func (node *Node) String() string {
 // DefaultLabel returns the label, falling back to the id unless NoLabel
 // is set.
 func (node *Node) DefaultLabel() string {
-	if node.Shape == Dot {
+	if node.Shape == PointShape {
 		return ""
 	}
 	if node.Label != "" || node.NoLabel {

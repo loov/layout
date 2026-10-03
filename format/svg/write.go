@@ -290,7 +290,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write(" class='node'")
 
 		fill := ltcolor(node.FillColor)
-		if node.Shape == layout.Dot && node.FillColor == nil {
+		if node.Shape == layout.PointShape && node.FillColor == nil {
 			fill = dkcolor(node.LineColor) // points are solid
 		}
 		svg.write(" fill='%v'", fill)

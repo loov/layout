@@ -200,7 +200,7 @@ func TestDotFanOut(t *testing.T) {
 	}{{layout.TopToBottom, 2}, {layout.TopToBottom, 3}, {layout.LeftToRight, 2}, {layout.LeftToRight, 3}} {
 		graph := layout.NewDigraph()
 		graph.RankDir = tc.dir
-		graph.Node("s").Shape = layout.Dot
+		graph.Node("s").Shape = layout.PointShape
 		for _, id := range []string{"a", "b", "c"}[:tc.edges] {
 			graph.Edge("s", id)
 		}

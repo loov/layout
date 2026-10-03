@@ -15,8 +15,8 @@ const epsilon = 1e-6
 // peripheryGap is the distance between a node's extra outlines
 const peripheryGap = 4 * Point
 
-// dotRadius is the default radius of a Dot node
-const dotRadius = 3 * Point
+// pointRadius is the default radius of a PointShape node
+const pointRadius = 3 * Point
 
 // AssignMissingValues fills in unset padding, font and size values on the
 // graph, its nodes and edges from the graph defaults. Node sizes are
@@ -46,8 +46,8 @@ func (graph *Graph) AssignMissingValues() {
 
 		node.Radius = node.Radius.Sub(node.pad)
 		node.pad = Vector{}
-		if node.Shape == Dot && node.Radius.X <= 0 && node.Radius.Y <= 0 {
-			node.Radius = Vector{dotRadius, dotRadius}
+		if node.Shape == PointShape && node.Radius.X <= 0 && node.Radius.Y <= 0 {
+			node.Radius = Vector{pointRadius, pointRadius}
 		}
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight
@@ -55,7 +55,7 @@ func (graph *Graph) AssignMissingValues() {
 		if node.Radius.Y <= 0 {
 			node.Radius.Y = graph.LineHeight
 		}
-		if !node.FixedSize && node.Shape != Dot {
+		if !node.FixedSize && node.Shape != PointShape {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			if IsHTMLLabel(node.DefaultLabel()) {
 				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
@@ -73,7 +73,7 @@ func (graph *Graph) AssignMissingValues() {
 				node.Radius.Y = labelRadius.Y
 			}
 		}
-		if node.Shape == Circle || node.Shape == Square || node.Shape == Dot {
+		if node.Shape == Circle || node.Shape == Square || node.Shape == PointShape {
 			// drawn with the larger radius on both axes
 			r := max(node.Radius.X, node.Radius.Y)
 			node.Radius = Vector{r, r}
@@ -511,7 +511,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	// edges line up, this far from its center
 	pack := graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho
 	packed := func(node *Node) Length {
-		if !pack || node.Shape == Dot {
+		if !pack || node.Shape == PointShape {
 			return 0
 		}
 		return min(0, graphdef.EdgePadding-node.Radius.X)
@@ -657,7 +657,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			}
 		}
 		for node, e := range ends {
-			if node.Shape == Dot {
+			if node.Shape == PointShape {
 				continue // edges meet at the dot
 			}
 			grow := Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2 - node.Radius.X

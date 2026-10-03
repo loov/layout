@@ -32,7 +32,7 @@ const peripheryGap = 4 * layout.Point
 // drawNode draws a node as a box that holds its label, and marks the box
 // solid so that edges don't draw over it
 func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
-	if node.Shape == layout.Dot {
+	if node.Shape == layout.PointShape {
 		x, y := c.col(node.Center.X), c.row(node.Center.Y)
 		c.boxes[node] = [4]int{x, y, x, y}
 		c.ink = rgb(node.LineColor)
@@ -175,7 +175,7 @@ func (c *canvas) across(cells [][2]int, from, to *layout.Node) [][2]int {
 // instead, so that edges fanning out of a dot leave it on separate sides
 // rather than sharing a run
 func (c *canvas) atDot(cells [][2]int, i, j, k int, node *layout.Node) {
-	if node.Shape != layout.Dot {
+	if node.Shape != layout.PointShape {
 		return
 	}
 	b := c.boxes[node]
@@ -353,7 +353,7 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 // join draws the box border of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
-	if node.Shape == layout.None || node.Shape == layout.Dot {
+	if node.Shape == layout.None || node.Shape == layout.PointShape {
 		return // no border to join
 	}
 	if end[0] < 0 || end[0] >= c.w || end[1] < 0 || end[1] >= c.h {

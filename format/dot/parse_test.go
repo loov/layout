@@ -94,8 +94,8 @@ func TestPointShape(t *testing.T) {
 		t.Fatal(err)
 	}
 	start := graph.Node("start")
-	if start.Shape != layout.Dot {
-		t.Fatalf("shape = %q, want %q", start.Shape, layout.Dot)
+	if start.Shape != layout.PointShape {
+		t.Fatalf("shape = %q, want %q", start.Shape, layout.PointShape)
 	}
 	if label := start.DefaultLabel(); label != "" {
 		t.Errorf("point has label %q, want none", label)
