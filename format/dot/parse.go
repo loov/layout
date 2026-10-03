@@ -118,15 +118,25 @@ var unescape = strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n")
 // expandLabel interprets a label value. In quoted strings \n, \l and \r
 // break lines and names replace their escapes, given as pairs such as
 // `\N`, node.ID; other escapes are kept for record labels. A final line
-// break only ends the last line, as in Graphviz. HTML labels and plain
-// ids are returned as they are.
+// break only ends the last line, as in Graphviz. A quoted label that
+// reads as HTML, such as "<init>", gets the literalMark prefix. HTML
+// labels and plain ids are returned as they are.
 func expandLabel(raw string, names ...string) string {
 	if len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' {
 		return raw
 	}
 	escapes := append([]string{`\\`, `\`, `\"`, `"`, `\n`, "\n", `\l`, "\n", `\r`, "\n"}, names...)
-	return strings.TrimSuffix(strings.NewReplacer(escapes...).Replace(raw[1:len(raw)-1]), "\n")
+	label := strings.TrimSuffix(strings.NewReplacer(escapes...).Replace(raw[1:len(raw)-1]), "\n")
+	if layout.IsHTMLLabel(label) {
+		label = literalMark + label
+	}
+	return label
 }
+
+// literalMark is a zero width space that keeps quoted text in angle
+// brackets from being drawn as an HTML label. It is not visible and
+// takes no room.
+const literalMark = "\u200b"
 
 // parserContext holds the attribute defaults in effect for a (sub)graph
 type parserContext struct {
@@ -155,6 +165,12 @@ func (context *parserContext) parse(src *ast.Graph) {
 	context.Graph.ID = src.ID
 	context.Graph.Directed = src.Directed
 	context.parseStmts(src.Stmts)
+	for _, node := range context.Graph.Nodes {
+		// record labels are never HTML, and their <port> must lead
+		if node.Shape == layout.Record {
+			node.Label = strings.TrimPrefix(node.Label, literalMark)
+		}
+	}
 	applyGraphAttrs(context.Graph, context.allAttrs)
 	context.pin()
 }

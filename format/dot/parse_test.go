@@ -244,3 +244,27 @@ func TestLabelEscapes(t *testing.T) {
 		}
 	}
 }
+
+func TestQuotedLabelsAreNotHTML(t *testing.T) {
+	graphs, err := ParseString(`digraph {
+		a [label="<init>"]; b [label=<<b>x</b>>];
+		c [label="<f0>|<f1>", shape=record];
+		subgraph cluster_x { label="<x>"; d }
+		a -> b [label="<y>"];
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := graphs[0]
+	for _, label := range []string{g.Node("a").Label, g.Clusters[0].Label, g.Edges[0].Label} {
+		if layout.IsHTMLLabel(label) {
+			t.Errorf("quoted label %q reads as HTML", label)
+		}
+	}
+	if !layout.IsHTMLLabel(g.Node("b").Label) {
+		t.Errorf("HTML label %q lost", g.Node("b").Label)
+	}
+	if got := g.Node("c").Label; got != "<f0>|<f1>" {
+		t.Errorf("record label = %q", got)
+	}
+}
