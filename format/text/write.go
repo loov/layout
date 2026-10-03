@@ -59,15 +59,20 @@ func Prepare(graph *layout.Graph) {
 		graph.NodePadding = graph.LineHeight / 2
 		return
 	}
-	// self-loops leave and return on the right, half the half height off
-	// the center: two rows put them a row above and below it
+	// self-loops stack down the right side, each leaving and returning a
+	// quarter of its share from the share's ends: four rows a loop put
+	// them a row above and below its middle
+	loops := map[*layout.Node]int{}
 	for _, edge := range graph.Edges {
-		if node := edge.From; edge.To == node {
-			node.Radius.Y = max(node.Radius.Y, 2*graph.LineHeight)
-			if node.Shape == layout.Circle {
-				// drawn as a box either way; a circle would widen as much
-				node.Shape = layout.Ellipse
-			}
+		if edge.From == edge.To {
+			loops[edge.From]++
+		}
+	}
+	for node, n := range loops {
+		node.Radius.Y = max(node.Radius.Y, 2*layout.Length(n)*graph.LineHeight)
+		if node.Shape == layout.Circle {
+			// drawn as a box either way; a circle would widen as much
+			node.Shape = layout.Ellipse
 		}
 	}
 }

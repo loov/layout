@@ -1,6 +1,7 @@
 package layout_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/loov/layout"
@@ -41,3 +42,28 @@ func TestLoopNodeLinesUp(t *testing.T) {
 		}
 	}
 }
+
+// TestLoopsApart checks that several self-loops of a node take routes of
+// their own, with labels apart, in hierarchical and force layouts.
+func TestLoopsApart(t *testing.T) {
+	for name, run := range map[string]func(*layout.Graph) error{"hierarchical": layout.Hierarchical, "force": layout.Force} {
+		graph := layout.NewDigraph()
+		for _, label := range []string{"first", "second"} {
+			edge := layout.NewEdge(graph.Node("a"), graph.Node("a"))
+			edge.Label = label
+			graph.AddEdge(edge)
+		}
+		if err := run(graph); err != nil {
+			t.Fatal(err)
+		}
+		a, b := graph.Edges[0], graph.Edges[1]
+		if slices.Equal(a.Path, b.Path) {
+			t.Errorf("%s: loops share the route %v", name, a.Path)
+		}
+		if gap := absLength(a.LabelPos.Y - b.LabelPos.Y); gap < a.LabelRadius.Y+b.LabelRadius.Y {
+			t.Errorf("%s: labels at %v and %v overlap", name, a.LabelPos, b.LabelPos)
+		}
+	}
+}
+
+func absLength(v layout.Length) layout.Length { return max(v, -v) }

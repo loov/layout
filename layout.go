@@ -822,14 +822,17 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		pairCount[pairKey(edge)]++
 	}
 	pairIndex := map[[2]hier.ID]int{}
+	loops := countLoops(graphdef.Edges)
 
 	for _, edge := range graphdef.Edges {
 		sourceid := nodes[edge.From]
 		targetid := nodes[edge.To]
 
 		if sourceid == targetid {
-			edge.Path = loopPath(edge, loopWidth, loopHeight)
-			edge.LabelPos = Vector{X: edge.From.Right() + loopWidth + graphdef.EdgePadding + edge.LabelRadius.X, Y: edge.From.Center.Y}
+			edge.Path = loopPath(edge, loopWidth, loopHeight, loops.next(edge), loops.count[edge.From])
+			// beside the far side of the loop
+			loopMid := (edge.Path[0].Y + edge.Path[len(edge.Path)-1].Y) / 2
+			edge.LabelPos = Vector{X: edge.From.Right() + loopWidth + graphdef.EdgePadding + edge.LabelRadius.X, Y: loopMid}
 			if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
 				// ported loops can sit on any side; label the middle of the loop
 				p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
@@ -914,7 +917,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			}
 		}
 	}
-	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.EdgePadding, 2*graphdef.RowPadding)
+	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
 }
 
 // flattenPath approximates the rounded corners drawn by the writers
@@ -1071,10 +1074,16 @@ func spreadEnds(graph *Graph, minSep Length) {
 // straight line, labels without a position the middle of their path.
 func layoutPinned(graph *Graph) {
 	boxClusters(graph)
+	loops := countLoops(graph.Edges)
+	given := map[*Edge]bool{} // label positions that stay
+	for _, edge := range graph.Edges {
+		given[edge] = edge.LabelPos != (Vector{})
+	}
+	defer nudgeLabels(graph.Edges, graph.Nodes, graph.EdgePadding, 2*graph.RowPadding, given)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			if edge.From == edge.To {
-				edge.Path = loopPath(edge, edge.From.Radius.X, edge.From.Radius.X)
+				edge.Path = loopPath(edge, edge.From.Radius.X, edge.From.Radius.X, loops.next(edge), loops.count[edge.From])
 			} else {
 				from, to := edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)
 				if edge.FromPort != CompassAuto {
@@ -1092,7 +1101,7 @@ func layoutPinned(graph *Graph) {
 				a, b := edge.Path[len(edge.Path)/2-1], edge.Path[len(edge.Path)/2]
 				mid = Vector{(a.X + b.X) / 2, (a.Y + b.Y) / 2}
 			}
-			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X, 0})
+			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X + graph.EdgePadding, 0})
 		}
 	}
 }
@@ -1136,13 +1145,19 @@ func boxClusters(graph *Graph) {
 }
 
 // nudgeLabels slides edge labels sideways along their rank until they
-// clear every edge path and the labels placed before them.
-func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length) {
+// clear every edge path and the labels placed before them. Labels of the
+// edges in keep stay where they are, and the others avoid them.
+func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length, keep map[*Edge]bool) {
 	paths := make([][]Vector, len(edges))
 	for i, edge := range edges {
 		paths[i] = flattenPath(edge.Path, radius, pad)
 	}
 	var placed []*Edge
+	for _, edge := range edges {
+		if keep[edge] && edge.Label != "" {
+			placed = append(placed, edge)
+		}
+	}
 	clear := func(edge *Edge, at Vector) bool {
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
@@ -1170,7 +1185,7 @@ func nudgeLabels(edges []*Edge, nodes []*Node, pad, radius Length) {
 		return true
 	}
 	for _, edge := range edges {
-		if edge.Label == "" || len(edge.Path) < 2 {
+		if edge.Label == "" || len(edge.Path) < 2 || keep[edge] {
 			continue
 		}
 		// candidates in growing rings: along the rank first, then across
@@ -1278,11 +1293,41 @@ func reversePath(path []Vector) []Vector {
 }
 
 // loopPath draws a self-loop on the right side of the node
-func loopPath(edge *Edge, width, height Length) []Vector {
+// loopCount numbers the self-loops without ports of each node, which
+// stack down its side
+type loopCount struct {
+	count, index map[*Node]int
+}
+
+func countLoops(edges []*Edge) *loopCount {
+	loops := &loopCount{count: map[*Node]int{}, index: map[*Node]int{}}
+	for _, edge := range edges {
+		if edge.From == edge.To && edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
+			loops.count[edge.From]++
+		}
+	}
+	return loops
+}
+
+// next returns the place of the self-loop edge among its node's loops
+func (loops *loopCount) next(edge *Edge) int {
+	if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
+		return 0
+	}
+	k := loops.index[edge.From]
+	loops.index[edge.From]++
+	return k
+}
+
+func loopPath(edge *Edge, width, height Length, k, n int) []Vector {
 	node := edge.From
 	right := node.Right() + width
-	up := Vector{X: node.Right(), Y: node.Center.Y - node.Radius.Y/2}
-	down := Vector{X: node.Right(), Y: node.Center.Y + node.Radius.Y/2}
+	// the n loops without ports stack down the right side, loop k in the
+	// k-th share of it; a single loop spans the middle half
+	share := 2 * node.Radius.Y / Length(max(n, 1))
+	top := node.Center.Y - node.Radius.Y + Length(k)*share
+	up := Vector{X: node.Right(), Y: top + share/4}
+	down := Vector{X: node.Right(), Y: top + 3*share/4}
 	if edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
 		// leave and return horizontally from where the outline is
 		from, to := node.Boundary(up), node.Boundary(down)
