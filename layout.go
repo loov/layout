@@ -452,7 +452,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 	// edges line up, this far from its center
 	pack := graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho
 	packed := func(node *Node) Length {
-		if !pack {
+		if !pack || node.Shape == Dot {
 			return 0
 		}
 		return min(0, graphdef.EdgePadding-node.Radius.X)
@@ -593,6 +593,9 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			}
 		}
 		for node, e := range ends {
+			if node.Shape == Dot {
+				continue // edges meet at the dot
+			}
 			node.Radius.X = max(node.Radius.X, Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2)
 		}
 	}

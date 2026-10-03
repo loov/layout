@@ -188,3 +188,50 @@ func TestOffCanvas(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// TestDotFanOut checks that edges fanning out of a dot each leave it on
+// a side of its own, attached and without sharing a run.
+func TestDotFanOut(t *testing.T) {
+	for _, tc := range []struct {
+		dir   layout.RankDir
+		edges int
+	}{{layout.TopToBottom, 2}, {layout.TopToBottom, 3}, {layout.LeftToRight, 2}, {layout.LeftToRight, 3}} {
+		graph := layout.NewDigraph()
+		graph.RankDir = tc.dir
+		graph.Node("s").Shape = layout.Dot
+		for _, id := range []string{"a", "b", "c"}[:tc.edges] {
+			graph.Edge("s", id)
+		}
+		Prepare(graph)
+		if err := layout.Hierarchical(graph); err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if err := Write(&buf, graph); err != nil {
+			t.Fatal(err)
+		}
+		lines := strings.Split(buf.String(), "\n")
+		at := func(x, y int) rune {
+			if y < 0 || y >= len(lines) || x < 0 || x >= len([]rune(lines[y])) {
+				return ' '
+			}
+			return []rune(lines[y])[x]
+		}
+		touching := 0
+		for y, line := range lines {
+			if x := slices.Index([]rune(line), '●'); x >= 0 {
+				for _, n := range []struct {
+					r     rune
+					cells string // characters with an arm toward the dot
+				}{{at(x, y-1), "│┌┐├┤┬┼╭╮"}, {at(x, y+1), "│└┘├┤┴┼╰╯▼"}, {at(x-1, y), "─┌└├┬┴┼╭╰"}, {at(x+1, y), "─┐┘┤┬┴┼╮╯▶"}} {
+					if strings.ContainsRune(n.cells, n.r) {
+						touching++
+					}
+				}
+			}
+		}
+		if touching != tc.edges || strings.ContainsAny(buf.String(), "━┃") {
+			t.Errorf("%v with %d edges: %d lines touch the dot, want one per edge without overlaps:\n%s", tc.dir, tc.edges, touching, buf.String())
+		}
+	}
+}

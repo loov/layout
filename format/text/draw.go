@@ -106,7 +106,38 @@ func (c *canvas) edgeCells(edge *layout.Edge) [][2]int {
 	last := len(cells) - 1
 	cells[0] = c.border(cells[0], cells[1], edge.From)
 	cells[last] = c.border(cells[last], cells[last-1], edge.To)
+	c.atDot(cells, 0, 1, 2, edge.From)
+	c.atDot(cells, last, last-1, last-2, edge.To)
 	return cells
+}
+
+// atDot starts the edge end cells[i] at a dot node in the dot's cell and,
+// when the edge turns at its first bend cells[j], turns it at the dot
+// instead, so that edges fanning out of a dot leave it on separate sides
+// rather than sharing a run
+func (c *canvas) atDot(cells [][2]int, i, j, k int, node *layout.Node) {
+	if node.Shape != layout.Dot {
+		return
+	}
+	b := c.boxes[node]
+	from := cells[i]
+	cells[i] = [2]int{b[0], b[1]}
+	if k < 0 || k >= len(cells) {
+		return
+	}
+	// keep the first segment straight from the dot's cell
+	for axis := range 2 {
+		if from[axis] == cells[j][axis] {
+			cells[j][axis] = cells[i][axis]
+		}
+	}
+	at, next := cells[i], cells[k]
+	switch bend := cells[j]; {
+	case at[1] == bend[1] && bend[0] == next[0] && next[1] != at[1]:
+		cells[j] = [2]int{at[0], next[1]} // across first, then along
+	case at[0] == bend[0] && bend[1] == next[1] && next[0] != at[0]:
+		cells[j] = [2]int{next[0], at[1]}
+	}
 }
 
 // spreadSides gives every edge end on a side of a box a row, or on the
