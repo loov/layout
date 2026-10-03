@@ -1,8 +1,9 @@
 package layout_test
 
 import (
-	"github.com/loov/layout"
 	"testing"
+
+	"github.com/loov/layout"
 )
 
 func TestTwipsConvertToPoints(t *testing.T) {

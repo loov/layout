@@ -1,9 +1,10 @@
 package layout_test
 
 import (
-	"github.com/loov/layout"
 	"math"
 	"testing"
+
+	"github.com/loov/layout"
 )
 
 func TestHierarchicalCompassPortsKeepPhysicalDirections(t *testing.T) {

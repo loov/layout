@@ -3,11 +3,12 @@ package dot
 import (
 	"bytes"
 	"fmt"
-	"github.com/loov/layout"
 	"os/exec"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/loov/layout"
 )
 
 func TestWritePolylineRoundTrip(t *testing.T) {
