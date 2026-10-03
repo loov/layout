@@ -204,7 +204,8 @@ func parseSpline(s string) []layout.Vector {
 	if end != nil {
 		points = append(points, *end)
 	}
-	return points
+	// Repeated controls encode straight segments in our DOT output.
+	return slices.Compact(points)
 }
 
 // applyGraphAttrs applies graph level attributes

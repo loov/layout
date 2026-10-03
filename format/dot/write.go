@@ -10,8 +10,8 @@ import (
 )
 
 // Write writes the graph as dot with the computed layout: nodes carry
-// pos, width and height, edges carry pos with their path points. The
-// output can be rendered by Graphviz with "neato -n2".
+// pos, width and height, edges carry pos with cubic controls for their
+// paths. The output can be rendered by Graphviz with "neato -n2".
 //
 // Coordinates are in points with the y axis pointing up, as in Graphviz.
 func Write(w io.Writer, graph *layout.Graph) error {
@@ -59,16 +59,25 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
 	for _, edge := range graph.Edges {
-		points := make([]string, 0, len(edge.Path))
-		for _, p := range edge.Path {
-			points = append(points, pt(p))
+		var attrs []string
+		if len(edge.Path) >= 2 {
+			// Graphviz expects 3n+1 cubic Bezier control points. Repeating
+			// each segment's ends represents the polyline without bending it.
+			points := []string{pt(edge.Path[0])}
+			for i := 1; i < len(edge.Path); i++ {
+				points = append(points, pt(edge.Path[i-1]), pt(edge.Path[i]), pt(edge.Path[i]))
+			}
+			attrs = append(attrs, "pos="+quote(strings.Join(points, " ")))
 		}
-		attrs := []string{"pos=" + quote(strings.Join(points, " "))}
 		if edge.Label != "" {
 			attrs = append(attrs, "label="+quote(edge.Label), "lp="+quote(pt(edge.LabelPos)))
 		}
 		if edge.Weight != 1 {
 			attrs = append(attrs, "weight="+strconv.FormatFloat(edge.Weight, 'g', -1, 64))
+		}
+		if len(attrs) == 0 {
+			write("\t%s %s %s;\n", quote(edge.From.ID), arrow, quote(edge.To.ID))
+			continue
 		}
 		write("\t%s %s %s [%s];\n", quote(edge.From.ID), arrow, quote(edge.To.ID), strings.Join(attrs, ", "))
 	}
