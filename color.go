@@ -62,7 +62,11 @@ func hsla(h, s, l, a float32) (r, g, b, ra float32) {
 		return l, l, l, a
 	}
 
-	h = float32(math.Mod(float64(h), 1))
+	// degrees to a fraction of the full turn, in [0, 1)
+	h = float32(math.Mod(float64(h), 360) / 360)
+	if h < 0 {
+		h += 1
+	}
 
 	var v2 float32
 	if l < 0.5 {
