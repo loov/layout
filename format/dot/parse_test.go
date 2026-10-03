@@ -184,3 +184,17 @@ func TestInvalidPosDoesNotPin(t *testing.T) {
 		t.Fatal("graph with invalid positions is pinned")
 	}
 }
+
+func TestSolidStyleOverridesInheritedStyle(t *testing.T) {
+	graphs, err := ParseString(`digraph { node [style=dashed]; edge [style="dotted"]; a [style="solid,filled"]; a -> b [style=solid] }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := graphs[0]
+	if got := g.Node("a").LineStyle; got != layout.Solid {
+		t.Errorf("node style = %q, want solid", got)
+	}
+	if got := g.Edges[0].LineStyle; got != layout.Solid {
+		t.Errorf("edge style = %q, want solid", got)
+	}
+}

@@ -664,6 +664,8 @@ func setLength(t *layout.Length, value string, unit layout.Length) {
 func setLineStyle(t *layout.LineStyle, value string) {
 	for s := range strings.SplitSeq(value, ",") {
 		switch strings.TrimSpace(s) {
+		case "solid":
+			*t = layout.Solid
 		case "dashed":
 			*t = layout.Dashed
 		case "dotted":
