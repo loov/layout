@@ -67,14 +67,14 @@ The same graph drawn for a terminal, with `text.Prepare(graph)` before laying ou
 ```
                       ╭────────╮
                       │checkout│
-                      ╰────────╯
+                      ╰──┬──┬──╯
                          │  │
                    ╭─────╯  ╰───────────╮
                    │                    │
                    ▼                    ▼
                 ╭─────╮               ╭────╮
                 │build│               │lint│
-                ╰─────╯               ╰────╯
+                ╰─┬─┬─╯               ╰─┬──╯
                   │ │                   ┊
            ╭──────╯ ╰──────╮            ┊
            │               │            ┊
@@ -83,7 +83,7 @@ The same graph drawn for a terminal, with `text.Prepare(graph)` before laying ou
 ┊          ▼               ▼          ┊ ┊
 ┊       ╭────╮       ╭───────────╮    ┊ ┊
 ┊       │unit│       │integration│    ┊ ┊
-┊       ╰────╯       ╰───────────╯    ┊ ┊
+┊       ╰──┬─╯       ╰─────┬─────╯    ┊ ┊
 ┊          │               │          ┊ ┊
 └┈┈┈┈┈┈┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈╂┈┈┈┈┈┈┈┈┈┈┘ ┊
            │               │            ┊
@@ -94,7 +94,7 @@ The same graph drawn for a terminal, with `text.Prepare(graph)` before laying ou
                          ▼ ▼ ▼
                        ┌──────┐
                        │review│
-                       └──────┘
+                       └───┬──┘
                            │
                            │ approve
                            │

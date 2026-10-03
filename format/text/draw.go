@@ -241,23 +241,27 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 	return end
 }
 
-// join draws the box side of node at an edge end without a marker as a
+// join draws the box border of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
 	if node.Shape == layout.None || node.Shape == layout.Dot {
 		return // no border to join
 	}
 	b := c.boxes[node]
-	if end[1] <= b[1] || end[1] >= b[3] {
-		return
-	}
 	i := end[1]*c.w + end[0]
 	double := node.Peripheries > 1
-	switch {
-	case end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
-		c.cells[i] = map[bool]rune{false: '┤', true: '╢'}[double]
-	case end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
-		c.cells[i] = map[bool]rune{false: '├', true: '╟'}[double]
+	pick := func(single, double2 rune) rune { return map[bool]rune{false: single, true: double2}[double] }
+	switch side := end[1] > b[1] && end[1] < b[3]; {
+	case side && end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
+		c.cells[i] = pick('┤', '╢')
+	case side && end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
+		c.cells[i] = pick('├', '╟')
+	case end[0] <= b[0] || end[0] >= b[2]:
+		// corners and outside the box
+	case end[1] == b[1] && end[1] > 0 && c.lines[i-c.w]&down != 0:
+		c.cells[i] = pick('┴', '╨')
+	case end[1] == b[3] && end[1]+1 < c.h && c.lines[i+c.w]&up != 0:
+		c.cells[i] = pick('┬', '╥')
 	}
 }
 
