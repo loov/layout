@@ -471,5 +471,3 @@ func (c *canvas) blank(x, y, w, h int) bool {
 	}
 	return true
 }
-
-func abs(v int) int { return max(v, -v) }

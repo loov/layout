@@ -44,7 +44,7 @@ func GenerateRegularGraph(n, connections int) *Graph {
 }
 
 // Generate implements quick.Generator interface
-func (_ *Graph) Generate(rand *rand.Rand, size int) reflect.Value {
+func (*Graph) Generate(rand *rand.Rand, size int) reflect.Value {
 	switch rand.Intn(4) {
 	case 0:
 		return reflect.ValueOf(GenerateRandomGraph(size, 0.1, rand))

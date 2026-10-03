@@ -424,8 +424,7 @@ func components(graphdef *Graph) []*Graph {
 	for i := range parent {
 		parent[i] = i
 	}
-	var findIndex func(i int) int
-	findIndex = func(i int) int {
+	findIndex := func(i int) int {
 		for parent[i] != i {
 			parent[i] = parent[parent[i]] // path halving
 			i = parent[i]
