@@ -14,6 +14,7 @@ import (
 // Graphs and labels are bounded so malformed text cannot exhaust the canvas.
 func FuzzRendering(f *testing.F) {
 	for mode := range 4 {
+		f.Add([]byte{byte(mode) | 0x10, 3, 0, 1, 1, 2, 2, 0, 0, 0}, "pinned")
 		f.Add([]byte{byte(mode), 3, 0, 1, 1, 2, 2, 0, 0, 0}, "漢字 é 👩‍💻\nsecond")
 		f.Add([]byte{byte(mode), 2, 5, 4, 0, 1, 1, 0}, "<TABLE><TR><TD>cell</TD></TR></TABLE>")
 	}
@@ -42,6 +43,13 @@ func FuzzRendering(f *testing.F) {
 			edge.ToPort = ports[int(b>>4)%len(ports)]
 			if a&0x80 != 0 {
 				edge.Label = labels[int(b>>3)%len(labels)]
+			}
+		}
+		if data[0]&0x10 != 0 {
+			// pinned positions from the data, some of them overlapping
+			for i, node := range graph.Nodes {
+				x, y := data[(2*i)%len(data)], data[(2*i+1)%len(data)]
+				node.Pos = &layout.Vector{X: layout.Length(x) * 7, Y: layout.Length(y) * 13}
 			}
 		}
 		forText := data[0]&2 != 0
