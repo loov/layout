@@ -852,27 +852,47 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 		}
 	}
 
-	// flat edges run sideways along the rank, arcing over nodes in between
+	// flat edges run sideways along the rank, arcing over nodes in between;
+	// overlapping arcs stack, narrower ones below
+	type arc struct {
+		flat   [2]*hier.Node
+		lo, hi Length
+		top    Length
+		level  int
+	}
+	var arcs []*arc
 	for _, flat := range positionedGraph.Flat {
 		sourcedef, targetdef := reverse[flat[0].ID], reverse[flat[1].ID]
-		path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
-		if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) > 1 {
-			top := min(sourcedef.Top(), targetdef.Top())
-			lo, hi := min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
-			for _, node := range byRank[flat[0].Rank] {
-				if node.Center.X > lo && node.Center.X < hi {
-					top = min(top, node.Top())
-				}
-			}
-			y := top - 2*graphdef.EdgePadding
-			path = []Vector{
-				sourcedef.TopCenter(),
-				{sourcedef.Center.X, y},
-				{targetdef.Center.X, y},
-				targetdef.TopCenter(),
+		if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) <= 1 {
+			path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
+			edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
+			continue
+		}
+		a := &arc{flat: flat, top: min(sourcedef.Top(), targetdef.Top())}
+		a.lo, a.hi = min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
+		for _, node := range byRank[flat[0].Rank] {
+			if node.Center.X > a.lo && node.Center.X < a.hi {
+				a.top = min(a.top, node.Top())
 			}
 		}
-		edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
+		arcs = append(arcs, a)
+	}
+	slices.SortStableFunc(arcs, func(a, b *arc) int { return cmp.Compare(a.hi-a.lo, b.hi-b.lo) })
+	for i, a := range arcs {
+		for _, below := range arcs[:i] {
+			if below.flat[0].Rank == a.flat[0].Rank && below.lo <= a.hi && a.lo <= below.hi {
+				a.level = max(a.level, below.level+1)
+				a.top = min(a.top, below.top)
+			}
+		}
+		sourcedef, targetdef := reverse[a.flat[0].ID], reverse[a.flat[1].ID]
+		y := a.top - 2*graphdef.EdgePadding*Length(a.level+1)
+		edgePaths[[2]hier.ID{a.flat[0].ID, a.flat[1].ID}] = []Vector{
+			sourcedef.TopCenter(),
+			{sourcedef.Center.X, y},
+			{targetdef.Center.X, y},
+			targetdef.TopCenter(),
+		}
 	}
 
 	// edges between the same pair of nodes share one route; spread them out

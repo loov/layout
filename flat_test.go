@@ -38,3 +38,27 @@ func TestFlatEdgesAvoidNodes(t *testing.T) {
 		}
 	}
 }
+
+// TestFlatArcsStack checks that overlapping arcs of flat edges over the
+// same rank run at different heights instead of along one line.
+func TestFlatArcsStack(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.SameRank = [][]*layout.Node{{graph.Node("a"), graph.Node("b"), graph.Node("c"), graph.Node("d")}}
+	for _, e := range [][2]string{{"a", "d"}, {"c", "a"}, {"b", "c"}, {"d", "b"}} {
+		graph.Edge(e[0], e[1])
+	}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	heights := map[layout.Length]string{}
+	for _, edge := range graph.Edges {
+		if len(edge.Path) != 4 {
+			continue // adjacent nodes, no arc
+		}
+		y := edge.Path[1].Y
+		if other, ok := heights[y]; ok {
+			t.Errorf("arcs of %v and %s both run at y %v", edge, other, y)
+		}
+		heights[y] = edge.String()
+	}
+}
