@@ -283,7 +283,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svgtag := svg.writeShape(node, node.Radius)
 		svg.write(" class='node'")
 
-		svg.write(" fill='%v'", ltcolor(node.FillColor))
+		fill := ltcolor(node.FillColor)
+		if node.Shape == layout.Dot && node.FillColor == nil {
+			fill = dkcolor(node.LineColor) // points are solid
+		}
+		svg.write(" fill='%v'", fill)
 		svg.write(" stroke='%v'", dkcolor(node.LineColor))
 		svg.writeStroke(node.LineWidth, node.LineStyle)
 

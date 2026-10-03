@@ -18,6 +18,9 @@ const (
 	Ellipse       = "ellipse"
 	// Record draws the label as a table of fields, see ParseRecord.
 	Record = "record"
+	// Dot is a small filled circle without a label, like Graphviz point;
+	// it marks where edges start or meet, such as an automaton's start.
+	Dot = "point"
 )
 
 // Splines selects how edge paths are drawn.

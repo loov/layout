@@ -3,6 +3,8 @@ package dot
 import (
 	"fmt"
 	"testing"
+
+	"github.com/loov/layout"
 )
 
 func TestSubgraphRankAttributesAcceptBothForms(t *testing.T) {
@@ -77,5 +79,26 @@ func TestSubgraphRankIsInheritedFromEnclosingGraph(t *testing.T) {
 				t.Fatalf("rank groups = %v, want %v", got, tc.groups)
 			}
 		})
+	}
+}
+
+func TestPointShape(t *testing.T) {
+	graphs, err := ParseString(`digraph { start [shape=point label="ignored"]; start -> a; }`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	graph := graphs[0]
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	start := graph.Node("start")
+	if start.Shape != layout.Dot {
+		t.Fatalf("shape = %q, want %q", start.Shape, layout.Dot)
+	}
+	if label := start.DefaultLabel(); label != "" {
+		t.Errorf("point has label %q, want none", label)
+	}
+	if start.Radius.X > 4*layout.Point || start.Radius.Y > 4*layout.Point {
+		t.Errorf("point radius = %v, want a small dot", start.Radius)
 	}
 }

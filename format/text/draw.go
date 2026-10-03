@@ -21,6 +21,19 @@ func (c *canvas) drawCluster(cluster *layout.Cluster) {
 // drawNode draws a node as a box that holds its label, and marks the box
 // solid so that edges don't draw over it
 func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
+	if node.Shape == layout.Dot {
+		x, y := c.col(node.Center.X), c.row(node.Center.Y)
+		c.boxes[node] = [4]int{x, y, x, y}
+		c.ink = rgb(node.LineColor)
+		if node.FillColor != nil {
+			c.ink = rgb(node.FillColor)
+		}
+		c.set(x, y, '●')
+		if x >= 0 && x < c.w && y >= 0 && y < c.h {
+			c.solid[y*c.w+x] = true
+		}
+		return
+	}
 	x0, y0 := c.col(node.Left()), c.row(node.Top())
 	x1, y1 := c.col(node.Right()), c.row(node.Bottom())
 	lines := strings.Split(node.DefaultLabel(), "\n")
@@ -118,6 +131,9 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 // join draws the box side of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
+	if node.Shape == layout.None || node.Shape == layout.Dot {
+		return // no border to join
+	}
 	b := c.boxes[node]
 	if end[1] <= b[1] || end[1] >= b[3] {
 		return

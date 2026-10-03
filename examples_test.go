@@ -241,7 +241,7 @@ var examples = map[string]func() *layout.Graph{
 // regexDFA returns the automaton of the regex examples
 func regexDFA() *layout.Graph {
 	graph := layout.NewDigraph()
-	graph.Node("start").Shape = layout.None
+	graph.Node("start").Shape = layout.Dot
 	for _, id := range []string{"s0", "s1", "s2", "s3", "s4"} {
 		graph.Node(id).Shape = layout.Circle
 	}

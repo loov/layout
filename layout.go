@@ -15,6 +15,9 @@ const epsilon = 1e-6
 // peripheryGap is the distance between a node's extra outlines
 const peripheryGap = 4 * Point
 
+// dotRadius is the default radius of a Dot node
+const dotRadius = 3 * Point
+
 // AssignMissingValues fills in unset padding, font and size values on the
 // graph, its nodes and edges from the graph defaults. Node sizes are
 // estimated from their labels.
@@ -43,13 +46,16 @@ func (graph *Graph) AssignMissingValues() {
 
 		node.Radius = node.Radius.Sub(node.peripheryPad)
 		node.peripheryPad = Vector{}
+		if node.Shape == Dot && node.Radius.X <= 0 && node.Radius.Y <= 0 {
+			node.Radius = Vector{dotRadius, dotRadius}
+		}
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight
 		}
 		if node.Radius.Y <= 0 {
 			node.Radius.Y = graph.LineHeight
 		}
-		if !node.FixedSize {
+		if !node.FixedSize && node.Shape != Dot {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			if IsHTMLLabel(node.DefaultLabel()) {
 				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
@@ -67,7 +73,7 @@ func (graph *Graph) AssignMissingValues() {
 				node.Radius.Y = labelRadius.Y
 			}
 		}
-		if node.Shape == Circle || node.Shape == Square {
+		if node.Shape == Circle || node.Shape == Square || node.Shape == Dot {
 			// drawn with the larger radius on both axes
 			r := max(node.Radius.X, node.Radius.Y)
 			node.Radius = Vector{r, r}
