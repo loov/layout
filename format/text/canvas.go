@@ -113,6 +113,7 @@ func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 
 
 func (c *canvas) set(x, y int, r rune) {
 	if x >= 0 && x < c.w && y >= 0 && y < c.h {
+		c.unpair(x, y, r != covered)
 		c.cells[y*c.w+x] = r
 		c.fg[y*c.w+x] = c.ink
 		c.lines[y*c.w+x] = 0
@@ -124,6 +125,7 @@ func (c *canvas) line(x, y int, mask int) {
 	if x < 0 || x >= c.w || y < 0 || y >= c.h || c.solid[y*c.w+x] {
 		return
 	}
+	c.unpair(x, y, true)
 	i := y*c.w + x
 	for arm := range 4 {
 		bit := 1 << arm
@@ -194,6 +196,20 @@ func (c *canvas) text(x, y int, s string) {
 // its label: the label between a space on each side, and the corners
 func clusterLabelWidth(cluster *layout.Cluster) int {
 	return width(strings.ReplaceAll(plain(cluster.Label), "\n", " ")) + 3
+}
+
+// unpair blanks the other half of a wide character in the cell at x, y
+// before the cell is overwritten, so that no half is left to shift the
+// row; before is false when the covered cell is rewritten for the wide
+// character just written before it
+func (c *canvas) unpair(x, y int, before bool) {
+	i := y*c.w + x
+	if before && c.cells[i] == covered && x > 0 {
+		c.cells[i-1] = ' '
+	}
+	if layout.IsWide(c.cells[i]) && x+1 < c.w && c.cells[i+1] == covered {
+		c.cells[i+1] = ' '
+	}
 }
 
 // covered marks the cell under the second column of a wide character,

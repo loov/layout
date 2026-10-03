@@ -346,3 +346,21 @@ func TestMarkerKept(t *testing.T) {
 		t.Errorf("the arrowhead of a -> b is missing:\n%s", got)
 	}
 }
+
+// TestOverlappingWideText checks that text written over half of a wide
+// character blanks the other half, so that the row doesn't shift.
+func TestOverlappingWideText(t *testing.T) {
+	got := renderDot(t, `digraph {
+		a [pos="0,0"]; b [pos="0,100"]; c [pos="200,0"]; d [pos="200,100"]
+		a -> b [label="漢字漢字", lp="60,50"]; c -> d [label="xyz", lp="48,50"]
+	}`)
+	var widths []int
+	for _, line := range strings.Split(got, "\n") {
+		if strings.Contains(line, "xyz") || strings.Count(line, "│") == 2 {
+			widths = append(widths, width(line))
+		}
+	}
+	if len(widths) < 2 || slices.Min(widths) != slices.Max(widths) {
+		t.Errorf("rows between the nodes are %v columns wide, want them equal:\n%s", widths, got)
+	}
+}
