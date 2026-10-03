@@ -115,3 +115,26 @@ func TestDoubleCircle(t *testing.T) {
 		}
 	}
 }
+
+// TestDoubleCircleDefaults checks that node defaults decide peripheries
+// together with the node's own attributes, as Graphviz does.
+func TestDoubleCircleDefaults(t *testing.T) {
+	for _, tc := range []struct {
+		src  string
+		want map[string]int
+	}{
+		{`digraph { node [shape=doublecircle]; a [shape=circle]; b; }`, map[string]int{"a": 0, "b": 2}},
+		{`digraph { node [peripheries=1]; a [shape=doublecircle]; }`, map[string]int{"a": 1}},
+		{`digraph { a [shape=doublecircle]; a [label=x]; }`, map[string]int{"a": 2}},
+	} {
+		graphs, err := ParseString(tc.src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for id, want := range tc.want {
+			if got := graphs[0].Node(id).Peripheries; got != want {
+				t.Errorf("%s: %s has %d peripheries, want %d", tc.src, id, got, want)
+			}
+		}
+	}
+}

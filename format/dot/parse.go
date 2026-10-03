@@ -37,7 +37,7 @@ func parse(file *ast.File, err error) ([]*layout.Graph, error) {
 	for _, graphStmt := range file.Graphs {
 		graphStmt.ID = unquote(graphStmt.ID)
 		unquoteStmts(graphStmt.Stmts)
-		parser := &parserContext{positioned: map[*layout.Node]bool{}}
+		parser := &parserContext{positioned: map[*layout.Node]bool{}, outlines: map[*layout.Node]*outlines{}}
 		parser.Graph = layout.NewGraph()
 		parser.parse(graphStmt)
 		graphs = append(graphs, parser.Graph)
@@ -110,6 +110,15 @@ type parserContext struct {
 	touched []*layout.Node // nodes referenced in this (sub)graph
 
 	positioned map[*layout.Node]bool // nodes with a pos attribute
+	outlines   map[*layout.Node]*outlines
+}
+
+// outlines is what decides a node's peripheries over all of its
+// attribute assignments: Graphviz draws doublecircle with two unless
+// peripheries is set
+type outlines struct {
+	double bool // the shape is doublecircle
+	set    bool // peripheries was set explicitly
 }
 
 func (context *parserContext) parse(src *ast.Graph) {
@@ -284,7 +293,7 @@ func (context *parserContext) parseStmts(stmts []ast.Stmt) {
 // count as touched in this context too.
 func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 	start := len(context.Graph.Clusters)
-	subcontext := &parserContext{positioned: context.positioned}
+	subcontext := &parserContext{positioned: context.positioned, outlines: context.outlines}
 	subcontext.Graph = context.Graph
 	subcontext.allAttrs = append(subcontext.allAttrs, context.allAttrs...)
 	subcontext.nodeAttrs = append(subcontext.nodeAttrs, context.nodeAttrs...)
@@ -344,7 +353,8 @@ func (context *parserContext) ensureNode(id string) *layout.Node {
 	if !exists {
 		node = context.Graph.Node(id)
 		node.Label = node.ID // dot's default label is the id, label="" is empty
-		applyNodeAttrs(node, context.nodeAttrs)
+		context.outlines[node] = &outlines{}
+		applyNodeAttrs(node, context.nodeAttrs, context.outlines[node])
 		context.notePos(node, context.nodeAttrs)
 	}
 	if !slices.Contains(context.touched, node) {
@@ -394,7 +404,7 @@ func lastAttr(attrs []*ast.Attr, key string) string {
 
 func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
 	node := context.ensureNode(src.Node.ID)
-	applyNodeAttrs(node, src.Attrs)
+	applyNodeAttrs(node, src.Attrs, context.outlines[node])
 	context.notePos(node, src.Attrs)
 	return node
 }
@@ -450,17 +460,22 @@ func (context *parserContext) ensureVertex(src ast.Vertex) []*layout.Node {
 	}
 }
 
-func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
+// applyNodeAttrs applies attrs to node; outlines carries what earlier
+// assignments to the node set
+func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr, outlines *outlines) {
 	var color layout.Color
-	filled, double, peripheries := false, false, false
+	filled := false
 	defer func() {
 		// style=filled without fillcolor fills with the outline color
 		if filled && node.FillColor == nil && color != nil {
 			node.FillColor = color
 		}
 		// doublecircle is a circle with two outlines unless set otherwise
-		if double && !peripheries {
-			node.Peripheries = 2
+		if !outlines.set {
+			node.Peripheries = 0
+			if outlines.double {
+				node.Peripheries = 2
+			}
 		}
 	}()
 	for _, attr := range attrs {
@@ -472,13 +487,13 @@ func applyNodeAttrs(node *layout.Node, attrs []*ast.Attr) {
 			node.FixedSize = attr.Val == "true" || attr.Val == "shape"
 		case "peripheries":
 			if n, err := strconv.Atoi(attr.Val); err == nil {
-				node.Peripheries, peripheries = n, true
+				node.Peripheries, outlines.set = n, true
 			}
 		case "image":
 			setString(&node.Image, attr.Val)
 		case "shape":
 			setShape(&node.Shape, attr.Val)
-			double = attr.Val == "doublecircle"
+			outlines.double = attr.Val == "doublecircle"
 		case "label":
 			setString(&node.Label, attr.Val)
 		case "color":
