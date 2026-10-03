@@ -46,6 +46,9 @@ func Prepare(graph *layout.Graph) {
 	sideways := graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft
 	graph.PackEdgeEnds = sideways
 	if sideways {
+		// nodes in a rank are stacked down the rows, which are twice as
+		// tall as columns are wide; keep the same visual spacing
+		graph.NodePadding = graph.LineHeight / 2
 		return
 	}
 	// self-loops leave and return on the right, half the half height off
