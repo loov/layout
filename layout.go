@@ -44,8 +44,8 @@ func (graph *Graph) AssignMissingValues() {
 			node.FontSize = graph.FontSize
 		}
 
-		node.Radius = node.Radius.Sub(node.peripheryPad)
-		node.peripheryPad = Vector{}
+		node.Radius = node.Radius.Sub(node.pad)
+		node.pad = Vector{}
 		if node.Shape == Dot && node.Radius.X <= 0 && node.Radius.Y <= 0 {
 			node.Radius = Vector{dotRadius, dotRadius}
 		}
@@ -80,8 +80,8 @@ func (graph *Graph) AssignMissingValues() {
 		}
 		if node.Peripheries > 1 {
 			extra := Length(node.Peripheries-1) * peripheryGap
-			node.peripheryPad = Vector{extra, extra}
-			node.Radius = node.Radius.Add(node.peripheryPad)
+			node.pad = Vector{extra, extra}
+			node.Radius = node.Radius.Add(node.pad)
 		}
 	}
 
@@ -215,6 +215,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 	swapRadii := func() {
 		for _, node := range graphdef.Nodes {
 			node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
+			node.pad.X, node.pad.Y = node.pad.Y, node.pad.X
 		}
 		for _, edge := range edges {
 			edge.LabelRadius.X, edge.LabelRadius.Y = edge.LabelRadius.Y, edge.LabelRadius.X
@@ -620,7 +621,16 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 			if node.Shape == Dot {
 				continue // edges meet at the dot
 			}
-			node.Radius.X = max(node.Radius.X, Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2)
+			grow := Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2 - node.Radius.X
+			if grow <= 0 {
+				continue
+			}
+			pad := Vector{X: grow}
+			if node.Shape == Circle || node.Shape == Square {
+				pad.Y = grow
+			}
+			node.Radius = node.Radius.Add(pad)
+			node.pad = node.pad.Add(pad)
 		}
 	}
 

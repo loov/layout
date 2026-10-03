@@ -32,3 +32,33 @@ func TestPackEdgeEnds(t *testing.T) {
 		t.Errorf("a -> c leaves a at y %v, want below %v and inside a", y, want)
 	}
 }
+
+// TestPackEdgeEndsRepeat checks that the room made for packed edge ends
+// keeps circles round and does not carry over to the next layout.
+func TestPackEdgeEndsRepeat(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {
+		graph := layout.NewDigraph()
+		graph.RankDir = dir
+		graph.Splines = layout.SplinesOrtho
+		graph.PackEdgeEnds = true
+		a := graph.Node("a")
+		a.Shape = layout.Circle
+		for _, to := range []string{"b", "c", "d", "e", "f", "g"} {
+			graph.Edge("a", to)
+		}
+		var first layout.Vector
+		for run := range 3 {
+			if err := layout.Hierarchical(graph); err != nil {
+				t.Fatal(err)
+			}
+			if a.Radius.X != a.Radius.Y {
+				t.Errorf("%v run %d: circle radius %v", dir, run, a.Radius)
+			}
+			if run == 0 {
+				first = a.Radius
+			} else if a.Radius != first {
+				t.Errorf("%v run %d: radius %v, was %v", dir, run, a.Radius, first)
+			}
+		}
+	}
+}

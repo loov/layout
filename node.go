@@ -29,10 +29,10 @@ type Node struct {
 	// Radius is the minimum half size; the label can grow it unless
 	// FixedSize is set
 	Radius Vector
-	// peripheryPad is the padding added to Radius for extra peripheries,
-	// removed again before the next layout recomputes it
-	peripheryPad Vector
-	FixedSize    bool
+	// pad is the padding layouting added to Radius, for extra peripheries
+	// and packed edge ends, removed again before the next layout
+	pad       Vector
+	FixedSize bool
 	// Image is a URL drawn inside the node
 	Image string
 
