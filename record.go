@@ -73,7 +73,8 @@ func parseRecord(s string, vertical bool) (*RecordField, string) {
 	return rec, ""
 }
 
-// cleanRecordText strips a <port> prefix and normalizes escaped line breaks
+// cleanRecordText strips a <port> prefix; parseRecord already turned
+// escapes into the characters they stand for
 func cleanRecordText(s string) string {
 	s = strings.TrimSpace(s)
 	if strings.HasPrefix(s, "<") {
@@ -81,7 +82,7 @@ func cleanRecordText(s string) string {
 			s = strings.TrimSpace(s[end+1:])
 		}
 	}
-	return strings.NewReplacer("\\n", "\n", "\\l", "\n", "\\r", "\n").Replace(s)
+	return s
 }
 
 // LayoutRecord parses the node's record label and computes the field

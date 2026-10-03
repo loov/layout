@@ -15,3 +15,12 @@ func TestParseRecord(t *testing.T) {
 		t.Errorf("group wrong: %+v", group)
 	}
 }
+
+// TestParseRecordEscapedBackslash checks that an escaped backslash stays
+// a backslash rather than starting a line break with the next letter.
+func TestParseRecordEscapedBackslash(t *testing.T) {
+	rec := ParseRecord(`C:\\new|x`)
+	if len(rec.Fields) != 2 || rec.Fields[0].Text != `C:\new` {
+		t.Errorf("got %+v, want C:\\new first", rec.Fields[0])
+	}
+}
