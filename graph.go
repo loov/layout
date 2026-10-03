@@ -40,6 +40,9 @@ type Graph struct {
 	// missing edge paths, like dot -n.
 	Pinned bool
 
+	// NodeByID indexes Nodes by ID. Node and AddNode keep the two in
+	// sync; a node appended to Nodes directly is missing from NodeByID,
+	// and Node then creates a second node with the same ID.
 	NodeByID map[string]*Node
 	Nodes    []*Node
 	Edges    []*Edge
@@ -98,7 +101,8 @@ func (graph *Graph) Edge(from, to string) *Edge {
 	return edge
 }
 
-// AddNode adds a new node.
+// AddNode adds a new node to Nodes and NodeByID; a node without an ID
+// is only added to Nodes.
 //
 // When a node with the same id already exists it returns false
 // and the node is not added.
