@@ -72,6 +72,24 @@ func TestWriteIsWellFormedXML(t *testing.T) {
 	}
 }
 
+func TestColorsKeepAlpha(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Node("a").FillColor = layout.RGBA{R: 0xFF, A: 0x80}
+	graph.Node("b").LineColor = layout.RGB{G: 0xFF}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"fill='rgba(255,0,0,0.502)'", "stroke='#00FF00'"} {
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("missing %s in\n%s", want, out.String())
+		}
+	}
+}
+
 func TestSanitizeHTMLRemovesRawTextElements(t *testing.T) {
 	for _, tag := range []string{"noscript", "xmp", "noembed", "noframes", "plaintext"} {
 		t.Run(tag, func(t *testing.T) {

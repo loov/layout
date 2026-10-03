@@ -73,11 +73,15 @@ func (svg *writer) writeDefs() {
 	</defs>`)
 }
 
+// colortext returns color as #RRGGBB, or as rgba() when translucent
 func colortext(color layout.Color) string {
 	const hex = "0123456789ABCDEF"
 	r, g, b, a := color.RGBA8()
 	if a == 0 {
 		return "none"
+	}
+	if a != 0xFF {
+		return fmt.Sprintf("rgba(%d,%d,%d,%.3g)", r, g, b, float64(a)/0xFF)
 	}
 	return string([]byte{'#',
 		hex[r>>4], hex[r&0xF],
