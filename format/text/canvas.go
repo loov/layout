@@ -82,7 +82,7 @@ func newCanvas(graph *layout.Graph) *canvas {
 	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
 	for _, edge := range graph.Edges {
-		for _, line := range strings.Split(edge.Label, "\n") {
+		for _, line := range strings.Split(plain(edge.Label), "\n") {
 			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+len([]rune(line))+1)
 		}
 	}

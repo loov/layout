@@ -45,7 +45,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
 	x0, y0 := c.col(node.Left()+inset), c.row(node.Top()+inset)
 	x1, y1 := c.col(node.Right()-inset), c.row(node.Bottom()-inset)
-	lines := strings.Split(node.DefaultLabel(), "\n")
+	lines := strings.Split(plain(node.DefaultLabel()), "\n")
 	// the box must hold the label and have distinct edges
 	if node.Shape != layout.Record {
 		for _, line := range lines {
@@ -92,7 +92,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		c.record(rec, node.TopLeft(), c.col, inside)
 		return
 	}
-	top := (y0+y1)/2 - len(lines)/2
+	top := (y0 + y1 + 1 - len(lines)) / 2
 	if graph.PackEdgeEnds && (graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft) {
 		top = y0 + 1 // with the main path, along the first row
 	}
@@ -332,7 +332,7 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" {
-			lines := strings.Split(edge.Label, "\n")
+			lines := strings.Split(plain(edge.Label), "\n")
 			w := 0
 			for _, line := range lines {
 				w = max(w, len([]rune(line)))
@@ -348,7 +348,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for _, cluster := range graph.Clusters {
 		if cluster.Label != "" {
 			c.font = 0
-			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+cluster.Label+" ")
+			c.text(c.col(cluster.TopLeft.X)+1, c.row(cluster.TopLeft.Y), " "+strings.ReplaceAll(plain(cluster.Label), "\n", " ")+" ")
 		}
 	}
 }
