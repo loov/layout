@@ -76,3 +76,19 @@ func TestStraightLineRoutingPreservesExplicitPorts(t *testing.T) {
 		})
 	}
 }
+
+func TestPinnedLayoutsHonorPorts(t *testing.T) {
+	for name, run := range map[string]func(*layout.Graph) error{"hierarchical": layout.Hierarchical, "force": layout.Force} {
+		t.Run(name, func(t *testing.T) {
+			g := layout.NewDigraph()
+			g.Pinned = true
+			e := g.Edge("a", "b")
+			e.From.Center, e.To.Center = layout.Vector{X: 100, Y: 100}, layout.Vector{X: 100, Y: 200}
+			e.FromPort, e.ToPort = layout.East, layout.West
+			if err := run(g); err != nil {
+				t.Fatal(err)
+			}
+			assertPortEndpoints(t, e)
+		})
+	}
+}

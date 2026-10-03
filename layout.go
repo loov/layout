@@ -973,7 +973,14 @@ func layoutPinned(graph *Graph) {
 			if edge.From == edge.To {
 				edge.Path = loopPath(edge.From, edge.From.Radius.X)
 			} else {
-				edge.Path = []Vector{edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)}
+				from, to := edge.From.Boundary(edge.To.Center), edge.To.Boundary(edge.From.Center)
+				if edge.FromPort != CompassAuto {
+					from = edge.From.CompassPoint(edge.FromPort)
+				}
+				if edge.ToPort != CompassAuto {
+					to = edge.To.CompassPoint(edge.ToPort)
+				}
+				edge.Path = []Vector{from, to}
 			}
 		}
 		if edge.Label != "" && edge.LabelPos == (Vector{}) {
