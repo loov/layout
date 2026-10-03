@@ -33,3 +33,31 @@ func TestRankDirMargins(t *testing.T) {
 		}
 	}
 }
+
+// TestRankDirDuplicateEdge checks that an edge listed twice is mapped
+// out of the layout frame once, so that it still ends at its nodes.
+func TestRankDirDuplicateEdge(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.LeftToRight, layout.RightToLeft, layout.BottomToTop} {
+		graph := layout.NewDigraph()
+		graph.RankDir = dir
+		graph.Edge("c", "d") // a component before, so that a -> b is shifted
+		edge := graph.Edge("a", "b")
+		edge.Label = "label"
+		graph.AddEdge(edge)
+		if err := layout.Hierarchical(graph); err != nil {
+			t.Fatal(err)
+		}
+		inside := func(node *layout.Node, p layout.Vector) bool {
+			const tolerance = 0.01
+			return p.X > node.Left()-tolerance && p.X < node.Right()+tolerance &&
+				p.Y > node.Top()-tolerance && p.Y < node.Bottom()+tolerance
+		}
+		if !inside(edge.From, edge.Path[0]) || !inside(edge.To, edge.Path[len(edge.Path)-1]) {
+			t.Errorf("%v: path %v does not connect %v at %v and %v at %v", dir, edge.Path, edge.From, edge.From.Center, edge.To, edge.To.Center)
+		}
+		min, max := graph.Bounds()
+		if pos := edge.LabelPos; pos.X < min.X || pos.X > max.X || pos.Y < min.Y || pos.Y > max.Y {
+			t.Errorf("%v: label at %v outside the drawing %v-%v", dir, pos, min, max)
+		}
+	}
+}

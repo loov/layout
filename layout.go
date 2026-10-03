@@ -193,14 +193,13 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		return nil
 	}
 
+	// edges are updated in place below, an edge listed twice only once
+	edges := uniqueEdges(graphdef.Edges)
+
 	// Compass directions are physical directions, so map them into the
 	// temporary rank frame and restore the caller's values afterward.
-	// Keyed by edge so that an edge listed twice is mapped only once.
-	ports := make(map[*Edge][2]Compass, len(graphdef.Edges))
-	for _, edge := range graphdef.Edges {
-		if _, ok := ports[edge]; ok {
-			continue
-		}
+	ports := make(map[*Edge][2]Compass, len(edges))
+	for _, edge := range edges {
 		ports[edge] = [2]Compass{edge.FromPort, edge.ToPort}
 		edge.FromPort = compassInRankFrame(edge.FromPort, graphdef.RankDir)
 		edge.ToPort = compassInRankFrame(edge.ToPort, graphdef.RankDir)
@@ -217,7 +216,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		for _, node := range graphdef.Nodes {
 			node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
 		}
-		for _, edge := range graphdef.Edges {
+		for _, edge := range edges {
 			edge.LabelRadius.X, edge.LabelRadius.Y = edge.LabelRadius.Y, edge.LabelRadius.X
 		}
 	}
@@ -245,7 +244,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		for _, node := range graphdef.Nodes {
 			node.Center = transform(node.Center)
 		}
-		for _, edge := range graphdef.Edges {
+		for _, edge := range edges {
 			for i, p := range edge.Path {
 				edge.Path[i] = transform(p)
 			}
@@ -266,7 +265,7 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		for _, node := range component.Nodes {
 			node.Center = node.Center.Add(shift)
 		}
-		for _, edge := range component.Edges {
+		for _, edge := range uniqueEdges(component.Edges) {
 			for i, p := range edge.Path {
 				edge.Path[i] = p.Add(shift)
 			}
@@ -279,6 +278,16 @@ func HierarchicalWith(graphdef *Graph, opts Options) error {
 		left += size.X + 2*graphdef.NodePadding
 	}
 	return nil
+}
+
+// uniqueEdges returns edges without repeats of the same edge
+func uniqueEdges(edges []*Edge) []*Edge {
+	seen := make(map[*Edge]bool, len(edges))
+	return slices.DeleteFunc(slices.Clone(edges), func(edge *Edge) bool {
+		repeat := seen[edge]
+		seen[edge] = true
+		return repeat
+	})
 }
 
 // validate checks that every edge connects nodes of the graph
