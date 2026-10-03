@@ -102,22 +102,23 @@ func (c *canvas) edgeCells(edge *layout.Edge) [][2]int {
 	return cells
 }
 
-// spreadSides gives every edge end on the left or right side of a box a
-// row of its own between the borders, as close to where it rounded as
-// the others allow. The layout spreads ends a row or so apart, but
-// rounds them to rows independently of the box, so ends could share a
-// row or land on a border. An end whose run goes on straight keeps its
-// row if it can; a moved end takes the bend before it along.
+// spreadSides gives every edge end on a side of a box a row, or on the
+// top or bottom a column, of its own between the corners, as close to
+// where it rounded as the others allow. The layout spreads ends apart,
+// but rounds them to cells independently of the box, so ends could share
+// a cell or land on a corner. An end whose run goes on straight keeps
+// its place if it can; a moved end takes the bend before it along.
 func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 	type end struct {
 		path   [][2]int
 		i, j   int  // the end and the bend before it
 		fixed  bool // the run goes on straight past the bend
-		toward int  // the row the edge heads for past the bend
+		toward int  // where the edge heads past the bend, along the side
 	}
 	type side struct {
 		node  *layout.Node
-		right bool
+		along int  // the axis along the side: 1 for left and right
+		after bool // right or bottom
 	}
 	sides := map[side][]end{}
 	for k, path := range paths {
@@ -131,45 +132,50 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		}{{0, 1, 2, edges[k].From}, {last, last - 1, last - 2, edges[k].To}} {
 			b := c.boxes[e.node]
 			at, bend := path[e.i], path[e.j]
-			right := bend[0] > b[2]
-			if b[3]-b[1] < 2 || at[1] != bend[1] || at[1] < b[1] || at[1] > b[3] || !right && bend[0] >= b[0] {
-				continue // not along a row from beside the box
+			for along := range 2 {
+				across := 1 - along
+				after := bend[across] > b[across+2]
+				if b[along+2]-b[along] < 2 || at[along] != bend[along] || at[along] < b[along] || at[along] > b[along+2] ||
+					!after && bend[across] >= b[across] {
+					continue // not straight into the side from beyond it
+				}
+				// onto the side, also where a rounder outline curves inside
+				path[e.i][across] = map[bool]int{false: b[across], true: b[across+2]}[after]
+				end := end{path: path, i: e.i, j: e.j, fixed: true, toward: at[along]}
+				if e.k >= 0 && e.k < len(path) {
+					end.fixed = path[e.k][along] == bend[along]
+					end.toward = path[e.k][along]
+				}
+				key := side{e.node, along, after}
+				sides[key] = append(sides[key], end)
+				break
 			}
-			// on the side, also where a rounder outline curves inside
-			path[e.i][0] = map[bool]int{false: b[0], true: b[2]}[right]
-			end := end{path: path, i: e.i, j: e.j, fixed: true, toward: at[1]}
-			if e.k >= 0 && e.k < len(path) {
-				end.fixed = path[e.k][1] == bend[1]
-				end.toward = path[e.k][1]
-			}
-			key := side{e.node, right}
-			sides[key] = append(sides[key], end)
 		}
 	}
 	for key, ends := range sides {
 		b := c.boxes[key.node]
-		lo, hi := b[1]+1, b[3]-1
+		lo, hi := b[key.along]+1, b[key.along+2]-1
 		if len(ends) > hi-lo+1 {
 			continue // no room; keep them as they are
 		}
 		slices.SortStableFunc(ends, func(a, b end) int {
-			return cmp.Or(cmp.Compare(a.path[a.i][1], b.path[b.i][1]), cmp.Compare(a.toward, b.toward))
+			return cmp.Or(cmp.Compare(a.path[a.i][key.along], b.path[b.i][key.along]), cmp.Compare(a.toward, b.toward))
 		})
 		want := make([]int, len(ends))
 		fixed := make([]bool, len(ends))
 		for n, e := range ends {
-			want[n], fixed[n] = e.path[e.i][1], e.fixed
+			want[n], fixed[n] = e.path[e.i][key.along], e.fixed
 		}
-		for n, row := range spreadRows(want, fixed, lo, hi) {
+		for n, at := range spreadRows(want, fixed, lo, hi) {
 			e := ends[n]
-			e.path[e.i][1], e.path[e.j][1] = row, row
+			e.path[e.i][key.along], e.path[e.j][key.along] = at, at
 		}
 	}
 }
 
-// spreadRows moves the ordered rows want as little as possible so that
-// each gets its own row within [lo, hi], with fixed rows moving only
-// when they must. Shifting row n by n turns this into ordering, solved
+// spreadRows moves the ordered rows, or columns, want as little as
+// possible so that each gets its own within [lo, hi], with fixed ones
+// moving only when they must. Shifting row n by n turns this into ordering, solved
 // by pooling adjacent violators.
 func spreadRows(want []int, fixed []bool, lo, hi int) []int {
 	type block struct {
