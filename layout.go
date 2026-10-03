@@ -147,6 +147,16 @@ var (
 	Quality = Options{OrderIterations: 96}
 )
 
+// labelSide is the side of an edge, in the top to bottom frame, that its
+// label goes on: right of downward edges, and above sideways ones, which
+// is the left in the frame
+func labelSide(dir RankDir) float32 {
+	if dir == LeftToRight || dir == RightToLeft {
+		return -1
+	}
+	return 1
+}
+
 // compassInRankFrame maps a physical port into the top-to-bottom frame.
 func compassInRankFrame(port Compass, dir RankDir) Compass {
 	compass := [...]Compass{North, NorthEast, East, SouthEast, South, SouthWest, West, NorthWest}
@@ -564,8 +574,9 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 				node.Radius.X += float32(width + graphdef.EdgePadding)
 				node.Radius.Y = float32(height + graphdef.EdgePadding)
 				if graphdef.Splines != SplinesOrtho {
-					// the edge passes on the left, the labels stack on the right
-					node.Anchor = -node.Radius.X + float32(graphdef.EdgePadding)
+					// the edge passes on one side, the labels stack on the
+					// other, see labelSide
+					node.Anchor = -labelSide(graphdef.RankDir) * (node.Radius.X - float32(graphdef.EdgePadding))
 				}
 			}
 			continue
@@ -694,8 +705,9 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 						height += 2 * edge.LabelRadius.Y
 					}
 					y := point.Y - height/2
+					side := Length(labelSide(graphdef.RankDir))
 					for _, edge := range edges {
-						edge.LabelPos = Vector{X: point.X + graphdef.EdgePadding + edge.LabelRadius.X, Y: y + edge.LabelRadius.Y}
+						edge.LabelPos = Vector{X: point.X + side*(graphdef.EdgePadding+edge.LabelRadius.X), Y: y + edge.LabelRadius.Y}
 						y += 2 * edge.LabelRadius.Y
 					}
 				}
