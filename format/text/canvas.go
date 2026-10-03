@@ -328,20 +328,11 @@ func (c *canvas) walk(x0, y0, x1, y1 int) {
 	}
 }
 
-// marker draws an edge end marker for the segment from a to the end b,
-// which lies in cell end. It sits in the gap before the node when the run
-// there is straight, else on the node border. It reports whether style
-// has a marker.
-func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) bool {
-	dir := down
-	switch dx, dy := b.X-a.X, b.Y-a.Y; {
-	case dy < 0 && -dy >= absLength(dx):
-		dir = up
-	case dx > 0 && dx > absLength(dy):
-		dir = right
-	case dx < 0 && -dx > absLength(dy):
-		dir = left
-	}
+// marker draws an edge end marker pointing in dir at the end of the edge
+// in cell end. It sits in the gap before the node when the run there is
+// straight, else on the node border. It reports whether style has a
+// marker.
+func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
 	r, ok := map[layout.Arrow]rune{
 		layout.ArrowNormal: arrow[dir],
 		layout.ArrowVee:    map[int]rune{up: '↑', down: '↓', left: '←', right: '→'}[dir],
@@ -359,6 +350,33 @@ func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) bool
 		c.solid[end[1]*c.w+end[0]] = true // later runs don't erase it
 	}
 	return true
+}
+
+// arrival returns the direction of the leg of the run between cells a
+// and b that reaches b, pointing at b. walk draws the horizontal leg
+// first, so from b when the run starts at b. Within a cell, it is the
+// direction of the segment from a to b in graph coordinates, p to q.
+func arrival(a, b [2]int, startsAtB bool, p, q layout.Vector) int {
+	horizontal := a[0] != b[0] && (startsAtB || a[1] == b[1])
+	switch {
+	case horizontal && b[0] > a[0]:
+		return right
+	case horizontal:
+		return left
+	case b[1] > a[1]:
+		return down
+	case b[1] < a[1]:
+		return up
+	}
+	switch dx, dy := q.X-p.X, q.Y-p.Y; {
+	case dy < 0 && -dy >= absLength(dx):
+		return up
+	case dx > 0 && dx > absLength(dy):
+		return right
+	case dx < 0 && -dx > absLength(dy):
+		return left
+	}
+	return down
 }
 
 func absLength(v layout.Length) layout.Length {

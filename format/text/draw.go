@@ -121,7 +121,50 @@ func (c *canvas) edgeCells(edge *layout.Edge) [][2]int {
 	cells[last] = c.border(cells[last], cells[last-1], edge.To)
 	c.atDot(cells, 0, 1, 2, edge.From)
 	c.atDot(cells, last, last-1, last-2, edge.To)
-	return cells
+	return c.across(cells, edge.From, edge.To)
+}
+
+// across adds bends to diagonal end segments, which walk draws as a
+// horizontal then a vertical leg, so that they leave and reach the boxes
+// across their borders instead of along them
+func (c *canvas) across(cells [][2]int, from, to *layout.Node) [][2]int {
+	// the axis an end crosses the border of its box on, from where it
+	// lies beside or above or below the box: 0 across a side, 1 across
+	// the top or bottom, -1 off a corner or at a dot
+	axis := func(end [2]int, node *layout.Node) int {
+		b := c.boxes[node]
+		inX, inY := end[0] > b[0] && end[0] < b[2], end[1] > b[1] && end[1] < b[3]
+		switch {
+		case inY && !inX:
+			return 0
+		case inX && !inY:
+			return 1
+		}
+		return -1
+	}
+	bends := func(a, b [2]int, first, last int) [][2]int {
+		if a[0] == b[0] || a[1] == b[1] {
+			return nil
+		}
+		switch {
+		case first == 1 && last == 1:
+			mid := (a[1] + b[1]) / 2
+			return [][2]int{{a[0], mid}, {b[0], mid}}
+		case first == 0 && last == 0:
+			mid := (a[0] + b[0]) / 2
+			return [][2]int{{mid, a[1]}, {mid, b[1]}}
+		case first == 1 || last == 0:
+			return [][2]int{{a[0], b[1]}} // vertical, then horizontal
+		}
+		return nil
+	}
+	last := len(cells) - 1
+	start, end := axis(cells[0], from), axis(cells[last], to)
+	if last == 1 {
+		return slices.Concat(cells[:1], bends(cells[0], cells[1], start, end), cells[1:])
+	}
+	return slices.Concat(cells[:1], bends(cells[0], cells[1], start, -1), cells[1:last],
+		bends(cells[last-1], cells[last], -1, end), cells[last:])
 }
 
 // atDot starts the edge end cells[i] at a dot node in the dot's cell and,
@@ -276,10 +319,10 @@ func (c *canvas) drawEdge(edge *layout.Edge, cells [][2]int) {
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
 	}
-	if !c.marker(head, path[len(path)-2], path[len(path)-1], cells[last]) {
+	if !c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last]) {
 		c.join(cells[last], edge.To)
 	}
-	if !c.marker(edge.ArrowTail, path[1], path[0], cells[0]) {
+	if !c.marker(edge.ArrowTail, arrival(cells[1], cells[0], true, path[1], path[0]), cells[0]) {
 		c.join(cells[0], edge.From)
 	}
 }

@@ -364,3 +364,13 @@ func TestOverlappingWideText(t *testing.T) {
 		t.Errorf("rows between the nodes are %v columns wide, want them equal:\n%s", widths, got)
 	}
 }
+
+// TestDiagonalEnds checks that a diagonal edge leaves and reaches the
+// boxes across their borders, with the arrowhead pointing along the last
+// leg.
+func TestDiagonalEnds(t *testing.T) {
+	got := renderDot(t, `digraph { a [pos="0,200"]; b [pos="300,0"]; a -> b [pos="0,182 300,18"] }`)
+	if !strings.Contains(got, "▼") || strings.Contains(got, "▶") || !regexp.MustCompile(`╰─*┬─*╯`).MatchString(got) {
+		t.Errorf("want the edge to leave a down and reach b down:\n%s", got)
+	}
+}
