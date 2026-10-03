@@ -124,7 +124,7 @@ func TestWriteArrowsRoundTripAndRenderInGraphviz(t *testing.T) {
 func TestWriteQuotesArrowNames(t *testing.T) {
 	g := layout.NewDigraph()
 	e := g.Edge("a", "b")
-	e.ArrowHead, e.ArrowTail = "x]; evil [label=y", "z]; evil2 [label=w"
+	e.ArrowHead, e.ArrowTail = `x]; evil [label="y`, `z]; evil2 [label="w`
 	var out bytes.Buffer
 	if err := Write(&out, g); err != nil {
 		t.Fatal(err)
@@ -138,5 +138,30 @@ func TestWriteQuotesArrowNames(t *testing.T) {
 	}
 	if got := graphs[0].Edges[0]; got.ArrowHead != e.ArrowHead || got.ArrowTail != e.ArrowTail {
 		t.Fatalf("arrows = %q, %q", got.ArrowHead, got.ArrowTail)
+	}
+}
+
+func TestWriteEscapesRoundTrip(t *testing.T) {
+	g := layout.NewDigraph()
+	e := g.Edge(`say "hi"`, `back\slash`)
+	e.From.Label = "two\nlines"
+	e.To.Label = `literal \n and "quotes"`
+	e.Label = `C:\dir\"x"`
+	var out bytes.Buffer
+	if err := Write(&out, g); err != nil {
+		t.Fatal(err)
+	}
+	graphs, err := Parse(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := graphs[0]
+	for i, node := range g.Nodes {
+		if got.Nodes[i].ID != node.ID || got.Nodes[i].Label != node.Label {
+			t.Errorf("node %q label %q, want %q label %q", got.Nodes[i].ID, got.Nodes[i].Label, node.ID, node.Label)
+		}
+	}
+	if got.Edges[0].Label != e.Label {
+		t.Errorf("edge label %q, want %q", got.Edges[0].Label, e.Label)
 	}
 }

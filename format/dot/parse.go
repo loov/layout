@@ -87,12 +87,16 @@ func unquoteAttrs(attrs []*ast.Attr) {
 	}
 }
 
+// unquote strips the quotes of a dot string and undoes the escapes that
+// quote in write.go adds.
 func unquote(s string) string {
 	if len(s) >= 2 && s[0] == '"' && s[len(s)-1] == '"' {
-		return s[1 : len(s)-1]
+		return unescape.Replace(s[1 : len(s)-1])
 	}
 	return s
 }
+
+var unescape = strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n")
 
 // parserContext holds the attribute defaults in effect for a (sub)graph
 type parserContext struct {
@@ -133,7 +137,7 @@ func (context *parserContext) pin() {
 	// the bounding box, when present, gives the exact height
 	for _, attr := range context.allAttrs {
 		if attr.Key == "bb" {
-			if corners := strings.Split(fixstring(attr.Val), ","); len(corners) == 4 {
+			if corners := strings.Split(attr.Val, ","); len(corners) == 4 {
 				if h, err := strconv.ParseFloat(corners[3], 64); err == nil {
 					top = layout.Length(h) * layout.Point
 				}
@@ -166,7 +170,7 @@ func (context *parserContext) notePos(node *layout.Node, attrs []*ast.Attr) {
 
 // parsePoint reads "x,y" in points, ignoring a trailing "!"
 func parsePoint(s string) (layout.Vector, bool) {
-	x, y, ok := strings.Cut(strings.TrimSuffix(fixstring(s), "!"), ",")
+	x, y, ok := strings.Cut(strings.TrimSuffix(s, "!"), ",")
 	if !ok {
 		return layout.Vector{}, false
 	}
@@ -180,7 +184,7 @@ func parsePoint(s string) (layout.Vector, bool) {
 func parseSpline(s string) []layout.Vector {
 	var start, end *layout.Vector
 	var points []layout.Vector
-	for field := range strings.FieldsSeq(fixstring(s)) {
+	for field := range strings.FieldsSeq(s) {
 		prefix := ""
 		if len(field) > 2 && field[1] == ',' && (field[0] == 's' || field[0] == 'e') {
 			prefix, field = field[:1], field[2:]
@@ -222,7 +226,7 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 	for _, attr := range attrs {
 		switch attr.Key {
 		case "rankdir":
-			switch strings.ToUpper(fixstring(attr.Val)) {
+			switch strings.ToUpper(attr.Val) {
 			case "LR":
 				graph.RankDir = layout.LeftToRight
 			case "RL":
@@ -233,7 +237,7 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 				graph.RankDir = layout.TopToBottom
 			}
 		case "splines":
-			switch strings.ToLower(fixstring(attr.Val)) {
+			switch strings.ToLower(attr.Val) {
 			case "polyline":
 				graph.Splines = layout.SplinesPolyline
 			case "line", "false":
@@ -526,7 +530,7 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 		case "fontcolor":
 			setColor(&edge.FontColor, attr.Val)
 		case "dir":
-			switch fixstring(attr.Val) {
+			switch attr.Val {
 			case "back":
 				edge.ArrowHead, edge.ArrowTail = layout.ArrowNone, layout.ArrowNormal
 			case "both":
@@ -537,13 +541,13 @@ func applyEdgeAttrs(edge *layout.Edge, attrs []*ast.Attr) {
 				edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNone
 			}
 		case "arrowhead":
-			edge.ArrowHead = layout.Arrow(fixstring(attr.Val))
+			edge.ArrowHead = layout.Arrow(attr.Val)
 		case "arrowtail":
-			edge.ArrowTail = layout.Arrow(fixstring(attr.Val))
+			edge.ArrowTail = layout.Arrow(attr.Val)
 		case "headport":
-			edge.ToPort = layout.Compass(fixstring(attr.Val))
+			edge.ToPort = layout.Compass(attr.Val)
 		case "tailport":
-			edge.FromPort = layout.Compass(fixstring(attr.Val))
+			edge.FromPort = layout.Compass(attr.Val)
 		case "fontname":
 			setString(&edge.FontName, attr.Val)
 		case "fontsize":
@@ -642,9 +646,6 @@ func setShape(t *layout.Shape, value string) {
 }
 
 func setString(t *string, value string) {
-	*t = fixstring(value)
+	*t = value
 }
 
-func fixstring(s string) string {
-	return strings.ReplaceAll(s, "\\n", "\n")
-}
