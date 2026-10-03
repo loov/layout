@@ -86,6 +86,12 @@ func newCanvas(graph *layout.Graph) *canvas {
 			c.w = max(c.w, c.col(edge.LabelPos.X-edge.LabelRadius.X)+width(line)+1)
 		}
 	}
+	for _, node := range graph.Nodes {
+		// boxes widen to their labels, see drawNode
+		label := plain(node.DefaultLabel())
+		c.w = max(c.w, c.col(node.Left())+textWidth(label)+2)
+		c.h = max(c.h, c.row(node.Top())+strings.Count(label, "\n")+3)
+	}
 	for _, cluster := range graph.Clusters {
 		if cluster.Label != "" {
 			c.w = max(c.w, c.col(cluster.TopLeft.X)+clusterLabelWidth(cluster)+1)
@@ -208,6 +214,15 @@ func width(s string) int {
 		}
 	}
 	return n
+}
+
+// textWidth returns the columns of the widest line of s
+func textWidth(s string) int {
+	w := 0
+	for _, line := range strings.Split(s, "\n") {
+		w = max(w, width(line))
+	}
+	return w
 }
 
 // fill sets the background of the cells inside the rectangle, unless
@@ -363,4 +378,33 @@ func recordRows(rec *layout.RecordField) int {
 		rows += len(rec.Fields) - 1
 	}
 	return rows
+}
+
+// reserveRecord widens a record node until each field holds its text
+// between the dividers. Fields share the width beyond their estimated
+// sizes evenly, so a field grows by the record's growth divided by the
+// fields beside it at each level.
+func reserveRecord(graph *layout.Graph, node *layout.Node, cellW layout.Length) {
+	if node.FontSize <= 0 {
+		// as the layout sizes the fields
+		node.FontSize = graph.FontSize
+		defer func() { node.FontSize = 0 }()
+	}
+	grow := layout.Length(0)
+	var walk func(rec *layout.RecordField, share layout.Length)
+	walk = func(rec *layout.RecordField, share layout.Length) {
+		if len(rec.Fields) == 0 {
+			need := layout.Length(textWidth(rec.Text)+2) * cellW
+			grow = max(grow, (need-(rec.BottomRight.X-rec.TopLeft.X))*share)
+			return
+		}
+		if !rec.Vertical {
+			share *= layout.Length(len(rec.Fields))
+		}
+		for _, field := range rec.Fields {
+			walk(field, share)
+		}
+	}
+	walk(graph.LayoutRecord(node), 1)
+	node.Radius.X += grow / 2
 }

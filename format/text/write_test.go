@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -280,6 +281,48 @@ func TestMultilineLabels(t *testing.T) {
 	for _, want := range []string{"│ first │", "│second │", "│ one", "│ two"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q:\n%s", want, got)
+		}
+	}
+}
+
+// render prepares, lays out and draws graph
+func render(t *testing.T, graph *layout.Graph) string {
+	t.Helper()
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	return buf.String()
+}
+
+// TestLabelsFitBoxes checks that the layout leaves room for boxes as wide
+// as their labels take cells, so that they don't run into each other, and
+// that record fields hold their texts between the dividers.
+func TestLabelsFitBoxes(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Shape = layout.Box
+	graph.Edge("a", "b")
+	graph.Edge("a", "c")
+	graph.Node("b").Label = "p                                  q"
+	got := render(t, graph)
+	if !regexp.MustCompile(`│p +q *│ +│ *c *│`).MatchString(got) {
+		t.Errorf("b runs into c:\n%s", got)
+	}
+
+	for _, tc := range []struct{ label, want string }{
+		{"{p   q|漢字漢字漢字漢字漢字漢字}", `│ *漢字漢字漢字漢字漢字漢字 *│`},
+		{"<f0> left|<f1> mid dle|<f2> right", `│ *left *│ *mid dle *│ *right *│`},
+	} {
+		graph := layout.NewDigraph()
+		node := graph.Node("a")
+		node.Shape, node.Label = layout.Record, tc.label
+		got := render(t, graph)
+		if !regexp.MustCompile(tc.want).MatchString(got) {
+			t.Errorf("%q: fields overflow:\n%s", tc.label, got)
 		}
 	}
 }

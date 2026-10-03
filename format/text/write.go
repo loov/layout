@@ -41,11 +41,30 @@ func Prepare(graph *layout.Graph) {
 	graph.NodePadding = graph.LineHeight * 2
 	graph.EdgePadding = graph.LineHeight
 
-	// text draws the dividers of records on rows of their own
+	// text draws the dividers of records on rows of their own, and boxes
+	// as wide as their labels take cells, which estimates can fall short of
+	if graph.FontSize <= 0 {
+		graph.FontSize = graph.LineHeight * 14 / 16
+	}
+	cellW := graph.FontSize * 0.55
 	for _, node := range graph.Nodes {
-		if node.Shape == layout.Record || node.Shape == layout.Auto && graph.Shape == layout.Record {
+		shape := node.Shape
+		if shape == layout.Auto {
+			shape = graph.Shape
+		}
+		if shape == layout.Dot {
+			continue
+		}
+		if node.Radius.X <= 0 {
+			node.Radius.X = graph.LineHeight // the layout's default
+		}
+		switch shape {
+		case layout.Record:
 			rows := recordRows(layout.ParseRecord(node.DefaultLabel()))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*layout.Length(rows+1)/2)
+			reserveRecord(graph, node, cellW)
+		default:
+			node.Radius.X = max(node.Radius.X, layout.Length(textWidth(plain(node.DefaultLabel()))+2)*cellW/2)
 		}
 	}
 

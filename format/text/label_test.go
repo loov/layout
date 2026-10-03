@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -37,7 +38,8 @@ func TestHTMLLabel(t *testing.T) {
 	if err := Write(&buf, graph); err != nil {
 		t.Fatal(err)
 	}
-	if got := buf.String(); !strings.Contains(got, "│bold│") || !strings.Contains(got, "┌────┐") || !strings.Contains(got, "└────┘") {
+	got := buf.String()
+	if !regexp.MustCompile(`(?m)^ *┌(─+)┐\n *│ *bold *│\n *└(─+)┘$`).MatchString(got) {
 		t.Errorf("want bold in a whole box:\n%s", got)
 	}
 }
@@ -61,8 +63,8 @@ func TestWideLabel(t *testing.T) {
 	for _, line := range strings.Split(strings.TrimSpace(buf.String()), "\n") {
 		widths = append(widths, width(strings.TrimSpace(line)))
 	}
-	if len(widths) != 3 || widths[0] != widths[1] || widths[1] != widths[2] || widths[1] != 10 {
-		t.Errorf("box rows are %v columns wide, want 10 each:\n%s", widths, buf.String())
+	if len(widths) != 3 || widths[0] != widths[1] || widths[1] != widths[2] || widths[1] < 10 {
+		t.Errorf("box rows are %v columns wide, want at least 10 each:\n%s", widths, buf.String())
 	}
 }
 
