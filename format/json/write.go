@@ -10,10 +10,15 @@ import (
 	"github.com/loov/layout"
 )
 
-// Graph is the JSON shape of a laid out graph.
+// Graph is the JSON shape of a laid out graph. The drawing spans Width
+// and Height from the top left corner X, Y. Coordinates are kept as laid
+// out, so X and Y are 0 unless something lies before the origin, as with
+// negative pinned positions.
 type Graph struct {
 	ID       string    `json:"id,omitempty"`
 	Directed bool      `json:"directed"`
+	X        float64   `json:"x"`
+	Y        float64   `json:"y"`
 	Width    float64   `json:"width"`
 	Height   float64   `json:"height"`
 	Nodes    []Node    `json:"nodes"`
@@ -53,10 +58,12 @@ type Cluster struct {
 
 // Convert builds the JSON shape of a laid out graph.
 func Convert(graph *layout.Graph) Graph {
-	_, size := graph.Bounds()
+	lo, hi := graph.Bounds()
+	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
 	out := Graph{ID: graph.ID, Directed: graph.Directed,
-		Width:  float64(size.X + graph.NodePadding),
-		Height: float64(size.Y + graph.RowPadding),
+		X: float64(lo.X), Y: float64(lo.Y),
+		Width:  float64(hi.X + graph.NodePadding - lo.X),
+		Height: float64(hi.Y + graph.RowPadding - lo.Y),
 		Nodes:  []Node{}, Edges: []Edge{}}
 	for _, node := range graph.Nodes {
 		out.Nodes = append(out.Nodes, Node{

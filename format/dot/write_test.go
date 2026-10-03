@@ -181,3 +181,26 @@ func TestWriteQuotesShape(t *testing.T) {
 		t.Fatalf("shape injected nodes:\n%s", &out)
 	}
 }
+
+func TestWriteBoundsContainNegativePositions(t *testing.T) {
+	g := layout.NewDigraph()
+	e := g.Edge("a", "b")
+	e.From.Center, e.To.Center = layout.Vector{X: -100, Y: -50}, layout.Vector{X: 50, Y: 80}
+	e.From.Radius, e.To.Radius = layout.Vector{X: 10, Y: 10}, layout.Vector{X: 10, Y: 10}
+	var out bytes.Buffer
+	if err := Write(&out, g); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), `bb="-110.00,-60.00,60.00,90.00"`) {
+		t.Errorf("bounding box does not contain the nodes:\n%s", &out)
+	}
+	graphs, err := Parse(bytes.NewReader(out.Bytes()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, node := range graphs[0].Nodes {
+		if node.Center != g.Nodes[i].Center {
+			t.Errorf("%s moved to %v, want %v", node.ID, node.Center, g.Nodes[i].Center)
+		}
+	}
+}

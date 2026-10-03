@@ -24,8 +24,11 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		}
 	}
 
-	_, size := graph.Bounds()
-	flipY := func(v layout.Vector) layout.Vector { return layout.Vector{X: v.X, Y: size.Y - v.Y} }
+	// the drawing starts at the origin unless it reaches before it
+	lo, hi := graph.Bounds()
+	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
+	// mirroring within the bounding box keeps coordinates in place
+	flipY := func(v layout.Vector) layout.Vector { return layout.Vector{X: v.X, Y: lo.Y + hi.Y - v.Y} }
 	pt := func(v layout.Vector) string {
 		v = flipY(v)
 		return strconv.FormatFloat(float64(v.X), 'f', 2, 64) + "," + strconv.FormatFloat(float64(v.Y), 'f', 2, 64)
@@ -45,7 +48,7 @@ func Write(w io.Writer, graph *layout.Graph) error {
 	if graph.RankDir != layout.TopToBottom {
 		write("\trankdir=%s;\n", graph.RankDir)
 	}
-	write("\tbb=\"0,0,%s\";\n", pt(layout.Vector{X: size.X, Y: 0}))
+	write("\tbb=\"%s,%s\";\n", pt(layout.Vector{X: lo.X, Y: hi.Y}), pt(layout.Vector{X: hi.X, Y: lo.Y}))
 	for _, node := range graph.Nodes {
 		attrs := []string{
 			"pos=" + quote(pt(node.Center)),

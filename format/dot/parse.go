@@ -203,12 +203,15 @@ func (context *parserContext) pin() {
 		}
 		top = max(top, node.Center.Y+node.Radius.Y)
 	}
-	// the bounding box, when present, gives the exact height
+	// the bounding box, when present, gives the exact extent; mirroring
+	// within it keeps coordinates in place
 	for _, attr := range context.allAttrs {
 		if attr.Key == "bb" {
 			if corners := strings.Split(attr.Val, ","); len(corners) == 4 {
-				if h, ok := parseFloat(corners[3], layout.Point); ok {
-					top = layout.Length(h)
+				bottom, okb := parseFloat(corners[1], layout.Point)
+				h, okh := parseFloat(corners[3], layout.Point)
+				if okb && okh {
+					top = layout.Length(bottom + h)
 				}
 			}
 		}
