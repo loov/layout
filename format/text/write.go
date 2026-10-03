@@ -14,7 +14,9 @@ import (
 )
 
 // Prepare sets ortho edges and spacing that leaves rows between ranks
-// for horizontal runs and arrowheads: more fan-out needs more rows.
+// for horizontal runs and arrowheads: more fan-out needs more rows. In
+// sideways layouts it also makes nodes with several edges on a side tall
+// enough to keep the edges on separate rows.
 func Prepare(graph *layout.Graph) {
 	graph.Splines = layout.SplinesOrtho
 	if graph.LineHeight <= 0 {
@@ -37,6 +39,28 @@ func Prepare(graph *layout.Graph) {
 	graph.RowPadding = graph.LineHeight * layout.Length(math.Min(rows, 8))
 	graph.NodePadding = graph.LineHeight * 2
 	graph.EdgePadding = graph.LineHeight
+
+	// sideways, edges leave and enter nodes on their left and right,
+	// which are only a few rows tall; make nodes tall enough for a row
+	// per edge on the busier side with a row between them
+	if graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft {
+		ins, outs := map[*layout.Node]int{}, map[*layout.Node]int{}
+		for _, edge := range graph.Edges {
+			if edge.From != edge.To {
+				outs[edge.From]++
+				ins[edge.To]++
+			}
+		}
+		for _, node := range graph.Nodes {
+			if n := max(ins[node], outs[node]); n > 1 {
+				node.Radius.Y = max(node.Radius.Y, graph.LineHeight*(layout.Length(n)+0.5))
+				if node.Shape == layout.Circle {
+					// drawn as a box either way; a circle would widen as much
+					node.Shape = layout.Ellipse
+				}
+			}
+		}
+	}
 }
 
 // Write draws the laid out graph as text. One character cell is

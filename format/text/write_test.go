@@ -136,3 +136,27 @@ func TestLineStyles(t *testing.T) {
 		}
 	}
 }
+
+// TestSidewaysEdgesApart checks that edges on the side of a node in a
+// sideways layout get rows of their own instead of sharing one.
+func TestSidewaysEdgesApart(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.RankDir = layout.LeftToRight
+	graph.Edge("a", "b")
+	graph.Edge("a", "c")
+	graph.Edge("a", "d")
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+	if strings.ContainsAny(buf.String(), "━┃┮┶┾┥┝┑┙┕┍") {
+		t.Errorf("edges share a run:\n%s", buf.String())
+	}
+	if got := strings.Count(buf.String(), "▶"); got != 3 {
+		t.Errorf("got %d arrowheads, want 3:\n%s", got, buf.String())
+	}
+}
