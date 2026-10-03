@@ -170,3 +170,21 @@ func TestSidewaysEdgesApart(t *testing.T) {
 		}
 	}
 }
+
+// TestOffCanvas checks that pinned nodes outside the drawing don't make
+// writing index outside the canvas.
+func TestOffCanvas(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Pinned = true
+	graph.Node("A").Center = layout.Vector{X: 50, Y: -100}
+	graph.Node("B").Center = layout.Vector{X: 150, Y: 50}
+	graph.Edge("A", "B").FromPort = layout.East
+	Prepare(graph)
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, graph); err != nil {
+		t.Fatal(err)
+	}
+}

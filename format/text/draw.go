@@ -266,6 +266,9 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 	if node.Shape == layout.None || node.Shape == layout.Dot {
 		return // no border to join
 	}
+	if end[0] < 0 || end[0] >= c.w || end[1] < 0 || end[1] >= c.h {
+		return // pinned nodes can lie outside the canvas
+	}
 	b := c.boxes[node]
 	i := end[1]*c.w + end[0]
 	double := node.Peripheries > 1
