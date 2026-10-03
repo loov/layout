@@ -296,12 +296,35 @@ func uniqueEdges(edges []*Edge) []*Edge {
 	})
 }
 
-// validate checks that every edge connects nodes of the graph
+// maxMinLen is the largest Edge.MinLen accepted; every rank an edge
+// spans costs a virtual node
+const maxMinLen = 1000
+
+// finite reports whether none of values is NaN or infinite
+func finite(values ...Length) bool {
+	for _, v := range values {
+		if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+			return false
+		}
+	}
+	return true
+}
+
+// validate checks that every edge connects nodes of the graph and that
+// the sizes, and the positions a pinned layout keeps, are finite
 func (graph *Graph) validate() error {
+	if !finite(graph.LineHeight, graph.FontSize, graph.NodePadding, graph.RowPadding, graph.EdgePadding) {
+		return fmt.Errorf("graph line height, font size or padding is not finite")
+	}
 	known := make(map[*Node]bool, len(graph.Nodes))
 	for i, node := range graph.Nodes {
-		if node == nil {
+		switch {
+		case node == nil:
 			return fmt.Errorf("node %d is nil", i)
+		case !finite(node.Radius.X, node.Radius.Y, node.FontSize, node.LineWidth):
+			return fmt.Errorf("node %v: radius, font size or line width is not finite", node)
+		case graph.Pinned && !finite(node.Center.X, node.Center.Y):
+			return fmt.Errorf("node %v: center %v is not finite", node, node.Center)
 		}
 		known[node] = true
 	}
@@ -315,6 +338,19 @@ func (graph *Graph) validate() error {
 			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.From)
 		case !known[edge.To]:
 			return fmt.Errorf("edge %v: node %q is not in the graph", edge, edge.To)
+		case !finite(Length(edge.Weight), edge.FontSize, edge.LineWidth):
+			return fmt.Errorf("edge %v: weight, font size or line width is not finite", edge)
+		case edge.MinLen > maxMinLen:
+			return fmt.Errorf("edge %v: minimum length %d is over %d", edge, edge.MinLen, maxMinLen)
+		case graph.Pinned && !finite(edge.LabelPos.X, edge.LabelPos.Y):
+			return fmt.Errorf("edge %v: label position %v is not finite", edge, edge.LabelPos)
+		}
+		if graph.Pinned {
+			for _, p := range edge.Path {
+				if !finite(p.X, p.Y) {
+					return fmt.Errorf("edge %v: path point %v is not finite", edge, p)
+				}
+			}
 		}
 	}
 	group := func(what string, nodes []*Node) error {
@@ -354,6 +390,9 @@ func (graph *Graph) validate() error {
 	for _, cluster := range graph.Clusters {
 		if err := group(fmt.Sprintf("cluster %q", cluster.ID), cluster.Nodes); err != nil {
 			return err
+		}
+		if graph.Pinned && !finite(cluster.TopLeft.X, cluster.TopLeft.Y, cluster.BottomRight.X, cluster.BottomRight.Y) {
+			return fmt.Errorf("cluster %q: box is not finite", cluster.ID)
 		}
 		depth := 0
 		for parent := cluster.Parent; parent != nil; parent = parent.Parent {
