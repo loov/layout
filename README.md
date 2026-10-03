@@ -1,8 +1,10 @@
-# layout [![GoDoc](https://godoc.org/github.com/loov/layout?status.svg)](https://godoc.org/github.com/loov/layout) [![Go Report Card](https://goreportcard.com/badge/github.com/loov/layout)](https://goreportcard.com/report/github.com/loov/layout)
+# layout [![GoDoc](https://godoc.org/github.com/loov/layout?status.svg)](https://godoc.org/github.com/loov/layout)
 
-## Experimental
+layout draws graphs in pure Go.
 
-Current version and API is in experimental stage. Property names may change.
+You build a graph in code or read one from a DOT or GraphML file. `layout.Hierarchical` places the nodes in ranks and routes the edges, in the same style as Graphviz `dot`. `layout.Force` is there for graphs without a clear direction. The result can be written as SVG, Unicode text for a terminal, JSON coordinates, DOT or GraphML.
+
+It understands a good part of the DOT language: clusters, record and HTML-like labels, ports, `rankdir`, `minlen`, and colors by X11 name.
 
 ## Installation
 
@@ -57,6 +59,7 @@ func main() {
         log.Fatal(err)
     }
     svg.Write(os.Stdout, graph)
+    text.Write(os.Stdout, graph)
 }
 ```
 
@@ -107,13 +110,6 @@ The same graph drawn for a terminal, with `text.Prepare(graph)` before laying ou
 Other layouts and outputs:
 
 * `layout.Force(graph)` — force-directed layout for undirected or cyclic graphs.
-* `layout.HierarchicalWith(graph, layout.Fast)` or `layout.Quality` — trade crossings for time.
-* `layout.Options{Align: layout.AlignLeft}` or `AlignRight` — pack the layout to one side, with nodes over their first or last neighbor, instead of centering them.
 * `format/json` — plain coordinates for drawing the graph elsewhere.
-* `format/text` — Unicode box-drawing output for terminals; call `text.Prepare(graph)` before laying out. `text.WriteColor` adds colors in the terminal theme's basic colors, or exact 24-bit colors, optionally on a background.
 
 The same is available from the command line: `glay -l force -q fast -t txt|ans|json|svg|dot|graphml input.dot`; colored text takes `-colors 16|truecolor` and `-bg color`.
-
-## Quality
-
-Currently the `layout.Hierarchy` algorithm output is significantly worse than graphviz. It is recommended to use `graphviz dot`, if possible.
