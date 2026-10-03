@@ -8,7 +8,8 @@ import "math"
 //
 // Nodes in a SameRank group are contracted into a single vertex so they end
 // up on the same rank; MinRank and MaxRank nodes are contracted with an
-// artificial source or sink connected to every other vertex. Edges that
+// artificial source or sink connected to every other vertex, which other
+// vertices may share a rank with, as with Graphviz rank=min and rank=max. Edges that
 // would contradict those constraints are ignored here and end up flat or
 // backwards; see Rank. The graph must be acyclic.
 //
@@ -86,10 +87,10 @@ func RankNetworkSimplex(graph *Graph) {
 	// zero weight edges keep the artificial source first and sink last
 	for v := range verts {
 		if source >= 0 && v != source {
-			s.addEdge(int32(source), int32(v), 0, 1)
+			s.addEdge(int32(source), int32(v), 0, 0)
 		}
 		if sink >= 0 && v != sink && v != source {
-			s.addEdge(int32(v), int32(sink), 0, 1)
+			s.addEdge(int32(v), int32(sink), 0, 0)
 		}
 	}
 	s.run()

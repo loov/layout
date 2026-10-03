@@ -7,7 +7,7 @@ flat         nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=0 parallel=
 labels       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=2 bends=0 wavy=0 back=1 labels=1 far=0 length=546 area=36798
 loop         nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=279 area=20480
 minimal      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=158 area=15360
-minmax       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=2 labels=0 far=0 length=299 area=24640
+minmax       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=2 labels=0 far=0 length=191 area=21504
 multi        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=299 area=15360
 rankdir      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=369 area=20126
 record       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=91 area=21856
