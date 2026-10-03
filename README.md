@@ -12,12 +12,12 @@ The graph layouting can be used as a command-line tool and as a library.
 
 To install the command-line tool:
 ```
-go get -u github.com/loov/layout/cmd/glay
+go install github.com/loov/layout/cmd/glay@latest
 ```
 
 To install the package:
 ```
-go get -u github.com/loov/layout
+go get github.com/loov/layout
 ```
 
 ## Usage
