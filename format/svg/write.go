@@ -404,7 +404,10 @@ func sanitizeNode(n *html.Node) {
 	}
 	n.Attr = slices.DeleteFunc(n.Attr, func(a html.Attribute) bool {
 		key := strings.ToLower(a.Key)
-		val := strings.ToLower(strings.TrimSpace(a.Val))
+		// URL parsing strips ASCII tabs and newlines anywhere in a URL,
+		// and leading/trailing C0 controls and spaces before reading its scheme.
+		val := strings.NewReplacer("\t", "", "\n", "", "\r", "").Replace(a.Val)
+		val = strings.ToLower(strings.TrimFunc(val, func(r rune) bool { return r <= 0x20 }))
 		return strings.HasPrefix(key, "on") ||
 			((key == "href" || key == "src" || key == "xlink:href" || key == "action" || key == "formaction") &&
 				(strings.HasPrefix(val, "javascript:") || strings.HasPrefix(val, "data:")))
