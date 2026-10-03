@@ -65,6 +65,24 @@ func orthoEdges(graph *Graph, rows [][2]Length, pad Length) {
 	routed := func(edge *Edge) bool {
 		return edge.From != edge.To && len(edge.Path) >= 2 && edge.Path[0].Y != edge.Path[len(edge.Path)-1].Y
 	}
+
+	// ends on side ports step out sideways before turning, instead of
+	// running along the node outline
+	sideways := map[Compass]Length{West: -pad, East: pad}
+	for _, edge := range graph.Edges {
+		if !routed(edge) {
+			continue
+		}
+		if dx := sideways[edge.FromPort]; dx != 0 {
+			p := edge.Path[0]
+			edge.Path = slices.Insert(edge.Path, 1, Vector{p.X + dx, p.Y})
+		}
+		if dx := sideways[edge.ToPort]; dx != 0 {
+			p := edge.Path[len(edge.Path)-1]
+			edge.Path = slices.Insert(edge.Path, len(edge.Path)-1, Vector{p.X + dx, p.Y})
+		}
+	}
+
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
