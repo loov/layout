@@ -5,8 +5,11 @@ import (
 	"slices"
 )
 
-// Position assigns node centers: rows by rank height, columns by Brandes-Köpf.
-func Position(graph *Graph) {
+// Position assigns node centers: rows by rank height, columns by
+// Brandes-Köpf. With straighten, virtual nodes of long edges move so that
+// the edges run diagonally; orthogonal routing wants them where
+// Brandes-Köpf aligns them, in line with an end, to save bends.
+func Position(graph *Graph, straighten bool) {
 	PositionInitial(graph)
 	if len(graph.Nodes) == 0 {
 		return
@@ -44,7 +47,9 @@ func Position(graph *Graph) {
 		slices.Sort(v)
 		node.Center.X = (v[1] + v[2]) / 2
 	}
-	StraightenChains(graph)
+	if straighten {
+		StraightenChains(graph)
+	}
 	flushLeft(graph)
 	AlignClusterBorders(graph)
 }

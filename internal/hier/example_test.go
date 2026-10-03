@@ -32,7 +32,7 @@ func Example() {
 	}
 
 	// position nodes
-	Position(orderedGraph)
+	Position(orderedGraph, true)
 	positionedGraph := orderedGraph
 
 	for _, node := range positionedGraph.Nodes {

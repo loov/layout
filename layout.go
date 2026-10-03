@@ -580,7 +580,7 @@ func hierarchicalComponent(graphdef *Graph, opts Options) {
 
 	// position nodes
 	positionedGraph := orderedGraph
-	hier.Position(positionedGraph)
+	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho)
 
 	// assign final positions; loop nodes were widened symmetrically,
 	// shift them left so the extra room is on the right
