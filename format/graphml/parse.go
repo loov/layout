@@ -34,7 +34,7 @@ func Parse(r io.Reader) ([]*layout.Graph, error) {
 		graph := layout.NewGraph()
 		graph.ID = src.ID
 		graph.Directed = src.EdgeDefault == Directed
-		if err := convertGraph(graph, src, keyName); err != nil {
+		if err := convertGraph(graph, src, keyName, graph.Directed); err != nil {
 			return nil, err
 		}
 		graphs = append(graphs, graph)
@@ -52,7 +52,11 @@ func ParseFile(path string) ([]*layout.Graph, error) {
 	return Parse(file)
 }
 
-func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) error {
+func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string, directed bool) error {
+	// a nested graph without edgedefault inherits the enclosing default
+	if src.EdgeDefault != "" {
+		directed = src.EdgeDefault == Directed
+	}
 	for i, srcnode := range src.Node {
 		if srcnode.ID == "" {
 			return fmt.Errorf("graph %q: node %d has no id", src.ID, i)
@@ -70,7 +74,7 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) er
 			}
 		}
 		for _, sub := range srcnode.Graph {
-			if err := convertGraph(graph, sub, keyName); err != nil {
+			if err := convertGraph(graph, sub, keyName, directed); err != nil {
 				return err
 			}
 		}
@@ -80,7 +84,7 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string) er
 			return fmt.Errorf("graph %q: edge %d has an empty endpoint", src.ID, i)
 		}
 		edge := layout.NewEdge(graph.Node(srcedge.Source), graph.Node(srcedge.Target))
-		edge.Directed = graph.Directed
+		edge.Directed = directed
 		if srcedge.Directed != nil {
 			edge.Directed = *srcedge.Directed
 		}
