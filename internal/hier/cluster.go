@@ -152,6 +152,10 @@ func orderClusters(graph *Graph) {
 		return
 	}
 	graph.assignPos()
+	clusterIndex := make(map[*Cluster]int, len(graph.Clusters))
+	for i, c := range graph.Clusters {
+		clusterIndex[c] = i
+	}
 	// bary is the mean position of a node's neighbors in the ranks above
 	// and below, which decides on which side of a cluster a node at the
 	// cluster's mean position goes
@@ -184,13 +188,15 @@ func orderClusters(graph *Graph) {
 				}
 			}
 		}
-		// node key: means from the outermost cluster inward, then the
-		// node's own position; borders sort to the ends of their cluster
+		// node key: means from the outermost cluster inward, each followed
+		// by the cluster's index so that siblings with equal means don't
+		// mix, then the node's own position; borders sort to the ends of
+		// their cluster
 		keys := make([][]float64, len(layer))
 		for i, node := range layer {
 			var key []float64
 			for c := node.Cluster; c != nil; c = c.Parent {
-				key = append(key, near[c]/float64(max(nearCount[c], 1)), sum[c]/float64(count[c]))
+				key = append(key, float64(clusterIndex[c]), near[c]/float64(max(nearCount[c], 1)), sum[c]/float64(count[c]))
 			}
 			slices.Reverse(key)
 			last := float64(node.Pos)

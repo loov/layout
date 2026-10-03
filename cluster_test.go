@@ -1,6 +1,7 @@
 package layout_test
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/loov/layout"
@@ -48,6 +49,47 @@ func TestClusterFitsLabel(t *testing.T) {
 	if a.Left() < cluster.TopLeft.X || a.Right() > cluster.BottomRight.X {
 		t.Errorf("a at %v-%v outside the cluster at %v-%v", a.Left(), a.Right(), cluster.TopLeft.X, cluster.BottomRight.X)
 	}
+}
+
+// checkSiblingClusters checks that clusters without a common parent don't
+// overlap and that no node lies inside a cluster it isn't a member of.
+func checkSiblingClusters(t *testing.T, graph *layout.Graph) {
+	t.Helper()
+	for i, a := range graph.Clusters {
+		for _, b := range graph.Clusters[i+1:] {
+			if a.Parent != b.Parent {
+				continue
+			}
+			if a.TopLeft.X < b.BottomRight.X && b.TopLeft.X < a.BottomRight.X && a.TopLeft.Y < b.BottomRight.Y && b.TopLeft.Y < a.BottomRight.Y {
+				t.Errorf("clusters %s %v-%v and %s %v-%v overlap", a.ID, a.TopLeft, a.BottomRight, b.ID, b.TopLeft, b.BottomRight)
+			}
+		}
+		for _, node := range graph.Nodes {
+			if slices.Contains(a.Nodes, node) {
+				continue
+			}
+			if c := node.Center; c.X > a.TopLeft.X && c.X < a.BottomRight.X && c.Y > a.TopLeft.Y && c.Y < a.BottomRight.Y {
+				t.Errorf("%s at %v lies inside cluster %s %v-%v", node.ID, c, a.ID, a.TopLeft, a.BottomRight)
+			}
+		}
+	}
+}
+
+// TestClusterSiblingsDontInterleave checks that two clusters whose nodes
+// have the same mean position in a rank stay apart instead of mixing.
+func TestClusterSiblingsDontInterleave(t *testing.T) {
+	graph := layout.NewDigraph()
+	for _, e := range [][2]string{{"n3", "n4"}, {"n1", "n5"}, {"n1", "n4"}, {"n2", "n4"}, {"n0", "n2"}, {"n5", "n4"}, {"n0", "n4"}} {
+		graph.Edge(e[0], e[1])
+	}
+	graph.Clusters = []*layout.Cluster{
+		{ID: "A", Nodes: []*layout.Node{graph.Node("n4"), graph.Node("n3")}},
+		{ID: "B", Nodes: []*layout.Node{graph.Node("n1"), graph.Node("n2")}},
+	}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	checkSiblingClusters(t, graph)
 }
 
 type Length = layout.Length
