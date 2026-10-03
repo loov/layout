@@ -79,8 +79,9 @@ func glyph(lines, heavy int) rune {
 
 // marker draws an edge end marker for the segment from a to the end b,
 // which lies in cell end. It sits in the gap before the node when the run
-// there is straight, else on the node border.
-func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) {
+// there is straight, else on the node border. It reports whether style
+// has a marker.
+func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) bool {
 	dir := down
 	switch dx, dy := b.X-a.X, b.Y-a.Y; {
 	case dy < 0 && -dy >= absLength(dx):
@@ -97,12 +98,13 @@ func (c *canvas) marker(style layout.Arrow, a, b layout.Vector, end [2]int) {
 		layout.ArrowODot:   '○',
 	}[style]
 	if !ok {
-		return
+		return false
 	}
 	if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
 		end = [2]int{px, py}
 	}
 	c.set(end[0], end[1], r)
+	return true
 }
 
 var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
@@ -358,10 +360,15 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		border := func(end, next [2]int, node *layout.Node) [2]int {
 			b := boxes[node]
 			if end[0] > b[0] && end[0] < b[2] && end[1] > b[1] && end[1] < b[3] {
-				if next[1] < end[1] {
+				switch {
+				case next[1] < end[1]:
 					end[1] = b[1]
-				} else if next[1] > end[1] {
+				case next[1] > end[1]:
 					end[1] = b[3]
+				case next[0] < end[0]:
+					end[0] = b[0]
+				case next[0] > end[0]:
+					end[0] = b[2]
 				}
 			}
 			return end
@@ -379,8 +386,27 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		if head == layout.ArrowDefault && edge.Directed {
 			head = layout.ArrowNormal
 		}
-		c.marker(head, path[len(path)-2], path[len(path)-1], cells[len(cells)-1])
-		c.marker(edge.ArrowTail, path[1], path[0], cells[0])
+		// an end without a marker on a box side joins the border, so that
+		// the edge visibly leaves the node
+		join := func(end [2]int, node *layout.Node) {
+			b := boxes[node]
+			if end[1] <= b[1] || end[1] >= b[3] {
+				return
+			}
+			i := end[1]*c.w + end[0]
+			switch {
+			case end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
+				c.cells[i] = '┤'
+			case end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
+				c.cells[i] = '├'
+			}
+		}
+		if !c.marker(head, path[len(path)-2], path[len(path)-1], cells[len(cells)-1]) {
+			join(cells[len(cells)-1], edge.To)
+		}
+		if !c.marker(edge.ArrowTail, path[1], path[0], cells[0]) {
+			join(cells[0], edge.From)
+		}
 	}
 	for _, edge := range graph.Edges {
 		if edge.Label != "" {
