@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [input]
+//	glay [-s dot] [-t svg|dot|json|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-colors 16|truecolor] [-bg color] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -18,6 +18,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
+	"strconv"
 	"strings"
 
 	"github.com/loov/layout"
@@ -38,6 +39,8 @@ var (
 	pick      = flag.String("g", "", "graph to lay out when the input has several, by name or index")
 	quality   = flag.String("q", "", "layout preset: fast, quality (default balanced)")
 	algorithm = flag.String("l", "hierarchical", "layout algorithm: hierarchical, force")
+	colors    = flag.String("colors", "16", "ans colors: 16 follows the terminal theme, truecolor keeps them exact")
+	bg        = flag.String("bg", "", "ans background for the whole drawing, as a color name or #RRGGBB")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )
@@ -121,7 +124,23 @@ func main() {
 	case "txt", "text":
 		write = text.Write
 	case "ans", "ansi":
-		write = text.WriteColor
+		var opts text.Options
+		switch *colors {
+		case "16":
+		case "truecolor", "24bit":
+			opts.Palette = text.TrueColor
+		default:
+			errorf("unknown colors %q", *colors)
+			os.Exit(1)
+		}
+		if *bg != "" {
+			opts.Background = parseColor(*bg)
+			if opts.Background == nil {
+				errorf("unknown background color %q", *bg)
+				os.Exit(1)
+			}
+		}
+		write = func(w io.Writer, graph *layout.Graph) error { return text.WriteColor(w, graph, opts) }
 	default:
 		errorf("unknown output format %q", *outformat)
 		os.Exit(1)
@@ -270,4 +289,19 @@ func main() {
 		os.Exit(1)
 		return
 	}
+}
+
+// parseColor parses a color name or #RRGGBB, returning nil when invalid
+func parseColor(value string) layout.Color {
+	if hex, ok := strings.CutPrefix(value, "#"); ok {
+		v, err := strconv.ParseUint(hex, 16, 32)
+		if err != nil || len(hex) != 6 {
+			return nil
+		}
+		return layout.RGB{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v)}
+	}
+	if color, ok := layout.ColorByName(value); ok {
+		return color
+	}
+	return nil
 }

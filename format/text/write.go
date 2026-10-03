@@ -1,7 +1,7 @@
 // Package text draws laid out graphs with Unicode box-drawing characters
-// for terminals, optionally colored with ANSI escape codes. Edges are rasterized onto a character grid as horizontal
-// and vertical runs, so ortho splines look best; diagonal segments become
-// staircases. Call Prepare before laying out for output with room for
+// for terminals, optionally colored with ANSI escape codes. Edges are
+// rasterized onto a character grid as horizontal and vertical runs, so
+// ortho splines look best; diagonal segments become staircases. Call Prepare before laying out for output with room for
 // the runs; the extra room is carved away again when writing.
 package text
 
@@ -10,6 +10,7 @@ import (
 	"io"
 	"math"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/loov/layout"
@@ -219,15 +220,139 @@ func rgb(color layout.Color) uint32 {
 	return 1<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b)
 }
 
-// sgr returns the escape code that selects the colors fg and bg
-func sgr(fg, bg uint32) string {
-	code := func(color uint32, set, reset string) string {
-		if color == 0 {
+// Options configure WriteColor.
+type Options struct {
+	// Palette selects how colors are written.
+	Palette Palette
+	// Background fills the whole drawing; nil leaves it to the terminal.
+	Background layout.Color
+}
+
+// Palette selects the colors that WriteColor writes.
+type Palette int
+
+const (
+	// ANSI16 maps colors to the 16 basic ANSI colors, which terminals draw
+	// from their theme, so that the drawing fits light and dark themes.
+	// Grays and washed out fills are left to the terminal.
+	ANSI16 Palette = iota
+	// TrueColor writes colors as given, with 24-bit escape codes.
+	TrueColor
+)
+
+// codes returns the escape code parameters that select the cell colors
+// fg and bg. Lines and text without a color are black or white on a fill
+// or background, whichever stands out.
+func (opts *Options) codes(fg, bg uint32) (string, string) {
+	if opts.Palette == TrueColor {
+		code := func(set int, color uint32) string {
+			return fmt.Sprintf("%d;2;%d;%d;%d", set, color>>16&0xFF, color>>8&0xFF, color&0xFF)
+		}
+		if bg == 0 {
+			bg = rgb(opts.Background)
+		}
+		f, b := "39", "49"
+		if bg != 0 {
+			b = code(48, bg)
+			if fg == 0 && lightness(bg) >= 0.5 {
+				fg = 1 << 24
+			} else if fg == 0 {
+				fg = 1<<24 | 0xFFFFFF
+			}
+		}
+		if fg != 0 {
+			f = code(38, fg)
+		}
+		return f, b
+	}
+	under := bg
+	b := ansi16(bg, fill)
+	if b == 0 {
+		under = rgb(opts.Background)
+		b = ansi16(under, ground)
+	}
+	f := ansi16(fg, ink)
+	if b != 0 {
+		f = ansi16(fg, inkOnFill)
+		if f == 0 && lightness(under) >= 0.5 {
+			f = 30
+		} else if f == 0 {
+			f = 97
+		}
+	}
+	code := func(n int, reset string) string {
+		if n == 0 {
 			return reset
 		}
-		return fmt.Sprintf("%s;2;%d;%d;%d", set, color>>16&0xFF, color>>8&0xFF, color&0xFF)
+		return strconv.Itoa(n)
 	}
-	return "\x1b[" + code(fg, "38", "39") + ";" + code(bg, "48", "49") + "m"
+	return code(f, "39"), code(b, "49")
+}
+
+// role is what a color is used for when mapping it to the basic colors
+type role int
+
+const (
+	ink       role = iota // lines and text on the terminal background
+	inkOnFill             // lines and text on a fill or background
+	fill                  // inside nodes and clusters
+	ground                // the background of the whole drawing
+)
+
+// ansi16 returns the escape code of the basic ANSI color closest to color
+// in its role, or 0 for the terminal default. Themes change the shades
+// but keep the hues, so the hue picks the color and lightness picks
+// between normal and bright. Grays on the terminal background become the
+// default or bright black, which themes keep readable, and dark or light
+// ones on a fill become black or bright white. Gray and washed out fills
+// are dropped; a gray background picks the closest gray.
+func ansi16(color uint32, role role) int {
+	if color == 0 {
+		return 0
+	}
+	r := float64(color>>16&0xFF) / 0xFF
+	g := float64(color>>8&0xFF) / 0xFF
+	b := float64(color&0xFF) / 0xFF
+	hi, lo := max(r, g, b), min(r, g, b)
+	light := (hi + lo) / 2
+	base := 30
+	if role >= fill {
+		base = 40
+	}
+	if hi-lo < 0.15 || role == fill && light > 0.85 {
+		switch {
+		case role == fill:
+			return 0
+		case role == ground:
+			return base + [4]int{0, 60, 7, 67}[min(int(light*4), 3)]
+		case role == inkOnFill && light < 0.3:
+			return 30
+		case role == inkOnFill && light >= 0.7:
+			return 97
+		case light < 0.3 || light >= 0.7:
+			return 0
+		}
+		return 90
+	}
+	var hue float64 // in sixths of the circle: red, yellow, green, cyan, blue, magenta
+	switch hi {
+	case r:
+		hue = math.Mod((g-b)/(hi-lo)+6, 6)
+	case g:
+		hue = (b-r)/(hi-lo) + 2
+	default:
+		hue = (r-g)/(hi-lo) + 4
+	}
+	if light > 0.6 {
+		base += 60
+	}
+	return base + [6]int{1, 3, 2, 6, 4, 5}[int(hue+0.5)%6]
+}
+
+// lightness returns the HSL lightness of a cell color, in [0, 1]
+func lightness(color uint32) float64 {
+	r, g, b := color>>16&0xFF, color>>8&0xFF, color&0xFF
+	return float64(max(r, g, b)+min(r, g, b)) / (2 * 0xFF)
 }
 
 func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
@@ -320,14 +445,18 @@ func sign(v int) int {
 
 // Write draws the laid out graph as text. One character cell is
 // graph.FontSize*0.55 wide and graph.LineHeight tall.
-func Write(w io.Writer, graph *layout.Graph) error { return write(w, graph, false) }
+func Write(w io.Writer, graph *layout.Graph) error { return write(w, graph, nil) }
 
 // WriteColor draws the graph like Write, with the colors set on nodes,
-// edges and clusters as 24-bit ANSI escape codes. Unset colors are left
-// to the terminal, except that lines and text on a fill default to black.
-func WriteColor(w io.Writer, graph *layout.Graph) error { return write(w, graph, true) }
+// edges and clusters as ANSI escape codes, see Options. Unset colors are
+// left to the terminal, except for lines and text on a fill or
+// background, which are black or white, whichever stands out.
+func WriteColor(w io.Writer, graph *layout.Graph, opts Options) error {
+	return write(w, graph, &opts)
+}
 
-func write(w io.Writer, graph *layout.Graph, color bool) error {
+// write draws the graph, colored unless opts is nil
+func write(w io.Writer, graph *layout.Graph, opts *Options) error {
 	cellW, cellH := graph.FontSize*0.55, graph.LineHeight
 	if cellW <= 0 {
 		cellW = 8
@@ -496,28 +625,30 @@ func write(w io.Writer, graph *layout.Graph, color bool) error {
 
 	var out strings.Builder
 	for _, line := range grid {
-		end := len(line)
-		for end > 0 && line[end-1].r == ' ' && (!color || line[end-1].bg == 0) {
-			end--
+		fs, bs := make([]string, len(line)), make([]string, len(line))
+		end := 0
+		for i, x := range line {
+			fs[i], bs[i] = "39", "49"
+			if opts != nil {
+				fs[i], bs[i] = opts.codes(x.fg, x.bg)
+			}
+			if x.r != ' ' || bs[i] != "49" {
+				end = i + 1
+			}
 		}
-		var fg, bg uint32
-		for _, x := range line[:end] {
-			if color {
-				want := x.fg
-				switch {
-				case x.r == ' ':
-					want = fg // blanks show only the background
-				case want == 0 && x.bg != 0:
-					want = 1 << 24 // black on fills, as in SVG
-				}
-				if want != fg || x.bg != bg {
-					fg, bg = want, x.bg
-					out.WriteString(sgr(fg, bg))
-				}
+		f, b := "39", "49"
+		for i, x := range line[:end] {
+			want := fs[i]
+			if x.r == ' ' {
+				want = f // blanks show only the background
+			}
+			if want != f || bs[i] != b {
+				f, b = want, bs[i]
+				out.WriteString("\x1b[" + f + ";" + b + "m")
 			}
 			out.WriteRune(x.r)
 		}
-		if fg != 0 || bg != 0 {
+		if f != "39" || b != "49" {
 			out.WriteString("\x1b[0m")
 		}
 		out.WriteByte('\n')
