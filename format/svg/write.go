@@ -243,7 +243,8 @@ func Write(w io.Writer, graph *layout.Graph) error {
 		svg.write("></rect>")
 		if cluster.Label != "" {
 			center := layout.Vector{X: (cluster.TopLeft.X + cluster.BottomRight.X) / 2, Y: cluster.TopLeft.Y + graph.LineHeight/2}
-			svg.writeText(graph, cluster.Label, center, graph.FontSize, "", nil)
+			radius := layout.Vector{X: (cluster.BottomRight.X - cluster.TopLeft.X) / 2, Y: graph.LineHeight / 2}
+			svg.writeLabel(graph, cluster.Label, center, radius, graph.FontSize, "", nil)
 		}
 	}
 

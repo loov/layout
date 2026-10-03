@@ -90,6 +90,21 @@ func TestColorsKeepAlpha(t *testing.T) {
 	}
 }
 
+func TestHTMLClusterLabel(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Clusters = []*layout.Cluster{{ID: "c", Label: "<<b>bold</b>>", Nodes: []*layout.Node{graph.Node("a")}}}
+	if err := layout.Hierarchical(graph); err != nil {
+		t.Fatal(err)
+	}
+	var out strings.Builder
+	if err := Write(&out, graph); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "<b>bold</b></body></foreignObject>") || strings.Contains(out.String(), "&lt;b&gt;") {
+		t.Errorf("cluster label not drawn as HTML:\n%s", out.String())
+	}
+}
+
 func TestSanitizeHTMLRemovesRawTextElements(t *testing.T) {
 	for _, tag := range []string{"noscript", "xmp", "noembed", "noframes", "plaintext"} {
 		t.Run(tag, func(t *testing.T) {
