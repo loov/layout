@@ -91,3 +91,31 @@ func TestRankDirRepeat(t *testing.T) {
 		}
 	}
 }
+
+// TestTextCircleDefault checks that a circle from the graph's default
+// shape is laid out for text like a node's own circle: as an ellipse, so
+// that a sideways node isn't as wide as its packed edges make it tall.
+func TestTextCircleDefault(t *testing.T) {
+	for _, own := range []bool{true, false} {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		if !own {
+			graph.Shape = layout.Circle
+		}
+		for _, id := range []string{"a", "b", "c", "d"} {
+			if own {
+				graph.Node(id).Shape = layout.Circle
+			}
+		}
+		graph.Edge("a", "b")
+		graph.Edge("a", "c")
+		graph.Edge("a", "d")
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if box := l.Node(graph.Nodes[0]); box.Shape != layout.Ellipse {
+			t.Errorf("own circle %v: laid out as %v, want ellipse", own, box.Shape)
+		}
+	}
+}

@@ -46,17 +46,17 @@ func (graph *lgraph) prepareText() {
 		return Length(draw.Columns(line)) * cellW
 	}
 	for _, node := range graph.Nodes {
-		shape := node.Shape
-		if shape == Auto {
-			shape = graph.Shape
+		// resolved here, so that the checks below see the default too
+		if node.Shape == Auto {
+			node.Shape = graph.Shape
 		}
-		if shape == PointShape {
+		if node.Shape == PointShape {
 			continue
 		}
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight // the layout's default
 		}
-		switch shape {
+		switch node.Shape {
 		case Record:
 			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel()))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
