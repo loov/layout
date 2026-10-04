@@ -2,6 +2,7 @@ package layout
 
 import (
 	"math"
+	"strings"
 
 	"github.com/loov/layout/internal/draw"
 )
@@ -56,7 +57,10 @@ func (graph *lgraph) prepareText() {
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
 			graph.reserveRecord(node, cellW)
 		default:
-			node.Radius.X = max(node.Radius.X, Length(draw.TextColumns(draw.PlainLabel(node.DefaultLabel()))+3)*cellW/2)
+			// the label's rows and a border row above and below
+			label := draw.PlainLabel(node.DefaultLabel())
+			node.Radius.X = max(node.Radius.X, Length(draw.TextColumns(label)+3)*cellW/2)
+			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(strings.Count(label, "\n")+2)/2)
 		}
 	}
 

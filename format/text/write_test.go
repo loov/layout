@@ -398,3 +398,25 @@ func TestInvisible(t *testing.T) {
 	}
 	t.Log("\n" + got)
 }
+
+// Nodes stacked down a sideways rank keep their bottom borders when their
+// labels take several rows.
+func TestMultilineStack(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.RankDir = layout.LeftToRight
+	for _, id := range []string{"b", "c", "d", "e", "f"} {
+		graph.Node(id).Label = "2001:db8:abcd:0100::/56\nsite " + id
+		graph.Edge("a", id)
+	}
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var buf bytes.Buffer
+	if err := Write(&buf, l); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(regexp.MustCompile("╰─*╯").FindAllString(buf.String(), -1)); got != len(graph.Nodes) {
+		t.Errorf("got %d bottom borders, want %d:\n%s", got, len(graph.Nodes), buf.String())
+	}
+}
