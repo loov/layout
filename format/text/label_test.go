@@ -182,9 +182,8 @@ func TestFitsLayout(t *testing.T) {
 						t.Errorf("%v %v %d: edge label %q has %.1f for %d columns", dir, shape, peripheries, edge.Label, at.LabelSize.X, w)
 					}
 				}
-				// sideways layouts don't reserve the width of cluster labels yet
 				box := l.Clusters[0]
-				if need := c.col(box.TopLeft.X) + clusterLabelWidth(graph.Clusters[0]); dir == layout.TopToBottom && need > c.col(box.BottomRight.X) {
+				if need := c.col(box.TopLeft.X) + clusterLabelWidth(graph.Clusters[0]); need > c.col(box.BottomRight.X) {
 					t.Errorf("%v %v %d: cluster label needs column %d, frame ends at %d", dir, shape, peripheries, need, c.col(box.BottomRight.X))
 				}
 			}

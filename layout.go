@@ -583,13 +583,17 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	hier.AddVirtuals(filledGraph)
 
 	// cluster borders
+	// the length of the box side along a cluster's label
+	labelSpan := func(cluster *lcluster) Length {
+		return 2 * (graphdef.textRadius(cluster.Label, "", graphdef.FontSize).X + graphdef.EdgePadding)
+	}
 	clusters := map[*lcluster]*hier.Cluster{}
 	for _, clusterdef := range graphdef.Clusters {
 		cluster := &hier.Cluster{}
 		if clusterdef.Label != "" && !sideways(graphdef.RankDir) {
 			// room for the label across the top, with padding beside it;
-			// sideways the label runs along the ranks
-			cluster.MinWidth = float32(2*graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).X + 2*graphdef.EdgePadding)
+			// sideways the label runs along the ranks, see labelSpan
+			cluster.MinWidth = float32(labelSpan(clusterdef))
 		}
 		for _, nodedef := range clusterdef.Nodes {
 			cluster.Members.Append(filledGraph.Nodes[nodes[nodedef]])
@@ -727,16 +731,46 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 			node.Radius.Y = half + extra
 		}
 	}
+	// span returns how far the box of a cluster will reach along the
+	// ranks: ranks are stacked their half heights apart, and the box spans
+	// its members, see the cluster boxes below
+	span := func(clusterdef *lcluster, cluster *hier.Cluster) Length {
+		half := func(rank int) float32 {
+			h := float32(0)
+			for _, node := range orderedGraph.ByRank[rank] {
+				h = max(h, node.Radius.Y)
+			}
+			return h
+		}
+		center := map[int]float32{cluster.MinRank: 0}
+		for rank := cluster.MinRank + 1; rank <= cluster.MaxRank; rank++ {
+			center[rank] = center[rank-1] + half(rank-1) + half(rank)
+		}
+		top, bottom := float32(math.Inf(1)), float32(math.Inf(-1))
+		for _, nodedef := range clusterdef.Nodes {
+			rank := orderedGraph.Nodes[nodes[nodedef]].Rank
+			top = min(top, center[rank]-float32(nodedef.Radius.Y))
+			bottom = max(bottom, center[rank]+float32(nodedef.Radius.Y))
+		}
+		return Length(bottom-top) + graphdef.RowPadding
+	}
 	for _, clusterdef := range graphdef.Clusters {
 		cluster := clusters[clusterdef]
 		pad := float32(graphdef.RowPadding / 2)
-		top := pad
-		if clusterdef.Label != "" {
+		top, bottom := pad, pad
+		switch {
+		case clusterdef.Label == "":
+		case sideways(graphdef.RankDir):
+			// the label runs along the ranks; make room for the box to
+			// reach as far on both sides
+			short := float32(max(0, labelSpan(clusterdef)-span(clusterdef, cluster))) / 2
+			top, bottom = top+short, bottom+short
+		default:
 			top += float32(2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y)
 		}
 		last := len(cluster.Left) - 1
 		grow([]*hier.Node{cluster.Left[0], cluster.Right[0]}, cluster.MinRank, top)
-		grow([]*hier.Node{cluster.Left[last], cluster.Right[last]}, cluster.MaxRank, pad)
+		grow([]*hier.Node{cluster.Left[last], cluster.Right[last]}, cluster.MaxRank, bottom)
 	}
 
 	// position nodes
@@ -777,7 +811,13 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		// enclose nested boxes
 		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
 		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
-		if clusterdef.Label != "" {
+		switch {
+		case clusterdef.Label == "":
+		case sideways(graphdef.RankDir):
+			if short := labelSpan(clusterdef) - (bottom - top); short > 0 {
+				top, bottom = top-short/2, bottom+short/2
+			}
+		default:
 			top -= 2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y
 		}
 		clusterdef.TopLeft = Vector{left, top}
