@@ -38,9 +38,9 @@ func TestWrite(t *testing.T) {
 func TestOverlap(t *testing.T) {
 	c := &canvas{}
 	c.reset(5, 3)
-	c.edge = 1
+	c.pen.edge = 1
 	c.walk(0, 0, 4, 2) // right along the top, then down
-	c.edge = 2
+	c.pen.edge = 2
 	c.walk(2, 0, 4, 1) // shares the top from x=2 and the start of the drop
 	var got string
 	for _, row := range c.rows {

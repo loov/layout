@@ -62,14 +62,20 @@ type canvas struct {
 	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	rows   [][]cell
-	ink    uint32               // color of lines and marks drawn from now on
-	font   uint32               // color of text drawn from now on
-	dashed bool                 // straight runs drawn from now on are dashed
-	edge   int                  // edge drawn from now on, so that overlaps show
+	pen    pen                  // what is drawn with from now on
 	ids    int                  // edge ids handed out
 	merged map[*layout.Edge]int // edge ids of merged edges
 	loops  map[*layout.Node]int // self-loops per node
 	ended  map[[2]int]bool      // cells where merged edges have ended
+}
+
+// pen is what the canvas draws with. Each drawing sets all of it, so
+// that nothing carries over from the drawing before.
+type pen struct {
+	ink    uint32 // color of lines and marks
+	font   uint32 // color of text
+	dashed bool   // straight runs are dashed
+	edge   int    // edge drawn, so that overlaps show
 }
 
 // newCanvas returns an empty canvas that fits the graph. One character
@@ -135,10 +141,14 @@ func (c *canvas) at(x, y int) *cell {
 func (c *canvas) col(v layout.Length) int { return int((v-c.origin.X)/c.cellW + 0.5) }
 func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 0.5) }
 
-func (c *canvas) set(x, y int, r rune) {
+// set writes r in the color of the pen's ink
+func (c *canvas) set(x, y int, r rune) { c.put(x, y, r, c.pen.ink) }
+
+// put writes r in the color fg over whatever the cell held
+func (c *canvas) put(x, y int, r rune, fg uint32) {
 	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
-		p.r, p.fg, p.lines, p.heavy = r, c.ink, 0, 0
+		p.r, p.fg, p.lines, p.heavy = r, fg, 0, 0
 	}
 }
 
@@ -153,20 +163,20 @@ func (c *canvas) line(x, y int, mask int) {
 		switch {
 		case mask&bit == 0:
 		case p.lines&bit == 0:
-			p.owner[arm] = c.edge
-		case p.owner[arm] != c.edge:
+			p.owner[arm] = c.pen.edge
+		case p.owner[arm] != c.pen.edge:
 			p.heavy |= bit
 		}
 	}
 	p.lines |= mask
 	p.r = glyph(p.lines, p.heavy)
-	p.fg = c.ink
+	p.fg = c.pen.ink
 	if o := p.owner; p.lines == up|down|left|right && p.heavy == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
 		p.r = '╂' // two edges crossing, not joining
-	} else if r, ok := rounded[p.r]; ok && !c.dashed {
+	} else if r, ok := rounded[p.r]; ok && !c.pen.dashed {
 		p.r = r // bends of edges, unlike cluster frames, are round
 	}
-	if c.dashed {
+	if c.pen.dashed {
 		dashes := []rune("┊┈")
 		if p.heavy != 0 {
 			dashes = []rune("┋┉")
@@ -197,27 +207,25 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 	}
 }
 
+// text writes s from x, y in the color of the pen's font
 func (c *canvas) text(x, y int, s string) {
-	ink := c.ink
-	c.ink = c.font
 	for _, r := range s {
 		switch {
 		case draw.IsZeroWidth(r), unicode.IsControl(r):
 			// a cell holds one character; marks on it are dropped, and
 			// control characters would garble the terminal
 		case draw.IsWide(r):
-			c.set(x, y, r)
-			c.set(x+1, y, covered)
+			c.put(x, y, r, c.pen.font)
+			c.put(x+1, y, covered, c.pen.font)
 			c.hold(x, y)
 			c.hold(x+1, y)
 			x += 2
 		default:
-			c.set(x, y, r)
+			c.put(x, y, r, c.pen.font)
 			c.hold(x, y)
 			x++
 		}
 	}
-	c.ink = ink
 }
 
 // hold keeps the cell at x, y from being carved away

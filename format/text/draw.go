@@ -29,12 +29,9 @@ func (c *canvas) drawCluster(i int) {
 	b := c.clusterBox(i)
 	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
 	c.ids++
-	c.edge = c.ids
-	c.ink = rgb(cluster.LineColor)
+	c.pen = pen{ink: rgb(cluster.LineColor), dashed: true, edge: c.ids}
 	c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))
-	c.dashed = true
 	c.frame(x0, y0, x1, y1)
-	c.dashed = false
 }
 
 // peripheryGap matches the layout's distance between a node's outlines
@@ -85,9 +82,9 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		if node.Invisible {
 			return
 		}
-		c.ink = rgb(node.LineColor)
+		c.pen = pen{ink: rgb(node.LineColor)}
 		if node.FillColor != nil {
-			c.ink = rgb(node.FillColor)
+			c.pen.ink = rgb(node.FillColor)
 		}
 		c.set(x0, y0, '●')
 		if p := c.at(x0, y0); p != nil {
@@ -95,7 +92,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		}
 		return
 	}
-	c.ink, c.font = rgb(node.LineColor), rgb(node.FontColor)
+	c.pen = pen{ink: rgb(node.LineColor), font: rgb(node.FontColor)}
 	if !node.Invisible {
 		c.fill(x0, y0, x1, y1, rgb(node.FillColor))
 	}
@@ -418,17 +415,19 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	}
 	last := len(cells) - 1
 	c.ids++
-	c.edge = c.ids
+	// merged edges share an id, so that they draw as one without overlaps
 	id, merged := c.merged[edge]
-	if merged {
-		c.edge = id // merged edges draw as one, without overlaps
+	if !merged {
+		id = c.ids
 	}
-	c.ink = rgb(edge.LineColor)
-	c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
+	c.pen = pen{
+		ink:    rgb(edge.LineColor),
+		dashed: edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted,
+		edge:   id,
+	}
 	for i := 0; i+1 < len(cells); i++ {
 		c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
 	}
-	c.dashed = false
 	head := edge.ArrowHead
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
@@ -512,7 +511,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 			label, x, y := c.edgeLabel(i)
 			lines := strings.Split(label, "\n")
 			x, y = c.nearEdge(x, y, draw.TextColumns(label), len(lines), paths[i])
-			c.font = rgb(edge.FontColor)
+			c.pen = pen{font: rgb(edge.FontColor)}
 			for k, line := range lines {
 				c.text(x, y+k, line)
 			}
@@ -520,7 +519,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	}
 	for i, cluster := range graph.Clusters {
 		if cluster.Label != "" && !cluster.Invisible {
-			c.font = 0
+			c.pen = pen{}
 			box := c.l.Clusters[i]
 			c.text(c.col(box.TopLeft.X)+1, c.row(box.TopLeft.Y), " "+clusterLabel(cluster)+" ")
 		}
