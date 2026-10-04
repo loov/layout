@@ -6,6 +6,7 @@ import (
 	"math"
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/internal/draw"
@@ -575,10 +576,49 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 		}
 	}
 	for i, cluster := range graph.Clusters {
-		if cluster.Label != "" && !cluster.Invisible {
-			c.pen = pen{}
-			box := c.l.Clusters[i]
-			c.text(c.col(box.TopLeft.X)+1, c.row(box.TopLeft.Y), " "+clusterLabel(cluster)+" ")
+		if cluster.Label == "" || cluster.Invisible {
+			continue
+		}
+		// the label goes on the frame after carving, see frameLabels, in
+		// the run of frame from the corner, which carving keeps as long
+		b := c.clusterBox(i)
+		text := " " + clusterLabel(cluster) + " "
+		run := 0
+		for p := c.at(b[0]+1, b[1]); p != nil && strings.ContainsRune("┈┉", p.r); p = c.at(b[0]+1+run, b[1]) {
+			run++
+		}
+		if w := draw.Columns(text); run >= w {
+			for x := range run {
+				c.at(b[0]+1+x, b[1]).need = w
+			}
+			c.at(b[0]+1, b[1]).label = i + 1
+			continue
+		}
+		c.pen = pen{}
+		c.text(b[0]+1, b[1], text)
+	}
+}
+
+// frameLabels writes the cluster labels at the cells marked for them on the
+// carved grid, see drawLabels
+func (c *canvas) frameLabels(grid [][]cell) {
+	for _, row := range grid {
+		for x := range row {
+			id := row[x].label
+			if id == 0 {
+				continue
+			}
+			for _, r := range " " + clusterLabel(c.l.Graph.Clusters[id-1]) + " " {
+				switch {
+				case draw.IsZeroWidth(r), unicode.IsControl(r):
+				case draw.IsWide(r):
+					row[x].r, row[x].fg, row[x+1].r = r, 0, covered
+					x += 2
+				default:
+					row[x].r, row[x].fg = r, 0
+					x++
+				}
+			}
 		}
 	}
 }

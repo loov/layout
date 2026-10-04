@@ -27,7 +27,9 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
 	c := drawGraph(l)
-	_, err := io.WriteString(w, encode(carve(c.rows, c.sideways()), opts))
+	grid := carve(c.rows, c.sideways())
+	c.frameLabels(grid)
+	_, err := io.WriteString(w, encode(grid, opts))
 	return err
 }
 

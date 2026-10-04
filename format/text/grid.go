@@ -12,6 +12,8 @@ type cell struct {
 	fg, bg uint32
 	keep   bool   // inside a node or of text, which carving keeps
 	glue   bool   // beside a label, which carving keeps beside it
+	need   int    // the length a run of these must keep, for a label on it
+	label  int    // the cluster whose label starts here, from 1
 	solid  bool   // covered by a node; edges do not draw there
 	lines  int    // direction mask, for joining edge runs
 	heavy  int    // arms that runs of different edges share
@@ -76,6 +78,19 @@ func seams(grid [][]cell, straight, markers string, keep int, turn bool, next, p
 			c := line[x]
 			if c.keep || !strings.ContainsRune(straight, c.r) {
 				return blocked
+			}
+			if c.need > 0 {
+				// a run kept for a label stays long enough for it
+				run := 1
+				for k := x - 1; k >= 0 && line[k].need == c.need; k-- {
+					run++
+				}
+				for k := x + 1; k < len(line) && line[k].need == c.need; k++ {
+					run++
+				}
+				if run <= c.need {
+					return blocked
+				}
 			}
 			if x < ends[i] {
 				for k := 1; k <= keep; k++ {
