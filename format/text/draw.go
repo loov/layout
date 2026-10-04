@@ -2,6 +2,7 @@ package text
 
 import (
 	"cmp"
+	"maps"
 	"math"
 	"slices"
 	"strings"
@@ -56,9 +57,29 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 	if box.Shape != layout.Record {
 		x1 = max(x1, x0+w)
 		// an odd number of spare cells can't be split evenly around the
-		// label, give one back
+		// label, give one back on a side that no edge ends next to on the
+		// top or bottom; ends on the sides move onto them, see spreadSides
 		if spare := x1 - x0 - 1 - draw.TextColumns(label); spare >= 3 && spare%2 == 1 {
-			x1--
+			lo, hi := x1, x0 // the columns of the edge ends
+			end := func(p layout.Vector) {
+				if r := c.row(p.Y); r <= y0 || r >= y1 {
+					lo, hi = min(lo, c.col(p.X)), max(hi, c.col(p.X))
+				}
+			}
+			for i, edge := range c.l.Graph.Edges {
+				if path := c.l.Edges[i].Path; len(path) > 0 && edge.From == node {
+					end(path[0])
+				}
+				if path := c.l.Edges[i].Path; len(path) > 0 && edge.To == node {
+					end(path[len(path)-1])
+				}
+			}
+			switch {
+			case hi < x1-1:
+				x1--
+			case lo > x0+1:
+				x0++
+			}
 		}
 	}
 	x1 = max(x1, x0+2)
@@ -350,7 +371,18 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			}
 		}
 	}
-	for key, ends := range sides {
+	// sides in the order of the nodes, as an edge can end on two of them
+	// and moving one end can move the other
+	keys := slices.Collect(maps.Keys(sides))
+	order := map[*layout.Node]int{}
+	for i, node := range c.l.Graph.Nodes {
+		order[node] = i
+	}
+	slices.SortFunc(keys, func(a, b side) int {
+		return cmp.Or(cmp.Compare(order[a.node], order[b.node]), cmp.Compare(a.along, b.along), cmp.Compare(boolInt(a.after), boolInt(b.after)))
+	})
+	for _, key := range keys {
+		ends := sides[key]
 		b := c.boxes[key.node]
 		lo, hi := b[key.along]+1, b[key.along+2]-1
 		if len(ends) > hi-lo+1 {
@@ -626,4 +658,12 @@ func setLeft(rec *draw.Record, x float64) {
 			setLeft(field, x)
 		}
 	}
+}
+
+// boolInt returns 1 for true and 0 for false
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }

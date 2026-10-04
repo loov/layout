@@ -716,11 +716,9 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 				}
 				node.Radius.X += float32(width + graphdef.EdgePadding)
 				node.Radius.Y = float32(height + graphdef.EdgePadding)
-				if graphdef.Splines != SplinesOrtho {
-					// the edge passes on one side, the labels stack on the
-					// other, see labelSide
-					node.Anchor = -labelSide(graphdef.RankDir) * (node.Radius.X - float32(graphdef.EdgePadding))
-				}
+				// the edge passes on one side, the labels stack on the
+				// other, see labelSide
+				node.Anchor = -labelSide(graphdef.RankDir) * (node.Radius.X - float32(graphdef.EdgePadding))
 			}
 			continue
 		}

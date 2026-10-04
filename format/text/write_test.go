@@ -511,3 +511,49 @@ func TestCarveKeepsRanks(t *testing.T) {
 		}
 	}
 }
+
+// TestWriteDeterministic checks that drawing a layout gives the same text
+// every time, whatever order maps are iterated in.
+func TestWriteDeterministic(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var graphs []*layout.Graph
+	for _, file := range files {
+		parsed, err := dot.ParseFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		graphs = append(graphs, parsed[0])
+	}
+	// edge ends close to the corners of a node, see nodeBox
+	fan := layout.NewDigraph()
+	fan.Edge("a", "b").Label = "iiiiiiiiiiiiiiii"
+	fan.Edge("a", "c").Label = "llllllllllllllll"
+	fan.Edge("a", "d").Label = "1.1.1.1"
+	fan.Edge("b", "e")
+	fan.Edge("c", "e")
+	fan.Edge("d", "e")
+	graphs = append(graphs, fan)
+	for _, graph := range graphs {
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var first bytes.Buffer
+		if err := Write(&first, l); err != nil {
+			t.Fatal(err)
+		}
+		for range 10 {
+			var again bytes.Buffer
+			if err := Write(&again, l); err != nil {
+				t.Fatal(err)
+			}
+			if again.String() != first.String() {
+				t.Errorf("%s: drawn differently:\n%s\nthen:\n%s", graph.ID, first.String(), again.String())
+				break
+			}
+		}
+	}
+}
