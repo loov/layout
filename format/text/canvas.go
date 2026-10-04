@@ -105,9 +105,9 @@ func newCanvas(l *layout.Layout) *canvas {
 	for i := range graph.Nodes {
 		box := l.Nodes[i]
 		// boxes widen to their labels, see drawNode
-		label := draw.PlainLabel(box.Label)
-		c.w = max(c.w, c.col(box.Left())+draw.TextColumns(label)+2)
-		c.h = max(c.h, c.row(box.Top())+strings.Count(label, "\n")+3)
+		w, h := draw.LabelBox(draw.PlainLabel(box.Label))
+		c.w = max(c.w, c.col(box.Left())+w+1)
+		c.h = max(c.h, c.row(box.Top())+h+1)
 	}
 	for i, cluster := range graph.Clusters {
 		if cluster.Label != "" {

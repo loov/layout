@@ -57,11 +57,12 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
 	x0, y0 := c.col(box.Left()+inset), c.row(box.Top()+inset)
 	x1, y1 := c.col(box.Right()-inset), c.row(box.Bottom()-inset)
-	lines := strings.Split(draw.PlainLabel(box.Label), "\n")
-	// the box must hold the label with a space on either side and have
-	// distinct edges
+	label := draw.PlainLabel(box.Label)
+	lines := strings.Split(label, "\n")
+	w, h := draw.LabelBox(label)
+	// the box must hold the label and have distinct edges
 	if box.Shape != layout.Record {
-		x1 = max(x1, x0+widest(lines)+3)
+		x1 = max(x1, x0+w)
 		// an odd number of spare cells can't be split evenly around the
 		// label, give one back
 		if spare := x1 - x0 - 1 - widest(lines); spare >= 3 && spare%2 == 1 {
@@ -75,7 +76,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		rec = layoutRecord(graph, node, box)
 		y1 = max(y1, y0+draw.RecordRows(rec)+1)
 	} else {
-		y1 = max(y1, y0+len(lines)+1)
+		y1 = max(y1, y0+h)
 	}
 	c.boxes[node] = [4]int{x0, y0, x1, y1}
 	c.ink, c.font = rgb(node.LineColor), rgb(node.FontColor)

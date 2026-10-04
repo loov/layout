@@ -191,3 +191,21 @@ func TestFitsLayout(t *testing.T) {
 		}
 	}
 }
+
+// TestWidenedBoxFits checks that the canvas holds a box widened past its
+// layout for its label, as when the layout wasn't made for text.
+func TestWidenedBoxFits(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Node("iiiiiiiiiiiiiiiiiiii")
+	l, err := layout.Hierarchical(graph, layout.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	if err := Write(&out, l); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "iiii │") {
+		t.Errorf("right border cut off:\n%s", out.String())
+	}
+}

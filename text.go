@@ -2,7 +2,6 @@ package layout
 
 import (
 	"math"
-	"strings"
 
 	"github.com/loov/layout/internal/draw"
 )
@@ -63,9 +62,9 @@ func (graph *lgraph) prepareText() {
 			graph.reserveRecord(node, cellW)
 		default:
 			// the label's rows and a border row above and below
-			label := draw.PlainLabel(node.DefaultLabel())
-			node.Radius.X = max(node.Radius.X, Length(draw.TextColumns(label)+3)*cellW/2)
-			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(strings.Count(label, "\n")+2)/2)
+			w, h := draw.LabelBox(draw.PlainLabel(node.DefaultLabel()))
+			node.Radius.X = max(node.Radius.X, Length(w)*cellW/2)
+			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(h)/2)
 		}
 	}
 
@@ -118,7 +117,8 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 	var walk func(rec *draw.Record, share Length)
 	walk = func(rec *draw.Record, share Length) {
 		if len(rec.Fields) == 0 {
-			need := Length(draw.TextColumns(rec.Text)+3) * cellW
+			w, _ := draw.LabelBox(rec.Text)
+			need := Length(w) * cellW
 			grow = max(grow, (need-Length(rec.X1-rec.X0))*share)
 			return
 		}

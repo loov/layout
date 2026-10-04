@@ -33,6 +33,13 @@ func TextColumns(s string) int {
 	return w
 }
 
+// LabelBox returns the size of the box text draws plain text in, as the
+// columns and rows from one border to the other: the text with a space
+// on either side, between borders on the rows above and below it
+func LabelBox(text string) (w, h int) {
+	return TextColumns(text) + 3, strings.Count(text, "\n") + 2
+}
+
 // RecordRows returns the rows the fields of a record need inside its
 // box: a row per line of text, and one per divider between fields
 // stacked vertically
