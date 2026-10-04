@@ -117,6 +117,11 @@ func newCanvas(l *layout.Layout) *canvas {
 	return c
 }
 
+// sideways reports whether the ranks of the graph are columns
+func (c *canvas) sideways() bool {
+	return c.l.Graph.RankDir == layout.LeftToRight || c.l.Graph.RankDir == layout.RightToLeft
+}
+
 // reset makes the canvas w by h blank cells
 func (c *canvas) reset(w, h int) {
 	c.w, c.h = w, h

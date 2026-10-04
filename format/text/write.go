@@ -26,6 +26,13 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
+	c := drawGraph(l)
+	_, err := io.WriteString(w, encode(carve(c.rows, c.sideways()), opts))
+	return err
+}
+
+// drawGraph draws the graph on a canvas, before carving
+func drawGraph(l *layout.Layout) *canvas {
 	graph := l.Graph
 	c := newCanvas(l)
 	for i, cluster := range graph.Clusters {
@@ -52,9 +59,7 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 		}
 	}
 	c.drawLabels(graph, paths)
-
-	_, err := io.WriteString(w, encode(carve(c.rows), opts))
-	return err
+	return c
 }
 
 // mergedEdges returns an id for the edges that the layout merged, the

@@ -136,7 +136,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	}
 	lines := strings.Split(draw.PlainLabel(box.Label), "\n")
 	top := (y0 + y1 + 1 - len(lines)) / 2
-	if graph.PackEdgeEnds && (graph.RankDir == layout.LeftToRight || graph.RankDir == layout.RightToLeft) {
+	if graph.PackEdgeEnds && c.sideways() {
 		top = y0 + 1 // with the main path, along the first row
 	}
 	for i, line := range lines {
