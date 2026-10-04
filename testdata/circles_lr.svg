@@ -1,0 +1,24 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='192' height='256'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M40.493446,114.44045 L86.86109,45.133175 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M104.83242,45.34123 L151.2279,114.619026 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M46.41616,121.05923 L81.44337,102.64111 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M110.236694,103.30183 L145.44336,121.35889 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M46.23669,135.30182 L81.44337,153.35889 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M110.236694,152.69818 L145.35289,134.4391 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M40.149086,141.76926 L86.86109,210.86682 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M104.83242,210.65877 L151.04364,141.25835 '></path><circle cx='32' cy='128' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='32' y='128' font-size='14' fill='#000000'>a</text>
+<circle cx='96' cy='32' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='96' y='32' font-size='14' fill='#000000'>b</text>
+<circle cx='160' cy='128' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='160' y='128' font-size='14' fill='#000000'>f</text>
+<circle cx='96' cy='96' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' fill='#000000'>c</text>
+<circle cx='96' cy='160' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='96' y='160' font-size='14' fill='#000000'>d</text>
+<circle cx='96' cy='224' r='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></circle><text text-anchor='middle' alignment-baseline='middle' x='96' y='224' font-size='14' fill='#000000'>e</text>
+</g></svg>

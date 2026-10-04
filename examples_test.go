@@ -20,6 +20,44 @@ import (
 var update = flag.Bool("update", false, "update testdata golden files")
 
 var examples = map[string]func() *layout.Graph{
+	// narrow_labels has edge labels of narrow letters, which take as many
+	// cells as any other letters in text
+	"narrow_labels": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Edge("a", "b").Label = "iiiiiiiiiiiiiiii"
+		graph.Edge("a", "c").Label = "llllllllllllllll"
+		graph.Edge("a", "d").Label = "1.1.1.1"
+		graph.Edge("b", "e")
+		graph.Edge("c", "e")
+		graph.Edge("d", "e")
+		return graph
+	},
+	// circles_lr makes every node a circle through the graph's default
+	// shape, sideways, where edge ends packed along nodes make them tall
+	"circles_lr": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		graph.Shape = layout.Circle
+		for _, to := range []string{"b", "c", "d", "e"} {
+			graph.Edge("a", to)
+			graph.Edge(to, "f")
+		}
+		return graph
+	},
+	// cluster_lr has cluster labels longer than their members, sideways,
+	// where the labels run along the ranks
+	"cluster_lr": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		graph.Edge("a", "b")
+		graph.Edge("a", "c")
+		graph.Edge("c", "d")
+		graph.Clusters = []*layout.Cluster{
+			{ID: "x", Label: "a cluster label that is long", Nodes: []*layout.Node{graph.Node("b")}},
+			{ID: "y", Label: "second one", Nodes: []*layout.Node{graph.Node("c"), graph.Node("d")}},
+		}
+		return graph
+	},
 	// readme is the example in README.md; keep the two in sync
 	"readme": func() *layout.Graph {
 		graph := layout.NewDigraph()
