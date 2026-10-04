@@ -298,6 +298,14 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		after bool // right or bottom
 	}
 	sides := map[side][]end{}
+	// merged ends on a side move as one, led by an end that goes on
+	// straight when there is one, as that stays; leads holds where each
+	// group's lead is in sides
+	type group struct {
+		side side
+		id   int
+	}
+	leads := map[group]int{}
 	for k, path := range paths {
 		if len(path) < 2 {
 			continue
@@ -328,34 +336,24 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 				}
 				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
 				key := side{e.node, along, after}
+				if n, ok := leads[group{key, end.group}]; ok {
+					lead := &sides[key][n]
+					if end.fixed && !lead.fixed {
+						end.also, lead.also = lead.also, nil
+						*lead, end = end, *lead
+					}
+					lead.also = append(lead.also, end)
+					break
+				}
+				if end.group != 0 {
+					leads[group{key, end.group}] = len(sides[key])
+				}
 				sides[key] = append(sides[key], end)
 				break
 			}
 		}
 	}
 	for key, ends := range sides {
-		// merged ends move as one, led by an end that goes on straight
-		// when there is one, as that stays
-		lead := map[int]int{}
-		for n, e := range ends {
-			if l, ok := lead[e.group]; e.group != 0 && (!ok || e.fixed && !ends[l].fixed) {
-				lead[e.group] = n
-			}
-		}
-		also := map[int][]end{}
-		for n, e := range ends {
-			if l := lead[e.group]; e.group != 0 && l != n {
-				also[l] = append(also[l], e)
-			}
-		}
-		var kept []end
-		for n, e := range ends {
-			if e.group == 0 || lead[e.group] == n {
-				e.also = also[n]
-				kept = append(kept, e)
-			}
-		}
-		ends = kept
 		b := c.boxes[key.node]
 		lo, hi := b[key.along]+1, b[key.along+2]-1
 		if len(ends) > hi-lo+1 {
