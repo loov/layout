@@ -515,6 +515,16 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 			for k, line := range lines {
 				c.text(x, y+k, line)
 			}
+			// the blanks around the label keep it beside its edge when
+			// carving, see seams
+			w := draw.TextColumns(label)
+			for row := y - 1; row <= y+len(lines); row++ {
+				for col := x - 1; col <= x+w; col++ {
+					if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {
+						p.glue = true
+					}
+				}
+			}
 		}
 	}
 	for i, cluster := range graph.Clusters {

@@ -11,6 +11,7 @@ type cell struct {
 	r      rune
 	fg, bg uint32
 	keep   bool   // inside a node or of text, which carving keeps
+	glue   bool   // beside a label, which carving keeps beside it
 	solid  bool   // covered by a node; edges do not draw there
 	lines  int    // direction mask, for joining edge runs
 	heavy  int    // arms that runs of different edges share
@@ -45,7 +46,7 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 // lines; see carve. Seams turn between lines when turn is set. Cells of
 // neighboring lines are joined when the cell of the line before has the
 // arm next, or the cell of the line after has the arm prev, or one is
-// kept and the other is too or is not blank.
+// kept or glued and the other is too or is not blank.
 func seams(grid [][]cell, straight, markers string, keep int, turn bool, next, prev int) [][]cell {
 	// the cost of a seam through a cell, and of each cell it moves along
 	const (
@@ -101,8 +102,9 @@ func seams(grid [][]cell, straight, markers string, keep int, turn bool, next, p
 			joined := make([]bool, m)
 			for x := range m {
 				a, b := grid[i-1][x], grid[i][x]
+				sticky := func(c cell) bool { return c.keep || c.glue }
 				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
-					a.keep && (b.keep || b.r != ' ') || b.keep && a.r != ' '
+					sticky(a) && (sticky(b) || b.r != ' ') || sticky(b) && a.r != ' '
 			}
 			if !turn {
 				for x := range m {

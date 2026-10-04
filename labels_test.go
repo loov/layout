@@ -2,6 +2,8 @@ package layout_test
 
 import (
 	"bytes"
+	"math"
+	"slices"
 	"strings"
 	"testing"
 
@@ -102,4 +104,75 @@ func TestLabelsApart(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestFlatEdgeLabels checks that the labels of edges between nodes of the
+// same rank, next to each other or arcing over others, keep clear of the
+// nodes and edges and lie beside their edge, within a text height of it.
+func TestFlatEdgeLabels(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {
+		for _, forText := range []bool{false, true} {
+			graph := flatLabels()
+			graph.RankDir = dir
+			l, err := layout.Hierarchical(graph, layout.Options{ForText: forText})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i, edge := range graph.Edges {
+				at := l.Edges[i]
+				if edge.Label == "" {
+					continue
+				}
+				tl := at.LabelCenter.Sub(layout.Vector{X: at.LabelSize.X / 2, Y: at.LabelSize.Y / 2})
+				br := at.LabelCenter.Add(layout.Vector{X: at.LabelSize.X / 2, Y: at.LabelSize.Y / 2})
+				for k, node := range graph.Nodes {
+					box := l.Nodes[k]
+					if box.Left() < br.X && tl.X < box.Right() && box.Top() < br.Y && tl.Y < box.Bottom() {
+						t.Errorf("%v text=%v: label %q overlaps node %s", dir, forText, edge.Label, node.ID)
+					}
+				}
+				for k, other := range graph.Edges {
+					if slices.ContainsFunc(samples(l.Edges[k].Path), func(p layout.Vector) bool {
+						return tl.X < p.X && p.X < br.X && tl.Y < p.Y && p.Y < br.Y
+					}) {
+						t.Errorf("%v text=%v: label %q covers edge %s->%s", dir, forText, edge.Label, other.From.ID, other.To.ID)
+					}
+				}
+				near := math.Inf(1)
+				for _, p := range samples(at.Path) {
+					dx, dy := max(tl.X-p.X, 0, p.X-br.X), max(tl.Y-p.Y, 0, p.Y-br.Y)
+					near = min(near, math.Hypot(float64(dx), float64(dy)))
+				}
+				if limit := float64(at.LabelSize.Y); near > limit {
+					t.Errorf("%v text=%v: label %q is %.1f from its edge, more than %.1f", dir, forText, edge.Label, near, limit)
+				}
+			}
+		}
+	}
+}
+
+// samples returns points along the segments of path, a hundred a segment
+func samples(path []layout.Vector) []layout.Vector {
+	var points []layout.Vector
+	for j := 0; j+1 < len(path); j++ {
+		a, b := path[j], path[j+1]
+		for s := range 101 {
+			f := layout.Length(s) / 100
+			points = append(points, layout.Vector{X: a.X + (b.X-a.X)*f, Y: a.Y + (b.Y-a.Y)*f})
+		}
+	}
+	return points
+}
+
+// flatLabels returns a graph with labeled edges between nodes of a rank:
+// next to each other, and arcing over one between them
+func flatLabels() *layout.Graph {
+	graph := layout.NewDigraph()
+	graph.Edge("a", "b").Label = "flat label"
+	graph.Edge("b", "c").Label = "x"
+	graph.Edge("a", "c").Label = "arc"
+	graph.Edge("a", "d")
+	graph.Edge("a", "e").Label = "down"
+	graph.SameRank = [][]*layout.Node{{graph.Node("a"), graph.Node("b"), graph.Node("c")}}
+	return graph
 }

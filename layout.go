@@ -688,6 +688,21 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		}
 	}
 
+	// a labeled edge between neighbors on a rank needs room between them
+	// for its label, on the right of the left one as for loops
+	for _, edge := range graphdef.Edges {
+		from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
+		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || max(from.Pos-to.Pos, to.Pos-from.Pos) != 1 {
+			continue
+		}
+		left := edge.From
+		if to.Pos < from.Pos {
+			left = edge.To
+		}
+		// neighbors are already two node paddings apart
+		loopExtra[left] += max(0, 2*(edge.LabelRadius.X+graphdef.EdgePadding-graphdef.NodePadding))
+	}
+
 	// assign node sizes
 	for id, node := range orderedGraph.Nodes {
 		if node.Virtual {
@@ -1055,6 +1070,23 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 				edge.Path = []Vector{from, to}
 			}
 		}
+	}
+	// labels of edges along a rank have no node of their own; they go
+	// above the middle of the topmost segment, between neighbors in the
+	// room made for them and outside an arc
+	for _, edge := range graphdef.Edges {
+		from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
+		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
+			continue
+		}
+		top := 0
+		for i := 1; i+1 < len(edge.Path); i++ {
+			if edge.Path[i].Y+edge.Path[i+1].Y < edge.Path[top].Y+edge.Path[top+1].Y {
+				top = i
+			}
+		}
+		a, b := edge.Path[top], edge.Path[top+1]
+		edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: min(a.Y, b.Y) - graphdef.EdgePadding - edge.LabelRadius.Y}
 	}
 	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
 }

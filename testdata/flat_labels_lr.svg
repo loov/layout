@@ -1,0 +1,27 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='195.34001' height='224' viewBox='-21.6 0 195.34001 224'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,80 L32,112 '></path><text text-anchor='middle' alignment-baseline='middle' x='66' y='104' font-size='14' fill='#000000'>flat label</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,144 L32,176 '></path><text text-anchor='middle' alignment-baseline='middle' x='22.36' y='160' font-size='14' fill='#000000'>x</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M16,64 L10,64 Q4,64 4,70 L4,186 Q4,192 10,192 L16,192 '></path><text text-anchor='middle' alignment-baseline='middle' x='-11.8' y='116' font-size='14' fill='#000000'>arc</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M47.360283,59.52097 L67.11514,53.760483 Q86.87,48 106.62486,42.239517 L126.37972,36.47903 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M46.65907,70.41184 L68.79806,80.095375 Q86.87,88 106.3887,90.84581 L125.9074,93.69162 '></path><text text-anchor='middle' alignment-baseline='middle' x='89.37258' y='67.05239' font-size='14' fill='#000000'>down</text>
+<ellipse cx='32' cy='64' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='64' font-size='14' fill='#000000'>a</text>
+<ellipse cx='32' cy='128' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='128' font-size='14' fill='#000000'>b</text>
+<ellipse cx='32' cy='192' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='192' font-size='14' fill='#000000'>c</text>
+<ellipse cx='141.74' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='141.74' y='32' font-size='14' fill='#000000'>d</text>
+<ellipse cx='141.74' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='141.74' y='96' font-size='14' fill='#000000'>e</text>
+</g></svg>

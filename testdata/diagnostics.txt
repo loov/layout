@@ -7,6 +7,8 @@ cluster_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 paralle
 complex      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=445 area=33938
 components   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=1 labels=0 far=0 length=250 area=48410
 flat         nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 wavy=0 back=0 labels=0 far=0 length=412 area=25600
+flat_labels  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 wavy=0 back=0 labels=0 far=0 length=419 area=36024
+flat_labels_lr nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 wavy=0 back=0 labels=0 far=0 length=382 area=34433
 flat_merged  nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 wavy=0 back=0 labels=0 far=0 length=412 area=25600
 labels       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 wavy=0 back=1 labels=1 far=0 length=556 area=45757
 loop         nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=211 area=17920

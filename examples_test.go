@@ -20,6 +20,14 @@ import (
 var update = flag.Bool("update", false, "update testdata golden files")
 
 var examples = map[string]func() *layout.Graph{
+	// flat_labels has labeled edges between nodes of a rank, next to each
+	// other and arcing over one between, see flatLabels
+	"flat_labels": flatLabels,
+	"flat_labels_lr": func() *layout.Graph {
+		graph := flatLabels()
+		graph.RankDir = layout.LeftToRight
+		return graph
+	},
 	// narrow_labels has edge labels of narrow letters, which take as many
 	// cells as any other letters in text
 	"narrow_labels": func() *layout.Graph {
