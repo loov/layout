@@ -16,6 +16,15 @@ type Graph struct {
 	// first end: the main path of a sideways layout then runs along the
 	// top of its nodes. Options.ForText sets it for sideways layouts.
 	PackEdgeEnds bool
+	// MergeEdges runs the ortho edges that leave a node on the same side
+	// from one point, as a single line that branches off towards their
+	// targets, and likewise joins the edges that enter a node on the same
+	// side before they reach it, so that a node needs room for one end a
+	// side. Only edges that look the same merge, and an edge merges at
+	// its start or its end, not both, so that the lines can't be read as
+	// edges that aren't there. Ends at ports and edges with labels stay
+	// apart. DOT calls this concentrate.
+	MergeEdges bool
 
 	// MeasureText returns the width of a single line of text in the
 	// given font; the height of a line is LineHeight. When nil, a

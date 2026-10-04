@@ -36,6 +36,9 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 	for _, node := range graph.Nodes {
 		c.drawNode(graph, node)
 	}
+	if graph.MergeEdges {
+		c.merged = mergedEdges(l)
+	}
 	paths := make([][][2]int, len(graph.Edges))
 	for i, edge := range graph.Edges {
 		if !edge.Invisible {
@@ -55,4 +58,17 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 	grid = transpose(carve(transpose(grid), " ─━┈┉┄", "◀▶●○", 2))
 	_, err := io.WriteString(w, encode(grid, opts))
 	return err
+}
+
+// mergedEdges returns an id for the edges that the layout merged, the
+// same for those in a group. An edge merges at its start or its end, not
+// both. The ids are negative, apart from those the canvas counts up.
+func mergedEdges(l *layout.Layout) map[*layout.Edge]int {
+	ids := map[*layout.Edge]int{}
+	for i, edge := range l.Graph.Edges {
+		if m := l.Edges[i].Merged; m != [2]int{} {
+			ids[edge] = -max(m[0], m[1])
+		}
+	}
+	return ids
 }

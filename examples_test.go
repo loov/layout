@@ -316,6 +316,9 @@ func regexDFA() *layout.Graph {
 // Run `go test -update` to regenerate the golden files.
 func TestExamples(t *testing.T) {
 	for name, build := range examples {
+		if strings.HasSuffix(name, "_merged") {
+			continue // merging needs ortho edges, which the svg doesn't use
+		}
 		t.Run(name, func(t *testing.T) {
 			checkGolden(t, filepath.Join("testdata", name+".svg"), build(), exampleOptions[name])
 		})
@@ -572,4 +575,17 @@ func diffLines(want, got []byte) string {
 		}
 	}
 	return out.String()
+}
+
+// merged edge variants of the examples with edges that fan out or in,
+// see layout.Graph.MergeEdges
+func init() {
+	for _, name := range []string{"minimal", "readme", "cluster", "flat", "rankdir", "subnets"} {
+		build := examples[name]
+		examples[name+"_merged"] = func() *layout.Graph {
+			graph := build()
+			graph.MergeEdges = true
+			return graph
+		}
+	}
 }

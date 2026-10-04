@@ -42,6 +42,10 @@ type EdgePath struct {
 	LabelSize   Vector
 	// FontSize is the edge's own, or the graph default when unset.
 	FontSize Length
+	// Merged is the group of edges this one merges with at its start
+	// and at its end, see Graph.MergeEdges; 0 where it doesn't. Merged
+	// edges share the end, and run together to where they turn apart.
+	Merged [2]int
 }
 
 // ClusterBox is the computed box of a cluster.

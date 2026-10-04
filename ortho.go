@@ -99,6 +99,22 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	}
 	for k, list := range ends {
 		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
+		// merged ends take one slot a group, that of its middle end
+		followers := map[*ledge][]end{}
+		groups := map[int][]end{}
+		list = slices.DeleteFunc(list, func(e end) bool {
+			g := graph.merged[e.edge][map[bool]int{true: 0, false: 1}[e.start]]
+			if g != 0 {
+				groups[g] = append(groups[g], e)
+			}
+			return g != 0
+		})
+		for _, group := range groups {
+			mid := group[len(group)/2]
+			followers[mid.edge] = slices.Delete(group, len(group)/2, len(group)/2+1)
+			list = append(list, mid)
+		}
+		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
 		// slots evenly spread around the center, or packed from the left
 		// an edge padding apart
 		n := Length(len(list))
@@ -131,10 +147,12 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 				xs[i] = want[i] // undo rounding, the run must stay exactly vertical
 			}
 			p := outline(k.node, xs[i], k.bottom)
-			if e.start {
-				e.edge.Path[0] = p
-			} else {
-				e.edge.Path[len(e.edge.Path)-1] = p
+			for _, f := range append([]end{e}, followers[e.edge]...) {
+				if f.start {
+					f.edge.Path[0] = p
+				} else {
+					f.edge.Path[len(f.edge.Path)-1] = p
+				}
 			}
 		}
 	}
@@ -170,6 +188,30 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		if len(jogs) == 0 {
 			continue
 		}
+		// merged edges turn along one track: the first jog of a group
+		// spans the rest, which take its track afterwards
+		shared := map[*jog][]*jog{}
+		first := map[int]*jog{}
+		jogs = slices.DeleteFunc(jogs, func(j *jog) bool {
+			g := graph.merged[j.edge]
+			id := 0
+			switch {
+			case j.index == 0 && g[0] != 0:
+				id = g[0]
+			case j.index == len(j.edge.Path)-2 && g[1] != 0:
+				id = g[1]
+			default:
+				return false
+			}
+			f, ok := first[id]
+			if !ok {
+				first[id] = j
+				return false
+			}
+			f.x0, f.x1 = min(f.x0, j.x0), max(f.x1, j.x1)
+			shared[f] = append(shared[f], j)
+			return true
+		})
 		// a rightward and a leftward jog over the same span run down each
 		// other's stubs on any tracks; split the rightward one into two
 		// steps that cross the leftward one in the middle
@@ -237,6 +279,10 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		spacing := min(pad, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
 			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
+			for _, o := range shared[j] {
+				o.y = j.y
+				channels[k] = append(channels[k], o)
+			}
 		}
 	}
 
@@ -309,4 +355,88 @@ func separate(want []Length, weight []float64, gap, lo, hi Length) []Length {
 		}
 	}
 	return xs
+}
+
+// mergeEdges adds the edge ends that merge, see Graph.MergeEdges, to
+// merged by a group id, after the ids already there; 0 for an end that
+// doesn't merge, at a port or alone. Ends
+// merge when they leave or enter a node on the same side, of edges that
+// look the same. An edge that would merge at both ends merges at
+// neither, or its line would join the sources of one group to the
+// targets of the other. Flat edges and loops don't merge, nor do edges
+// with labels, which could end up beside a stretch they share.
+func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int) {
+	type look struct {
+		head, tail Arrow
+		style      LineStyle
+		width      Length
+		color      [5]uint8
+	}
+	type group struct {
+		node         *lnode
+		below, start bool
+		look         look
+	}
+	keys := map[*ledge][2]group{}
+	count := map[group]int{}
+	for _, e := range edges {
+		from, to := rank(e.From), rank(e.To)
+		if from == to || e.Label != "" {
+			continue
+		}
+		l := look{head: e.ArrowHead, tail: e.ArrowTail, style: e.LineStyle, width: e.LineWidth}
+		if e.LineColor != nil {
+			r, g, b, a := e.LineColor.RGBA8()
+			l.color = [5]uint8{r, g, b, a, 1}
+		}
+		below := from < to
+		k := [2]group{{e.From, below, true, l}, {e.To, !below, false, l}}
+		if e.FromPort != CompassAuto {
+			k[0].node = nil
+		}
+		if e.ToPort != CompassAuto {
+			k[1].node = nil
+		}
+		keys[e] = k
+		for _, g := range k {
+			count[g]++
+		}
+	}
+	merges := func(g group) bool { return g.node != nil && count[g] > 1 }
+	var both []*ledge
+	for _, e := range edges {
+		if k, ok := keys[e]; ok && merges(k[0]) && merges(k[1]) {
+			both = append(both, e)
+		}
+	}
+	// all at once, as dropping one leaves another merging; groups only
+	// shrink, so no edge comes to merge at both ends
+	for _, e := range both {
+		count[keys[e][0]]--
+		count[keys[e][1]]--
+		delete(keys, e)
+	}
+	ids := map[group]int{}
+	base := 0
+	for _, m := range merged {
+		base = max(base, m[0], m[1])
+	}
+	for _, e := range edges {
+		k, ok := keys[e]
+		if !ok {
+			continue
+		}
+		var m [2]int
+		for i, g := range k {
+			if merges(g) {
+				if ids[g] == 0 {
+					ids[g] = base + len(ids) + 1
+				}
+				m[i] = ids[g]
+			}
+		}
+		if m != [2]int{} {
+			merged[e] = m
+		}
+	}
 }

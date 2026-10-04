@@ -24,6 +24,10 @@ type lgraph struct {
 	ForText bool
 	// Pinned means every node has a Pos; layout keeps them
 	Pinned bool
+	// merged holds the group ids of the edge ends that merge, at the
+	// start and the end, see mergeEdges; the components of a graph
+	// share it
+	merged map[*ledge][2]int
 }
 
 // lnode is the working copy of a Node.
@@ -161,7 +165,7 @@ func (g *lgraph) result() *Layout {
 		})
 	}
 	for _, e := range g.Edges {
-		path := EdgePath{Path: e.Path, FontSize: e.FontSize}
+		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: g.merged[e]}
 		if e.Label != "" {
 			path.LabelCenter = e.LabelPos
 			path.LabelSize = Vector{2 * e.LabelRadius.X, 2 * e.LabelRadius.Y}

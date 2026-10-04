@@ -4,7 +4,7 @@ layout draws graphs in pure Go.
 
 You build a graph in code or read one from a DOT or GraphML file. `layout.Hierarchical` places the nodes in ranks and routes the edges, in the same style as Graphviz `dot`. `layout.Force` is there for graphs without a clear direction. The result can be written as SVG, Unicode text for a terminal, JSON coordinates, DOT or GraphML.
 
-It understands a good part of the DOT language: clusters, record and HTML-like labels, ports, `rankdir`, `minlen`, and colors by X11 name.
+It understands a good part of the DOT language: clusters, record and HTML-like labels, ports, `rankdir`, `minlen`, `concentrate` for merged edges, and colors by X11 name.
 
 ## Installation
 

@@ -36,9 +36,10 @@
 //   - minlen=0 is ignored; put such nodes in a rank=same subgraph.
 //   - The graph label, labels on subgraphs that are not clusters,
 //     xlabel, headlabel and taillabel are not drawn.
+//   - concentrate shares the starts of ortho edges, see
+//     layout.Graph.MergeEdges; edges into a node stay apart.
 //   - Layout controls such as constraint, group, ordering, compound with
-//     lhead and ltail, concentrate, newrank, size, ratio and rotate have
-//     no effect.
+//     lhead and ltail, newrank, size, ratio and rotate have no effect.
 package dot
 
 import (
@@ -366,6 +367,8 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 			case "ortho":
 				graph.Splines = layout.SplinesOrtho
 			}
+		case "concentrate":
+			graph.MergeEdges, _ = strconv.ParseBool(attr.Val)
 		case "nodesep":
 			setLength(&graph.NodePadding, attr.Val, layout.Inch)
 		case "ranksep":

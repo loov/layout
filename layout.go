@@ -261,6 +261,8 @@ func hierarchical(graphdef *lgraph, opts Options) {
 		}
 	}()
 
+	// the components share it, see lgraph.merged
+	graphdef.merged = map[*ledge][2]int{}
 	left := Length(0)
 	for _, component := range components(graphdef) {
 		hierarchicalComponent(component, opts)
@@ -626,10 +628,31 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		}
 	}
 
+	if graphdef.MergeEdges && graphdef.Splines == SplinesOrtho {
+		mergeEdges(graphdef.merged, graphdef.Edges, func(node *lnode) int { return orderedGraph.Nodes[nodes[node]].Rank })
+	}
+
 	// packed edge ends need room on each side of a node for its ends an
 	// edge padding apart, from an edge padding in
 	if pack {
 		ends := map[*lnode][2]int{} // above and below, by rank
+		// merged ends take one end a group
+		type slot struct {
+			node  *lnode
+			below bool
+			group int
+		}
+		counted := map[slot]bool{}
+		count := func(node *lnode, below bool, group int) {
+			k := slot{node, below, group}
+			if group != 0 && counted[k] {
+				return
+			}
+			counted[k] = true
+			e := ends[node]
+			e[map[bool]int{false: 0, true: 1}[below]]++
+			ends[node] = e
+		}
 		for _, edge := range graphdef.Edges {
 			from, to := orderedGraph.Nodes[nodes[edge.From]].Rank, orderedGraph.Nodes[nodes[edge.To]].Rank
 			if from == to {
@@ -637,14 +660,10 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 			}
 			below := from < to
 			if edge.FromPort == CompassAuto {
-				e := ends[edge.From]
-				e[map[bool]int{false: 0, true: 1}[below]]++
-				ends[edge.From] = e
+				count(edge.From, below, graphdef.merged[edge][0])
 			}
 			if edge.ToPort == CompassAuto {
-				e := ends[edge.To]
-				e[map[bool]int{false: 1, true: 0}[below]]++
-				ends[edge.To] = e
+				count(edge.To, !below, graphdef.merged[edge][1])
 			}
 		}
 		for node, e := range ends {

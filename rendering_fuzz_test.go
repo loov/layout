@@ -15,6 +15,7 @@ import (
 func FuzzRendering(f *testing.F) {
 	for mode := range 4 {
 		f.Add([]byte{byte(mode) | 0x10, 3, 0, 1, 1, 2, 2, 0, 0, 0}, "pinned")
+		f.Add([]byte{byte(mode) | 0x20, 5, 0, 1, 0, 2, 0, 3, 1, 4, 2, 4, 3, 4}, "merged")
 		f.Add([]byte{byte(mode), 3, 0, 1, 1, 2, 2, 0, 0, 0}, "漢字 é 👩‍💻\nsecond")
 		f.Add([]byte{byte(mode), 2, 5, 4, 0, 1, 1, 0}, "<TABLE><TR><TD>cell</TD></TR></TABLE>")
 	}
@@ -25,6 +26,7 @@ func FuzzRendering(f *testing.F) {
 		data = data[:min(len(data), 128)]
 		label = label[:min(len(label), 128)]
 		graph := layout.NewDigraph()
+		graph.MergeEdges = data[0]&0x20 != 0
 		graph.RankDir = []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft}[int(data[0]>>2)%4]
 		shapes := []layout.Shape{layout.Box, layout.Ellipse, layout.Circle, layout.None, layout.PointShape, layout.Record}
 		labels := []string{label, "first\nsecond", "<" + label + ">", "<p> " + label + "|{left|right}", "漢字", "é 👩‍💻"}

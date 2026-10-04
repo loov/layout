@@ -19,7 +19,8 @@ func (c *canvas) drawCluster(cluster *layout.Cluster, box layout.ClusterBox) {
 		// width can fall a few cells short
 		x1 = max(x1, x0+clusterLabelWidth(cluster))
 	}
-	c.edge++
+	c.ids++
+	c.edge = c.ids
 	c.ink = rgb(cluster.LineColor)
 	c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))
 	c.dashed = true
@@ -227,6 +228,9 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		i, j   int  // the end and the bend before it
 		fixed  bool // the run goes on straight past the bend
 		toward int  // where the edge heads past the bend, along the side
+		group  int  // the merged ends there, see layout.EdgePath.Merged
+
+		also []end // further edges of a shared start, which follow it
 	}
 	type side struct {
 		node  *layout.Node
@@ -259,6 +263,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 					end.fixed = path[e.k][along] == bend[along]
 					end.toward = path[e.k][along]
 				}
+				end.group = c.l.Edges[k].Merged[map[bool]int{true: 0, false: 1}[e.i == 0]]
 				key := side{e.node, along, after}
 				sides[key] = append(sides[key], end)
 				break
@@ -266,6 +271,28 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		}
 	}
 	for key, ends := range sides {
+		// merged ends move as one, led by an end that goes on straight
+		// when there is one, as that stays
+		lead := map[int]int{}
+		for n, e := range ends {
+			if l, ok := lead[e.group]; e.group != 0 && (!ok || e.fixed && !ends[l].fixed) {
+				lead[e.group] = n
+			}
+		}
+		also := map[int][]end{}
+		for n, e := range ends {
+			if l := lead[e.group]; e.group != 0 && l != n {
+				also[l] = append(also[l], e)
+			}
+		}
+		var kept []end
+		for n, e := range ends {
+			if e.group == 0 || lead[e.group] == n {
+				e.also = also[n]
+				kept = append(kept, e)
+			}
+		}
+		ends = kept
 		b := c.boxes[key.node]
 		lo, hi := b[key.along]+1, b[key.along+2]-1
 		if len(ends) > hi-lo+1 {
@@ -282,6 +309,9 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		for n, at := range spreadRows(want, fixed, lo, hi) {
 			e := ends[n]
 			e.path[e.i][key.along], e.path[e.j][key.along] = at, at
+			for _, f := range e.also {
+				f.path[f.i][key.along], f.path[f.j][key.along] = at, at
+			}
 		}
 	}
 }
@@ -326,7 +356,11 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 		return
 	}
 	last := len(cells) - 1
-	c.edge++
+	c.ids++
+	c.edge = c.ids
+	if id, ok := c.merged[edge]; ok {
+		c.edge = id // merged edges draw as one, without overlaps
+	}
 	c.ink = rgb(edge.LineColor)
 	c.dashed = edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted
 	for i := 0; i+1 < len(cells); i++ {
@@ -337,11 +371,20 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
 	}
-	if !c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last]) {
-		c.join(cells[last], edge.To)
+	// merged edges share their ends, which get one marker
+	_, merged := c.merged[edge]
+	if !merged || !c.ended[cells[last]] {
+		if !c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last]) {
+			c.join(cells[last], edge.To)
+		}
 	}
-	if !c.marker(edge.ArrowTail, arrival(cells[1], cells[0], true, path[1], path[0]), cells[0]) {
-		c.join(cells[0], edge.From)
+	if !merged || !c.ended[cells[0]] {
+		if !c.marker(edge.ArrowTail, arrival(cells[1], cells[0], true, path[1], path[0]), cells[0]) {
+			c.join(cells[0], edge.From)
+		}
+	}
+	if merged {
+		c.ended[cells[0]], c.ended[cells[last]] = true, true
 	}
 }
 

@@ -58,23 +58,26 @@ type canvas struct {
 	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	cells  []rune
-	fg, bg []uint32 // colors per cell, see rgb
-	ink    uint32   // color of lines and marks drawn from now on
-	font   uint32   // color of text drawn from now on
-	lines  []int    // direction mask per cell, for joining edge runs
-	heavy  []int    // arms that runs of different edges share
-	owner  [][4]int // edge that first drew each arm of a cell
-	solid  []bool   // cells covered by a node; edges do not draw there
-	keep   []bool   // cells inside nodes and of text, which carving keeps
-	dashed bool     // straight runs drawn from now on are dashed
-	edge   int      // edge drawn from now on, so that overlaps show
+	fg, bg []uint32             // colors per cell, see rgb
+	ink    uint32               // color of lines and marks drawn from now on
+	font   uint32               // color of text drawn from now on
+	lines  []int                // direction mask per cell, for joining edge runs
+	heavy  []int                // arms that runs of different edges share
+	owner  [][4]int             // edge that first drew each arm of a cell
+	solid  []bool               // cells covered by a node; edges do not draw there
+	keep   []bool               // cells inside nodes and of text, which carving keeps
+	dashed bool                 // straight runs drawn from now on are dashed
+	edge   int                  // edge drawn from now on, so that overlaps show
+	ids    int                  // edge ids handed out
+	merged map[*layout.Edge]int // edge ids of merged edges
+	ended  map[[2]int]bool      // cells where merged edges have ended
 }
 
 // newCanvas returns an empty canvas that fits the graph. One character
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
 func newCanvas(l *layout.Layout) *canvas {
 	graph := l.Graph
-	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}}
+	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{}}
 	if c.cellW <= 0 {
 		c.cellW = 8
 	}
