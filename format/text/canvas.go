@@ -98,17 +98,14 @@ func newCanvas(l *layout.Layout) *canvas {
 			c.loops[edge.From]++
 		}
 	}
-	for i := range graph.Nodes {
-		box := l.Nodes[i]
-		// boxes widen to their labels, see drawNode
-		w, h := draw.LabelBox(draw.PlainLabel(box.Label))
-		c.w = max(c.w, c.col(box.Left())+w+1)
-		c.h = max(c.h, c.row(box.Top())+h+1)
+	// boxes can be wider than the layout's, see nodeBox and clusterBox
+	fit := func(b [4]int) { c.w, c.h = max(c.w, b[2]+1), max(c.h, b[3]+1) }
+	for _, node := range graph.Nodes {
+		c.boxes[node] = c.nodeBox(node)
+		fit(c.boxes[node])
 	}
-	for i, cluster := range graph.Clusters {
-		if cluster.Label != "" {
-			c.w = max(c.w, c.col(l.Clusters[i].TopLeft.X)+clusterLabelWidth(cluster)+1)
-		}
+	for i := range graph.Clusters {
+		fit(c.clusterBox(i))
 	}
 	c.reset(c.w, c.h)
 	return c

@@ -30,7 +30,7 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 	c := newCanvas(l)
 	for i, cluster := range graph.Clusters {
 		if !cluster.Invisible {
-			c.drawCluster(cluster, l.Clusters[i])
+			c.drawCluster(i)
 		}
 	}
 	for _, node := range graph.Nodes {
