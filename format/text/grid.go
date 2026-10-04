@@ -63,27 +63,36 @@ func transpose(grid [][]cell) [][]cell {
 // encode writes the grid as lines of text without trailing blanks,
 // colored with escape codes unless opts is nil
 func encode(grid [][]cell, opts *Options) string {
+	// the escape code parameters of each pair of cell colors
+	codes := map[[2]uint32][2]string{}
+	code := func(x cell) (string, string) {
+		if opts == nil {
+			return "39", "49"
+		}
+		k := [2]uint32{x.fg, x.bg}
+		fb, ok := codes[k]
+		if !ok {
+			fb[0], fb[1] = opts.codes(x.fg, x.bg)
+			codes[k] = fb
+		}
+		return fb[0], fb[1]
+	}
 	var out strings.Builder
 	for _, line := range grid {
-		fs, bs := make([]string, len(line)), make([]string, len(line))
 		end := 0
 		for i, x := range line {
-			fs[i], bs[i] = "39", "49"
-			if opts != nil {
-				fs[i], bs[i] = opts.codes(x.fg, x.bg)
-			}
-			if x.r != ' ' || bs[i] != "49" {
+			if _, bg := code(x); x.r != ' ' || bg != "49" {
 				end = i + 1
 			}
 		}
 		f, b := "39", "49"
-		for i, x := range line[:end] {
-			want := fs[i]
+		for _, x := range line[:end] {
+			want, bg := code(x)
 			if x.r == ' ' {
 				want = f // blanks show only the background
 			}
-			if want != f || bs[i] != b {
-				f, b = want, bs[i]
+			if want != f || bg != b {
+				f, b = want, bg
 				out.WriteString("\x1b[" + f + ";" + b + "m")
 			}
 			if x.r != covered {
