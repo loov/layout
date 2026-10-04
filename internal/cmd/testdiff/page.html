@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>testdata changes</title>
+<style>
+:root {
+	--bg: #f4f4f2;
+	--card: #fff;
+	--ink: #1d1d1b;
+	--muted: #6b6b66;
+	--line: #d9d9d4;
+	--accent: #2f6fdf;
+	--added: #1f8a4c;
+	--removed: #c2410c;
+	--paper: #fff; /* behind drawings, white inverted in dark */
+	--mono: Menlo, Monaco, "SF Mono", Consolas, "DejaVu Sans Mono", monospace;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, -apple-system, sans-serif; }
+header { padding: 16px 20px 8px; }
+header button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); cursor: pointer; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.sub { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 12px 20px 40px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
+.card:hover, .card:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.thumb { height: 190px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 8px; background: #fff; }
+.thumb img { max-width: 100%; max-height: 100%; }
+.thumb pre { margin: 0; }
+.label { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-top: 1px solid var(--line); font-size: 13px; }
+.label .path { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 12px; }
+.badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--muted); }
+.badge.added { color: var(--added); }
+.badge.removed { color: var(--removed); }
+pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; line-height: 1.15; margin: 0; color: #000; background: #fff; white-space: pre; }
+
+/* detail view */
+.detail { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; }
+.detail.open { display: flex; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+.bar .path { font-family: var(--mono); font-weight: 600; margin-right: auto; }
+.bar button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); cursor: pointer; }
+.bar button:hover { border-color: var(--accent); }
+.bar .hint { color: var(--muted); font-size: 12px; width: 100%; }
+.panels { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); min-height: 0; }
+.panel { display: flex; flex-direction: column; background: var(--paper); min-width: 0; min-height: 0; }
+.panel h2 { background: var(--card); }
+.panel h2 { margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
+.panel h2 span { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.scroll { flex: 1; overflow: auto; padding: 12px; cursor: grab; user-select: none; touch-action: none; }
+.scroll.panning { cursor: grabbing; }
+.none { color: var(--muted); font-style: italic; }
+/* both layers in one cell, so that the stack is as large as either, on
+   white, so that what is the same cancels out */
+.onion { display: inline-grid; isolation: isolate; filter: invert(1); background: #fff; touch-action: none; cursor: grab; }
+.onion > * { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: none; object-position: 0 0; background: #fff; }
+.onion.dragging { cursor: grabbing; }
+.onion .new { mix-blend-mode: difference; }
+.context { position: absolute; left: 0; top: 0; opacity: .14; pointer-events: none; }
+.onion-wrap { position: relative; display: inline-block; }
+
+/* dark: the chrome follows the theme, and the drawings, kept black on
+   white, are inverted whole, onion skin included */
+:root[data-theme="dark"] {
+	--bg: #161615;
+	--card: #20201e;
+	--ink: #e8e8e4;
+	--muted: #9a9a93;
+	--line: #3a3a36;
+	--accent: #6c9cf0;
+	--added: #4cc282;
+	--removed: #f08a5b;
+	--paper: #000;
+	color-scheme: dark;
+}
+:root[data-theme="dark"] .thumb,
+:root[data-theme="dark"] .scroll { filter: invert(1) hue-rotate(180deg); }
+:root[data-theme="dark"] .none { filter: invert(1); }
+header .theme { margin-left: auto; }
+
+@media (max-width: 900px) {
+	.panels { grid-template-columns: 1fr; grid-auto-rows: minmax(240px, 1fr); }
+}
+</style>
+</head>
+<body>
+<header>
+	<div style="display: flex; align-items: center; gap: 8px">
+		<h1>testdata changes</h1>
+		<button class="theme" title="toggle the theme (t)">◐ theme</button>
+	</div>
+	<div class="sub" id="sub"></div>
+</header>
+<main class="grid" id="grid"></main>
+
+<section class="detail" id="detail" aria-modal="true" role="dialog">
+	<div class="bar">
+		<span class="path" id="dpath"></span>
+		<button id="prev" title="previous (k)">◀ prev</button>
+		<button id="next" title="next (j)">next ▶</button>
+		<button id="zoomout" title="zoom out (-)">−</button>
+		<span id="zoomlabel">100%</span>
+		<button id="zoomin" title="zoom in (+)">+</button>
+		<button id="fit" title="fit (f)">fit</button>
+		<button id="reset" title="reset the onion offset (0)">reset offset</button>
+		<button class="theme" title="toggle the theme (t)">◐</button>
+		<button id="close" title="close (Esc)">close ✕</button>
+		<div class="hint">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
+	</div>
+	<div class="panels">
+		<div class="panel"><h2>old</h2><div class="scroll" id="old"></div></div>
+		<div class="panel"><h2>new</h2><div class="scroll" id="new"></div></div>
+		<div class="panel"><h2>onion skin <span id="offset"></span></h2><div class="scroll" id="onion"></div></div>
+	</div>
+</section>
+
+<script>
+const DATA = /*DATA*/null;
+
+// the theme follows the system unless chosen, and the choice is kept
+function setTheme(theme) {
+	document.documentElement.dataset.theme = theme;
+	try { localStorage.setItem("testdiff-theme", theme); } catch {}
+}
+{
+	let theme = null;
+	try { theme = localStorage.getItem("testdiff-theme"); } catch {}
+	document.documentElement.dataset.theme = theme ||
+		(matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+}
+const toggleTheme = () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark");
+for (const button of document.querySelectorAll(".theme")) button.onclick = toggleTheme;
+
+const grid = document.getElementById("grid");
+const detail = document.getElementById("detail");
+document.getElementById("sub").textContent =
+	`${DATA.changes.length} changed drawings in ${DATA.title}`;
+document.title = `testdata changes: ${DATA.title}`;
+
+// drawing returns an element showing the contents of a drawing
+function drawing(kind, text) {
+	if (kind === "ans") return ansi(text);
+	if (kind === "svg") {
+		const img = document.createElement("img");
+		img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(text);
+		img.draggable = false;
+		return img;
+	}
+	const pre = document.createElement("pre");
+	pre.className = "drawing";
+	pre.textContent = text;
+	return pre;
+}
+
+// the basic colors, normal and bright, as terminals commonly draw them;
+// terminal themes choose their own
+const BASIC = ["#000000", "#cd3131", "#0dbc79", "#e5e510", "#2472c8", "#bc3fbc", "#11a8cd", "#e5e5e5"];
+const BRIGHT = ["#666666", "#f14c4c", "#23d18b", "#f5f543", "#3b8eea", "#d670d6", "#29b8db", "#ffffff"];
+
+// ansi returns text colored with SGR escape codes, see text.WriteColor, as
+// a drawing of colored spans
+function ansi(text) {
+	const pre = document.createElement("pre");
+	pre.className = "drawing";
+	let fg = "", bg = "";
+	const put = s => {
+		if (!s) return;
+		if (!fg && !bg) return pre.append(s);
+		const span = document.createElement("span");
+		span.style.color = fg;
+		span.style.background = bg;
+		span.textContent = s;
+		pre.append(span);
+	};
+	const codes = /\x1b\[([\d;]*)([A-Za-z])/g;
+	let at = 0;
+	for (const m of text.matchAll(codes)) {
+		put(text.slice(at, m.index));
+		at = m.index + m[0].length;
+		if (m[2] !== "m") continue; // only colors are drawn
+		const p = m[1] ? m[1].split(";").map(Number) : [0];
+		for (let i = 0; i < p.length; i++) {
+			const n = p[i];
+			if (n === 0) fg = bg = "";
+			else if (n === 39) fg = "";
+			else if (n === 49) bg = "";
+			else if (n >= 30 && n <= 37) fg = BASIC[n - 30];
+			else if (n >= 90 && n <= 97) fg = BRIGHT[n - 90];
+			else if (n >= 40 && n <= 47) bg = BASIC[n - 40];
+			else if (n >= 100 && n <= 107) bg = BRIGHT[n - 100];
+			else if ((n === 38 || n === 48) && p[i + 1] === 2) {
+				const color = `rgb(${p[i + 2]}, ${p[i + 3]}, ${p[i + 4]})`;
+				if (n === 38) fg = color; else bg = color;
+				i += 4;
+			}
+		}
+	}
+	put(text.slice(at));
+	return pre;
+}
+
+function status(change) {
+	if (!change.old) return "added";
+	if (!change.new) return "removed";
+	return "changed";
+}
+
+// fit scales el with css zoom to fit inside box, once it has a size
+function fit(el, box) {
+	const apply = () => {
+		el.style.zoom = 1;
+		const w = el.offsetWidth, h = el.offsetHeight;
+		if (!w || !h) return;
+		el.style.zoom = Math.min(1, (box.clientWidth - 16) / w, (box.clientHeight - 16) / h);
+	};
+	if (el.tagName === "IMG" && !el.complete) el.addEventListener("load", apply, { once: true });
+	requestAnimationFrame(apply);
+}
+
+DATA.changes.forEach((change, i) => {
+	const card = document.createElement("div");
+	card.className = "card";
+	card.tabIndex = 0;
+	const thumb = document.createElement("div");
+	thumb.className = "thumb";
+	const el = drawing(change.kind, change.new || change.old);
+	thumb.append(el);
+	const label = document.createElement("div");
+	label.className = "label";
+	const path = document.createElement("span");
+	path.className = "path";
+	path.textContent = change.path.replace(/^testdata\//, "");
+	path.title = change.path;
+	const badge = document.createElement("span");
+	badge.className = "badge " + status(change);
+	badge.textContent = status(change);
+	label.append(path, badge);
+	card.append(thumb, label);
+	card.addEventListener("click", () => show(i));
+	card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i); } });
+	grid.append(card);
+	fit(el, thumb);
+});
+
+// the detail view
+let current = -1, zoom = 1, offset = { x: 0, y: 0 }, unit = { x: 1, y: 1 };
+const panes = ["old", "new", "onion"].map(id => document.getElementById(id));
+
+function show(i) {
+	current = (i + DATA.changes.length) % DATA.changes.length;
+	const change = DATA.changes[current];
+	document.getElementById("dpath").textContent = change.path;
+	offset = { x: 0, y: 0 };
+	for (const [pane, text] of [[panes[0], change.old], [panes[1], change.new]]) {
+		pane.replaceChildren(text ? drawing(change.kind, text) : none());
+	}
+	panes[2].replaceChildren(onion(change));
+	detail.classList.add("open");
+	history.replaceState(null, "", "#" + current);
+	// a nudge moves the text a cell, the images a pixel
+	unit = { x: 1, y: 1 };
+	if (change.kind !== "svg") {
+		const probe = drawing("txt", "x");
+		probe.style.position = "absolute";
+		document.body.append(probe);
+		const r = probe.getBoundingClientRect();
+		unit = { x: r.width, y: r.height };
+		probe.remove();
+	}
+	whenLoaded(() => setZoom(fitZoom()));
+	moved();
+}
+
+function none() {
+	const p = document.createElement("p");
+	p.className = "none";
+	p.textContent = "(none)";
+	return p;
+}
+
+// onion stacks new over old with a difference blend, inverted, so that what
+// is the same cancels to white; a faint copy of new keeps them in context
+function onion(change) {
+	if (!change.old || !change.new) {
+		return drawing(change.kind, change.new || change.old); // nothing to compare
+	}
+	const wrap = document.createElement("div");
+	wrap.className = "onion-wrap";
+	const stack = document.createElement("div");
+	stack.className = "onion";
+	stack.append(drawing(change.kind, change.old));
+	const top = drawing(change.kind, change.new);
+	top.classList.add("new");
+	stack.append(top);
+	const context = drawing(change.kind, change.new);
+	context.classList.add("context");
+	wrap.append(stack, context);
+
+	let start = null;
+	stack.addEventListener("pointerdown", e => {
+		if (e.shiftKey) return; // panning, see below
+		e.stopPropagation();
+		start = { x: e.clientX, y: e.clientY, ox: offset.x, oy: offset.y };
+		stack.setPointerCapture(e.pointerId);
+		stack.classList.add("dragging");
+	});
+	stack.addEventListener("pointermove", e => {
+		if (!start) return;
+		// text moves a whole cell at a time, so that it lines up
+		const snap = (v, u) => Math.round(v / u) * u;
+		offset = {
+			x: snap(start.ox + (e.clientX - start.x) / zoom, unit.x),
+			y: snap(start.oy + (e.clientY - start.y) / zoom, unit.y),
+		};
+		moved();
+	});
+	const stop = () => { start = null; stack.classList.remove("dragging"); };
+	stack.addEventListener("pointerup", stop);
+	stack.addEventListener("pointercancel", stop);
+	return wrap;
+}
+
+function moved() {
+	const top = panes[2].querySelector(".new");
+	const context = panes[2].querySelector(".context");
+	for (const el of [top, context]) {
+		if (el) el.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+	}
+	const text = unit.x !== 1
+		? `${Math.round(offset.x / unit.x)}, ${Math.round(offset.y / unit.y)} cells`
+		: `${Math.round(offset.x)}, ${Math.round(offset.y)}px`;
+	document.getElementById("offset").textContent = offset.x || offset.y ? "offset " + text : "";
+}
+
+function whenLoaded(done) {
+	const images = [...detail.querySelectorAll("img")].filter(img => !img.complete);
+	if (!images.length) return requestAnimationFrame(done);
+	let left = images.length;
+	for (const img of images) img.addEventListener("load", () => { if (--left === 0) done(); }, { once: true });
+}
+
+// fitZoom returns the zoom that fits the largest drawing into a panel
+function fitZoom() {
+	let w = 0, h = 0;
+	for (const pane of panes) {
+		const el = pane.firstElementChild;
+		if (!el) continue;
+		el.style.zoom = 1;
+		w = Math.max(w, el.offsetWidth);
+		h = Math.max(h, el.offsetHeight);
+	}
+	if (!w || !h) return 1;
+	const box = panes[0];
+	return Math.min(4, (box.clientWidth - 24) / w, (box.clientHeight - 24) / h);
+}
+
+function setZoom(z) {
+	zoom = Math.max(0.1, Math.min(8, z));
+	for (const pane of panes) {
+		const el = pane.firstElementChild;
+		if (el) el.style.zoom = zoom;
+	}
+	document.getElementById("zoomlabel").textContent = Math.round(zoom * 100) + "%";
+}
+
+function close() {
+	detail.classList.remove("open");
+	history.replaceState(null, "", location.pathname);
+	grid.children[current]?.focus();
+}
+
+// dragging pans the panels together; on the onion skin, with shift held
+for (const pane of panes) {
+	let start = null;
+	pane.addEventListener("pointerdown", e => {
+		if (e.button !== 0) return;
+		start = { x: e.clientX, y: e.clientY, left: pane.scrollLeft, top: pane.scrollTop };
+		pane.setPointerCapture(e.pointerId);
+		pane.classList.add("panning");
+	});
+	pane.addEventListener("pointermove", e => {
+		if (!start) return;
+		pane.scrollLeft = start.left - (e.clientX - start.x);
+		pane.scrollTop = start.top - (e.clientY - start.y);
+		follow(pane);
+	});
+	const stop = () => { start = null; pane.classList.remove("panning"); };
+	pane.addEventListener("pointerup", stop);
+	pane.addEventListener("pointercancel", stop);
+}
+
+// the panels scroll together: the others follow the one scrolled, and
+// ignore the scroll events of following, which can clamp to their size
+const followed = new Map();
+function follow(pane) {
+	for (const other of panes) {
+		if (other === pane) continue;
+		other.scrollLeft = pane.scrollLeft;
+		other.scrollTop = pane.scrollTop;
+		followed.set(other, other.scrollLeft + "," + other.scrollTop);
+	}
+}
+for (const pane of panes) {
+	pane.addEventListener("scroll", () => {
+		if (followed.get(pane) === pane.scrollLeft + "," + pane.scrollTop) return;
+		followed.delete(pane);
+		follow(pane);
+	});
+}
+
+document.getElementById("prev").onclick = () => show(current - 1);
+document.getElementById("next").onclick = () => show(current + 1);
+document.getElementById("zoomin").onclick = () => setZoom(zoom * 1.25);
+document.getElementById("zoomout").onclick = () => setZoom(zoom / 1.25);
+document.getElementById("fit").onclick = () => setZoom(fitZoom());
+document.getElementById("reset").onclick = () => { offset = { x: 0, y: 0 }; moved(); };
+document.getElementById("close").onclick = close;
+
+document.addEventListener("keydown", e => {
+	if (e.metaKey || e.ctrlKey || e.altKey) return;
+	if (e.key === "t" && !e.shiftKey) { toggleTheme(); return; }
+	if (!detail.classList.contains("open")) return;
+	const step = e.shiftKey ? 10 : 1;
+	const keys = {
+		Escape: close,
+		j: () => show(current + 1),
+		k: () => show(current - 1),
+		"+": () => setZoom(zoom * 1.25),
+		"=": () => setZoom(zoom * 1.25),
+		"-": () => setZoom(zoom / 1.25),
+		f: () => setZoom(fitZoom()),
+		"0": () => { offset = { x: 0, y: 0 }; moved(); },
+		ArrowLeft: () => { offset.x -= step * unit.x; moved(); },
+		ArrowRight: () => { offset.x += step * unit.x; moved(); },
+		ArrowUp: () => { offset.y -= step * unit.y; moved(); },
+		ArrowDown: () => { offset.y += step * unit.y; moved(); },
+	};
+	const action = keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] || keys[e.key];
+	if (action) { e.preventDefault(); action(); }
+});
+
+// #n opens the drawing at n, so that a reload keeps the place
+if (/^#\d+$/.test(location.hash)) show(Number(location.hash.slice(1)));
+</script>
+</body>
+</html>
