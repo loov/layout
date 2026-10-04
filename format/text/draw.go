@@ -299,13 +299,16 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 					continue // not straight into the side from beyond it
 				}
 				// onto the side, also where a rounder outline curves inside
-				path[e.i][across] = map[bool]int{false: b[across], true: b[across+2]}[after]
+				path[e.i][across] = b[across]
+				if after {
+					path[e.i][across] = b[across+2]
+				}
 				end := end{path: path, i: e.i, j: e.j, fixed: true, toward: at[along]}
 				if e.k >= 0 && e.k < len(path) {
 					end.fixed = path[e.k][along] == bend[along]
 					end.toward = path[e.k][along]
 				}
-				end.group = c.l.Edges[k].Merged[map[bool]int{true: 0, false: 1}[e.i == 0]]
+				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
 				key := side{e.node, along, after}
 				sides[key] = append(sides[key], end)
 				break
@@ -461,19 +464,22 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 	}
 	b := c.boxes[node]
 	i := end[1]*c.w + end[0]
-	double := node.Peripheries > 1
-	pick := func(single, double2 rune) rune { return map[bool]rune{false: single, true: double2}[double] }
+	// junctions on the left, right, top and bottom side
+	joins := []rune("┤├┴┬")
+	if node.Peripheries > 1 {
+		joins = []rune("╢╟╨╥")
+	}
 	switch side := end[1] > b[1] && end[1] < b[3]; {
 	case side && end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
-		c.cells[i] = pick('┤', '╢')
+		c.cells[i] = joins[0]
 	case side && end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
-		c.cells[i] = pick('├', '╟')
+		c.cells[i] = joins[1]
 	case end[0] <= b[0] || end[0] >= b[2]:
 		// corners and outside the box
 	case end[1] == b[1] && end[1] > 0 && c.lines[i-c.w]&down != 0:
-		c.cells[i] = pick('┴', '╨')
+		c.cells[i] = joins[2]
 	case end[1] == b[3] && end[1]+1 < c.h && c.lines[i+c.w]&up != 0:
-		c.cells[i] = pick('┬', '╥')
+		c.cells[i] = joins[3]
 	}
 }
 

@@ -46,7 +46,11 @@ func glyph(lines, heavy int) rune {
 	return glyphs[i]
 }
 
-var arrow = map[int]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
+// arrowheads and vees by direction
+var (
+	arrow = [right + 1]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
+	vee   = [right + 1]rune{up: '↑', down: '↓', left: '←', right: '→'}
+)
 
 // canvas is the character grid the graph is drawn on, with what is
 // needed to join lines and color the cells
@@ -164,12 +168,15 @@ func (c *canvas) line(x, y int, mask int) {
 		c.cells[i] = r // bends of edges, unlike cluster frames, are round
 	}
 	if c.dashed {
-		heavy := c.heavy[i] != 0
+		dashes := []rune("┊┈")
+		if c.heavy[i] != 0 {
+			dashes = []rune("┋┉")
+		}
 		switch c.lines[i] {
 		case up, down, up | down:
-			c.cells[i] = map[bool]rune{false: '┊', true: '┋'}[heavy]
+			c.cells[i] = dashes[0]
 		case left, right, left | right:
-			c.cells[i] = map[bool]rune{false: '┈', true: '┉'}[heavy]
+			c.cells[i] = dashes[1]
 		}
 	}
 }
@@ -340,13 +347,14 @@ func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
 	if style == layout.ArrowDefault || style == layout.ArrowNone {
 		return false
 	}
-	r, ok := map[layout.Arrow]rune{
-		layout.ArrowVee:  map[int]rune{up: '↑', down: '↓', left: '←', right: '→'}[dir],
-		layout.ArrowDot:  '●',
-		layout.ArrowODot: '○',
-	}[style]
-	if !ok {
-		r = arrow[dir]
+	r := arrow[dir]
+	switch style {
+	case layout.ArrowVee:
+		r = vee[dir]
+	case layout.ArrowDot:
+		r = '●'
+	case layout.ArrowODot:
+		r = '○'
 	}
 	if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
 		end = [2]int{px, py}
@@ -392,9 +400,9 @@ func absLength(v layout.Length) layout.Length {
 	return v
 }
 
-func opposite(dir int) int { return map[int]int{up: down, down: up, left: right, right: left}[dir] }
-func dx(dir int) int       { return map[int]int{left: -1, right: 1}[dir] }
-func dy(dir int) int       { return map[int]int{up: -1, down: 1}[dir] }
+func opposite(dir int) int { return [right + 1]int{up: down, down: up, left: right, right: left}[dir] }
+func dx(dir int) int       { return [right + 1]int{left: -1, right: 1}[dir] }
+func dy(dir int) int       { return [right + 1]int{up: -1, down: 1}[dir] }
 func sign(v int) int {
 	if v < 0 {
 		return -1
