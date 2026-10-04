@@ -1,9 +1,6 @@
 package text
 
-import (
-	"slices"
-	"strings"
-)
+import "strings"
 
 // cell is a drawn character with its colors, see rgb, and what is
 // needed to join the lines drawn through it
@@ -17,47 +14,60 @@ type cell struct {
 	owner  [4]int // edge that first drew each arm
 }
 
-// carve removes rows that only continue straight lines or blanks and
-// repeat the row before them, keeping at most keep of every such run.
-// Removing them keeps the drawing connected, just tighter. Rows through
-// nodes or text stay, so that their blanks keep their size.
-func carve(grid [][]cell, straight, markers string, keep int) [][]cell {
-	out := grid[:0:0]
-	run := 0
+// carve removes rows and then columns that only continue straight lines
+// or blanks and repeat the one before them, keeping at most one such row
+// and two such columns of every run, as cells are about twice as tall as
+// wide. Removing them keeps the drawing connected, just tighter. Rows and
+// columns through nodes or text stay, so that their blanks keep their
+// size.
+func carve(grid [][]cell) [][]cell {
+	w := 0
+	if len(grid) > 0 {
+		w = len(grid[0])
+	}
+	rows := carved(len(grid), w, func(i, j int) cell { return grid[i][j] }, " │┃┊┋┆", "▲▼●○", 1)
+	var out [][]cell
 	for i, row := range grid {
-		plain := true
-		for _, x := range row {
-			if x.keep || !strings.ContainsRune(straight, x.r) {
-				plain = false
-				break
-			}
-		}
-		// a marker on a run continues it like the line it sits on
-		same := func(x, prev cell) bool { return x.r == prev.r || x.r != ' ' && strings.ContainsRune(markers, prev.r) }
-		if plain && i > 0 && slices.EqualFunc(row, grid[i-1], same) {
-			run++
-		} else {
-			run = 0
-		}
-		if run < keep {
+		if rows[i] {
 			out = append(out, row)
 		}
+	}
+	cols := carved(w, len(out), func(i, j int) cell { return out[j][i] }, " ─━┈┉┄", "◀▶●○", 2)
+	for y, row := range out {
+		kept := row[:0]
+		for x, c := range row {
+			if cols[x] {
+				kept = append(kept, c)
+			}
+		}
+		out[y] = kept
 	}
 	return out
 }
 
-func transpose(grid [][]cell) [][]cell {
-	if len(grid) == 0 {
-		return nil
-	}
-	out := make([][]cell, len(grid[0]))
-	for x := range out {
-		out[x] = make([]cell, len(grid))
-		for y := range grid {
-			out[x][y] = grid[y][x]
+// carved reports which of n lines of m cells to keep, with at returning
+// cell j of line i: a line that only continues the straight lines across
+// it or blanks and repeats the line before it is kept only for the first
+// keep of every run of such lines
+func carved(n, m int, at func(i, j int) cell, straight, markers string, keep int) []bool {
+	kept := make([]bool, n)
+	run := 0
+	for i := range n {
+		repeat := i > 0
+		for j := 0; j < m && repeat; j++ {
+			x, prev := at(i, j), at(i-1, j)
+			// a marker on a run continues it like the line it sits on
+			repeat = !x.keep && strings.ContainsRune(straight, x.r) &&
+				(x.r == prev.r || x.r != ' ' && strings.ContainsRune(markers, prev.r))
 		}
+		if repeat {
+			run++
+		} else {
+			run = 0
+		}
+		kept[i] = run < keep
 	}
-	return out
+	return kept
 }
 
 // encode writes the grid as lines of text without trailing blanks,
