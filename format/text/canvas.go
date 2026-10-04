@@ -61,15 +61,9 @@ type canvas struct {
 	origin layout.Vector // graph coordinates of the top left cell
 	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
-	cells  []rune
-	fg, bg []uint32             // colors per cell, see rgb
+	rows   [][]cell
 	ink    uint32               // color of lines and marks drawn from now on
 	font   uint32               // color of text drawn from now on
-	lines  []int                // direction mask per cell, for joining edge runs
-	heavy  []int                // arms that runs of different edges share
-	owner  [][4]int             // edge that first drew each arm of a cell
-	solid  []bool               // cells covered by a node; edges do not draw there
-	keep   []bool               // cells inside nodes and of text, which carving keeps
 	dashed bool                 // straight runs drawn from now on are dashed
 	edge   int                  // edge drawn from now on, so that overlaps show
 	ids    int                  // edge ids handed out
@@ -116,15 +110,28 @@ func newCanvas(l *layout.Layout) *canvas {
 			c.w = max(c.w, c.col(l.Clusters[i].TopLeft.X)+clusterLabelWidth(cluster)+1)
 		}
 	}
-	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
-	c.fg = make([]uint32, c.w*c.h)
-	c.bg = make([]uint32, c.w*c.h)
-	c.lines = make([]int, c.w*c.h)
-	c.heavy = make([]int, c.w*c.h)
-	c.owner = make([][4]int, c.w*c.h)
-	c.solid = make([]bool, c.w*c.h)
-	c.keep = make([]bool, c.w*c.h)
+	c.reset(c.w, c.h)
 	return c
+}
+
+// reset makes the canvas w by h blank cells
+func (c *canvas) reset(w, h int) {
+	c.w, c.h = w, h
+	c.rows = make([][]cell, h)
+	for y := range c.rows {
+		c.rows[y] = make([]cell, w)
+		for x := range c.rows[y] {
+			c.rows[y][x].r = ' '
+		}
+	}
+}
+
+// at returns the cell at x, y, or nil off the canvas
+func (c *canvas) at(x, y int) *cell {
+	if x < 0 || x >= c.w || y < 0 || y >= c.h {
+		return nil
+	}
+	return &c.rows[y][x]
 }
 
 // col and row return the cell column and row of graph coordinates
@@ -132,49 +139,46 @@ func (c *canvas) col(v layout.Length) int { return int((v-c.origin.X)/c.cellW + 
 func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 0.5) }
 
 func (c *canvas) set(x, y int, r rune) {
-	if x >= 0 && x < c.w && y >= 0 && y < c.h {
+	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
-		c.cells[y*c.w+x] = r
-		c.fg[y*c.w+x] = c.ink
-		c.lines[y*c.w+x] = 0
-		c.heavy[y*c.w+x] = 0
+		p.r, p.fg, p.lines, p.heavy = r, c.ink, 0, 0
 	}
 }
 
 func (c *canvas) line(x, y int, mask int) {
-	if x < 0 || x >= c.w || y < 0 || y >= c.h || c.solid[y*c.w+x] {
+	p := c.at(x, y)
+	if p == nil || p.solid {
 		return
 	}
 	c.unpair(x, y, true)
-	i := y*c.w + x
 	for arm := range 4 {
 		bit := 1 << arm
 		switch {
 		case mask&bit == 0:
-		case c.lines[i]&bit == 0:
-			c.owner[i][arm] = c.edge
-		case c.owner[i][arm] != c.edge:
-			c.heavy[i] |= bit
+		case p.lines&bit == 0:
+			p.owner[arm] = c.edge
+		case p.owner[arm] != c.edge:
+			p.heavy |= bit
 		}
 	}
-	c.lines[i] |= mask
-	c.cells[i] = glyph(c.lines[i], c.heavy[i])
-	c.fg[i] = c.ink
-	if o := c.owner[i]; c.lines[i] == up|down|left|right && c.heavy[i] == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
-		c.cells[i] = '╂' // two edges crossing, not joining
-	} else if r, ok := rounded[c.cells[i]]; ok && !c.dashed {
-		c.cells[i] = r // bends of edges, unlike cluster frames, are round
+	p.lines |= mask
+	p.r = glyph(p.lines, p.heavy)
+	p.fg = c.ink
+	if o := p.owner; p.lines == up|down|left|right && p.heavy == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
+		p.r = '╂' // two edges crossing, not joining
+	} else if r, ok := rounded[p.r]; ok && !c.dashed {
+		p.r = r // bends of edges, unlike cluster frames, are round
 	}
 	if c.dashed {
 		dashes := []rune("┊┈")
-		if c.heavy[i] != 0 {
+		if p.heavy != 0 {
 			dashes = []rune("┋┉")
 		}
-		switch c.lines[i] {
+		switch p.lines {
 		case up, down, up | down:
-			c.cells[i] = dashes[0]
+			p.r = dashes[0]
 		case left, right, left | right:
-			c.cells[i] = dashes[1]
+			p.r = dashes[1]
 		}
 	}
 }
@@ -221,8 +225,8 @@ func (c *canvas) text(x, y int, s string) {
 
 // hold keeps the cell at x, y from being carved away
 func (c *canvas) hold(x, y int) {
-	if x >= 0 && x < c.w && y >= 0 && y < c.h {
-		c.keep[y*c.w+x] = true
+	if p := c.at(x, y); p != nil {
+		p.keep = true
 	}
 }
 
@@ -257,12 +261,12 @@ func centered(x0, x1 int, line string) int {
 // row; before is false when the covered cell is rewritten for the wide
 // character just written before it
 func (c *canvas) unpair(x, y int, before bool) {
-	i := y*c.w + x
-	if before && c.cells[i] == covered && x > 0 {
-		c.cells[i-1] = ' '
+	p := c.at(x, y)
+	if prev := c.at(x-1, y); before && p.r == covered && prev != nil {
+		prev.r = ' '
 	}
-	if draw.IsWide(c.cells[i]) && x+1 < c.w && c.cells[i+1] == covered {
-		c.cells[i+1] = ' '
+	if next := c.at(x+1, y); draw.IsWide(p.r) && next != nil && next.r == covered {
+		next.r = ' '
 	}
 }
 
@@ -276,9 +280,11 @@ func (c *canvas) fill(x0, y0, x1, y1 int, color uint32) {
 	if color == 0 {
 		return
 	}
-	for y := max(y0+1, 0); y < min(y1, c.h); y++ {
-		for x := max(x0+1, 0); x < min(x1, c.w); x++ {
-			c.bg[y*c.w+x] = color
+	for y := y0 + 1; y < y1; y++ {
+		for x := x0 + 1; x < x1; x++ {
+			if p := c.at(x, y); p != nil {
+				p.bg = color
+			}
 		}
 	}
 }
@@ -374,12 +380,12 @@ func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
 	case layout.ArrowODot:
 		r = '○'
 	}
-	if px, py := end[0]-dx(dir), end[1]-dy(dir); px >= 0 && px < c.w && py >= 0 && py < c.h && c.lines[py*c.w+px] == dir|opposite(dir) {
-		end = [2]int{px, py}
+	if before := c.at(end[0]-dx(dir), end[1]-dy(dir)); before != nil && before.lines == dir|opposite(dir) {
+		end = [2]int{end[0] - dx(dir), end[1] - dy(dir)}
 	}
 	c.set(end[0], end[1], r)
-	if end[0] >= 0 && end[0] < c.w && end[1] >= 0 && end[1] < c.h {
-		c.solid[end[1]*c.w+end[0]] = true // later runs don't erase it
+	if p := c.at(end[0], end[1]); p != nil {
+		p.solid = true // later runs don't erase it
 	}
 	return true
 }

@@ -53,7 +53,7 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 	}
 	c.drawLabels(graph, paths)
 
-	grid := c.grid()
+	grid := c.rows
 	grid = carve(grid, " │┃┊┋┆", "▲▼●○", 1)
 	grid = transpose(carve(transpose(grid), " ─━┈┉┄", "◀▶●○", 2))
 	_, err := io.WriteString(w, encode(grid, opts))

@@ -5,24 +5,16 @@ import (
 	"strings"
 )
 
-// cell is a drawn character with its colors, see rgb
+// cell is a drawn character with its colors, see rgb, and what is
+// needed to join the lines drawn through it
 type cell struct {
 	r      rune
 	fg, bg uint32
-	keep   bool // inside a node or of text, see canvas.keep
-}
-
-// grid returns the drawn cells by row
-func (c *canvas) grid() [][]cell {
-	grid := make([][]cell, c.h)
-	for y := range grid {
-		grid[y] = make([]cell, c.w)
-		for x := range grid[y] {
-			i := y*c.w + x
-			grid[y][x] = cell{c.cells[i], c.fg[i], c.bg[i], c.keep[i]}
-		}
-	}
-	return grid
+	keep   bool   // inside a node or of text, which carving keeps
+	solid  bool   // covered by a node; edges do not draw there
+	lines  int    // direction mask, for joining edge runs
+	heavy  int    // arms that runs of different edges share
+	owner  [4]int // edge that first drew each arm
 }
 
 // carve removes rows that only continue straight lines or blanks and

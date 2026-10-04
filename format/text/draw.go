@@ -47,8 +47,8 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 			c.ink = rgb(node.FillColor)
 		}
 		c.set(x, y, '●')
-		if x >= 0 && x < c.w && y >= 0 && y < c.h {
-			c.solid[y*c.w+x] = true
+		if p := c.at(x, y); p != nil {
+			p.solid = true
 		}
 		return
 	}
@@ -86,8 +86,8 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			c.set(x, y, ' ')
-			if x >= 0 && x < c.w && y >= 0 && y < c.h {
-				c.solid[y*c.w+x] = true
+			if p := c.at(x, y); p != nil {
+				p.solid = true
 			}
 			if x > x0 && x < x1 && y > y0 && y < y1 {
 				c.hold(x, y) // blanks inside a box are part of it
@@ -459,27 +459,32 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 	if c.l.Node(node).Shape == layout.None || c.l.Node(node).Shape == layout.PointShape || node.Invisible {
 		return // no border to join
 	}
-	if end[0] < 0 || end[0] >= c.w || end[1] < 0 || end[1] >= c.h {
+	p := c.at(end[0], end[1])
+	if p == nil {
 		return // pinned nodes can lie outside the canvas
 	}
+	// whether the cell at dx, dy from the end has an arm toward it
+	arm := func(dx, dy, dir int) bool {
+		q := c.at(end[0]+dx, end[1]+dy)
+		return q != nil && q.lines&dir != 0
+	}
 	b := c.boxes[node]
-	i := end[1]*c.w + end[0]
 	// junctions on the left, right, top and bottom side
 	joins := []rune("┤├┴┬")
 	if node.Peripheries > 1 {
 		joins = []rune("╢╟╨╥")
 	}
 	switch side := end[1] > b[1] && end[1] < b[3]; {
-	case side && end[0] == b[0] && end[0] > 0 && c.lines[i-1]&right != 0:
-		c.cells[i] = joins[0]
-	case side && end[0] == b[2] && end[0]+1 < c.w && c.lines[i+1]&left != 0:
-		c.cells[i] = joins[1]
+	case side && end[0] == b[0] && arm(-1, 0, right):
+		p.r = joins[0]
+	case side && end[0] == b[2] && arm(1, 0, left):
+		p.r = joins[1]
 	case end[0] <= b[0] || end[0] >= b[2]:
 		// corners and outside the box
-	case end[1] == b[1] && end[1] > 0 && c.lines[i-c.w]&down != 0:
-		c.cells[i] = joins[2]
-	case end[1] == b[3] && end[1]+1 < c.h && c.lines[i+c.w]&up != 0:
-		c.cells[i] = joins[3]
+	case end[1] == b[1] && arm(0, -1, down):
+		p.r = joins[2]
+	case end[1] == b[3] && arm(0, 1, up):
+		p.r = joins[3]
 	}
 }
 
@@ -561,12 +566,9 @@ func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
 
 // blank reports whether the w by h cells from x, y are empty
 func (c *canvas) blank(x, y, w, h int) bool {
-	if y < 0 || y+h > c.h || x < 0 || x+w > c.w {
-		return false
-	}
 	for row := y; row < y+h; row++ {
-		for i := row*c.w + x; i < row*c.w+x+w; i++ {
-			if c.cells[i] != ' ' || c.solid[i] {
+		for col := x; col < x+w; col++ {
+			if p := c.at(col, row); p == nil || p.r != ' ' || p.solid {
 				return false
 			}
 		}

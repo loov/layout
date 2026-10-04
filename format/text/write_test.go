@@ -36,18 +36,18 @@ func TestWrite(t *testing.T) {
 }
 
 func TestOverlap(t *testing.T) {
-	c := &canvas{w: 5, h: 3}
-	c.cells = []rune(strings.Repeat(" ", c.w*c.h))
-	c.lines = make([]int, c.w*c.h)
-	c.heavy = make([]int, c.w*c.h)
-	c.fg = make([]uint32, c.w*c.h)
-	c.owner = make([][4]int, c.w*c.h)
-	c.solid = make([]bool, c.w*c.h)
+	c := &canvas{}
+	c.reset(5, 3)
 	c.edge = 1
 	c.walk(0, 0, 4, 2) // right along the top, then down
 	c.edge = 2
 	c.walk(2, 0, 4, 1) // shares the top from x=2 and the start of the drop
-	got := string(c.cells)
+	var got string
+	for _, row := range c.rows {
+		for _, x := range row {
+			got += string(x.r)
+		}
+	}
 	if want := "──╼━┓    ╿    │"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
