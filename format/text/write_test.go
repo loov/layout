@@ -420,3 +420,37 @@ func TestMultilineStack(t *testing.T) {
 		t.Errorf("got %d bottom borders, want %d:\n%s", got, len(graph.Nodes), buf.String())
 	}
 }
+
+// Round shapes, and Auto drawn as an ellipse, get rounded corners; other
+// shapes square ones, and double outlines double ones.
+func TestCorners(t *testing.T) {
+	for _, tc := range []struct {
+		shape       layout.Shape
+		peripheries int
+		corner      string
+	}{
+		{layout.Auto, 1, "╭"},
+		{layout.Ellipse, 1, "╭"},
+		{layout.Circle, 1, "╭"},
+		{layout.Box, 1, "┌"},
+		{layout.Square, 1, "┌"},
+		{layout.Record, 1, "┌"},
+		{"diamond", 1, "┌"},
+		{layout.Circle, 2, "╔"},
+	} {
+		graph := layout.NewDigraph()
+		node := graph.Node("a")
+		node.Shape, node.Peripheries = tc.shape, tc.peripheries
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var buf bytes.Buffer
+		if err := Write(&buf, l); err != nil {
+			t.Fatal(err)
+		}
+		if got := strings.TrimSpace(buf.String())[:len(tc.corner)]; got != tc.corner {
+			t.Errorf("%q with %d outlines: corner %q, want %q:\n%s", tc.shape, tc.peripheries, got, tc.corner, buf.String())
+		}
+	}
+}

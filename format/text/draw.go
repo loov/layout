@@ -96,14 +96,16 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	if node.Invisible {
 		return
 	}
-	style := "╭╮╰╯─│"
+	// rounded corners for round shapes, Auto included as it is drawn as
+	// an ellipse; there are no rounded double corners
+	style := "┌┐└┘─│"
 	switch {
 	case box.Shape == layout.None:
 		style = "      "
 	case node.Peripheries > 1:
 		style = "╔╗╚╝═║" // like double circles, of any shape
-	case box.Shape == layout.Box, box.Shape == layout.Square, box.Shape == layout.Record:
-		style = "┌┐└┘─│"
+	case box.Shape == layout.Circle, box.Shape == layout.Ellipse, box.Shape == layout.Auto:
+		style = "╭╮╰╯─│"
 	}
 	c.rect(x0, y0, x1, y1, style)
 	if rec != nil {
