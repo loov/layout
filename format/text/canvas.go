@@ -94,11 +94,9 @@ func newCanvas(l *layout.Layout) *canvas {
 	topLeft, size := l.Bounds()
 	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
 	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
-	for i, edge := range graph.Edges {
-		path := l.Edges[i]
-		for _, line := range strings.Split(draw.PlainLabel(edge.Label), "\n") {
-			c.w = max(c.w, c.col(path.LabelCenter.X-path.LabelSize.X/2)+draw.Columns(line)+1)
-		}
+	for i := range graph.Edges {
+		label, x, _ := c.edgeLabel(i)
+		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
 	c.loops = map[*layout.Node]int{}
 	for _, edge := range graph.Edges {
@@ -228,10 +226,30 @@ func (c *canvas) hold(x, y int) {
 	}
 }
 
+// clusterLabel returns the label of a cluster on one line, as it is
+// drawn along the top of the frame
+func clusterLabel(cluster *layout.Cluster) string {
+	return strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")
+}
+
 // clusterLabelWidth returns the columns from a cluster's left corner past
 // its label: the label between a space on each side, and the corners
 func clusterLabelWidth(cluster *layout.Cluster) int {
-	return draw.Columns(strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")) + 3
+	return draw.Columns(clusterLabel(cluster)) + 3
+}
+
+// edgeLabel returns the label of the edge at index i as text draws it,
+// and the cell the layout puts its top left corner in
+func (c *canvas) edgeLabel(i int) (label string, x, y int) {
+	at := c.l.Edges[i]
+	label = draw.PlainLabel(c.l.Graph.Edges[i].Label)
+	return label, c.col(at.LabelCenter.X - at.LabelSize.X/2), c.row(at.LabelCenter.Y) - strings.Count(label, "\n")/2
+}
+
+// centered returns the column that centers line between the columns x0
+// and x1 of the borders around it
+func centered(x0, x1 int, line string) int {
+	return (x0 + x1 + 1 - draw.Columns(line)) / 2
 }
 
 // unpair blanks the other half of a wide character in the cell at x, y
@@ -290,7 +308,7 @@ func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(la
 		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
 		lines := strings.Split(rec.Text, "\n")
 		for i, line := range lines {
-			c.text((x0+x1+1-draw.Columns(line))/2, (y0+y1)/2-(len(lines)-1)/2+i, line)
+			c.text(centered(x0, x1, line), (y0+y1)/2-(len(lines)-1)/2+i, line)
 		}
 		return
 	}

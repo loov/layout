@@ -65,7 +65,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		x1 = max(x1, x0+w)
 		// an odd number of spare cells can't be split evenly around the
 		// label, give one back
-		if spare := x1 - x0 - 1 - widest(lines); spare >= 3 && spare%2 == 1 {
+		if spare := x1 - x0 - 1 - draw.TextColumns(label); spare >= 3 && spare%2 == 1 {
 			x1--
 		}
 	}
@@ -125,7 +125,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		top = y0 + 1 // with the main path, along the first row
 	}
 	for i, line := range lines {
-		c.text((x0+x1+1-draw.Columns(line))/2, top+i, line)
+		c.text(centered(x0, x1, line), top+i, line)
 	}
 }
 
@@ -488,14 +488,9 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" && !edge.Invisible {
-			at := c.l.Edges[i]
-			lines := strings.Split(draw.PlainLabel(edge.Label), "\n")
-			w := 0
-			for _, line := range lines {
-				w = max(w, draw.Columns(line))
-			}
-			x, y := c.col(at.LabelCenter.X-at.LabelSize.X/2), c.row(at.LabelCenter.Y)-(len(lines)-1)/2
-			x, y = c.nearEdge(x, y, w, len(lines), paths[i])
+			label, x, y := c.edgeLabel(i)
+			lines := strings.Split(label, "\n")
+			x, y = c.nearEdge(x, y, draw.TextColumns(label), len(lines), paths[i])
 			c.font = rgb(edge.FontColor)
 			for k, line := range lines {
 				c.text(x, y+k, line)
@@ -506,7 +501,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 		if cluster.Label != "" && !cluster.Invisible {
 			c.font = 0
 			box := c.l.Clusters[i]
-			c.text(c.col(box.TopLeft.X)+1, c.row(box.TopLeft.Y), " "+strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")+" ")
+			c.text(c.col(box.TopLeft.X)+1, c.row(box.TopLeft.Y), " "+clusterLabel(cluster)+" ")
 		}
 	}
 }
@@ -579,15 +574,6 @@ func (c *canvas) blank(x, y, w, h int) bool {
 	return true
 }
 
-// widest returns the columns of the widest line
-func widest(lines []string) int {
-	w := 0
-	for _, line := range lines {
-		w = max(w, draw.Columns(line))
-	}
-	return w
-}
-
 // evenRecord moves the divider after a field a column left when the
 // field's text would have an odd number of spare columns around it, so
 // that the text is centered; the field after takes the column.
@@ -595,7 +581,7 @@ func (c *canvas) evenRecord(rec *draw.Record, origin layout.Vector) {
 	for i, field := range rec.Fields {
 		if !rec.Vertical && i+1 < len(rec.Fields) && len(field.Fields) == 0 {
 			x0, x1 := c.col(origin.X+layout.Length(field.X0)), c.col(origin.X+layout.Length(field.X1))
-			if spare := x1 - x0 - 1 - widest(strings.Split(field.Text, "\n")); spare >= 3 && spare%2 == 1 {
+			if spare := x1 - x0 - 1 - draw.TextColumns(field.Text); spare >= 3 && spare%2 == 1 {
 				x := field.X1 - float64(c.cellW)
 				field.X1 = x
 				setLeft(rec.Fields[i+1], x)

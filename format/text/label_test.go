@@ -178,7 +178,7 @@ func TestFitsLayout(t *testing.T) {
 				}
 				for i, edge := range graph.Edges {
 					at := l.Edges[i]
-					if w := widest(strings.Split(draw.PlainLabel(edge.Label), "\n")); c.col(at.LabelCenter.X+at.LabelSize.X/2)-c.col(at.LabelCenter.X-at.LabelSize.X/2) < w {
+					if w := draw.TextColumns(draw.PlainLabel(edge.Label)); c.col(at.LabelCenter.X+at.LabelSize.X/2)-c.col(at.LabelCenter.X-at.LabelSize.X/2) < w {
 						t.Errorf("%v %v %d: edge label %q has %.1f for %d columns", dir, shape, peripheries, edge.Label, at.LabelSize.X, w)
 					}
 				}
