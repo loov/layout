@@ -24,9 +24,9 @@ func ExampleWrite() {
 		log.Fatal(err)
 	}
 	// Output:
-	//         ╭────╮
-	//         │ a  │
-	//         ╰─┬┬─╯
+	//         ╭───╮
+	//         │ a │
+	//         ╰─┬┬╯
 	//           ││
 	//     ╭─────╯╰─────╮
 	//     │            │
@@ -38,9 +38,9 @@ func ExampleWrite() {
 	//     ╰─────╮╭─────╯
 	//           ││
 	//           ▼▼
-	//         ╭────╮
-	//         │ d  │
-	//         ╰────╯
+	//         ╭───╮
+	//         │ d │
+	//         ╰───╯
 }
 
 // WriteColor adds the node, edge and cluster colors as ANSI escape codes

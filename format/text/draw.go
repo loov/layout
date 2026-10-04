@@ -57,10 +57,14 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 	x0, y0 := c.col(box.Left()+inset), c.row(box.Top()+inset)
 	x1, y1 := c.col(box.Right()-inset), c.row(box.Bottom()-inset)
 	lines := strings.Split(draw.PlainLabel(box.Label), "\n")
-	// the box must hold the label and have distinct edges
+	// the box must hold the label with a space on either side and have
+	// distinct edges
 	if box.Shape != layout.Record {
-		for _, line := range lines {
-			x1 = max(x1, x0+draw.Columns(line)+1)
+		x1 = max(x1, x0+widest(lines)+3)
+		// an odd number of spare cells can't be split evenly around the
+		// label, give one back
+		if spare := x1 - x0 - 1 - widest(lines); spare >= 3 && spare%2 == 1 {
+			x1--
 		}
 	}
 	x1 = max(x1, x0+2)
@@ -108,6 +112,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 			share := float64((v - box.Top()) / (box.Bottom() - box.Top()))
 			return y0 + int(math.Round(share*float64(y1-y0)))
 		}
+		c.evenRecord(rec, box.TopLeft())
 		c.record(rec, box.TopLeft(), c.col, inside)
 		return
 	}
@@ -481,4 +486,40 @@ func (c *canvas) blank(x, y, w, h int) bool {
 		}
 	}
 	return true
+}
+
+// widest returns the columns of the widest line
+func widest(lines []string) int {
+	w := 0
+	for _, line := range lines {
+		w = max(w, draw.Columns(line))
+	}
+	return w
+}
+
+// evenRecord moves the divider after a field a column left when the
+// field's text would have an odd number of spare columns around it, so
+// that the text is centered; the field after takes the column.
+func (c *canvas) evenRecord(rec *draw.Record, origin layout.Vector) {
+	for i, field := range rec.Fields {
+		if !rec.Vertical && i+1 < len(rec.Fields) && len(field.Fields) == 0 {
+			x0, x1 := c.col(origin.X+layout.Length(field.X0)), c.col(origin.X+layout.Length(field.X1))
+			if spare := x1 - x0 - 1 - widest(strings.Split(field.Text, "\n")); spare >= 3 && spare%2 == 1 {
+				x := field.X1 - float64(c.cellW)
+				field.X1 = x
+				setLeft(rec.Fields[i+1], x)
+			}
+		}
+		c.evenRecord(field, origin)
+	}
+}
+
+// setLeft moves the left edge of a field and of the fields along it
+func setLeft(rec *draw.Record, x float64) {
+	rec.X0 = x
+	for i, field := range rec.Fields {
+		if rec.Vertical || i == 0 {
+			setLeft(field, x)
+		}
+	}
 }

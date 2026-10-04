@@ -280,7 +280,7 @@ func TestMultilineLabels(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := buf.String()
-	for _, want := range []string{"│ first │", "│second │", "│ one", "│ two"} {
+	for _, want := range []string{"│ first  │", "│ second │", "│ one", "│ two"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q:\n%s", want, got)
 		}
@@ -311,7 +311,7 @@ func TestLabelsFitBoxes(t *testing.T) {
 	graph.Edge("a", "c")
 	graph.Node("b").Label = "p                                  q"
 	got := render(t, graph)
-	if !regexp.MustCompile(`│p +q *│ +│ *c *│`).MatchString(got) {
+	if !regexp.MustCompile(`│ +p +q +│ +│ +c +│`).MatchString(got) {
 		t.Errorf("b runs into c:\n%s", got)
 	}
 

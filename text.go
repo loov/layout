@@ -56,7 +56,7 @@ func (graph *lgraph) prepareText() {
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
 			graph.reserveRecord(node, cellW)
 		default:
-			node.Radius.X = max(node.Radius.X, Length(draw.TextColumns(draw.PlainLabel(node.DefaultLabel()))+2)*cellW/2)
+			node.Radius.X = max(node.Radius.X, Length(draw.TextColumns(draw.PlainLabel(node.DefaultLabel()))+3)*cellW/2)
 		}
 	}
 
@@ -109,7 +109,7 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 	var walk func(rec *draw.Record, share Length)
 	walk = func(rec *draw.Record, share Length) {
 		if len(rec.Fields) == 0 {
-			need := Length(draw.TextColumns(rec.Text)+2) * cellW
+			need := Length(draw.TextColumns(rec.Text)+3) * cellW
 			grow = max(grow, (need-Length(rec.X1-rec.X0))*share)
 			return
 		}
