@@ -303,10 +303,11 @@ func (c *canvas) atDot(cells [][2]int, i, j, k int, node *layout.Node) {
 func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 	type end struct {
 		path   [][2]int
-		i, j   int  // the end and the bend before it
-		fixed  bool // the run goes on straight past the bend
-		toward int  // where the edge heads past the bend, along the side
-		group  int  // the merged ends there, see layout.EdgePath.Merged
+		i, j   int     // the end and the bend before it
+		fixed  bool    // the run goes on straight past the bend
+		toward int     // where the edge heads past the bend, along the side
+		group  int     // the merged ends there, see layout.EdgePath.Merged
+		exact  float64 // where the layout ends the edge along the side, in cells
 
 		also []end // further edges of a shared start, which follow it
 	}
@@ -353,6 +354,14 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 					end.toward = path[e.k][along]
 				}
 				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
+				p := c.l.Edges[k].Path[0]
+				if e.i != 0 {
+					p = c.l.Edges[k].Path[len(c.l.Edges[k].Path)-1]
+				}
+				end.exact = float64((p.X - c.origin.X) / c.cellW)
+				if along == 1 {
+					end.exact = float64((p.Y - c.origin.Y) / c.cellH)
+				}
 				key := side{e.node, along, after}
 				if n, ok := leads[group{key, end.group}]; ok {
 					lead := &sides[key][n]
@@ -395,6 +404,12 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		fixed := make([]bool, len(ends))
 		for n, e := range ends {
 			want[n], fixed[n] = e.path[e.i][key.along], e.fixed
+			// an end is no further from the one before than their distance
+			// in the layout, so that ends about a cell apart stay next to
+			// each other however they round; one going on straight stays
+			if n > 0 && !e.fixed {
+				want[n] = min(want[n], want[n-1]+max(1, int(math.Round(e.exact-ends[n-1].exact))))
+			}
 		}
 		for n, at := range spreadRows(want, fixed, lo, hi) {
 			e := ends[n]
