@@ -421,7 +421,8 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	last := len(cells) - 1
 	c.ids++
 	c.edge = c.ids
-	if id, ok := c.merged[edge]; ok {
+	id, merged := c.merged[edge]
+	if merged {
 		c.edge = id // merged edges draw as one, without overlaps
 	}
 	c.ink = rgb(edge.LineColor)
@@ -435,7 +436,6 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 		head = layout.ArrowNormal
 	}
 	// merged edges share their ends, which get one marker
-	_, merged := c.merged[edge]
 	if !merged || !c.ended[cells[last]] {
 		if !c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last]) {
 			c.join(cells[last], edge.To)
@@ -474,7 +474,7 @@ func (c *canvas) border(end, next [2]int, node *layout.Node) [2]int {
 // join draws the box border of node at an edge end without a marker as a
 // junction, so that the edge visibly leaves the node
 func (c *canvas) join(end [2]int, node *layout.Node) {
-	if c.l.Node(node).Shape == layout.None || c.l.Node(node).Shape == layout.PointShape || node.Invisible {
+	if shape := c.l.Node(node).Shape; shape == layout.None || shape == layout.PointShape || node.Invisible {
 		return // no border to join
 	}
 	p := c.at(end[0], end[1])
