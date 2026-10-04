@@ -593,7 +593,8 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		if clusterdef.Label != "" && !sideways(graphdef.RankDir) {
 			// room for the label across the top, with padding beside it;
 			// sideways the label runs along the ranks, see labelSpan
-			cluster.MinWidth = float32(labelSpan(clusterdef))
+			// across the borders, which the box keeps half of
+			cluster.MinWidth = float32(labelSpan(clusterdef) + graphdef.EdgePadding)
 		}
 		for _, nodedef := range clusterdef.Nodes {
 			cluster.Members.Append(filledGraph.Nodes[nodes[nodedef]])
@@ -787,7 +788,9 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 
 	// cluster boxes span their borders horizontally and their members
 	// vertically, with room for the label on top; inner boxes are
-	// finished first so that outer boxes can enclose them
+	// finished first so that outer boxes can enclose them. A box side
+	// keeps to the inner half of its border, so that the boxes of
+	// neighboring borders are apart.
 	byDepth := slices.Clone(graphdef.Clusters)
 	slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
 	for _, clusterdef := range byDepth {
@@ -798,8 +801,8 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		cluster := clusters[clusterdef]
 		left, right := Length(math.Inf(1)), Length(math.Inf(-1))
 		for i := range cluster.Left {
-			left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X))
-			right = max(right, Length(cluster.Right[i].Center.X+cluster.Right[i].Radius.X))
+			left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X/2))
+			right = max(right, Length(cluster.Right[i].Center.X+cluster.Right[i].Radius.X/2))
 		}
 		top, bottom := Length(math.Inf(1)), Length(math.Inf(-1))
 		for _, nodedef := range clusterdef.Nodes {

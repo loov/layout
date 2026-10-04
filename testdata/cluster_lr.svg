@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='517.76' height='192'>
+<svg xmlns='http://www.w3.org/2000/svg' width='517.76' height='189'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,8 +15,8 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><rect class='cluster' x='161.44' y='88' width='178.88' height='88' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='96' font-size='14' fill='#000000'>a cluster label that is long</text>
-<rect class='cluster' x='226.88' y='0' width='274.88' height='88' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='364.32' y='8' font-size='14' fill='#000000'>second one</text>
+	</defs><g><rect class='cluster' x='161.44' y='91' width='178.88' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='99' font-size='14' fill='#000000'>a cluster label that is long</text>
+<rect class='cluster' x='226.88' y='3' width='274.88' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='364.32' y='11' font-size='14' fill='#000000'>second one</text>
 <path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M47.37135,92.44091 L235.19012,128.8651 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M47.37135,83.55909 L235.19012,47.134895 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M266.88,44 L461.76,44 '></path><ellipse cx='32' cy='88' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='88' font-size='14' fill='#000000'>a</text>
 <ellipse cx='250.88' cy='132' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='132' font-size='14' fill='#000000'>b</text>
 <ellipse cx='250.88' cy='44' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='44' font-size='14' fill='#000000'>c</text>
