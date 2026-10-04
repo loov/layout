@@ -143,7 +143,46 @@ func (c *canvas) edgeCells(edge *layout.Edge, path []layout.Vector) [][2]int {
 	cells[last] = c.border(cells[last], cells[last-1], edge.To)
 	c.atDot(cells, 0, 1, 2, edge.From)
 	c.atDot(cells, last, last-1, last-2, edge.To)
+	if edge.From == edge.To && c.loops[edge.From] == 1 {
+		c.centerLoop(cells, path, edge.From)
+	}
 	return c.across(cells, edge.From, edge.To)
+}
+
+// centerLoop places the ends of the only self-loop of node symmetrically
+// about the middle of its box, as the layout does. Rounding each end to
+// a cell on its own can leave the loop off-center and a cell narrower,
+// depending on where the node lands.
+func (c *canvas) centerLoop(cells [][2]int, path []layout.Vector, node *layout.Node) {
+	if len(cells) != 4 {
+		return // loops with ports go around the node
+	}
+	b := c.boxes[node]
+	for along := range 2 {
+		across := 1 - along
+		if cells[0][across] != cells[3][across] || cells[0][along] == cells[3][along] {
+			continue // the ends are not on one side
+		}
+		span := float64((path[3].X - path[0].X) / c.cellW)
+		if along == 1 {
+			span = float64((path[3].Y - path[0].Y) / c.cellH)
+		}
+		// the span nearest the layout's that splits evenly about the middle
+		sum := b[along] + b[along+2]
+		odd := (sum%2 + 2) % 2
+		n := 2*int(math.Round((math.Abs(span)-float64(odd))/2)) + odd
+		n = max(n, 2-odd)
+		if n > b[along+2]-b[along]-2 {
+			return // no room inside the corners
+		}
+		lo, hi := (sum-n)/2, (sum+n)/2
+		if span < 0 {
+			lo, hi = hi, lo
+		}
+		cells[0][along], cells[1][along] = lo, lo
+		cells[2][along], cells[3][along] = hi, hi
+		return
+	}
 }
 
 // across adds bends to diagonal end segments, which walk draws as a

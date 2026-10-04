@@ -70,6 +70,7 @@ type canvas struct {
 	edge   int                  // edge drawn from now on, so that overlaps show
 	ids    int                  // edge ids handed out
 	merged map[*layout.Edge]int // edge ids of merged edges
+	loops  map[*layout.Node]int // self-loops per node
 	ended  map[[2]int]bool      // cells where merged edges have ended
 }
 
@@ -93,6 +94,12 @@ func newCanvas(l *layout.Layout) *canvas {
 		path := l.Edges[i]
 		for _, line := range strings.Split(draw.PlainLabel(edge.Label), "\n") {
 			c.w = max(c.w, c.col(path.LabelCenter.X-path.LabelSize.X/2)+draw.Columns(line)+1)
+		}
+	}
+	c.loops = map[*layout.Node]int{}
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To {
+			c.loops[edge.From]++
 		}
 	}
 	for i := range graph.Nodes {
