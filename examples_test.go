@@ -236,6 +236,49 @@ var examples = map[string]func() *layout.Graph{
 		graph.Edge("D", "A")
 		return graph
 	},
+	// subnets is an IPv6 address plan in the documentation prefix, drawn
+	// left to right, with labels of two lines stacked down the ranks
+	"subnets": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.RankDir = layout.LeftToRight
+		for _, n := range [][2]string{
+			{"ula", "2001:db8:abcd::/48\nsite"},
+			{"s00", "2001:db8:abcd::/56\nsite 00 (network)"},
+			{"s01", "2001:db8:abcd:0100::/56\nsite 01 (north)"},
+			{"s02", "2001:db8:abcd:0200::/56\nsite 02 (west)"},
+			{"s03", "2001:db8:abcd:0300::/56\nsite 03 (east)"},
+			{"remote", "2001:db8:abcd:fb00::/56\nremote access"},
+			{"circuit", "2001:db8:abcd:fc00::/56\ncircuit /127s"},
+			{"srv6", "2001:db8:abcd:fd00::/56\nSRv6 locators"},
+			{"carrier", "2001:db8:abcd:fe00::/56\ncarrier /127s"},
+			{"lab", "2001:db8:abcd:ff00::/56\nlab"},
+			{"loopback", "2001:db8:abcd::/64\nrouter loopbacks"},
+			{"anycast", "2001:db8:abcd:1::/64\nanycast"},
+			{"dns", "2001:db8:abcd:1::53\ndns"},
+			{"ntp", "2001:db8:abcd:1::123\nntp"},
+			{"mgmt", "2001:db8:abcd:100::/64\nmgmt0, VLAN 0 (mgmt)"},
+			{"guest", "2001:db8:abcd:109::/64\nguest0, VLAN 9 (guest)"},
+			{"lan", "2001:db8:abcd:110::/64\nlan0, VLAN 10 (lan)"},
+			{"dev", "2001:db8:abcd:120::/64\ndev0, VLAN 20 (dev)"},
+			{"iot", "2001:db8:abcd:166::/64\niot0, VLAN 66 (iot)"},
+		} {
+			graph.Node(n[0]).Label = n[1]
+		}
+		for _, e := range []struct {
+			from string
+			to   []string
+		}{
+			{"ula", []string{"s00", "s01", "s02", "s03", "remote", "circuit", "srv6", "carrier", "lab"}},
+			{"s00", []string{"loopback", "anycast"}},
+			{"anycast", []string{"dns", "ntp"}},
+			{"s01", []string{"mgmt", "guest", "lan", "dev", "iot"}},
+		} {
+			for _, to := range e.to {
+				graph.Edge(e.from, to)
+			}
+		}
+		return graph
+	},
 }
 
 // exampleOptions are the layout options of examples that don't use the

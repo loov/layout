@@ -14,6 +14,7 @@ readme       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 record       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=91 area=21856
 regex        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=564 area=47250
 regex_tb     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=570 area=39305
+subnets      nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=2 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=2956 area=451703
 weighted     nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=181 area=9216
 abstract     nodes=0 through=0 near=2 crossings=62 shallow=12 overlaps=1 parallel=3 ends=0 shafts=0 jagged=2 bends=2 wavy=4 back=0 labels=0 far=0 length=12400 area=641985
 alf          nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 wavy=0 back=0 labels=0 far=0 length=1418 area=401793
