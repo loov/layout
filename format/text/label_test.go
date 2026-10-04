@@ -127,3 +127,67 @@ func TestControlCharacters(t *testing.T) {
 		t.Errorf("want the label without control characters in a whole box:\n%s", got)
 	}
 }
+
+// TestFitsLayout checks that the layout reserves the cells text draws in:
+// node boxes and cluster frames don't grow past their layout boxes, and
+// node boxes don't overlap, and edge labels get their columns.
+func TestFitsLayout(t *testing.T) {
+	labels := []string{"a", "hello world", "one\ntwo\nthree", "漢字", "é 👩‍💻", "iiiiiiii", "<<b>bold</b> text>",
+		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>"}
+	records := []string{"a|b", "{a|b|c}", "<p> left|{top|mid|bottom}|right", "x|{y|{z|w}}", "{a\\nb|c}"}
+	shapes := []layout.Shape{layout.Box, layout.Ellipse, layout.Circle, layout.Square, layout.None, layout.Record, layout.Auto}
+	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {
+		for _, shape := range shapes {
+			for peripheries := 1; peripheries <= 2; peripheries++ {
+				graph := layout.NewDigraph()
+				graph.RankDir = dir
+				for i := range 8 {
+					node := graph.Node(string(rune('a' + i)))
+					node.Shape, node.Peripheries = shape, peripheries
+					node.Label = labels[(i+peripheries)%len(labels)]
+					if shape == layout.Record {
+						node.Label = records[i%len(records)]
+					}
+				}
+				for i := 1; i < 8; i++ {
+					graph.Edge(graph.Nodes[(i-1)/2].ID, graph.Nodes[i].ID).Label = labels[i%len(labels)]
+				}
+				graph.Edge("d", "d")
+				graph.Clusters = append(graph.Clusters, &layout.Cluster{ID: "c", Label: "iiiiiiiiiiiiiiii", Nodes: graph.Nodes[1:2]})
+				l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+				if err != nil {
+					t.Fatal(err)
+				}
+				c := newCanvas(l)
+				for _, node := range graph.Nodes {
+					c.drawNode(graph, node)
+				}
+				for i, node := range graph.Nodes {
+					box := l.Nodes[i]
+					inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
+					want := [4]int{c.col(box.Left() + inset), c.row(box.Top() + inset), c.col(box.Right() - inset), c.row(box.Bottom() - inset)}
+					if got := c.boxes[node]; got[2] > want[2] || got[3] > want[3] {
+						t.Errorf("%v %v %d: %q drawn at %v, laid out at %v", dir, shape, peripheries, node.Label, got, want)
+					}
+					for _, other := range graph.Nodes[i+1:] {
+						p, q := c.boxes[node], c.boxes[other]
+						if p[0] <= q[2] && q[0] <= p[2] && p[1] <= q[3] && q[1] <= p[3] {
+							t.Errorf("%v %v %d: %q at %v overlaps %q at %v", dir, shape, peripheries, node.Label, p, other.Label, q)
+						}
+					}
+				}
+				for i, edge := range graph.Edges {
+					at := l.Edges[i]
+					if w := widest(strings.Split(draw.PlainLabel(edge.Label), "\n")); c.col(at.LabelCenter.X+at.LabelSize.X/2)-c.col(at.LabelCenter.X-at.LabelSize.X/2) < w {
+						t.Errorf("%v %v %d: edge label %q has %.1f for %d columns", dir, shape, peripheries, edge.Label, at.LabelSize.X, w)
+					}
+				}
+				// sideways layouts don't reserve the width of cluster labels yet
+				box := l.Clusters[0]
+				if need := c.col(box.TopLeft.X) + clusterLabelWidth(graph.Clusters[0]); dir == layout.TopToBottom && need > c.col(box.BottomRight.X) {
+					t.Errorf("%v %v %d: cluster label needs column %d, frame ends at %d", dir, shape, peripheries, need, c.col(box.BottomRight.X))
+				}
+			}
+		}
+	}
+}

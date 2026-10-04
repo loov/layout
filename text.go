@@ -40,6 +40,11 @@ func (graph *lgraph) prepareText() {
 		graph.FontSize = graph.LineHeight * 14 / 16
 	}
 	cellW := graph.FontSize * 0.55
+	// text draws every label in cells of one size, so edge and cluster
+	// labels, records and HTML tables are measured that way too
+	graph.MeasureText = func(line, _ string, _ Length) Length {
+		return Length(draw.Columns(line)) * cellW
+	}
 	for _, node := range graph.Nodes {
 		shape := node.Shape
 		if shape == Auto {
