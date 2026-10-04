@@ -407,7 +407,8 @@ func TestExamplesText(t *testing.T) {
 }
 
 // TestGraphviz lays out the classic Graphviz directed examples in
-// testdata/graphviz/*.gv and compares them to the .svg next to them.
+// testdata/graphviz/*.gv and compares them to the .svg next to them, and
+// laid out for text to the .txt, and with merged edges to the _merged.txt.
 func TestGraphviz(t *testing.T) {
 	files, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
 	if err != nil {
@@ -423,6 +424,20 @@ func TestGraphviz(t *testing.T) {
 				t.Fatalf("expected one graph, got %d", len(graphs))
 			}
 			checkGolden(t, strings.TrimSuffix(file, ".gv")+".svg", graphs[0], layout.Options{})
+
+			for suffix, merge := range map[string]bool{".txt": false, "_merged.txt": true} {
+				graph := *graphs[0]
+				graph.MergeEdges = merge
+				l, err := layout.Hierarchical(&graph, layout.Options{ForText: true})
+				if err != nil {
+					t.Fatal(err)
+				}
+				var got bytes.Buffer
+				if err := text.Write(&got, l); err != nil {
+					t.Fatal(err)
+				}
+				compareGolden(t, strings.TrimSuffix(file, ".gv")+suffix, got.Bytes())
+			}
 		})
 	}
 }
