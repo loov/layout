@@ -262,7 +262,12 @@ var examples = map[string]func() *layout.Graph{
 			{"dev", "2001:db8:abcd:120::/64\ndev0, VLAN 20 (dev)"},
 			{"iot", "2001:db8:abcd:166::/64\niot0, VLAN 66 (iot)"},
 		} {
-			graph.Node(n[0]).Label = n[1]
+			node := graph.Node(n[0])
+			node.Label = n[1]
+			// prefixes split further are boxes, networks are rounded
+			if strings.Contains(n[1], "/48") || strings.Contains(n[1], "/56") {
+				node.Shape = layout.Box
+			}
 		}
 		for _, e := range []struct {
 			from string
