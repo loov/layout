@@ -277,90 +277,14 @@ func mergeRow(a, b []cell) ([]cell, bool) {
 // than the old, keeps a cell off nodes, and lines with a label beside
 // them stay.
 func unjog(g grid) (changed bool) {
-	type pos struct{ r, c int }
 	at := func(p pos) *cell { return g.at(p.r, p.c) }
-	is := func(p pos, set string) bool { q := at(p); return q != nil && strings.ContainsRune(set, q.r) }
-	// run returns where a line leaving p along the row in dir runs to, and
-	// whether it goes on down there; when it does not, it runs into
-	// something there, such as an arrowhead
-	run := func(p pos, dir int) (to int, turns bool) {
-		c := p.c + dir
-		for is(pos{p.r, c}, "─╂") {
-			c += dir
-		}
-		return c, is(pos{p.r, c}, map[int]string{-1: "╭", 1: "╮"}[dir])
-	}
-	// step returns the direction of the step of a line that comes down to
-	// p, where it runs along to and whether it goes on down there
-	step := func(p pos) (dir, to int, turns bool) {
-		switch {
-		case is(p, "╰"):
-			dir = 1
-		case is(p, "╯"):
-			dir = -1
-		default:
-			return 0, 0, false
-		}
-		to, turns = run(p, dir)
-		return dir, to, turns
-	}
-	// bottom returns the row where a line going down from p turns or ends
-	bottom := func(p pos) int {
-		r := p.r + 1
-		for is(pos{r, p.c}, "│╂") {
-			r++
-		}
-		return r
-	}
-	// cells returns the cells along the points, with the arms of each in
-	// the line: in into the first, out out of the last
-	cells := func(in, out int, points ...pos) ([]pos, []int) {
-		var path []pos
-		for i, p := range points {
-			if i == 0 {
-				path = append(path, p)
-				continue
-			}
-			q := path[len(path)-1]
-			dr, dc := cmp.Compare(p.r, q.r), cmp.Compare(p.c, q.c)
-			for q != p {
-				q.r, q.c = q.r+dr, q.c+dc
-				path = append(path, q)
-			}
-		}
-		dirs := make([]int, len(path))
-		toward := func(from, to pos) int {
-			switch {
-			case to.r < from.r:
-				return up
-			case to.r > from.r:
-				return down
-			case to.c < from.c:
-				return left
-			}
-			return right
-		}
-		for i, p := range path {
-			if i == 0 {
-				dirs[i] |= in
-			} else {
-				dirs[i] |= toward(p, path[i-1])
-			}
-			if i == len(path)-1 {
-				dirs[i] |= out
-			} else {
-				dirs[i] |= toward(p, path[i+1])
-			}
-		}
-		return path, dirs
-	}
 	// reroute moves a line from the old cells to the new ones, both with
 	// the arm in into the first, ending in head when it is set, if it can
 	// fewer has reroute take only a new line that crosses fewer lines
 	fewer := false
 	reroute := func(in int, old, path []pos, dirs []int, head *cell) bool {
 		olds := map[pos]int{}
-		_, oldArms := cells(in, down, old...)
+		_, oldArms := route(in, down, old...)
 		for i, p := range old {
 			olds[p] = oldArms[i]
 		}
@@ -456,7 +380,7 @@ func unjog(g grid) (changed bool) {
 	for r := range g {
 		for c := range g[r] {
 			top := pos{r, c}
-			if q := at(top); is(top, "├┤┬┴┼") && !q.solid {
+			if q := at(top); g.is(top, "├┤┬┴┼") && !q.solid {
 				// a line leaving a junction along the row and a step after
 				// it: one, on the row of the junction, which stays
 				for _, dir := range []int{-1, 1} {
@@ -465,43 +389,43 @@ func unjog(g grid) (changed bool) {
 						side, back = left, right
 					}
 					first := pos{r, c + dir}
-					b, ok := run(top, dir)
+					b, ok := g.run(top, dir)
 					if arms(q.r)&side == 0 || !ok || at(first).solid {
 						continue
 					}
-					mid := pos{bottom(pos{r, b}), b}
-					_, c2, turns := step(mid)
+					mid := pos{g.bottom(pos{r, b}), b}
+					_, c2, turns := g.step(mid)
 					if !turns || (c2-c)*dir <= 0 {
 						continue
 					}
 					end := pos{mid.r, c2}
-					old, _ := cells(back, down, first, pos{r, b}, mid, end)
-					path, dirs := cells(back, down, first, pos{r, c2}, end)
+					old, _ := route(back, down, first, pos{r, b}, mid, end)
+					path, dirs := route(back, down, first, pos{r, c2}, end)
 					if reroute(back, old, path, dirs, nil) {
 						changed = true
 					}
 				}
 				continue
 			}
-			_, b, ok := step(top)
+			_, b, ok := g.step(top)
 			if !ok {
 				continue
 			}
-			mid := pos{bottom(pos{r, b}), b}
-			if dir, c2, turns := step(mid); dir != 0 {
+			mid := pos{g.bottom(pos{r, b}), b}
+			if dir, c2, turns := g.step(mid); dir != 0 {
 				// two steps: one, on the lower row or else the upper;
 				// a second that runs into something ends before it
 				end, out := pos{mid.r, c2}, down
 				if !turns {
 					end, out = pos{mid.r, c2 - dir}, map[int]int{-1: left, 1: right}[dir]
 				}
-				old, _ := cells(up, out, top, pos{r, b}, mid, end)
+				old, _ := route(up, out, top, pos{r, b}, mid, end)
 				vias := []pos{{mid.r, c}, {r, c2}}
 				if !turns {
 					vias = vias[:1] // the run goes on along the lower row
 				}
 				for _, via := range vias {
-					path, dirs := cells(up, out, top, via, end)
+					path, dirs := route(up, out, top, via, end)
 					if reroute(up, old, path, dirs, nil) {
 						changed = true
 						break
@@ -509,7 +433,7 @@ func unjog(g grid) (changed bool) {
 				}
 				continue
 			}
-			if !is(mid, "▼") {
+			if !g.is(mid, "▼") {
 				continue
 			}
 			// a last step before an arrowhead into a box: the arrowhead
@@ -524,8 +448,8 @@ func unjog(g grid) (changed bool) {
 				continue
 			}
 			head := *at(mid)
-			old, _ := cells(up, down, top, pos{r, b}, mid)
-			path, dirs := cells(up, down, top, pos{mid.r, c})
+			old, _ := route(up, down, top, pos{r, b}, mid)
+			path, dirs := route(up, down, top, pos{mid.r, c})
 			if reroute(up, old, path, dirs, &head) {
 				changed = true
 			}
@@ -537,21 +461,21 @@ func unjog(g grid) (changed bool) {
 	for r := range g {
 		for c := range g[r] {
 			top := pos{r, c}
-			_, b, ok := step(top)
+			_, b, ok := g.step(top)
 			if !ok {
 				continue
 			}
 			first := r
-			for is(pos{first - 1, c}, "│╂") {
+			for g.is(pos{first - 1, c}, "│╂") {
 				first--
 			}
-			last := bottom(pos{r, b}) - 1
-			old, _ := cells(up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
+			last := g.bottom(pos{r, b}) - 1
+			old, _ := route(up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
 			for row := first; row <= last; row++ {
 				if row == r {
 					continue
 				}
-				path, dirs := cells(up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+				path, dirs := route(up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
 				if reroute(up, old, path, dirs, nil) {
 					changed = true
 					break
@@ -560,4 +484,91 @@ func unjog(g grid) (changed bool) {
 		}
 	}
 	return changed
+}
+
+// pos is the row and column of a cell
+type pos struct{ r, c int }
+
+// is reports whether the cell at p is one of the characters in set
+func (g grid) is(p pos, set string) bool {
+	q := g.at(p.r, p.c)
+	return q != nil && strings.ContainsRune(set, q.r)
+}
+
+// run returns where a line leaving p along the row in dir runs to, and
+// whether it goes on down there; when it does not, it runs into
+// something there, such as an arrowhead
+func (g grid) run(p pos, dir int) (to int, turns bool) {
+	c := p.c + dir
+	for g.is(pos{p.r, c}, "─╂") {
+		c += dir
+	}
+	return c, g.is(pos{p.r, c}, map[int]string{-1: "╭", 1: "╮"}[dir])
+}
+
+// step returns the direction of the step of a line that comes down to
+// p, where it runs along to and whether it goes on down there
+func (g grid) step(p pos) (dir, to int, turns bool) {
+	switch {
+	case g.is(p, "╰"):
+		dir = 1
+	case g.is(p, "╯"):
+		dir = -1
+	default:
+		return 0, 0, false
+	}
+	to, turns = g.run(p, dir)
+	return dir, to, turns
+}
+
+// bottom returns the row where a line going down from p turns or ends
+func (g grid) bottom(p pos) int {
+	r := p.r + 1
+	for g.is(pos{r, p.c}, "│╂") {
+		r++
+	}
+	return r
+}
+
+// route returns the cells along the points, with the arms of each in
+// the line: in into the first, out out of the last
+func route(in, out int, points ...pos) ([]pos, []int) {
+	var path []pos
+	for i, p := range points {
+		if i == 0 {
+			path = append(path, p)
+			continue
+		}
+		q := path[len(path)-1]
+		dr, dc := cmp.Compare(p.r, q.r), cmp.Compare(p.c, q.c)
+		for q != p {
+			q.r, q.c = q.r+dr, q.c+dc
+			path = append(path, q)
+		}
+	}
+	dirs := make([]int, len(path))
+	toward := func(from, to pos) int {
+		switch {
+		case to.r < from.r:
+			return up
+		case to.r > from.r:
+			return down
+		case to.c < from.c:
+			return left
+		}
+		return right
+	}
+	for i, p := range path {
+		if i == 0 {
+			dirs[i] |= in
+		} else {
+			dirs[i] |= toward(p, path[i-1])
+		}
+		if i == len(path)-1 {
+			dirs[i] |= out
+		} else {
+			dirs[i] |= toward(p, path[i+1])
+		}
+	}
+	return path, dirs
 }
