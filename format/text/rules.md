@@ -121,7 +121,9 @@ tests. The rest are judged by eye, with the diagnostics in
   node. A change that pushes a balanced fork off center is worse, even when it
   saves corners elsewhere. Without merging, a node with two unlabeled edges in
   from the rank above still sits between its parents, so that both edges are
-  about as long.
+  about as long. Where centering would add crossings or push the node's
+  neighbors in its rank apart, a straight trunk into one child with the others
+  branching off it (`╭────┤`) is fine.
 - **Straight edges win over centering where nothing merges.** Labeled edges
   never merge, so a node with only labeled edges to one side isn't a fork.
   Lining it up with one neighbor so that the edge runs straight beats centering
