@@ -99,61 +99,8 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 	// the box must hold the label and have distinct edges
 	if box.Shape != layout.Record {
 		x1 = max(x1, x0+w)
-		// an odd number of spare cells can't be split evenly around the
-		// label, give one back on a side that no edge ends next to on the
-		// top or bottom, where spreadSides puts them; ends on the sides
-		// move onto them
 		if spare := x1 - x0 - 1 - draw.TextColumns(label); spare >= 3 && spare%2 == 1 {
-			type end struct {
-				exact    float64
-				straight bool
-			}
-			var top, bottom []end
-			add := func(path []layout.Vector) {
-				p := path[0]
-				// straight on past the first bend, see spreadSides
-				straight := len(path) < 3 || absLength(path[2].X-path[1].X) < 0.01
-				e := end{float64((p.X - c.origin.X) / c.cellW), straight}
-				switch r := c.row(p.Y); {
-				case r <= y0:
-					top = append(top, e)
-				case r >= y1:
-					bottom = append(bottom, e)
-				}
-			}
-			for i, edge := range c.l.Graph.Edges {
-				path := c.l.Edges[i].Path
-				if len(path) == 0 {
-					continue
-				}
-				if edge.From == node {
-					add(path)
-				}
-				if edge.To == node {
-					back := slices.Clone(path)
-					slices.Reverse(back)
-					add(back)
-				}
-			}
-			lo, hi := x1, x0 // the columns of the edge ends
-			for _, ends := range [][]end{top, bottom} {
-				slices.SortFunc(ends, func(a, b end) int { return cmp.Compare(a.exact, b.exact) })
-				cells := make([]int, len(ends))
-				exact, fixed := make([]float64, len(ends)), make([]bool, len(ends))
-				for n, e := range ends {
-					cells[n], exact[n], fixed[n] = int(e.exact+0.5), e.exact, e.straight
-				}
-				packEnds(cells, exact, fixed)
-				for _, x := range cells {
-					lo, hi = min(lo, x), max(hi, x)
-				}
-			}
-			switch {
-			case hi < x1-1:
-				x1--
-			case lo > x0+1:
-				x0++
-			}
+			x0, x1 = c.evenLabel(node, x0, y0, x1, y1)
 		}
 	}
 	x1 = max(x1, x0+2)
@@ -164,6 +111,64 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 		y1 = max(y1, y0+h)
 	}
 	return [4]int{x0, y0, x1, y1}
+}
+
+// evenLabel gives back one of an odd number of spare cells, which can't be
+// split evenly around the label of node, on a side that no edge ends next
+// to on the top or bottom, where spreadSides puts them; ends on the sides
+// move onto them. It returns the new left and right columns of the box.
+func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
+	type end struct {
+		exact    float64
+		straight bool
+	}
+	var top, bottom []end
+	add := func(path []layout.Vector) {
+		p := path[0]
+		// straight on past the first bend, see spreadSides
+		straight := len(path) < 3 || absLength(path[2].X-path[1].X) < 0.01
+		e := end{float64((p.X - c.origin.X) / c.cellW), straight}
+		switch r := c.row(p.Y); {
+		case r <= y0:
+			top = append(top, e)
+		case r >= y1:
+			bottom = append(bottom, e)
+		}
+	}
+	for i, edge := range c.l.Graph.Edges {
+		path := c.l.Edges[i].Path
+		if len(path) == 0 {
+			continue
+		}
+		if edge.From == node {
+			add(path)
+		}
+		if edge.To == node {
+			back := slices.Clone(path)
+			slices.Reverse(back)
+			add(back)
+		}
+	}
+	lo, hi := x1, x0 // the columns of the edge ends
+	for _, ends := range [][]end{top, bottom} {
+		slices.SortFunc(ends, func(a, b end) int { return cmp.Compare(a.exact, b.exact) })
+		cells := make([]int, len(ends))
+		exact, fixed := make([]float64, len(ends)), make([]bool, len(ends))
+		for n, e := range ends {
+			cells[n], exact[n], fixed[n] = int(e.exact+0.5), e.exact, e.straight
+		}
+		packEnds(cells, exact, fixed)
+		for _, x := range cells {
+			lo, hi = min(lo, x), max(hi, x)
+		}
+	}
+	switch {
+	case hi < x1-1:
+		x1--
+	case lo > x0+1:
+		x0++
+	}
+	return x0, x1
 }
 
 // drawNode draws a node in its box, see nodeBox, and marks the box solid
