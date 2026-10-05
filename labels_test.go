@@ -12,6 +12,7 @@ import (
 	"github.com/loov/layout/format/graphml"
 	"github.com/loov/layout/format/svg"
 	"github.com/loov/layout/format/text"
+	"github.com/loov/layout/internal/examples"
 )
 
 // TestEmptyNodeLabel checks that a node with an explicitly empty label is
@@ -112,7 +113,7 @@ func TestLabelsApart(t *testing.T) {
 func TestFlatEdgeLabels(t *testing.T) {
 	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {
 		for _, forText := range []bool{false, true} {
-			graph := flatLabels()
+			graph := examples.FlatLabels()
 			graph.RankDir = dir
 			l, err := layout.Hierarchical(graph, layout.Options{ForText: forText})
 			if err != nil {
@@ -162,17 +163,4 @@ func samples(path []layout.Vector) []layout.Vector {
 		}
 	}
 	return points
-}
-
-// flatLabels returns a graph with labeled edges between nodes of a rank:
-// next to each other, and arcing over one between them
-func flatLabels() *layout.Graph {
-	graph := layout.NewDigraph()
-	graph.Edge("a", "b").Label = "flat label"
-	graph.Edge("b", "c").Label = "x"
-	graph.Edge("a", "c").Label = "arc"
-	graph.Edge("a", "d")
-	graph.Edge("a", "e").Label = "down"
-	graph.SameRank = [][]*layout.Node{{graph.Node("a"), graph.Node("b"), graph.Node("c")}}
-	return graph
 }
