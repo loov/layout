@@ -36,6 +36,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 		}
 	}
 	graph.ByRank = best
+	OrderRanksChains(graph)
 	graph.assignPos()
 }
 

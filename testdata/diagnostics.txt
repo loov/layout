@@ -30,10 +30,10 @@ subnets_merged nodes=0 through=2 near=9 crossings=0 shallow=0 overlaps=0 paralle
 weighted     nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=181 area=9216 unbalance=128
 abstract     nodes=0 through=0 near=2 crossings=61 shallow=10 overlaps=1 parallel=3 ends=0 shafts=0 jagged=1 bends=5 corners=53 wavy=5 back=0 labels=0 far=0 length=10153 area=491254 unbalance=1929
 alf          nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=1 wavy=0 back=0 labels=0 far=0 length=1373 area=382531 unbalance=244
-clust4       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=1 labels=0 far=0 length=1085 area=93120 unbalance=219
+clust4       nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=3 wavy=0 back=1 labels=0 far=0 length=1100 area=93120 unbalance=215
 fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=3 labels=0 far=0 length=1842 area=218503 unbalance=128
 nested       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=1 wavy=0 back=0 labels=0 far=0 length=725 area=71808 unbalance=70
-ortho        nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=1351 area=93120 unbalance=219
+ortho        nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=20 wavy=2 back=1 labels=0 far=0 length=1375 area=93120 unbalance=215
 switch       nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=3615 area=164750 unbalance=1320
 unix         nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=15 wavy=0 back=0 labels=0 far=0 length=4509 area=522063 unbalance=905
 world        nodes=0 through=0 near=1 crossings=54 shallow=4 overlaps=0 parallel=1 ends=0 shafts=0 jagged=1 bends=0 corners=49 wavy=0 back=0 labels=0 far=0 length=10652 area=438464 unbalance=1885
