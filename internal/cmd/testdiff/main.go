@@ -5,6 +5,7 @@
 //
 //	go run ./internal/cmd/testdiff          # the working tree against HEAD
 //	go run ./internal/cmd/testdiff <commit> # a commit against its parent
+//	go run ./internal/cmd/testdiff <old> <new> # two commits, such as main HEAD
 //	go run ./internal/cmd/testdiff -all     # every drawing, changed or not
 //	go run ./internal/cmd/testdiff -title "option 1" # titled, to tell pages apart
 //
@@ -56,16 +57,21 @@ func main() {
 	all := flag.Bool("all", false, "show every drawing, also the ones that did not change")
 	name := flag.String("title", "", "title of the page, in place of what it compares")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [-title title] [commit]")
+		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [-title title] [commit | old new]")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
-	if flag.NArg() > 1 {
+	if flag.NArg() > 2 {
 		flag.Usage()
 		os.Exit(2)
 	}
 
-	changes, title, err := collect(flag.Arg(0), *all)
+	base, target, title, err := revisions(flag.Args())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "testdiff:", err)
+		os.Exit(1)
+	}
+	changes, err := collect(base, target, *all)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "testdiff:", err)
 		os.Exit(1)
@@ -101,41 +107,61 @@ func main() {
 	}
 }
 
-// collect returns the changed drawings under testdata, of the commit
-// against its parent, or of the working tree against HEAD when commit is
-// empty, and a title for them; with all, also the ones that did not change
-func collect(commit string, all bool) ([]Change, string, error) {
+// revisions returns what the arguments compare, and a title for it: the
+// working tree against HEAD, a commit against its parent, or an old commit
+// against a new one; an empty base has nothing, the new commit of a root
+// commit, and an empty target is the working tree
+func revisions(args []string) (base, target, title string, err error) {
+	for _, rev := range args {
+		if _, err := git("rev-parse", "--verify", "--quiet", rev+"^{commit}"); err != nil {
+			return "", "", "", fmt.Errorf("unknown commit %q", rev)
+		}
+	}
+	subject := func(rev string) string {
+		out, _ := git("log", "-1", "--format=%h %s", rev)
+		return strings.TrimSpace(out)
+	}
+	switch len(args) {
+	case 0:
+		return "HEAD", "", "the working tree", nil
+	case 1:
+		base = args[0] + "^"
+		if _, err := git("rev-parse", "--verify", "--quiet", base); err != nil {
+			base = "" // a root commit
+		}
+		return base, args[0], subject(args[0]), nil
+	}
+	return args[0], args[1], args[0] + " → " + args[1], nil
+}
+
+// collect returns the drawings under testdata that differ between base and
+// target, see revisions; with all, also the ones that don't
+func collect(base, target string, all bool) ([]Change, error) {
 	root, err := git("rev-parse", "--show-toplevel")
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	root = strings.TrimSpace(root)
 
-	base, title := "HEAD", "the working tree"
-	args := []string{"diff", "--name-only", "--no-renames", "HEAD"}
-	if commit != "" {
-		if _, err := git("rev-parse", "--verify", "--quiet", commit+"^{commit}"); err != nil {
-			return nil, "", fmt.Errorf("unknown commit %q", commit)
-		}
-		title, _ = git("log", "-1", "--format=%h %s", commit)
-		title = strings.TrimSpace(title)
-		base = commit + "^"
-		args = []string{"diff", "--name-only", "--no-renames", base, commit}
-		if _, err := git("rev-parse", "--verify", "--quiet", base); err != nil {
-			// a root commit: everything is added, and there is no old
-			base = ""
-			args = []string{"diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit}
-		}
+	var args []string
+	switch {
+	case target == "":
+		args = []string{"diff", "--name-only", "--no-renames", base}
+	case base == "":
+		args = []string{"diff-tree", "--root", "--no-commit-id", "--name-only", "-r", target}
+	default:
+		args = []string{"diff", "--name-only", "--no-renames", base, target}
 	}
+	commit := target
 	listed, err := git(append(args, "--", "testdata")...)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 	paths := strings.Fields(listed)
 	if commit == "" {
 		untracked, err := git("ls-files", "--others", "--exclude-standard", "--", "testdata")
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		paths = append(paths, strings.Fields(untracked)...)
 	}
@@ -147,7 +173,7 @@ func collect(commit string, all bool) ([]Change, string, error) {
 			tracked, err = git("ls-tree", "-r", "--name-only", commit, "--", "testdata")
 		}
 		if err != nil {
-			return nil, "", err
+			return nil, err
 		}
 		paths = append(paths, strings.Fields(tracked)...)
 	}
@@ -199,7 +225,7 @@ func collect(commit string, all bool) ([]Change, string, error) {
 			changes = append(changes, change)
 		}
 	}
-	return changes, title, nil
+	return changes, nil
 }
 
 var (
