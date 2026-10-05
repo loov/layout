@@ -255,9 +255,10 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			return a.xin < b.xin
 		})
 		// a jog entering where another exits goes above it, or the exit
-		// would run down its stub; otherwise keep the sorted order
+		// would run down its stub; otherwise keep the sorted order. Where
+		// is within half a pad, as text draws closer runs in one cell
 		above := func(a, b *jog) bool {
-			return b == a.next || !a.split && b.next == nil && a.xin == b.x0+b.x1-b.xin
+			return b == a.next || !a.split && b.next == nil && absLength(a.xin-(b.x0+b.x1-b.xin)) < pad/2
 		}
 		ordered := make([]*jog, 0, len(jogs))
 		for len(jogs) > 0 {
