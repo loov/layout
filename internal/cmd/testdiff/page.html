@@ -760,8 +760,8 @@ function svgEditor(change) {
 	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map() };
 	const wrap = document.createElement("div");
 	wrap.className = "svgedit";
-	wrap.innerHTML = state.svg;
-	const svg = wrap.querySelector("svg");
+	const svg = inertSVG(state.svg);
+	wrap.append(svg);
 	const root = svg.querySelector(":scope > g") || svg;
 
 	// items: nodes with what is drawn after them, and edge labels; edges
@@ -867,6 +867,21 @@ function svgEditor(change) {
 			`Moved:\n${lines.join("\n") || "- nothing"}\n\nAll node centers after the moves:\n${nodes.join("\n")}\n`;
 	}
 	return { kind: "svg", el: wrap, key: () => false, undo, message, selected: () => false };
+}
+
+// inertSVG parses an svg drawing for editing in the page, which unlike an
+// image runs what it holds: scripts, event handlers and javascript: links
+// are dropped, so that a drawing can't run code
+function inertSVG(text) {
+	const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+	for (const el of doc.querySelectorAll("script")) el.remove();
+	for (const el of doc.querySelectorAll("*")) {
+		for (const attr of [...el.attributes]) {
+			if (/^on/i.test(attr.name) || /^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+		}
+	}
+	const svg = doc.documentElement;
+	return svg.tagName === "svg" ? document.importNode(svg, true) : document.createElementNS("http://www.w3.org/2000/svg", "svg");
 }
 
 // parsePath returns the commands of a path of M, L and Q, as the svg
