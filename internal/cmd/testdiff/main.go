@@ -44,7 +44,8 @@ type Change struct {
 	OldSize *[2]float64 `json:"oldSize"`
 	NewSize *[2]float64 `json:"newSize"`
 	// OldStats and NewStats are the diagnostics of the layout drawn, see
-	// layout.Diagnostics, by key; nil when missing
+	// layout.Diagnostics, by key, with the edges of text counted as drawn,
+	// see textStats; nil when missing
 	OldStats map[string]float64 `json:"oldStats"`
 	NewStats map[string]float64 `json:"newStats"`
 }
@@ -180,11 +181,17 @@ func collect(commit string, all bool) ([]Change, string, error) {
 			if kind == "svg" {
 				stats = "svg"
 			}
-			changes = append(changes, Change{
+			change := Change{
 				Path: path, Kind: kind, Old: old, New: new,
 				OldSize: size(kind, old), NewSize: size(kind, new),
 				OldStats: oldStats[stats][name], NewStats: newStats[stats][name],
-			})
+			}
+			if kind != "svg" {
+				// text is counted as drawn, see textStats
+				change.OldStats = withText(change.OldStats, old)
+				change.NewStats = withText(change.NewStats, new)
+			}
+			changes = append(changes, change)
 		}
 	}
 	return changes, title, nil
@@ -218,6 +225,22 @@ func size(kind, content string) *[2]float64 {
 		w = max(w, draw.Columns(strings.TrimRight(line, " ")))
 	}
 	return &[2]float64{float64(w), float64(len(lines))}
+}
+
+// withText returns stats with the counts of the text drawing content in
+// place of those of the layout, or nil when there is no drawing
+func withText(stats map[string]float64, content string) map[string]float64 {
+	if content == "" {
+		return nil
+	}
+	out := map[string]float64{}
+	for k, v := range stats {
+		out[k] = v
+	}
+	for k, v := range textStats(content) {
+		out[k] = v
+	}
+	return out
 }
 
 // diagnostics parses the lines of a diagnostics file, a name followed by
