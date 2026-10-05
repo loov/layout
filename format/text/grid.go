@@ -54,7 +54,88 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	// straightening a line can clear the way for another
 	for !sideways && unjog(grid) {
 	}
+	for merged := !sideways; merged; {
+		grid, merged = mergeRows(grid)
+	}
 	return rows(grid, true)
+}
+
+// mergeRows merges the first two neighboring rows with runs along them
+// into one, where the lines of the lower one move up without meeting
+// those of the upper: no cell gets runs along from both, and a line that
+// leaves the upper row up and the lower row down runs on through both.
+// Nodes, markers, text and the frames of clusters stay where they are. It
+// returns whether it merged two rows.
+func mergeRows(grid [][]cell) ([][]cell, bool) {
+	along := func(row []cell) bool {
+		return slices.ContainsFunc(row, func(c cell) bool { return c.lines&(left|right) != 0 })
+	}
+	for r := 0; r+1 < len(grid); r++ {
+		if !along(grid[r]) || !along(grid[r+1]) {
+			continue
+		}
+		if row, ok := mergeRow(grid[r], grid[r+1]); ok {
+			grid[r] = row
+			return slices.Delete(grid, r+1, r+2), true
+		}
+	}
+	return grid, false
+}
+
+// mergeRow returns the cells of a and b in one row, see mergeRows
+func mergeRow(a, b []cell) ([]cell, bool) {
+	out := make([]cell, max(len(a), len(b)))
+	for x := range out {
+		p, q := cell{r: ' '}, cell{r: ' '}
+		if x < len(a) {
+			p = a[x]
+		}
+		if x < len(b) {
+			q = b[x]
+		}
+		fixed := func(c cell) bool {
+			return c.solid || c.keep || c.glue || c.need > 0 || c.label > 0 || c.frame || c.r != ' ' && c.lines == 0
+		}
+		link := p.lines&down != 0 && q.lines&up != 0
+		switch {
+		case fixed(p) || fixed(q) || p.bg != q.bg:
+			if p.r != ' ' || q.r != ' ' || p.bg != q.bg {
+				return nil, false
+			}
+		case p.lines&down != 0 != (q.lines&up != 0):
+			return nil, false // a line that ends between them
+		case p.lines&up != 0 && q.lines&down != 0 && !link:
+			return nil, false // two lines would join
+		case p.lines&(left|right) != 0 && q.lines&(left|right) != 0:
+			return nil, false
+		}
+		lines := p.lines&^down | q.lines&^up
+		c := cell{r: ' ', fg: p.fg, bg: p.bg, lines: lines}
+		for arm := range 4 {
+			switch bit := 1 << arm; {
+			case lines&bit == 0:
+			case bit == down:
+				c.owner[arm] = q.owner[arm]
+			case bit == up || p.lines&bit != 0:
+				c.owner[arm] = p.owner[arm]
+			default:
+				c.owner[arm], c.fg = q.owner[arm], q.fg
+			}
+		}
+		switch {
+		case lines == 0:
+		case lines == p.lines:
+			c.r, c.fg = p.r, p.fg
+		case lines == q.lines:
+			c.r, c.fg = q.r, q.fg
+		case lines == up|down|left|right && c.owner[0] != c.owner[2]:
+			c.r = '╂' // a line across another
+		default:
+			c.r = corner(lines)
+		}
+		out[x] = c
+	}
+	return out, true
 }
 
 // unjog straightens lines down the grid: two steps aside in a row become
