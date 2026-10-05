@@ -89,6 +89,23 @@ pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; 
 :root[data-theme="dark"] .none { filter: invert(1); }
 header .theme { margin-left: auto; }
 
+/* edit mode: the new drawing, rearranged by hand, beside the old */
+.edit-only { display: none; }
+.detail.editing .edit-only { display: inline-block; }
+.detail.editing .hint.edit-only { display: block; }
+.detail.editing .view-only { display: none; }
+.detail.editing .panels { grid-template-columns: 1fr 2fr; }
+.detail.editing .panel:nth-child(3) { display: none; }
+.detail.editing #new { cursor: default; }
+.bar button.on { border-color: var(--accent); color: var(--accent); }
+.palette button { font-family: var(--mono); padding: 2px 6px; min-width: 24px; }
+pre.editor { cursor: text; outline: none; }
+pre.editor .sel { background: color-mix(in srgb, #2f6fdf 22%, transparent); }
+pre.editor .cur { box-shadow: inset 2px 0 0 #2f6fdf; }
+pre.editor.moving { cursor: grabbing; }
+.svgedit svg [data-drag] { cursor: grab; }
+.svgedit svg [data-drag]:hover { filter: drop-shadow(0 0 2px #2f6fdf); }
+
 @media (max-width: 900px) {
 	.panels { grid-template-columns: 1fr; grid-auto-rows: minmax(240px, 1fr); }
 }
@@ -113,10 +130,16 @@ header .theme { margin-left: auto; }
 		<span id="zoomlabel">100%</span>
 		<button id="zoomin" title="zoom in (+)">+</button>
 		<button id="fit" title="fit (f)">fit</button>
-		<button id="reset" title="reset the onion offset (0)">reset offset</button>
+		<button id="reset" class="view-only" title="reset the onion offset (0)">reset offset</button>
+		<button id="edit" title="rearrange the new drawing by hand (e)">✎ edit</button>
+		<span class="palette edit-only" id="palette"></span>
+		<button id="undo" class="edit-only" title="undo (⌘Z)">undo</button>
+		<button id="revert" class="edit-only" title="drop the edits of this drawing">revert</button>
+		<button id="copy" class="edit-only" title="copy the drawing now and as edited, to paste to an assistant">copy</button>
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
-		<div class="hint">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
+		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it, arrows nudge it (or move the cursor), type or click the palette to draw, Delete clears, ⌘Z undoes. SVG: drag nodes and edge labels; edge ends follow. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
+		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
 		<div class="panel"><h2>old <span class="dim" id="oldsize"></span></h2><div class="scroll" id="old"></div></div>
@@ -324,6 +347,9 @@ let current = -1, zoom = 1, offset = { x: 0, y: 0 }, unit = { x: 1, y: 1 };
 const panes = ["old", "new", "onion"].map(id => document.getElementById(id));
 
 function show(i) {
+	editor = null;
+	detail.classList.remove("editing");
+	document.getElementById("edit").classList.remove("on");
 	current = (i + DATA.changes.length) % DATA.changes.length;
 	const change = DATA.changes[current];
 	document.getElementById("dpath").textContent = change.path;
@@ -502,7 +528,15 @@ document.getElementById("reset").onclick = () => { offset = { x: 0, y: 0 }; move
 document.getElementById("close").onclick = close;
 
 document.addEventListener("keydown", e => {
+	if (editor && detail.classList.contains("open")) {
+		if (e.key === "Escape" && !editor.selected()) return stopEdit();
+		if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") { e.preventDefault(); return editor.undo(); }
+		if (!e.metaKey && !e.ctrlKey && editor.key(e)) { e.preventDefault(); return; }
+		if (e.key === "e" && editor.kind === "svg") return stopEdit();
+		return;
+	}
 	if (e.metaKey || e.ctrlKey || e.altKey) return;
+	if (e.key === "e" && detail.classList.contains("open")) { e.preventDefault(); return startEdit(); }
 	if (e.key === "t" && !e.shiftKey) { toggleTheme(); return; }
 	if (!detail.classList.contains("open")) return;
 	const step = e.shiftKey ? 10 : 1;
@@ -523,6 +557,357 @@ document.addEventListener("keydown", e => {
 	const action = keys[e.key.length === 1 ? e.key.toLowerCase() : e.key] || keys[e.key];
 	if (action) { e.preventDefault(); action(); }
 });
+
+// edit mode: rearrange the new drawing by hand, then copy it with the
+// drawing as it is, as a message to paste for an assistant; edits are kept
+// by path while the page is open
+let editor = null;
+const edits = new Map();
+
+function startEdit() {
+	const change = DATA.changes[current];
+	if (!change.new && !change.old) return;
+	editor = change.kind === "svg" ? svgEditor(change) : textEditor(change);
+	panes[1].replaceChildren(editor.el);
+	document.getElementById("palette").replaceChildren(...(editor.palette || []));
+	detail.classList.add("editing");
+	document.getElementById("edit").classList.add("on");
+	setZoom(zoom);
+}
+
+function stopEdit() {
+	const at = { left: panes[1].scrollLeft, top: panes[1].scrollTop };
+	show(current);
+	panes[1].scrollLeft = at.left;
+	panes[1].scrollTop = at.top;
+}
+
+const stripColors = text => text.replace(/\x1b\[[\d;]*[A-Za-z]/g, "");
+
+// textEditor edits a text drawing as a grid of cells
+function textEditor(change) {
+	const original = stripColors(change.new || change.old);
+	const toRows = text => {
+		const lines = text.replace(/\n+$/, "").split("\n").map(line => Array.from(line));
+		const width = Math.max(0, ...lines.map(l => l.length)) + 8;
+		for (let i = 0; i < 3; i++) lines.push([]);
+		for (const line of lines) while (line.length < width) line.push(" ");
+		return lines;
+	};
+	const toText = rows => rows.map(r => r.join("").replace(/\s+$/, "")).join("\n").replace(/\n+$/, "") + "\n";
+	const clone = rows => rows.map(r => r.slice());
+	let state = edits.get(change.path) || { rows: toRows(original), undo: [] };
+	let rows = state.rows;
+	let cursor = { r: 0, c: 0 }, sel = null; // sel is [r0, c0, r1, c1], unordered
+	const save = () => { state.rows = rows; edits.set(change.path, state); };
+	const push = () => { state.undo.push(clone(rows)); if (state.undo.length > 200) state.undo.shift(); };
+
+	const pre = document.createElement("pre");
+	pre.className = "drawing editor";
+	const box = () => sel && [Math.min(sel[0], sel[2]), Math.min(sel[1], sel[3]), Math.max(sel[0], sel[2]), Math.max(sel[1], sel[3])];
+	const esc = ch => ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch === "&" ? "&amp;" : ch;
+	function render() {
+		const b = box();
+		let html = "";
+		rows.forEach((row, r) => {
+			row.forEach((ch, c) => {
+				let cls = b && r >= b[0] && r <= b[2] && c >= b[1] && c <= b[3] ? "sel" : "";
+				if (cursor.r === r && cursor.c === c) cls += " cur";
+				html += cls ? `<span class="${cls.trim()}">${esc(ch)}</span>` : esc(ch);
+			});
+			html += "\n";
+		});
+		pre.innerHTML = html;
+	}
+	// grow makes room for the cell at r, c, keeping the grid rectangular
+	function grow(grid, r, c) {
+		const width = Math.max(grid[0]?.length || 0, c + 1);
+		while (grid.length <= r) grid.push([]);
+		for (const row of grid) while (row.length < width) row.push(" ");
+	}
+	// moved returns grid with the cells of b moved by dr, dc, leaving blanks
+	function moved(grid, b, dr, dc) {
+		const out = clone(grid);
+		for (let r = b[0]; r <= b[2]; r++) for (let c = b[1]; c <= b[3]; c++) out[r][c] = " ";
+		grow(out, b[2] + dr, b[3] + dc);
+		for (let r = b[0]; r <= b[2]; r++) for (let c = b[1]; c <= b[3]; c++) out[r + dr][c + dc] = grid[r][c];
+		return out;
+	}
+	const cell = e => {
+		const rect = pre.getBoundingClientRect();
+		const w = rect.width / rows[0].length, h = rect.height / rows.length;
+		return {
+			r: Math.max(0, Math.min(rows.length - 1, Math.floor((e.clientY - rect.top) / h))),
+			c: Math.max(0, Math.min(rows[0].length - 1, Math.floor((e.clientX - rect.left) / w))),
+		};
+	};
+	const inside = (p, b) => b && p.r >= b[0] && p.r <= b[2] && p.c >= b[1] && p.c <= b[3];
+
+	let drag = null;
+	pre.addEventListener("pointerdown", e => {
+		if (e.button !== 0) return;
+		e.stopPropagation();
+		pre.setPointerCapture(e.pointerId);
+		const p = cell(e), b = box();
+		if (inside(p, b)) {
+			drag = { mode: "move", from: p, start: clone(rows), b, moved: false };
+			pre.classList.add("moving");
+		} else {
+			drag = { mode: "select" };
+			cursor = p;
+			sel = [p.r, p.c, p.r, p.c];
+		}
+		render();
+	});
+	pre.addEventListener("pointermove", e => {
+		if (!drag) return;
+		const p = cell(e);
+		if (drag.mode === "select") {
+			sel[2] = p.r; sel[3] = p.c;
+		} else {
+			const dr = Math.max(-drag.b[0], p.r - drag.from.r), dc = Math.max(-drag.b[1], p.c - drag.from.c);
+			rows = moved(drag.start, drag.b, dr, dc);
+			sel = [drag.b[0] + dr, drag.b[1] + dc, drag.b[2] + dr, drag.b[3] + dc];
+			drag.moved = dr !== 0 || dc !== 0;
+		}
+		render();
+	});
+	const stop = () => {
+		if (!drag) return;
+		if (drag.mode === "select" && sel[0] === sel[2] && sel[1] === sel[3]) sel = null;
+		if (drag.mode === "move" && drag.moved) {
+			state.undo.push(drag.start);
+			save();
+		}
+		drag = null;
+		pre.classList.remove("moving");
+		render();
+	};
+	pre.addEventListener("pointerup", stop);
+	pre.addEventListener("pointercancel", stop);
+
+	function type(ch) {
+		push();
+		grow(rows, cursor.r, cursor.c + 1);
+		rows[cursor.r][cursor.c] = ch;
+		cursor = { r: cursor.r, c: cursor.c + 1 };
+		sel = null;
+		save();
+		render();
+	}
+	function key(e) {
+		const step = e.shiftKey ? 5 : 1;
+		const arrows = { ArrowLeft: [0, -step], ArrowRight: [0, step], ArrowUp: [-step, 0], ArrowDown: [step, 0] };
+		const b = box();
+		if (arrows[e.key]) {
+			let [dr, dc] = arrows[e.key];
+			if (b) {
+				// nudge the selection
+				dr = Math.max(-b[0], dr); dc = Math.max(-b[1], dc);
+				push();
+				rows = moved(rows, b, dr, dc);
+				sel = [b[0] + dr, b[1] + dc, b[2] + dr, b[3] + dc];
+				save();
+			}
+			cursor = { r: Math.max(0, cursor.r + dr), c: Math.max(0, cursor.c + dc) };
+			grow(rows, cursor.r, cursor.c);
+			render();
+			return true;
+		}
+		if (e.key === "Escape") { sel = null; render(); return true; }
+		if (e.key === "Delete" || e.key === "Backspace") {
+			push();
+			if (b) {
+				for (let r = b[0]; r <= b[2]; r++) for (let c = b[1]; c <= b[3]; c++) rows[r][c] = " ";
+			} else {
+				if (e.key === "Backspace") cursor = { r: cursor.r, c: Math.max(0, cursor.c - 1) };
+				rows[cursor.r][cursor.c] = " ";
+			}
+			save();
+			render();
+			return true;
+		}
+		if (e.key === "Enter") { cursor = { r: cursor.r + 1, c: cursor.c }; grow(rows, cursor.r, cursor.c); sel = null; render(); return true; }
+		if (e.key.length === 1 && !e.altKey) { type(e.key); return true; }
+		return false;
+	}
+	function undo() {
+		if (!state.undo.length) return;
+		rows = state.undo.pop();
+		sel = null;
+		save();
+		render();
+	}
+	const palette = Array.from("─│╭╮╰╯┬┴├┤┼╂▼▲◀▶┈┊", ch => {
+		const button = document.createElement("button");
+		button.textContent = ch;
+		button.title = "draw " + ch + " at the cursor";
+		button.onclick = () => type(ch);
+		return button;
+	});
+	function message() {
+		return `\`${change.path}\` as the layout draws it now:\n\n\`\`\`text\n${original.replace(/\n+$/, "")}\n\`\`\`\n\n` +
+			`and rearranged by hand to show how it could look nicer:\n\n\`\`\`text\n${toText(rows).replace(/\n+$/, "")}\n\`\`\`\n`;
+	}
+	render();
+	return { kind: "txt", el: pre, palette, key, undo, message, selected: () => !!sel };
+}
+
+// svgEditor edits an svg drawing by dragging its nodes and edge labels;
+// edge ends at a node follow it, their routes stay
+function svgEditor(change) {
+	const original = change.new || change.old;
+	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map() };
+	const wrap = document.createElement("div");
+	wrap.className = "svgedit";
+	wrap.innerHTML = state.svg;
+	const svg = wrap.querySelector("svg");
+	const root = svg.querySelector(":scope > g") || svg;
+
+	// items: nodes with what is drawn after them, and edge labels; edges
+	const items = [], edges = [];
+	let item = null, edge = null;
+	for (const el of root.children) {
+		if (el.matches(".edge")) {
+			item = null;
+			edge = { el, cmds: parsePath(el.getAttribute("d")) };
+			edges.push(edge);
+		} else if (el.matches(".node")) {
+			item = { els: [el], name: "" };
+			items.push(item);
+			edge = null;
+		} else if (el.matches(".cluster")) {
+			item = edge = null;
+		} else if (item) {
+			item.els.push(el);
+			if (el.tagName === "text") item.name += (item.name ? " " : "") + el.textContent;
+		} else if (edge && el.tagName === "text") {
+			items.push({ els: [el], name: el.textContent, label: true });
+		}
+	}
+	for (const it of items) {
+		it.name ||= "node " + items.indexOf(it);
+		for (const el of it.els) el.dataset.drag = "";
+		const t = /translate\(([-\d.e]+),? ?([-\d.e]+)\)/.exec(it.els[0].getAttribute("transform") || "");
+		it.t = t ? { x: +t[1], y: +t[2] } : { x: 0, y: 0 };
+	}
+	const place = it => { for (const el of it.els) el.setAttribute("transform", `translate(${it.t.x} ${it.t.y})`); };
+	const bbox = it => {
+		let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+		for (const el of it.els) {
+			const b = el.getBBox();
+			x0 = Math.min(x0, b.x + it.t.x); y0 = Math.min(y0, b.y + it.t.y);
+			x1 = Math.max(x1, b.x + b.width + it.t.x); y1 = Math.max(y1, b.y + b.height + it.t.y);
+		}
+		return { x0, y0, x1, y1 };
+	};
+	const ends = e => [e.cmds[0].pts[0], e.cmds.at(-1).pts.at(-1)];
+
+	let drag = null;
+	svg.addEventListener("pointerdown", e => {
+		const it = items.find(it => it.els.some(el => el === e.target || el.contains(e.target)));
+		if (!it || e.button !== 0) return;
+		e.stopPropagation();
+		e.preventDefault();
+		svg.setPointerCapture(e.pointerId);
+		const b = bbox(it), pad = 10;
+		const near = p => p[0] >= b.x0 - pad && p[0] <= b.x1 + pad && p[1] >= b.y0 - pad && p[1] <= b.y1 + pad;
+		const follow = it.label ? [] : edges.flatMap(edge => ends(edge).filter(near).map(p => ({ edge, p, at: p.slice() })));
+		drag = {
+			it, x: e.clientX, y: e.clientY, t: { ...it.t }, follow,
+			// svg units per screen pixel, zoom included
+			scale: svg.viewBox.baseVal?.width ? svg.viewBox.baseVal.width / svg.getBoundingClientRect().width : svg.width.baseVal.value / svg.getBoundingClientRect().width,
+			before: { svg: svg.outerHTML, moves: new Map(state.moves) },
+			center: { x: (b.x0 + b.x1) / 2 - it.t.x, y: (b.y0 + b.y1) / 2 - it.t.y },
+		};
+	});
+	svg.addEventListener("pointermove", e => {
+		if (!drag) return;
+		const dx = (e.clientX - drag.x) * drag.scale, dy = (e.clientY - drag.y) * drag.scale;
+		drag.it.t = { x: drag.t.x + dx, y: drag.t.y + dy };
+		place(drag.it);
+		for (const f of drag.follow) {
+			f.p[0] = f.at[0] + dx;
+			f.p[1] = f.at[1] + dy;
+			f.edge.el.setAttribute("d", formatPath(f.edge.cmds));
+		}
+	});
+	const stop = () => {
+		if (!drag) return;
+		const { it, center } = drag;
+		if (it.t.x !== drag.t.x || it.t.y !== drag.t.y) {
+			state.undo.push(drag.before);
+			const from = state.moves.get(it.name)?.from || { x: center.x + drag.t.x, y: center.y + drag.t.y };
+			state.moves.set(it.name, { from, to: { x: center.x + it.t.x, y: center.y + it.t.y }, label: it.label });
+			state.svg = svg.outerHTML;
+			edits.set(change.path, state);
+		}
+		drag = null;
+	};
+	svg.addEventListener("pointerup", stop);
+	svg.addEventListener("pointercancel", stop);
+
+	function undo() {
+		const last = state.undo.pop();
+		if (!last) return;
+		state.svg = last.svg;
+		state.moves = last.moves;
+		startEdit();
+	}
+	const round = v => Math.round(v);
+	function message() {
+		const lines = [...state.moves].map(([name, m]) =>
+			`- ${m.label ? "label" : "node"} "${name}": (${round(m.from.x)}, ${round(m.from.y)}) → (${round(m.to.x)}, ${round(m.to.y)})`);
+		const nodes = items.filter(it => !it.label).map(it => {
+			const b = bbox(it);
+			return `- "${it.name}": (${round((b.x0 + b.x1) / 2)}, ${round((b.y0 + b.y1) / 2)})`;
+		});
+		return `\`${change.path}\`: I dragged parts of the drawing to show how the layout could look nicer. ` +
+			`Coordinates are svg pixels, y down; edge ends follow their nodes, but edges were not rerouted.\n\n` +
+			`Moved:\n${lines.join("\n") || "- nothing"}\n\nAll node centers after the moves:\n${nodes.join("\n")}\n`;
+	}
+	return { kind: "svg", el: wrap, key: () => false, undo, message, selected: () => false };
+}
+
+// parsePath returns the commands of a path of M, L and Q, as the svg
+// writer draws edges, with their points
+function parsePath(d) {
+	return [...d.matchAll(/([A-Za-z])([^A-Za-z]*)/g)].map(m => {
+		const n = (m[2].match(/-?[\d.]+(?:e-?\d+)?/g) || []).map(Number);
+		const pts = [];
+		for (let i = 0; i + 1 < n.length; i += 2) pts.push([n[i], n[i + 1]]);
+		return { c: m[1], pts };
+	});
+}
+
+function formatPath(cmds) {
+	return cmds.map(c => c.c + c.pts.map(p => p.map(v => Math.round(v * 100) / 100).join(",")).join(" ")).join(" ");
+}
+
+async function copyText(text) {
+	try {
+		await navigator.clipboard.writeText(text);
+		return true;
+	} catch {
+		const area = document.createElement("textarea");
+		area.value = text;
+		document.body.append(area);
+		area.select();
+		const ok = document.execCommand("copy");
+		area.remove();
+		return ok;
+	}
+}
+
+document.getElementById("edit").onclick = () => editor ? stopEdit() : startEdit();
+document.getElementById("undo").onclick = () => editor?.undo();
+document.getElementById("revert").onclick = () => { edits.delete(DATA.changes[current].path); startEdit(); };
+document.getElementById("copy").onclick = async () => {
+	if (!editor) return;
+	const button = document.getElementById("copy");
+	button.textContent = await copyText(editor.message()) ? "copied ✓" : "copy failed";
+	setTimeout(() => { button.textContent = "copy"; }, 1500);
+};
 
 // #n opens the drawing at n, so that a reload keeps the place
 if (/^#\d+$/.test(location.hash)) show(Number(location.hash.slice(1)));
