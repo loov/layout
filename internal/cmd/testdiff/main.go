@@ -6,6 +6,7 @@
 //	go run ./internal/cmd/testdiff          # the working tree against HEAD
 //	go run ./internal/cmd/testdiff <commit> # a commit against its parent
 //	go run ./internal/cmd/testdiff -all     # every drawing, changed or not
+//	go run ./internal/cmd/testdiff -title "option 1" # titled, to tell pages apart
 //
 // It writes the page to a temporary directory and opens it.
 package main
@@ -53,8 +54,9 @@ type Change struct {
 func main() {
 	noOpen := flag.Bool("n", false, "only write the page, don't open it")
 	all := flag.Bool("all", false, "show every drawing, also the ones that did not change")
+	name := flag.String("title", "", "title of the page, in place of what it compares")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [commit]")
+		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [-title title] [commit]")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -67,6 +69,9 @@ func main() {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "testdiff:", err)
 		os.Exit(1)
+	}
+	if *name != "" {
+		title = *name
 	}
 	if len(changes) == 0 {
 		if *all {
