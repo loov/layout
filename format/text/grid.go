@@ -54,6 +54,13 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	// straightening a line can clear the way for another
 	for !sideways && unjog(grid) {
 	}
+	// rows merge first, as taking a step out can block that, and again
+	// after, as it can clear the way
+	for merged := !sideways; merged; {
+		grid, merged = mergeRows(grid)
+	}
+	for !sideways && straighten(grid) {
+	}
 	for merged := !sideways; merged; {
 		grid, merged = mergeRows(grid)
 	}
@@ -110,6 +117,35 @@ func mergeRows(grid [][]cell) ([][]cell, bool) {
 	return grid, false
 }
 
+// straighten takes the first step of a line aside out, sliding the line
+// before or after it over, see slide. It returns whether it took one out.
+func straighten(grid [][]cell) bool {
+	for r, row := range grid {
+		for x, c := range row {
+			// the turn at the left end of a step
+			if c.lines&right == 0 || bits.OnesCount(uint(c.lines)) != 2 || c.lines&(up|down) == 0 {
+				continue
+			}
+			end := x + 1
+			for end < len(row) && row[end].lines == left|right {
+				end++
+			}
+			if end == len(row) || row[end].lines != left|opposite(c.lines&(up|down)) {
+				continue
+			}
+			for _, from := range []struct{ x, dx int }{{x, end - x}, {end, x - end}} {
+				if moves, ok := slide(grid, r, from.x, grid[r][from.x].lines&(up|down), from.dx); ok {
+					for _, m := range moves {
+						grid[m.r][m.x] = m.c
+					}
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // move is a cell to put at r, x
 type move struct {
 	r, x int
@@ -148,10 +184,15 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 				continue
 			}
 			p := at(y, c)
-			// toward the run it shrinks over its own run, away from it,
+			// toward the run it shrinks over its own run, onto the turn at
+			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
-			if dx*side > 0 && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
+			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(arms&(up|down)) && p.owner[bits.TrailingZeros(uint(opposite(run)))] == id
+			if dx*side > 0 && !end && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
 				return false
+			}
+			if end {
+				arms = up | down
 			}
 		}
 		line := cell{r: '─', fg: turn.fg, lines: left | right, owner: [4]int{id, id, id, id}}
@@ -176,12 +217,25 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 		switch {
 		case p == nil:
 			return nil, false
-		case p.lines == up|down && p.owner[0] == id && !p.solid:
-			// a cell off nodes, as unjog keeps
-			if !blank(y, x+dx) || solid(y, x+dx-1) || solid(y, x+dx+1) {
+		case p.lines&(up|down) == up|down && p.owner[0] == id && p.owner[1] == id && !p.solid:
+			// a line it crosses it crosses where it goes too, and leaves
+			// whole where it was; a cell off nodes, as unjog keeps
+			q := at(y, x+dx)
+			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.lines == left|right && q.owner[2] != id
+			if (p.lines != up|down && p.lines != up|down|left|right) || !blank(y, x+dx) && !across || solid(y, x+dx-1) || solid(y, x+dx+1) {
 				return nil, false
 			}
-			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, vertical})
+			was := cell{r: ' '}
+			if p.lines != up|down {
+				was = *p
+				was.r, was.lines, was.owner[0], was.owner[1] = '─', left|right, 0, 0
+			}
+			to := vertical
+			if across {
+				to = *q
+				to.r, to.lines, to.owner[0], to.owner[1] = '╂', up|down|left|right, id, id
+			}
+			moves = append(moves, move{y, x, was}, move{y, x + dx, to})
 			continue
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
