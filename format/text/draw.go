@@ -664,19 +664,44 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 		if cluster.Label == "" || cluster.Invisible {
 			continue
 		}
-		// the label goes on the frame after carving, see frameLabels, in
-		// the run of frame from the corner, which carving keeps as long
+		// the label goes on the frame after carving, see frameLabels, at
+		// the first place along the top, else along the bottom, where the
+		// lines that cross the frame fall on spaces of it; carving keeps
+		// those cells
 		b := c.clusterBox(i)
 		text := " " + clusterLabel(cluster) + " "
-		run := 0
-		for p := c.at(b[0]+1, b[1]); p != nil && strings.ContainsRune("┈┉", p.r); p = c.at(b[0]+1+run, b[1]) {
-			run++
-		}
-		if w := draw.Columns(text); run >= w {
-			for x := range run {
-				c.at(b[0]+1+x, b[1]).need = w
+		var runes []rune
+		for _, r := range text {
+			switch {
+			case draw.IsZeroWidth(r), unicode.IsControl(r):
+			case draw.IsWide(r):
+				runes = append(runes, r, covered)
+			default:
+				runes = append(runes, r)
 			}
-			c.at(b[0]+1, b[1]).label = i + 1
+		}
+		fits := func(x, y int) bool {
+			for j, r := range runes {
+				p := c.at(x+j, y)
+				if p == nil || x+j >= b[2] || !strings.ContainsRune("┈┉", p.r) && !(r == ' ' && p.lines&(up|down) != 0) {
+					return false
+				}
+			}
+			return true
+		}
+		placed := false
+		for _, y := range []int{b[1], b[3]} {
+			for x := b[0] + 1; x < b[2] && !placed; x++ {
+				if fits(x, y) {
+					for j := range runes {
+						c.at(x+j, y).need = len(runes)
+					}
+					c.at(x, y).label = i + 1
+					placed = true
+				}
+			}
+		}
+		if placed {
 			continue
 		}
 		c.pen = pen{}
@@ -696,6 +721,8 @@ func (c *canvas) frameLabels(grid [][]cell) {
 			for _, r := range " " + clusterLabel(c.l.Graph.Clusters[id-1]) + " " {
 				switch {
 				case draw.IsZeroWidth(r), unicode.IsControl(r):
+				case row[x].lines&(up|down) != 0:
+					x++ // a line that crosses the frame, on a space, stays
 				case draw.IsWide(r):
 					row[x].r, row[x].fg, row[x+1].r = r, 0, covered
 					x += 2
