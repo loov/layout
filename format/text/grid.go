@@ -24,8 +24,8 @@ type cell struct {
 // carve tightens the drawing along seams: it removes a cell from every
 // column, and then from every row, as long as some seam can go through
 // cells that only continue the straight lines across it or blanks, and
-// repeat the cells before them. At most one such row and two such
-// columns stay of every run, as cells are about twice as tall as wide.
+// repeat the cells before them. At most one such row or column stays of
+// every run.
 // Seams across the ranks go straight, rows when ranks are rows and
 // columns when they are sideways, so that the nodes of a rank stay in
 // line. Seams along the ranks turn, but not between cells that are
@@ -47,7 +47,7 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	// the stubs of lines leaving a node go last: lines can still run
 	// further along them while the columns are carved
 	grid = rows(grid, false)
-	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 2, !sideways, true, false, down, up)
+	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 1, !sideways, true, false, down, up)
 	return rows(grid, true)
 }
 
@@ -74,9 +74,11 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 		jog      = 1 << 16 // crossing a straight line, which bends it
 		extend   = 4       // crossing a line where it turns
 	)
-	// the directions along the lines, toward the start and the end
+	// the directions along the lines, toward the start and the end; the
+	// lines run across the ranks when they are columns, see carve
 	lo, hi := left, right
-	if next&(left|right) != 0 {
+	across := next&(left|right) != 0
+	if across {
 		lo, hi = up, down
 	}
 	// crossings that failed to jog, by line and cell, until a seam is cut
@@ -125,7 +127,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 				// needs no cell between, unless an arrowhead follows; and
 				// a node needs no blank under it where what follows is
 				// blank or drawn by an edge that leaves the node there
-				if keep == 1 && x > 0 && x+1 < len(line) && !strings.ContainsRune(markers, line[x+1].r) {
+				if across && x > 0 && x+1 < len(line) && !strings.ContainsRune(markers, line[x+1].r) {
 					// or, with stubs, that goes on straight, which keeps a
 					// cell of it
 					if c.r == glyph(lo|hi, 0) && arms(line[x-1].r)&hi != 0 && arms(line[x+1].r)&lo != 0 &&
