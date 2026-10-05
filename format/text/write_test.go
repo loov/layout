@@ -557,3 +557,49 @@ func TestWriteDeterministic(t *testing.T) {
 		}
 	}
 }
+
+// TestUnjogJunction checks that a line leaving a junction along its row
+// and stepping aside after it steps once, on the row of the junction,
+// which stays.
+func TestUnjogJunction(t *testing.T) {
+	grid := func(s string) [][]cell {
+		var g [][]cell
+		for _, line := range strings.Split(strings.Trim(s, "\n"), "\n") {
+			var row []cell
+			for _, r := range line {
+				row = append(row, cell{r: r, lines: arms(r)})
+			}
+			g = append(g, row)
+		}
+		return g
+	}
+	text := func(g [][]cell) string {
+		var b strings.Builder
+		for _, row := range g {
+			for _, c := range row {
+				b.WriteRune(c.r)
+			}
+			b.WriteByte('\n')
+		}
+		return b.String()
+	}
+	g := grid(`
+  │          
+  ├───╮      
+  │   │      
+  │   ╰─────╮
+  │         │
+`)
+	for unjog(g) {
+	}
+	want := text(grid(`
+  │          
+  ├─────────╮
+  │         │
+  │         │
+  │         │
+`))
+	if got := text(g); got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
+	}
+}
