@@ -41,3 +41,17 @@ func TestValidateNumbers(t *testing.T) {
 		}
 	}
 }
+
+func TestHierarchicalErrors(t *testing.T) {
+	graph := layout.NewDigraph()
+	stray := layout.NewNode("stray")
+	graph.AddEdge(layout.NewEdge(graph.Node("A"), stray))
+	if _, err := layout.Hierarchical(graph, layout.Options{}); err == nil {
+		t.Error("expected an error for an edge to a node outside the graph")
+	}
+	graph = layout.NewDigraph()
+	graph.AddEdge(&layout.Edge{From: graph.Node("A")})
+	if _, err := layout.Hierarchical(graph, layout.Options{}); err == nil {
+		t.Error("expected an error for a nil endpoint")
+	}
+}
