@@ -7,7 +7,8 @@
 //  2. Rank assigns each node a rank (row), tightens and balances them.
 //  3. AddVirtuals splits edges spanning several ranks with virtual nodes.
 //  4. OrderRanks orders nodes within ranks to reduce edge crossings.
-//  5. Position assigns coordinates using the Brandes-Köpf algorithm.
+//  5. Position assigns coordinates by network simplex, as Graphviz dot
+//     does, or by Brandes-Köpf when aligned to a side.
 //
 // The package layout drives the stages in that order.
 package hier

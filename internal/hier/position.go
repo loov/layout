@@ -9,8 +9,8 @@ import (
 type Align int
 
 const (
-	// Balanced centers nodes among their neighbors, from the median of
-	// the four Brandes-Köpf layouts
+	// Balanced centers nodes among their neighbors, keeping long edges
+	// straight and the layout narrow, see positionSimplex
 	Balanced Align = iota
 	// Left lines nodes up with their first neighbor in the rank above
 	// and packs them to the left
@@ -20,10 +20,11 @@ const (
 	Right
 )
 
-// Position assigns node centers: rows by rank height, columns by
-// Brandes-Köpf as align picks. With straighten, virtual nodes of long
-// edges move so that the edges run diagonally; orthogonal routing wants
-// them where Brandes-Köpf aligns them, in line with an end, to save bends.
+// Position assigns node centers: rows by rank height, columns by network
+// simplex when balanced and by Brandes-Köpf when aligned left or right.
+// With straighten, virtual nodes of long edges move so that the edges run
+// diagonally; orthogonal routing wants them where positioning aligns
+// them, in line with an end, to save bends.
 func Position(graph *Graph, straighten bool, align Align) {
 	PositionInitial(graph)
 	if len(graph.Nodes) == 0 {
@@ -37,7 +38,7 @@ func Position(graph *Graph, straighten bool, align Align) {
 			node.Center.X = xs[node.ID]
 		}
 	default:
-		positionBalanced(graph)
+		positionSimplex(graph)
 	}
 	if straighten {
 		StraightenChains(graph)
@@ -46,9 +47,9 @@ func Position(graph *Graph, straighten bool, align Align) {
 	AlignClusterBorders(graph)
 }
 
-// positionBalanced sets x to the average of the two median x of the four
+// balancedKoepf returns the average of the two median x of the four
 // Brandes-Köpf layouts, after lining them up with the narrowest one
-func positionBalanced(graph *Graph) {
+func balancedKoepf(graph *Graph) []float32 {
 	// four alignments: up/down x left/right
 	var xs [4][]float32
 	for i := range xs {
@@ -76,11 +77,13 @@ func positionBalanced(graph *Graph) {
 		}
 	}
 
+	x := make([]float32, len(graph.Nodes))
 	for _, node := range graph.Nodes {
 		v := []float32{xs[0][node.ID], xs[1][node.ID], xs[2][node.ID], xs[3][node.ID]}
 		slices.Sort(v)
-		node.Center.X = (v[1] + v[2]) / 2
+		x[node.ID] = (v[1] + v[2]) / 2
 	}
+	return x
 }
 
 // StraightenChains moves virtual nodes towards the midpoint of their
@@ -298,5 +301,121 @@ func flushLeft(graph *Graph) {
 	}
 	for _, node := range graph.Nodes {
 		node.Center.X -= minleft
+	}
+}
+
+// widthWeight is what the width of the layout costs against the length of
+// edges along the ranks, and settleWeight what it costs a node to be away
+// from where balanced Brandes-Köpf puts it, see positionSimplex
+const (
+	widthWeight  = 1
+	settleWeight = 1.0 / 64
+)
+
+// positionSimplex sets x by network simplex on an auxiliary graph, as
+// Gansner et al. section 4.2 do: every edge gets a vertex below both of its
+// ends, so that the cost of the edge is how far apart its ends are, and
+// neighbors in a rank stay apart by their widths. Edges between virtual
+// nodes weigh more, so that long edges run straight. The width of the
+// layout costs too, so that a long edge bends rather than holding a gap
+// open across every rank.
+//
+// Many layouts can cost the same, such as with a node anywhere between
+// its two children; a slight pull towards where balanced Brandes-Köpf
+// puts each node picks the one that centers nodes among their neighbors.
+func positionSimplex(graph *Graph) {
+	n := graph.NodeCount()
+	edges := 0
+	for _, node := range graph.Nodes {
+		edges += len(node.Out)
+	}
+	// two more vertices bound the ranks on the left and the right, and
+	// the edge between them costs the width of the drawing; the left one
+	// is also where the pulls are measured from
+	s := &simplex{n: int32(n + edges + 2 + n)}
+	lft, rgt := int32(n+edges), int32(n+edges+1)
+	s.addEdge(lft, rgt, widthWeight, 0)
+	settle := balancedKoepf(graph)
+	low := float32(math.Inf(1)) // the left side, where nodes reach to
+	for _, node := range graph.Nodes {
+		low = min(low, settle[node.ID]-node.Radius.X)
+	}
+	for _, node := range graph.Nodes {
+		if node.Virtual {
+			continue
+		}
+		at := settle[node.ID] - low + node.Anchor
+		pull := int32(n+edges+2) + int32(node.ID)
+		// costs how far the node is from at past the left side
+		s.addEdge(pull, int32(node.ID), settleWeight, int32(math.Round(float64(at))))
+		s.addEdge(pull, lft, settleWeight, 0)
+	}
+	for _, layer := range graph.ByRank {
+		if len(layer) > 0 {
+			first, last := layer[0], layer[len(layer)-1]
+			s.addEdge(lft, int32(first.ID), 0, int32(math.Ceil(float64(first.Radius.X+first.Anchor))))
+			s.addEdge(int32(last.ID), rgt, 0, int32(math.Ceil(float64(last.Radius.X-last.Anchor))))
+		}
+		for i := 1; i < len(layer); i++ {
+			a, b := layer[i-1], layer[i]
+			// anchors line up, a node reaches Radius.X past its center
+			gap := a.Radius.X - a.Anchor + b.Radius.X + b.Anchor
+			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(math.Ceil(float64(gap))))
+		}
+	}
+	weight := func(src, dst *Node) float32 {
+		omega := float32(1)
+		switch {
+		case src.Virtual && dst.Virtual:
+			omega = 8
+		case src.Virtual || dst.Virtual:
+			omega = 2
+		}
+		return omega * graph.Weight(src, dst)
+	}
+	v := int32(n)
+	for _, src := range graph.Nodes {
+		for _, dst := range src.Out {
+			w := weight(src, dst)
+			s.addEdge(v, int32(src.ID), w, 0)
+			s.addEdge(v, int32(dst.ID), w, 0)
+			v++
+		}
+	}
+	s.run()
+
+	// fans: a node with several children goes over the middle of them,
+	// from the bottom up, as far as its neighbors in the rank let it
+	x := make([]float32, n)
+	for _, node := range graph.Nodes {
+		x[node.ID] = float32(s.rank[node.ID])
+	}
+	lo, hi := float32(s.rank[lft]), float32(s.rank[rgt])
+	for r := len(graph.ByRank) - 1; r >= 0; r-- {
+		layer := graph.ByRank[r]
+		for i, node := range layer {
+			if node.Virtual || len(node.Out) < 2 {
+				continue
+			}
+			first, last := float32(math.Inf(1)), float32(math.Inf(-1))
+			for _, child := range node.Out {
+				first, last = min(first, x[child.ID]), max(last, x[child.ID])
+			}
+			left, right := lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor
+			if i > 0 {
+				a := layer[i-1]
+				left = x[a.ID] + float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor)))
+			}
+			if i+1 < len(layer) {
+				b := layer[i+1]
+				right = x[b.ID] - float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor)))
+			}
+			if left <= right {
+				x[node.ID] = min(max((first+last)/2, left), right)
+			}
+		}
+	}
+	for _, node := range graph.Nodes {
+		node.Center.X = x[node.ID] - node.Anchor
 	}
 }

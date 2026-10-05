@@ -140,7 +140,8 @@ type Options struct {
 type Align int
 
 const (
-	// AlignBalanced centers nodes among their neighbors.
+	// AlignBalanced centers nodes among their neighbors, keeping long
+	// edges straight and the layout narrow.
 	AlignBalanced Align = iota
 	// AlignLeft puts nodes over their first neighbor in the rank before
 	// and packs the layout to the left.
@@ -694,7 +695,10 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	}
 
 	// a labeled edge between neighbors on a rank needs room between them
-	// for its label, on the right of the left one as for loops
+	// for its label, on the right of the left one as for loops, and below
+	// the edge within the rank, which it may be taller than, see the
+	// labels of edges along a rank
+	flatBelow := map[*lnode]Length{}
 	for _, edge := range graphdef.Edges {
 		from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
 		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || max(from.Pos-to.Pos, to.Pos-from.Pos) != 1 {
@@ -706,6 +710,9 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		}
 		// neighbors are already two node paddings apart
 		loopExtra[left] += max(0, 2*(edge.LabelRadius.X+graphdef.EdgePadding-graphdef.NodePadding))
+		below := graphdef.EdgePadding + 2*edge.LabelRadius.Y
+		flatBelow[edge.From] = max(flatBelow[edge.From], below)
+		flatBelow[edge.To] = max(flatBelow[edge.To], below)
 	}
 
 	// assign node sizes
@@ -735,7 +742,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		// difference, where its edges line up with the neighbors
 		node.Radius.X += float32((loopExtra[nodedef] + loopLeft[nodedef]) / 2)
 		node.Anchor = float32(loopShift(nodedef) + packed(nodedef))
-		node.Radius.Y = float32(nodedef.Radius.Y + graphdef.RowPadding)
+		node.Radius.Y = float32(max(nodedef.Radius.Y, flatBelow[nodedef]) + graphdef.RowPadding)
 	}
 
 	// reserve room for the cluster box lines and the label strip by making
@@ -870,6 +877,10 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		for _, out := range source.Out {
 			path := []Vector{}
 			path = append(path, sourcedef.BottomCenter().Add(Vector{X: packed(sourcedef)}))
+			if below := sourcedef.Center.Y + flatBelow[sourcedef]; graphdef.Splines != SplinesOrtho && below > path[0].Y {
+				// past the label beside the node first, see flatBelow
+				path = append(path, Vector{path[0].X, below})
+			}
 
 			target := out
 			for target != nil && target.Virtual {
@@ -1110,11 +1121,17 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		}
 	}
 	// labels of edges along a rank have no node of their own; they go
-	// above the middle of the topmost segment, between neighbors in the
-	// room made for them and outside an arc
+	// above the middle of the topmost segment, outside an arc, or between
+	// neighbors in the room made for them, below the edge, away from the
+	// arcs over them
 	for _, edge := range graphdef.Edges {
 		from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
 		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
+			continue
+		}
+		if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {
+			a, b := edge.Path[0], edge.Path[len(edge.Path)-1]
+			edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: max(a.Y, b.Y) + graphdef.EdgePadding + edge.LabelRadius.Y}
 			continue
 		}
 		top := 0

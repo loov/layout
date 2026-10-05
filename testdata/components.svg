@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='334.56' height='192'>
+<svg xmlns='http://www.w3.org/2000/svg' width='350.56' height='192'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,11 +15,11 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56.698177,46.23669 L38.64111,81.44337 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M71.30183,46.23669 L89.35889,81.44337 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M190.31242,47.297928 L180.12605,80.54116 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M180.68758,111.29793 L190.77289,144.5685 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M199.65384,144.69177 L206.82698,120.34567 Q214,96 206.77678,71.669174 L199.55357,47.33835 '></path><ellipse cx='64' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='64' y='32' font-size='14' fill='#000000'>A</text>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56.698177,46.23669 L38.64111,81.44337 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M71.30183,46.23669 L89.35889,81.44337 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M190.31242,47.297928 L180.12605,80.54116 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M184.30539,109.67554 L205.8985,146.2027 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M214.50487,144.00797 L214.25244,120.00398 Q214,96 207.16814,72.98738 L199.55357,47.33835 '></path><ellipse cx='64' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='64' y='32' font-size='14' fill='#000000'>A</text>
 <ellipse cx='32' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' fill='#000000'>B</text>
 <ellipse cx='96' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' fill='#000000'>C</text>
 <ellipse cx='195' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='195' y='32' font-size='14' fill='#000000'>X</text>
 <ellipse cx='176' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='176' y='96' font-size='14' fill='#000000'>Y</text>
-<ellipse cx='195' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='195' y='160' font-size='14' fill='#000000'>Z</text>
-<ellipse cx='290.28' cy='32' rx='28.28' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='290.28' y='32' font-size='14' fill='#000000'>Lonely</text>
+<ellipse cx='214' cy='160' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='214' y='160' font-size='14' fill='#000000'>Z</text>
+<ellipse cx='306.28' cy='32' rx='28.28' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='306.28' y='32' font-size='14' fill='#000000'>Lonely</text>
 </g></svg>
