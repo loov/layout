@@ -21,6 +21,9 @@ type Graph struct {
 	minlens map[[2]ID]int32
 	// Ranking
 	ByRank []Nodes
+	// FamilyGap keeps neighbors in a rank that have parents, but share
+	// none, further apart, so that the children of a node stay together
+	FamilyGap float32
 	// EndGap is how far apart packed ends of edges on a side of a node
 	// are, from its anchor on, within its EndRoom; 0 when they aren't
 	// packed, see Position

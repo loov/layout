@@ -810,6 +810,14 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		// see the slots of packed ends in orthoEdges; merged ends share one
 		positionedGraph.EndGap = float32(graphdef.EdgePadding)
 	}
+	if graphdef.ForText && graphdef.MergeEdges {
+		// a cell between the fans of different nodes, as merged edges
+		// center a node's children on it
+		positionedGraph.FamilyGap = float32(graphdef.cellWidth())
+		if sideways(graphdef.RankDir) {
+			positionedGraph.FamilyGap = float32(graphdef.LineHeight)
+		}
+	}
 	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, graphdef.MergeEdges, align)
 
 	// assign final positions, off the center of nodes widened for loops
