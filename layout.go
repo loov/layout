@@ -820,346 +820,354 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	}
 	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, graphdef.MergeEdges, align)
 
-	// assign final positions, off the center of nodes widened for loops
-	for nodedef, id := range nodes {
-		node := positionedGraph.Nodes[id]
-		nodedef.Center.X = Length(node.Center.X) + loopShift(nodedef)
-		nodedef.Center.Y = Length(node.Center.Y)
-	}
+	// finish places the nodes, clusters, edges and labels where the
+	// positions in positionedGraph put them
+	finish := func() {
+		// assign final positions, off the center of nodes widened for loops
+		for nodedef, id := range nodes {
+			node := positionedGraph.Nodes[id]
+			nodedef.Center.X = Length(node.Center.X) + loopShift(nodedef)
+			nodedef.Center.Y = Length(node.Center.Y)
+		}
 
-	// cluster boxes span their borders horizontally and their members
-	// vertically, with room for the label on top; inner boxes are
-	// finished first so that outer boxes can enclose them. A box side
-	// keeps to the inner half of its border, so that the boxes of
-	// neighboring borders are apart.
-	byDepth := slices.Clone(graphdef.Clusters)
-	slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
-	for _, clusterdef := range byDepth {
-		clusterdef.TopLeft = Vector{Length(math.Inf(1)), Length(math.Inf(1))}
-		clusterdef.BottomRight = Vector{Length(math.Inf(-1)), Length(math.Inf(-1))}
-	}
-	for _, clusterdef := range byDepth {
-		cluster := clusters[clusterdef]
-		left, right := Length(math.Inf(1)), Length(math.Inf(-1))
-		for i := range cluster.Left {
-			left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X/2))
-			right = max(right, Length(cluster.Right[i].Center.X+cluster.Right[i].Radius.X/2))
+		// cluster boxes span their borders horizontally and their members
+		// vertically, with room for the label on top; inner boxes are
+		// finished first so that outer boxes can enclose them. A box side
+		// keeps to the inner half of its border, so that the boxes of
+		// neighboring borders are apart.
+		byDepth := slices.Clone(graphdef.Clusters)
+		slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
+		for _, clusterdef := range byDepth {
+			clusterdef.TopLeft = Vector{Length(math.Inf(1)), Length(math.Inf(1))}
+			clusterdef.BottomRight = Vector{Length(math.Inf(-1)), Length(math.Inf(-1))}
 		}
-		top, bottom := Length(math.Inf(1)), Length(math.Inf(-1))
-		for _, nodedef := range clusterdef.Nodes {
-			top = min(top, nodedef.Top())
-			bottom = max(bottom, nodedef.Bottom())
-		}
-		top -= graphdef.RowPadding / 2
-		bottom += graphdef.RowPadding / 2
-		// enclose nested boxes
-		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
-		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
-		switch {
-		case clusterdef.Label == "":
-		case sideways(graphdef.RankDir):
-			if short := labelSpan(clusterdef) - (bottom - top); short > 0 {
-				top, bottom = top-short/2, bottom+short/2
+		for _, clusterdef := range byDepth {
+			cluster := clusters[clusterdef]
+			left, right := Length(math.Inf(1)), Length(math.Inf(-1))
+			for i := range cluster.Left {
+				left = min(left, Length(cluster.Left[i].Center.X-cluster.Left[i].Radius.X/2))
+				right = max(right, Length(cluster.Right[i].Center.X+cluster.Right[i].Radius.X/2))
 			}
-		default:
-			top -= 2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y
-		}
-		clusterdef.TopLeft = Vector{left, top}
-		clusterdef.BottomRight = Vector{right, bottom}
-		if parent := clusterdef.Parent; parent != nil {
-			pad := graphdef.RowPadding / 2
-			parent.TopLeft = Vector{min(parent.TopLeft.X, left), min(parent.TopLeft.Y, top-pad)}
-			parent.BottomRight = Vector{max(parent.BottomRight.X, right), max(parent.BottomRight.Y, bottom+pad)}
-		}
-	}
-
-	// real nodes per rank, obstacles for edge routing
-	byRank := make([][]*lnode, len(positionedGraph.ByRank))
-	for _, node := range positionedGraph.Nodes {
-		if !node.Virtual {
-			byRank[node.Rank] = append(byRank[node.Rank], reverse[node.ID])
-		}
-	}
-	obstacles := newObstacles(byRank, graphdef.EdgePadding)
-
-	// calculate edges
-	edgePaths := map[[2]hier.ID][]Vector{}
-	for _, source := range positionedGraph.Nodes {
-		if source.Virtual {
-			continue
-		}
-
-		sourcedef := reverse[source.ID]
-		for _, out := range source.Out {
-			path := []Vector{}
-			path = append(path, sourcedef.BottomCenter().Add(Vector{X: packed(sourcedef)}))
-			if below := sourcedef.Center.Y + flatBelow[sourcedef]; graphdef.Splines != SplinesOrtho && below > path[0].Y {
-				// past the label beside the node first, see flatBelow
-				path = append(path, Vector{path[0].X, below})
+			top, bottom := Length(math.Inf(1)), Length(math.Inf(-1))
+			for _, nodedef := range clusterdef.Nodes {
+				top = min(top, nodedef.Top())
+				bottom = max(bottom, nodedef.Bottom())
 			}
-
-			target := out
-			for target != nil && target.Virtual {
-				if len(target.Out) < 1 { // should never happen
-					target = nil
-					break
+			top -= graphdef.RowPadding / 2
+			bottom += graphdef.RowPadding / 2
+			// enclose nested boxes
+			left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
+			right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
+			switch {
+			case clusterdef.Label == "":
+			case sideways(graphdef.RankDir):
+				if short := labelSpan(clusterdef) - (bottom - top); short > 0 {
+					top, bottom = top-short/2, bottom+short/2
 				}
-
-				point := Vector{Length(target.Center.X), Length(target.Center.Y)}
-				if edges, ok := labelNode[target]; ok {
-					point.X = Length(target.Center.X + target.Anchor)
-					// labels sit right beside the line, stacked vertically
-					// around the node's center
-					var height Length
-					for _, edge := range edges {
-						height += 2 * edge.LabelRadius.Y
-					}
-					y := point.Y - height/2
-					side := Length(labelSide(graphdef.RankDir))
-					for _, edge := range edges {
-						edge.LabelPos = Vector{X: point.X + side*(graphdef.EdgePadding+edge.LabelRadius.X), Y: y + edge.LabelRadius.Y}
-						y += 2 * edge.LabelRadius.Y
-					}
-				}
-				path = append(path, point)
-
-				target = target.Out[0]
+			default:
+				top -= 2 * graphdef.textRadius(clusterdef.Label, "", graphdef.FontSize).Y
 			}
-			if target == nil {
+			clusterdef.TopLeft = Vector{left, top}
+			clusterdef.BottomRight = Vector{right, bottom}
+			if parent := clusterdef.Parent; parent != nil {
+				pad := graphdef.RowPadding / 2
+				parent.TopLeft = Vector{min(parent.TopLeft.X, left), min(parent.TopLeft.Y, top-pad)}
+				parent.BottomRight = Vector{max(parent.BottomRight.X, right), max(parent.BottomRight.Y, bottom+pad)}
+			}
+		}
+
+		// real nodes per rank, obstacles for edge routing
+		byRank := make([][]*lnode, len(positionedGraph.ByRank))
+		for _, node := range positionedGraph.Nodes {
+			if !node.Virtual {
+				byRank[node.Rank] = append(byRank[node.Rank], reverse[node.ID])
+			}
+		}
+		obstacles := newObstacles(byRank, graphdef.EdgePadding)
+
+		// calculate edges
+		edgePaths := map[[2]hier.ID][]Vector{}
+		for _, source := range positionedGraph.Nodes {
+			if source.Virtual {
 				continue
 			}
 
-			targetdef := reverse[target.ID]
-			path = append(path, targetdef.TopCenter().Add(Vector{X: packed(targetdef)}))
+			sourcedef := reverse[source.ID]
+			for _, out := range source.Out {
+				path := []Vector{}
+				path = append(path, sourcedef.BottomCenter().Add(Vector{X: packed(sourcedef)}))
+				if below := sourcedef.Center.Y + flatBelow[sourcedef]; graphdef.Splines != SplinesOrtho && below > path[0].Y {
+					// past the label beside the node first, see flatBelow
+					path = append(path, Vector{path[0].X, below})
+				}
 
-			// clip ends to node outlines so fan-ins don't converge on one
-			// point; packed ends stay at the first end, where they line up
-			if !pack {
-				path[0] = sourcedef.Boundary(path[1])
-				path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+				target := out
+				for target != nil && target.Virtual {
+					if len(target.Out) < 1 { // should never happen
+						target = nil
+						break
+					}
+
+					point := Vector{Length(target.Center.X), Length(target.Center.Y)}
+					if edges, ok := labelNode[target]; ok {
+						point.X = Length(target.Center.X + target.Anchor)
+						// labels sit right beside the line, stacked vertically
+						// around the node's center
+						var height Length
+						for _, edge := range edges {
+							height += 2 * edge.LabelRadius.Y
+						}
+						y := point.Y - height/2
+						side := Length(labelSide(graphdef.RankDir))
+						for _, edge := range edges {
+							edge.LabelPos = Vector{X: point.X + side*(graphdef.EdgePadding+edge.LabelRadius.X), Y: y + edge.LabelRadius.Y}
+							y += 2 * edge.LabelRadius.Y
+						}
+					}
+					path = append(path, point)
+
+					target = target.Out[0]
+				}
+				if target == nil {
+					continue
+				}
+
+				targetdef := reverse[target.ID]
+				path = append(path, targetdef.TopCenter().Add(Vector{X: packed(targetdef)}))
+
+				// clip ends to node outlines so fan-ins don't converge on one
+				// point; packed ends stay at the first end, where they line up
+				if !pack {
+					path[0] = sourcedef.Boundary(path[1])
+					path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+				}
+
+				if graphdef.Splines != SplinesOrtho {
+					// orthogonal edges run on virtual node columns and rank
+					// channels, which are free of nodes by construction
+					path = routeAround(path, obstacles, sourcedef, targetdef, graphdef.EdgePadding)
+					path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
+				}
+
+				edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 			}
+		}
 
-			if graphdef.Splines != SplinesOrtho {
-				// orthogonal edges run on virtual node columns and rank
-				// channels, which are free of nodes by construction
-				path = routeAround(path, obstacles, sourcedef, targetdef, graphdef.EdgePadding)
-				path = routeAroundClusters(path, graphdef.Clusters, sourcedef, targetdef, graphdef.EdgePadding)
+		// flat edges run sideways along the rank, arcing over nodes in between;
+		// overlapping arcs stack, narrower ones below
+		type arc struct {
+			flat   [2]*hier.Node
+			lo, hi Length
+			top    Length
+			level  int
+		}
+		var arcs []*arc
+		for _, flat := range positionedGraph.Flat {
+			sourcedef, targetdef := reverse[flat[0].ID], reverse[flat[1].ID]
+			if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) <= 1 {
+				path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
+				edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
+				continue
 			}
-
-			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
-		}
-	}
-
-	// flat edges run sideways along the rank, arcing over nodes in between;
-	// overlapping arcs stack, narrower ones below
-	type arc struct {
-		flat   [2]*hier.Node
-		lo, hi Length
-		top    Length
-		level  int
-	}
-	var arcs []*arc
-	for _, flat := range positionedGraph.Flat {
-		sourcedef, targetdef := reverse[flat[0].ID], reverse[flat[1].ID]
-		if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) <= 1 {
-			path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
-			edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
-			continue
-		}
-		a := &arc{flat: flat, top: min(sourcedef.Top(), targetdef.Top())}
-		a.lo, a.hi = min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
-		for _, node := range byRank[flat[0].Rank] {
-			if node.Center.X > a.lo && node.Center.X < a.hi {
-				a.top = min(a.top, node.Top())
-			}
-		}
-		arcs = append(arcs, a)
-	}
-	slices.SortStableFunc(arcs, func(a, b *arc) int { return cmp.Compare(a.hi-a.lo, b.hi-b.lo) })
-	for i, a := range arcs {
-		for _, below := range arcs[:i] {
-			if below.flat[0].Rank == a.flat[0].Rank && below.lo <= a.hi && a.lo <= below.hi {
-				a.level = max(a.level, below.level+1)
-				a.top = min(a.top, below.top)
-			}
-		}
-		sourcedef, targetdef := reverse[a.flat[0].ID], reverse[a.flat[1].ID]
-		y := a.top - 2*graphdef.EdgePadding*Length(a.level+1)
-		edgePaths[[2]hier.ID{a.flat[0].ID, a.flat[1].ID}] = []Vector{
-			sourcedef.TopCenter(),
-			{sourcedef.Center.X, y},
-			{targetdef.Center.X, y},
-			targetdef.TopCenter(),
-		}
-	}
-
-	// edges between the same pair of nodes share one route; spread them out
-	pairKey := func(edge *ledge) [2]hier.ID {
-		a, b := nodes[edge.From], nodes[edge.To]
-		if a > b {
-			a, b = b, a
-		}
-		return [2]hier.ID{a, b}
-	}
-	pairCount := map[[2]hier.ID]int{}
-	for _, edge := range graphdef.Edges {
-		pairCount[pairKey(edge)]++
-	}
-	pairIndex := map[[2]hier.ID]int{}
-	loops := countLoops(graphdef.Edges)
-
-	for _, edge := range graphdef.Edges {
-		sourceid := nodes[edge.From]
-		targetid := nodes[edge.To]
-
-		if sourceid == targetid {
-			edge.Path = loopPath(edge, loopWidth, loopHeight, loops.next(edge), loops.count[edge.From])
-			// beside the far side of the loop
-			loopMid := (edge.Path[0].Y + edge.Path[len(edge.Path)-1].Y) / 2
-			edge.LabelPos = Vector{X: edge.From.Right() + loopWidth + graphdef.EdgePadding + edge.LabelRadius.X, Y: loopMid}
-			if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
-				// ported loops can sit on any side; label the middle of the loop
-				p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
-				mid := Vector{X: (p.X + q.X) / 2, Y: (p.Y + q.Y) / 2}
-				d := mid.Sub(edge.From.Center)
-				if n := Length(math.Hypot(float64(d.X), float64(d.Y))); n > 0 {
-					d = Vector{X: d.X / n, Y: d.Y / n}
-					gap := graphdef.EdgePadding + Length(math.Abs(float64(d.X)))*edge.LabelRadius.X + Length(math.Abs(float64(d.Y)))*edge.LabelRadius.Y
-					edge.LabelPos = mid.Add(Vector{X: d.X * gap, Y: d.Y * gap})
+			a := &arc{flat: flat, top: min(sourcedef.Top(), targetdef.Top())}
+			a.lo, a.hi = min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
+			for _, node := range byRank[flat[0].Rank] {
+				if node.Center.X > a.lo && node.Center.X < a.hi {
+					a.top = min(a.top, node.Top())
 				}
 			}
-			continue
+			arcs = append(arcs, a)
+		}
+		slices.SortStableFunc(arcs, func(a, b *arc) int { return cmp.Compare(a.hi-a.lo, b.hi-b.lo) })
+		for i, a := range arcs {
+			for _, below := range arcs[:i] {
+				if below.flat[0].Rank == a.flat[0].Rank && below.lo <= a.hi && a.lo <= below.hi {
+					a.level = max(a.level, below.level+1)
+					a.top = min(a.top, below.top)
+				}
+			}
+			sourcedef, targetdef := reverse[a.flat[0].ID], reverse[a.flat[1].ID]
+			y := a.top - 2*graphdef.EdgePadding*Length(a.level+1)
+			edgePaths[[2]hier.ID{a.flat[0].ID, a.flat[1].ID}] = []Vector{
+				sourcedef.TopCenter(),
+				{sourcedef.Center.X, y},
+				{targetdef.Center.X, y},
+				targetdef.TopCenter(),
+			}
 		}
 
-		var path []Vector
-		if p, ok := edgePaths[[2]hier.ID{sourceid, targetid}]; ok {
-			path = p
-		} else if p, ok := edgePaths[[2]hier.ID{targetid, sourceid}]; ok {
-			path = reversePath(p) // the edge was reversed to break a cycle
-		} else {
-			continue
+		// edges between the same pair of nodes share one route; spread them out
+		pairKey := func(edge *ledge) [2]hier.ID {
+			a, b := nodes[edge.From], nodes[edge.To]
+			if a > b {
+				a, b = b, a
+			}
+			return [2]hier.ID{a, b}
+		}
+		pairCount := map[[2]hier.ID]int{}
+		for _, edge := range graphdef.Edges {
+			pairCount[pairKey(edge)]++
+		}
+		pairIndex := map[[2]hier.ID]int{}
+		loops := countLoops(graphdef.Edges)
+
+		for _, edge := range graphdef.Edges {
+			sourceid := nodes[edge.From]
+			targetid := nodes[edge.To]
+
+			if sourceid == targetid {
+				edge.Path = loopPath(edge, loopWidth, loopHeight, loops.next(edge), loops.count[edge.From])
+				// beside the far side of the loop
+				loopMid := (edge.Path[0].Y + edge.Path[len(edge.Path)-1].Y) / 2
+				edge.LabelPos = Vector{X: edge.From.Right() + loopWidth + graphdef.EdgePadding + edge.LabelRadius.X, Y: loopMid}
+				if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
+					// ported loops can sit on any side; label the middle of the loop
+					p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
+					mid := Vector{X: (p.X + q.X) / 2, Y: (p.Y + q.Y) / 2}
+					d := mid.Sub(edge.From.Center)
+					if n := Length(math.Hypot(float64(d.X), float64(d.Y))); n > 0 {
+						d = Vector{X: d.X / n, Y: d.Y / n}
+						gap := graphdef.EdgePadding + Length(math.Abs(float64(d.X)))*edge.LabelRadius.X + Length(math.Abs(float64(d.Y)))*edge.LabelRadius.Y
+						edge.LabelPos = mid.Add(Vector{X: d.X * gap, Y: d.Y * gap})
+					}
+				}
+				continue
+			}
+
+			var path []Vector
+			if p, ok := edgePaths[[2]hier.ID{sourceid, targetid}]; ok {
+				path = p
+			} else if p, ok := edgePaths[[2]hier.ID{targetid, sourceid}]; ok {
+				path = reversePath(p) // the edge was reversed to break a cycle
+			} else {
+				continue
+			}
+
+			// pinned ports override the automatic attachment points
+			if edge.FromPort != CompassAuto {
+				path = append([]Vector{edge.From.CompassPoint(edge.FromPort)}, path[1:]...)
+			}
+			if edge.ToPort != CompassAuto {
+				path = append(path[:len(path)-1:len(path)-1], edge.To.CompassPoint(edge.ToPort))
+			}
+
+			key := pairKey(edge)
+			if n := pairCount[key]; n > 1 {
+				k := pairIndex[key]
+				pairIndex[key]++
+				spacing := 2 * graphdef.EdgePadding
+				offset := (Length(k) - Length(n-1)/2) * spacing
+				path = offsetPath(path, offset, edge.From, edge.To)
+			}
+
+			// pinned ports override the automatic attachment points
+			path = slices.Clone(path)
+			if edge.FromPort != CompassAuto {
+				path[0] = edge.From.CompassPoint(edge.FromPort)
+			}
+			if edge.ToPort != CompassAuto {
+				path[len(path)-1] = edge.To.CompassPoint(edge.ToPort)
+			}
+			edge.Path = path
 		}
 
-		// pinned ports override the automatic attachment points
-		if edge.FromPort != CompassAuto {
-			path = append([]Vector{edge.From.CompassPoint(edge.FromPort)}, path[1:]...)
-		}
-		if edge.ToPort != CompassAuto {
-			path = append(path[:len(path)-1:len(path)-1], edge.To.CompassPoint(edge.ToPort))
-		}
-
-		key := pairKey(edge)
-		if n := pairCount[key]; n > 1 {
-			k := pairIndex[key]
-			pairIndex[key]++
-			spacing := 2 * graphdef.EdgePadding
-			offset := (Length(k) - Length(n-1)/2) * spacing
-			path = offsetPath(path, offset, edge.From, edge.To)
-		}
-
-		// pinned ports override the automatic attachment points
-		path = slices.Clone(path)
-		if edge.FromPort != CompassAuto {
-			path[0] = edge.From.CompassPoint(edge.FromPort)
-		}
-		if edge.ToPort != CompassAuto {
-			path[len(path)-1] = edge.To.CompassPoint(edge.ToPort)
-		}
-		edge.Path = path
-	}
-
-	if graphdef.Splines != SplinesOrtho {
-		// an edge cutting across a label on its way past it in the label's
-		// rank runs straight across the band of the labels there instead
-		band := map[Length]Length{} // half heights by the y of their rank
-		for node := range labelNode {
-			y := Length(node.Center.Y)
-			band[y] = max(band[y], Length(node.Radius.Y))
-		}
-		pad := graphdef.EdgePadding / 2
-		cuts := func(edge *ledge, a, b Vector) bool {
-			for _, other := range graphdef.Edges {
-				if other != edge && other.Label != "" {
-					tl := other.LabelPos.Sub(other.LabelRadius).Sub(Vector{X: pad, Y: pad})
-					br := other.LabelPos.Add(other.LabelRadius).Add(Vector{X: pad, Y: pad})
-					if segmentHitsRect(a, b, tl, br) {
-						return true
+		if graphdef.Splines != SplinesOrtho {
+			// an edge cutting across a label on its way past it in the label's
+			// rank runs straight across the band of the labels there instead
+			band := map[Length]Length{} // half heights by the y of their rank
+			for node := range labelNode {
+				y := Length(node.Center.Y)
+				band[y] = max(band[y], Length(node.Radius.Y))
+			}
+			pad := graphdef.EdgePadding / 2
+			cuts := func(edge *ledge, a, b Vector) bool {
+				for _, other := range graphdef.Edges {
+					if other != edge && other.Label != "" {
+						tl := other.LabelPos.Sub(other.LabelRadius).Sub(Vector{X: pad, Y: pad})
+						br := other.LabelPos.Add(other.LabelRadius).Add(Vector{X: pad, Y: pad})
+						if segmentHitsRect(a, b, tl, br) {
+							return true
+						}
+					}
+				}
+				return false
+			}
+			for _, edge := range graphdef.Edges {
+				for i := len(edge.Path) - 2; i >= 1; i-- {
+					p := edge.Path[i]
+					h, ok := band[p.Y]
+					if ok && (cuts(edge, edge.Path[i-1], p) || cuts(edge, p, edge.Path[i+1])) {
+						if edge.Path[i-1].Y > p.Y {
+							h = -h // reversed edges run up
+						}
+						edge.Path = slices.Replace(edge.Path, i, i+1, Vector{X: p.X, Y: p.Y - h}, Vector{X: p.X, Y: p.Y + h})
 					}
 				}
 			}
-			return false
 		}
-		for _, edge := range graphdef.Edges {
-			for i := len(edge.Path) - 2; i >= 1; i-- {
-				p := edge.Path[i]
-				h, ok := band[p.Y]
-				if ok && (cuts(edge, edge.Path[i-1], p) || cuts(edge, p, edge.Path[i+1])) {
-					if edge.Path[i-1].Y > p.Y {
-						h = -h // reversed edges run up
-					}
-					edge.Path = slices.Replace(edge.Path, i, i+1, Vector{X: p.X, Y: p.Y - h}, Vector{X: p.X, Y: p.Y + h})
-				}
-			}
-		}
-	}
 
-	if graphdef.Splines == SplinesOrtho {
-		// row extents per rank: real node boxes, virtual nodes are flat
-		rows := make([][2]Length, len(positionedGraph.ByRank))
-		for r, layer := range positionedGraph.ByRank {
-			rows[r] = [2]Length{Length(math.Inf(1)), Length(math.Inf(-1))}
-			for _, node := range layer {
-				top, bottom := Length(node.Center.Y), Length(node.Center.Y)
-				if !node.Virtual {
-					top, bottom = reverse[node.ID].Top(), reverse[node.ID].Bottom()
+		if graphdef.Splines == SplinesOrtho {
+			// row extents per rank: real node boxes, virtual nodes are flat
+			rows := make([][2]Length, len(positionedGraph.ByRank))
+			for r, layer := range positionedGraph.ByRank {
+				rows[r] = [2]Length{Length(math.Inf(1)), Length(math.Inf(-1))}
+				for _, node := range layer {
+					top, bottom := Length(node.Center.Y), Length(node.Center.Y)
+					if !node.Virtual {
+						top, bottom = reverse[node.ID].Top(), reverse[node.ID].Bottom()
+					}
+					rows[r][0], rows[r][1] = min(rows[r][0], top), max(rows[r][1], bottom)
 				}
-				rows[r][0], rows[r][1] = min(rows[r][0], top), max(rows[r][1], bottom)
+			}
+			orthoEdges(graphdef, rows, graphdef.EdgePadding, pack)
+		}
+		if graphdef.Splines != SplinesOrtho {
+			spreadWaypoints(graphdef.Edges, graphdef.EdgePadding)
+			spreadEnds(graphdef, 9*Point)
+		}
+		if graphdef.Splines == SplinesLine {
+			for _, edge := range graphdef.Edges {
+				if edge.From != edge.To && len(edge.Path) > 2 {
+					from, to := edge.Path[0], edge.Path[len(edge.Path)-1]
+					if edge.FromPort == CompassAuto {
+						from = edge.From.Boundary(edge.To.Center)
+					}
+					if edge.ToPort == CompassAuto {
+						to = edge.To.Boundary(edge.From.Center)
+					}
+					edge.Path = []Vector{from, to}
+				}
 			}
 		}
-		orthoEdges(graphdef, rows, graphdef.EdgePadding, pack)
-	}
-	if graphdef.Splines != SplinesOrtho {
-		spreadWaypoints(graphdef.Edges, graphdef.EdgePadding)
-		spreadEnds(graphdef, 9*Point)
-	}
-	if graphdef.Splines == SplinesLine {
+		// labels of edges along a rank have no node of their own; they go
+		// above the middle of the topmost segment, outside an arc, or between
+		// neighbors in the room made for them, below the edge, away from the
+		// arcs over them
 		for _, edge := range graphdef.Edges {
-			if edge.From != edge.To && len(edge.Path) > 2 {
-				from, to := edge.Path[0], edge.Path[len(edge.Path)-1]
-				if edge.FromPort == CompassAuto {
-					from = edge.From.Boundary(edge.To.Center)
-				}
-				if edge.ToPort == CompassAuto {
-					to = edge.To.Boundary(edge.From.Center)
-				}
-				edge.Path = []Vector{from, to}
+			from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
+			if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
+				continue
 			}
-		}
-	}
-	// labels of edges along a rank have no node of their own; they go
-	// above the middle of the topmost segment, outside an arc, or between
-	// neighbors in the room made for them, below the edge, away from the
-	// arcs over them
-	for _, edge := range graphdef.Edges {
-		from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
-		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
-			continue
-		}
-		if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {
-			a, b := edge.Path[0], edge.Path[len(edge.Path)-1]
-			edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: max(a.Y, b.Y) + graphdef.EdgePadding + edge.LabelRadius.Y}
-			continue
-		}
-		top := 0
-		for i := 1; i+1 < len(edge.Path); i++ {
-			if edge.Path[i].Y+edge.Path[i+1].Y < edge.Path[top].Y+edge.Path[top+1].Y {
-				top = i
+			if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {
+				a, b := edge.Path[0], edge.Path[len(edge.Path)-1]
+				edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: max(a.Y, b.Y) + graphdef.EdgePadding + edge.LabelRadius.Y}
+				continue
 			}
+			top := 0
+			for i := 1; i+1 < len(edge.Path); i++ {
+				if edge.Path[i].Y+edge.Path[i+1].Y < edge.Path[top].Y+edge.Path[top+1].Y {
+					top = i
+				}
+			}
+			a, b := edge.Path[top], edge.Path[top+1]
+			edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: min(a.Y, b.Y) - graphdef.EdgePadding - edge.LabelRadius.Y}
 		}
-		a, b := edge.Path[top], edge.Path[top+1]
-		edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: min(a.Y, b.Y) - graphdef.EdgePadding - edge.LabelRadius.Y}
+		nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.Clusters, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
 	}
-	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.Clusters, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
+	finish()
+	if graphdef.ForText && graphdef.Splines == SplinesOrtho && align == hier.Balanced {
+		straightenNodes(positionedGraph, graphdef, finish)
+	}
 }
 
 // flattenPath approximates the rounded corners drawn by the writers
@@ -1899,4 +1907,172 @@ func nearestOnPath(path []Vector, p Vector) (Vector, bool) {
 		}
 	}
 	return best, bestDist < math.Inf(1)
+}
+
+// straightenNodes moves a node along its rank in line with a node it has
+// an edge to, and pushes the ones beside it as far as they have to go,
+// where the edges that finish draws then bend less and cross no more;
+// positioning can't tell which edges end up straight
+func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
+	// merged edges share a run, see Graph.MergeEdges
+	merged := func(a, b *ledge) bool {
+		ma, mb := graphdef.merged[a], graphdef.merged[b]
+		return ma[0] != 0 && ma[0] == mb[0] || ma[1] != 0 && ma[1] == mb[1]
+	}
+	measure := func() (bends, crossings, overlaps int) {
+		type segment struct {
+			a, b Vector
+			edge *ledge
+		}
+		var horizontal, vertical []segment
+		for _, edge := range graphdef.Edges {
+			for i := 1; i < len(edge.Path); i++ {
+				a, b := edge.Path[i-1], edge.Path[i]
+				switch {
+				case a.Y == b.Y && a.X != b.X:
+					horizontal = append(horizontal, segment{a, b, edge})
+				case a.X == b.X && a.Y != b.Y:
+					vertical = append(vertical, segment{a, b, edge})
+				}
+				if i+1 < len(edge.Path) {
+					c := edge.Path[i+1]
+					if (a.X == b.X) != (b.X == c.X) {
+						bends++
+					}
+				}
+			}
+		}
+		for _, h := range horizontal {
+			for _, v := range vertical {
+				if h.edge != v.edge &&
+					min(h.a.X, h.b.X) < v.a.X && v.a.X < max(h.a.X, h.b.X) &&
+					min(v.a.Y, v.b.Y) < h.a.Y && h.a.Y < max(v.a.Y, v.b.Y) {
+					crossings++
+				}
+			}
+		}
+		// runs of different edges along each other
+		for _, runs := range [][]segment{horizontal, vertical} {
+			for i, r := range runs {
+				for _, q := range runs[i+1:] {
+					if r.edge == q.edge || merged(r.edge, q.edge) {
+						continue
+					}
+					same := r.a.Y == q.a.Y && min(max(r.a.X, r.b.X), max(q.a.X, q.b.X)) > max(min(r.a.X, r.b.X), min(q.a.X, q.b.X))
+					if r.a.X == r.b.X {
+						same = r.a.X == q.a.X && min(max(r.a.Y, r.b.Y), max(q.a.Y, q.b.Y)) > max(min(r.a.Y, r.b.Y), min(q.a.Y, q.b.Y))
+					}
+					if same {
+						overlaps++
+					}
+				}
+			}
+		}
+		// runs along the frame of a cluster, within half a cell of it, which
+		// text draws on it
+		near := Vector{X: graphdef.cellWidth() / 2, Y: graphdef.LineHeight / 2}
+		if sideways(graphdef.RankDir) {
+			near.X, near.Y = near.Y, near.X
+		}
+		for _, cluster := range graphdef.Clusters {
+			tl, br := cluster.TopLeft, cluster.BottomRight
+			for _, h := range horizontal {
+				lo, hi := min(h.a.X, h.b.X), max(h.a.X, h.b.X)
+				if (absLength(h.a.Y-tl.Y) <= near.Y || absLength(h.a.Y-br.Y) <= near.Y) && min(hi, br.X)-max(lo, tl.X) > near.X {
+					overlaps++
+				}
+			}
+			for _, v := range vertical {
+				lo, hi := min(v.a.Y, v.b.Y), max(v.a.Y, v.b.Y)
+				if (absLength(v.a.X-tl.X) <= near.X || absLength(v.a.X-br.X) <= near.X) && min(hi, br.Y)-max(lo, tl.Y) > near.Y {
+					overlaps++
+				}
+			}
+		}
+		return bends, crossings, overlaps
+	}
+	fan := func(node *hier.Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
+	gap := func(a, b *hier.Node) float32 {
+		gap := a.Radius.X + b.Radius.X
+		if fan(a) && fan(b) && a.In[0] != b.In[0] {
+			gap += graph.FamilyGap
+		}
+		return gap
+	}
+	at := func() []float32 {
+		xs := make([]float32, len(graph.Nodes))
+		for i, node := range graph.Nodes {
+			xs[i] = node.Center.X
+		}
+		return xs
+	}
+	// a node centered over its children, or under its parents, stays: a
+	// balanced fork is worth its bends
+	balanced := func(node *hier.Node) bool {
+		for _, ends := range []hier.Nodes{node.In, node.Out} {
+			if len(ends) < 2 {
+				continue
+			}
+			lo, hi := float32(math.Inf(1)), float32(math.Inf(-1))
+			for _, other := range ends {
+				lo, hi = min(lo, other.Center.X+other.Anchor), max(hi, other.Center.X+other.Anchor)
+			}
+			if math.Abs(float64(node.Center.X+node.Anchor-(lo+hi)/2)) < 1 {
+				return true
+			}
+		}
+		return false
+	}
+	move := func(node *hier.Node, x float32) {
+		layer := graph.ByRank[node.Rank]
+		i := slices.Index(layer, node)
+		node.Center.X = x
+		for j := i + 1; j < len(layer); j++ {
+			layer[j].Center.X = max(layer[j].Center.X, layer[j-1].Center.X+gap(layer[j-1], layer[j]))
+		}
+		for j := i - 1; j >= 0; j-- {
+			layer[j].Center.X = min(layer[j].Center.X, layer[j+1].Center.X-gap(layer[j], layer[j+1]))
+		}
+	}
+	bends, crossings, overlaps := measure()
+	for range 4 {
+		improved := false
+		for _, node := range graph.Nodes {
+			if node.Virtual || balanced(node) {
+				continue
+			}
+			for _, other := range slices.Concat(node.In, node.Out) {
+				want := other.Center.X + other.Anchor - node.Anchor
+				if math.Abs(float64(want-node.Center.X)) < 0.5 {
+					continue
+				}
+				before := at()
+				var kept []*hier.Node
+				for _, n := range graph.Nodes {
+					if !n.Virtual && balanced(n) {
+						kept = append(kept, n)
+					}
+				}
+				move(node, want)
+				if slices.ContainsFunc(kept, func(n *hier.Node) bool { return !balanced(n) }) {
+					for i, x := range before {
+						graph.Nodes[i].Center.X = x
+					}
+					continue
+				}
+				finish()
+				if b, c, o := measure(); b < bends && c <= crossings && o <= overlaps {
+					bends, crossings, overlaps, improved = b, c, o, true
+					break
+				}
+				for i, x := range before {
+					graph.Nodes[i].Center.X = x
+				}
+			}
+		}
+		if !improved {
+			break
+		}
+	}
+	finish()
 }
