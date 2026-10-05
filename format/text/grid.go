@@ -673,9 +673,10 @@ func bendLines(grid, cut [][]cell, path []int, next, prev, lo, hi int) (jogs int
 				if !bd.extends && (near < 0 || near >= len(cut) || !line(cut[near][bd.at]) || !line(cut[other][bd.to])) {
 					continue
 				}
+				// a line along a box stays of the box
 				like := cut[bd.row][bd.at]
-				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines}
-				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join}
+				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid}
+				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid}
 				if !bd.extends {
 					jogs++
 				}
