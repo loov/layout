@@ -5,6 +5,7 @@
 //
 //	go run ./internal/cmd/testdiff          # the working tree against HEAD
 //	go run ./internal/cmd/testdiff <commit> # a commit against its parent
+//	go run ./internal/cmd/testdiff -all     # every drawing, changed or not
 //
 // It writes the page to a temporary directory and opens it.
 package main
@@ -30,8 +31,9 @@ import (
 //go:embed page.html
 var page string
 
-// Change is a testdata drawing that differs between the two versions;
-// Old or New is empty when the file was added or removed.
+// Change is a testdata drawing in the two versions; Old or New is empty
+// when the file was added or removed, and they are the same when it did
+// not change, see -all.
 type Change struct {
 	Path string `json:"path"`
 	Kind string `json:"kind"` // svg, txt or ans
@@ -45,8 +47,9 @@ type Change struct {
 
 func main() {
 	noOpen := flag.Bool("n", false, "only write the page, don't open it")
+	all := flag.Bool("all", false, "show every drawing, also the ones that did not change")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [commit]")
+		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [commit]")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -55,13 +58,17 @@ func main() {
 		os.Exit(2)
 	}
 
-	changes, title, err := collect(flag.Arg(0))
+	changes, title, err := collect(flag.Arg(0), *all)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "testdiff:", err)
 		os.Exit(1)
 	}
 	if len(changes) == 0 {
-		fmt.Fprintln(os.Stderr, "testdiff: no testdata drawings changed in", title)
+		if *all {
+			fmt.Fprintln(os.Stderr, "testdiff: no testdata drawings in", title)
+		} else {
+			fmt.Fprintln(os.Stderr, "testdiff: no testdata drawings changed in", title)
+		}
 		return
 	}
 
@@ -86,8 +93,8 @@ func main() {
 
 // collect returns the changed drawings under testdata, of the commit
 // against its parent, or of the working tree against HEAD when commit is
-// empty, and a title for them
-func collect(commit string) ([]Change, string, error) {
+// empty, and a title for them; with all, also the ones that did not change
+func collect(commit string, all bool) ([]Change, string, error) {
 	root, err := git("rev-parse", "--show-toplevel")
 	if err != nil {
 		return nil, "", err
@@ -122,6 +129,18 @@ func collect(commit string) ([]Change, string, error) {
 		}
 		paths = append(paths, strings.Fields(untracked)...)
 	}
+	if all {
+		var tracked string
+		if commit == "" {
+			tracked, err = git("ls-files", "--", "testdata")
+		} else {
+			tracked, err = git("ls-tree", "-r", "--name-only", commit, "--", "testdata")
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		paths = append(paths, strings.Fields(tracked)...)
+	}
 	slices.Sort(paths)
 	paths = slices.Compact(paths)
 
@@ -138,7 +157,7 @@ func collect(commit string) ([]Change, string, error) {
 		} else if data, err := os.ReadFile(filepath.Join(root, path)); err == nil {
 			new = string(data)
 		}
-		if old != new {
+		if all && (old != "" || new != "") || old != new {
 			changes = append(changes, Change{
 				Path: path, Kind: kind, Old: old, New: new,
 				OldSize: size(kind, old), NewSize: size(kind, new),

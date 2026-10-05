@@ -34,6 +34,7 @@ h1 { font-size: 18px; margin: 0 0 4px; }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--muted); }
 .badge.added { color: var(--added); }
 .badge.removed { color: var(--removed); }
+.badge.same { opacity: .6; }
 .size { padding: 0 10px 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .grow { color: var(--removed); }
 .shrink { color: var(--added); }
@@ -139,8 +140,12 @@ for (const button of document.querySelectorAll(".theme")) button.onclick = toggl
 
 const grid = document.getElementById("grid");
 const detail = document.getElementById("detail");
-document.getElementById("sub").textContent =
-	`${DATA.changes.length} changed drawings in ${DATA.title}`;
+{
+	const changed = DATA.changes.filter(c => status(c) !== "same").length;
+	document.getElementById("sub").textContent = changed === DATA.changes.length
+		? `${changed} changed drawings in ${DATA.title}`
+		: `${DATA.changes.length} drawings in ${DATA.title}, ${changed} changed`;
+}
 document.title = `testdata changes: ${DATA.title}`;
 
 // drawing returns an element showing the contents of a drawing
@@ -230,6 +235,7 @@ function delta(change, short) {
 function status(change) {
 	if (!change.old) return "added";
 	if (!change.new) return "removed";
+	if (change.old === change.new) return "same";
 	return "changed";
 }
 
