@@ -130,9 +130,7 @@ func Example_text() {
 	//      │ parse │
 	//      ╰──┬──┬─╯
 	//       ╭─╯  ╰─────╮
-	//       │          │
-	//       │ ok       │ error
-	//       │          │
+	//       │ok        │error
 	//       ▼          ▼
 	//  ╭────────╮ ╭────────╮
 	//  │ render │ │ report │

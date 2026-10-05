@@ -698,11 +698,11 @@ func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
 					dx, dy, gap = 0, 1, d
 				}
 			case beside && p[0] < x:
-				if d := x - p[0] - 2; d < gap { // one blank column is close
+				if d := x - p[0] - 1; d < gap {
 					dx, dy, gap = -1, 0, d
 				}
 			case beside && p[0] >= x+w:
-				if d := p[0] - (x + w) - 1; d < gap {
+				if d := p[0] - (x + w); d < gap {
 					dx, dy, gap = 1, 0, d
 				}
 			}

@@ -123,18 +123,29 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 				}
 			}
 			if x < ends[i] {
-				// a line that turns right after leaving what it joins
-				// needs no cell between, unless an arrowhead follows; and
-				// a node needs no blank under it where what follows is
-				// blank or drawn by an edge that leaves the node there
-				if across && x > 0 && x+1 < len(line) && !strings.ContainsRune(markers, line[x+1].r) {
-					// or, with stubs, that goes on straight, which keeps a
-					// cell of it
-					if c.r == glyph(lo|hi, 0) && arms(line[x-1].r)&hi != 0 && arms(line[x+1].r)&lo != 0 &&
-						(arms(line[x+1].r) != lo|hi || stubs && line[x+1].r == c.r && line[x+1].bg == c.bg) {
+				// with stubs, last, blanks keep one of a run before what
+				// follows, and none around the text of labels
+				if stubs && c.r == ' ' && c.bg == 0 && x > 0 && x+1 < len(line) {
+					text := func(p cell) bool { return p.keep && !p.solid }
+					if after := line[x+1]; after.r == ' ' && after.bg == 0 || text(after) || text(line[x-1]) {
 						return 0
 					}
-					if c.r == ' ' && line[x-1].solid && !line[x+1].solid && leaves(grid, i, x, lo) {
+				}
+				// a line that turns right after leaving what it joins
+				// needs no cell between, unless it leaves a node for an
+				// arrowhead; and a node needs no blank under it where what
+				// follows is blank or drawn by an edge that leaves the node
+				// there
+				if across && x > 0 && x+1 < len(line) {
+					before, after := line[x-1], line[x+1]
+					arrow := strings.ContainsRune(markers, after.r)
+					if c.r == glyph(lo|hi, 0) && arms(before.r)&hi != 0 && (arms(after.r)&lo != 0 || arrow) && !(arrow && before.solid) &&
+						// or, with stubs, that goes on straight, which keeps a
+						// cell of it
+						(arrow || arms(after.r) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
+						return 0
+					}
+					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(grid, i, x, lo) {
 						return 0
 					}
 				}

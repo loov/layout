@@ -281,7 +281,7 @@ func TestMultilineLabels(t *testing.T) {
 		t.Fatal(err)
 	}
 	got := buf.String()
-	for _, want := range []string{"│ first  │", "│ second │", "│ one", "│ two"} {
+	for _, want := range []string{"│ first  │", "│ second │", "│one", "│two"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q:\n%s", want, got)
 		}
@@ -358,7 +358,7 @@ func TestOverlappingWideText(t *testing.T) {
 	}`)
 	var widths []int
 	for _, line := range strings.Split(got, "\n") {
-		if strings.Contains(line, "xyz") || strings.Count(line, "│") == 2 {
+		if strings.Contains(line, "xyz") || strings.Count(line, "│") == 2 || strings.Count(line, "▲") == 2 {
 			widths = append(widths, draw.Columns(line))
 		}
 	}
