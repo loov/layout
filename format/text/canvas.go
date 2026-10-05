@@ -57,7 +57,13 @@ func newCanvas(l *layout.Layout) *canvas {
 		label, x, _ := c.edgeLabel(i)
 		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
-	c.loops = map[*layout.Node]int{}
+	c.drawn, c.nodes, c.loops = map[*layout.Edge]int{}, map[*layout.Node]int{}, map[*layout.Node]int{}
+	for i, node := range graph.Nodes {
+		c.nodes[node] = i + 1
+	}
+	if graph.MergeEdges {
+		c.merged = mergedEdges(l)
+	}
 	for _, edge := range graph.Edges {
 		if edge.From == edge.To {
 			c.loops[edge.From]++

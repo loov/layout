@@ -37,7 +37,8 @@ func centered(x0, x1 int, line string) int {
 
 // drawLabels writes edge and cluster labels over everything else; paths
 // are the cells of the edges
-func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
+func (c *canvas) drawLabels(paths [][][2]int) {
+	graph := c.l.Graph
 	for i, edge := range graph.Edges {
 		if edge.Label != "" && !edge.Invisible {
 			label, x, y := c.edgeLabel(i)

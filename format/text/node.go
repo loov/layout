@@ -169,7 +169,8 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 // drawNode draws a node in its box, see nodeBox, and marks the box solid
 // so that edges don't draw over it; an invisible node only keeps its box
 // clear
-func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
+func (c *canvas) drawNode(node *layout.Node) {
+	graph := c.l.Graph
 	box := c.l.Node(node)
 	b := c.boxes[node]
 	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]

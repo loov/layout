@@ -79,20 +79,13 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 	graph := l.Graph
 	c := newCanvas(l)
 	c.spread = spread
-	c.drawn, c.nodes = map[*layout.Edge]int{}, map[*layout.Node]int{}
-	for i, node := range graph.Nodes {
-		c.nodes[node] = i + 1
-	}
 	for i, cluster := range graph.Clusters {
 		if !cluster.Invisible {
 			c.drawCluster(i)
 		}
 	}
 	for _, node := range graph.Nodes {
-		c.drawNode(graph, node)
-	}
-	if graph.MergeEdges {
-		c.merged = mergedEdges(l)
+		c.drawNode(node)
 	}
 	paths := make([][][2]int, len(graph.Edges))
 	for i, edge := range graph.Edges {
@@ -106,6 +99,6 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 			c.drawEdge(edge, l.Edges[i].Path, paths[i])
 		}
 	}
-	c.drawLabels(graph, paths)
+	c.drawLabels(paths)
 	return c
 }
