@@ -381,12 +381,34 @@ func positionSimplex(graph *Graph, fans bool) {
 		}
 		return omega * graph.Weight(src, dst)
 	}
+	// packed ends of edges on a side of a node line up from its anchor
+	// on, in the order of the nodes they head to, see Graph.EndGap; an
+	// edge measures from where its ends attach
+	from, to := map[[2]ID]float32{}, map[[2]ID]float32{}
+	spread := func(node *Node, ends Nodes, at map[[2]ID]float32, key func(other *Node) [2]ID) {
+		if graph.EndGap == 0 || node.Virtual || len(ends) < 2 {
+			return
+		}
+		ends = slices.Clone(ends)
+		slices.SortStableFunc(ends, func(a, b *Node) int { return a.Pos - b.Pos })
+		gap := min(graph.EndGap, node.EndRoom/float32(len(ends)-1))
+		for i, other := range ends {
+			at[key(other)] = float32(i) * gap
+		}
+	}
+	for _, node := range graph.Nodes {
+		spread(node, node.Out, from, func(dst *Node) [2]ID { return [2]ID{node.ID, dst.ID} })
+		spread(node, node.In, to, func(src *Node) [2]ID { return [2]ID{src.ID, node.ID} })
+	}
 	v := int32(n)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
 			w := weight(src, dst)
-			s.addEdge(v, int32(src.ID), w, 0)
-			s.addEdge(v, int32(dst.ID), w, 0)
+			// |x(src) + from - x(dst) - to| at the least cost
+			k := [2]ID{src.ID, dst.ID}
+			d := int32(math.Round(float64(from[k] - to[k])))
+			s.addEdge(v, int32(src.ID), w, max(0, -d))
+			s.addEdge(v, int32(dst.ID), w, max(0, d))
 			v++
 		}
 	}

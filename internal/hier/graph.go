@@ -21,6 +21,10 @@ type Graph struct {
 	minlens map[[2]ID]int32
 	// Ranking
 	ByRank []Nodes
+	// EndGap is how far apart packed ends of edges on a side of a node
+	// are, from its anchor on, within its EndRoom; 0 when they aren't
+	// packed, see Position
+	EndGap float32
 }
 
 // ID is an unique identifier to a Node
@@ -58,6 +62,9 @@ type Node struct {
 	// Anchor is the x offset from Center where the edge passes through
 	// a virtual node, for nodes that carry a label beside the edge
 	Anchor float32
+	// EndRoom is how far packed ends of edges on a side can spread from
+	// the anchor, see Graph.EndGap
+	EndRoom float32
 }
 
 // String returns node label

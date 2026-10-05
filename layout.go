@@ -742,6 +742,10 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		// difference, where its edges line up with the neighbors
 		node.Radius.X += float32((loopExtra[nodedef] + loopLeft[nodedef]) / 2)
 		node.Anchor = float32(loopShift(nodedef) + packed(nodedef))
+		if pack && nodedef.Shape != PointShape {
+			// see the slots of packed ends in orthoEdges
+			node.EndRoom = float32(2 * (nodedef.Radius.X - min(graphdef.EdgePadding, nodedef.Radius.X)))
+		}
 		node.Radius.Y = float32(max(nodedef.Radius.Y, flatBelow[nodedef]) + graphdef.RowPadding)
 	}
 
@@ -802,6 +806,10 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	// position nodes
 	positionedGraph := orderedGraph
 	align := map[Align]hier.Align{AlignBalanced: hier.Balanced, AlignLeft: hier.Left, AlignRight: hier.Right}[opts.Align]
+	if pack && !graphdef.MergeEdges {
+		// see the slots of packed ends in orthoEdges; merged ends share one
+		positionedGraph.EndGap = float32(graphdef.EdgePadding)
+	}
 	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, graphdef.MergeEdges, align)
 
 	// assign final positions, off the center of nodes widened for loops
