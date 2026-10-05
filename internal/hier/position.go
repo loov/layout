@@ -362,8 +362,10 @@ func positionSimplex(graph *Graph, fans bool) {
 			a, b := layer[i-1], layer[i]
 			// anchors line up, a node reaches Radius.X past its center
 			gap := a.Radius.X - a.Anchor + b.Radius.X + b.Anchor
-			// the fans of different nodes keep apart; a source has none
-			if !a.Virtual && !b.Virtual && len(a.In) > 0 && len(b.In) > 0 && !slices.ContainsFunc(a.In, func(p *Node) bool { return slices.Contains(b.In, p) }) {
+			// the fans of different nodes keep apart: children of one
+			// parent each, which has others
+			fan := func(node *Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
+			if fan(a) && fan(b) && a.In[0] != b.In[0] {
 				gap += graph.FamilyGap
 			}
 			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(math.Ceil(float64(gap))))
