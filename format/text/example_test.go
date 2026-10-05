@@ -25,18 +25,18 @@ func ExampleWrite() {
 	}
 	// Output:
 	//      ╭───╮
-	//    │ a │
-	//    ╰─┬┬╯
-	//    ╭─╯╰──╮
+	//     │ a │
+	//     ╰┬─┬╯
+	//    ╭─╯ ╰─╮
 	//    ▼     ▼
 	//  ╭───╮ ╭───╮
 	//  │ b │ │ c │
 	//  ╰─┬─╯ ╰─┬─╯
-	//    ╰─╮╭──╯
-	//      ▼▼
-	//    ╭───╮
-	//    │ d │
-	//    ╰───╯
+	//    ╰─╮ ╭─╯
+	//      ▼ ▼
+	//     ╭───╮
+	//     │ d │
+	//     ╰───╯
 }
 
 // WriteColor adds the node, edge and cluster colors as ANSI escape codes

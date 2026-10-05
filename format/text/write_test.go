@@ -476,7 +476,7 @@ func TestCarveKeepsRanks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c := drawGraph(l)
+			c := drawGraph(l, true)
 			// mark the top left corner of every node to find it after carving
 			axis := 1 // the rows of the ranks
 			if c.sideways() {

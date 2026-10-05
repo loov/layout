@@ -340,6 +340,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		toward int     // where the edge heads past the bend, along the side
 		group  int     // the merged ends there, see layout.EdgePath.Merged
 		exact  float64 // where the layout ends the edge along the side, in cells
+		marker bool    // drawn with an arrowhead or another mark, not a junction
 
 		also []end // further edges of a shared start, which follow it
 	}
@@ -386,6 +387,14 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 					end.toward = path[e.k][along]
 				}
 				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
+				mark := edges[k].ArrowTail
+				if e.i != 0 {
+					mark = edges[k].ArrowHead
+					if mark == layout.ArrowDefault && edges[k].Directed {
+						mark = layout.ArrowNormal
+					}
+				}
+				end.marker = mark != layout.ArrowDefault && mark != layout.ArrowNone
 				p := c.l.Edges[k].Path[0]
 				if e.i != 0 {
 					p = c.l.Edges[k].Path[len(c.l.Edges[k].Path)-1]
@@ -439,7 +448,44 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed
 		}
 		packEnds(want, exact, fixed)
-		for n, at := range spreadRows(want, fixed, lo, hi) {
+		// an end that turns toward a place along the side goes straight
+		// there instead, past no other end; an arrowhead may go as far as
+		// a corner, see below
+		for n, e := range ends {
+			if e.fixed || e.toward < lo-1 || e.toward > hi+1 {
+				continue
+			}
+			past := slices.ContainsFunc(want, func(w int) bool {
+				return w != want[n] && (w-want[n])*(w-e.toward) <= 0
+			})
+			if !past && e.toward >= lo && e.toward <= hi {
+				want[n], fixed[n] = e.toward, true
+			}
+		}
+		// with spread, a cell between ends where the side has room, as
+		// balanced as the ends were
+		rows := spreadRows(want, fixed, lo, hi, 1)
+		if c.spread && 2*len(want)-1 <= hi-lo+1 {
+			wide := spreadRows(want, fixed, lo, hi, 2)
+			moved := false
+			for n := range want {
+				moved = moved || fixed[n] && wide[n] != want[n]
+			}
+			if !moved {
+				rows = wide
+			}
+		}
+		// of several ends, the first or last goes on to the corner when
+		// its arrowhead lines up with where the edge comes from, so the
+		// edge runs straight in beside the box; a lone end there would
+		// read as reaching for the corner
+		for _, n := range []int{0, len(ends) - 1} {
+			e := ends[n]
+			if len(ends) > 1 && !e.fixed && e.marker && e.group == 0 && (n == 0 && e.toward == lo-1 || n == len(ends)-1 && e.toward == hi+1) {
+				rows[n] = e.toward
+			}
+		}
+		for n, at := range rows {
 			e := ends[n]
 			e.path[e.i][key.along], e.path[e.j][key.along] = at, at
 			for _, f := range e.also {
@@ -462,10 +508,10 @@ func packEnds(cells []int, exact []float64, fixed []bool) {
 }
 
 // spreadRows moves the ordered rows, or columns, want as little as
-// possible so that each gets its own within [lo, hi], with fixed ones
-// moving only when they must. Shifting row n by n turns this into ordering, solved
-// by pooling adjacent violators.
-func spreadRows(want []int, fixed []bool, lo, hi int) []int {
+// possible so that they are at least gap apart within [lo, hi], with fixed
+// ones moving only when they must. Shifting row n by n*gap turns this into
+// ordering, solved by pooling adjacent violators.
+func spreadRows(want []int, fixed []bool, lo, hi, gap int) []int {
 	type block struct {
 		sum, weight float64
 		n           int
@@ -476,7 +522,7 @@ func spreadRows(want []int, fixed []bool, lo, hi int) []int {
 		if fixed[n] {
 			weight = 1e6
 		}
-		blocks = append(blocks, block{float64(row-n) * weight, weight, 1})
+		blocks = append(blocks, block{float64(row-n*gap) * weight, weight, 1})
 		for len(blocks) > 1 {
 			a, b := blocks[len(blocks)-2], blocks[len(blocks)-1]
 			if a.sum/a.weight <= b.sum/b.weight {
@@ -487,9 +533,9 @@ func spreadRows(want []int, fixed []bool, lo, hi int) []int {
 	}
 	rows := make([]int, 0, len(want))
 	for _, b := range blocks {
-		first := min(max(int(math.Round(b.sum/b.weight)), lo), hi-len(want)+1)
+		first := min(max(int(math.Round(b.sum/b.weight)), lo), hi-(len(want)-1)*gap)
 		for range b.n {
-			rows = append(rows, first+len(rows))
+			rows = append(rows, first+len(rows)*gap)
 		}
 	}
 	return rows

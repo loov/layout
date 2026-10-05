@@ -8,6 +8,7 @@ package text
 
 import (
 	"io"
+	"strings"
 
 	"github.com/loov/layout"
 )
@@ -26,17 +27,51 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
-	c := drawGraph(l)
-	grid := carve(c.rows, c.sideways())
+	// edge ends spread apart look balanced, but can keep carving from
+	// lining an edge up straight: they stay apart unless that bends
+	// edges more, or as much on a larger drawing
+	var c *canvas
+	var grid [][]cell
+	for _, spread := range []bool{true, false} {
+		d := drawGraph(l, spread)
+		g := carve(d.rows, d.sideways())
+		if c == nil || better(g, grid) {
+			c, grid = d, g
+		}
+	}
 	c.frameLabels(grid)
 	_, err := io.WriteString(w, encode(grid, opts))
 	return err
 }
 
-// drawGraph draws the graph on a canvas, before carving
-func drawGraph(l *layout.Layout) *canvas {
+// better reports whether the carved grid a has fewer bends of edges than
+// b, or as many in less area
+func better(a, b [][]cell) bool {
+	measure := func(grid [][]cell) (bends, area int) {
+		width := 0
+		for _, row := range grid {
+			for x, c := range row {
+				if !c.solid && strings.ContainsRune("╭╮╰╯", c.r) {
+					bends++
+				}
+				if c.r != ' ' || c.bg != 0 {
+					width = max(width, x+1)
+				}
+			}
+		}
+		return bends, width * len(grid)
+	}
+	ba, aa := measure(a)
+	bb, ab := measure(b)
+	return ba < bb || ba == bb && aa < ab
+}
+
+// drawGraph draws the graph on a canvas, before carving; with spread,
+// edge ends on a side keep a cell apart where there is room
+func drawGraph(l *layout.Layout, spread bool) *canvas {
 	graph := l.Graph
 	c := newCanvas(l)
+	c.spread = spread
 	for i, cluster := range graph.Clusters {
 		if !cluster.Invisible {
 			c.drawCluster(i)

@@ -67,6 +67,7 @@ type canvas struct {
 	merged map[*layout.Edge]int // edge ids of merged edges
 	loops  map[*layout.Node]int // self-loops per node
 	ended  map[[2]int]bool      // cells where merged edges have ended
+	spread bool                 // edge ends on a side keep a cell apart where there is room
 }
 
 // pen is what the canvas draws with. Each drawing sets all of it, so
