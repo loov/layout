@@ -23,7 +23,7 @@ rankdir_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=2 paralle
 readme       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=12 wavy=2 back=0 labels=0 far=0 length=2499 area=373934 unbalance=145
 readme_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=2 corners=18 wavy=2 back=0 labels=0 far=0 length=2612 area=373934 unbalance=12
 record       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=239 area=43120 unbalance=0
-regex        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=4 wavy=1 back=0 labels=0 far=0 length=1582 area=137741 unbalance=8
+regex        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=4 wavy=1 back=0 labels=0 far=0 length=1581 area=142045 unbalance=8
 regex_tb     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=8 wavy=1 back=0 labels=0 far=0 length=1617 area=168804 unbalance=0
 subnets      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=30 wavy=0 back=0 labels=0 far=0 length=2845 area=561488 unbalance=72
 subnets_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=48 parallel=48 ends=48 shafts=0 jagged=0 bends=0 corners=32 wavy=0 back=0 labels=0 far=0 length=3101 area=531936 unbalance=16
@@ -34,8 +34,8 @@ alf          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 alf_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=15 parallel=15 ends=15 shafts=0 jagged=0 bends=0 corners=34 wavy=0 back=0 labels=0 far=0 length=4089 area=784192 unbalance=369
 clust4       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2456 area=270336 unbalance=434
 clust4_merged nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2489 area=270336 unbalance=402
-fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=28 wavy=4 back=3 labels=0 far=0 length=4595 area=490680 unbalance=378
-fsm_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4559 area=490680 unbalance=410
+fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4589 area=479776 unbalance=378
+fsm_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4583 area=479776 unbalance=450
 nested       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=1381 area=192000 unbalance=112
 nested_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=1381 area=192000 unbalance=112
 ortho        nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2456 area=270336 unbalance=434

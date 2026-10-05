@@ -502,13 +502,15 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	// a node widened for loops sits left of the widened box's center
 	loopShift := func(node *lnode) Length { return -(loopExtra[node] - loopLeft[node]) / 2 }
 	// with packed edge ends, the first end of a node is where its
-	// edges line up, this far from its center
+	// edges line up, this far from its center, an edge padding inside its
+	// innermost outline
 	pack := graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho
+	outlines := func(node *lnode) Length { return Length(max(node.Peripheries-1, 0)) * peripheryGap }
 	packed := func(node *lnode) Length {
 		if !pack || node.Shape == PointShape {
 			return 0
 		}
-		return min(0, graphdef.EdgePadding-node.Radius.X)
+		return min(0, graphdef.EdgePadding+outlines(node)-node.Radius.X)
 	}
 	for _, edge := range graphdef.Edges {
 		if edge.From == edge.To {
@@ -681,7 +683,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 			if node.Shape == PointShape {
 				continue // edges meet at the dot
 			}
-			grow := Length(max(e[0], e[1])+1)*step - node.Radius.X
+			grow := Length(max(e[0], e[1])+1)*step + outlines(node) - node.Radius.X
 			if grow <= 0 {
 				continue
 			}

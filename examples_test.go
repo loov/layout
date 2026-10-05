@@ -348,7 +348,8 @@ func TestEdgesApart(t *testing.T) {
 
 // TestArrowsBesideNodes checks the text drawings for arrowheads drawn on
 // the top or bottom border of a node, where an edge has no room to end
-// before the node.
+// before the node, and for arrowheads at a corner of a box, which read as
+// reaching for the corner.
 func TestArrowsBesideNodes(t *testing.T) {
 	files, err := filepath.Glob(filepath.Join("testdata", "*.txt"))
 	if err != nil {
@@ -359,15 +360,38 @@ func TestArrowsBesideNodes(t *testing.T) {
 		t.Fatal(err)
 	}
 	border := regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨]*[▼▲][─═┬┴╥╨]*[╮┐╗╯┘╝]`)
+	sideways := regexp.MustCompile(`▶[╭┌╔╰└╚]|[╮┐╗╯┘╝]◀`)
+	const (
+		top    = "╭┌╔╮┐╗"
+		bottom = "╰└╚╯┘╝"
+	)
 	for _, file := range append(files, graphviz...) {
 		data, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
-		for i, line := range strings.Split(string(data), "\n") {
+		lines := strings.Split(string(data), "\n")
+		for i, line := range lines {
 			if m := border.FindString(line); m != "" {
 				t.Errorf("%s:%d: arrow on a border: %s", file, i+1, m)
 			}
+			if m := sideways.FindString(line); m != "" {
+				t.Errorf("%s:%d: arrow at a corner: %s", file, i+1, m)
+			}
+			for x, r := range []rune(line) {
+				if r == '▼' && i+1 < len(lines) && strings.ContainsRune(top, at(lines[i+1], x)) ||
+					r == '▲' && i > 0 && strings.ContainsRune(bottom, at(lines[i-1], x)) {
+					t.Errorf("%s:%d: arrow at a corner, column %d", file, i+1, x+1)
+				}
+			}
 		}
 	}
+}
+
+// at returns the rune at column x of line, a space past its end
+func at(line string, x int) rune {
+	if r := []rune(line); x < len(r) {
+		return r[x]
+	}
+	return ' '
 }
