@@ -584,6 +584,87 @@ function stopEdit() {
 
 const stripColors = text => text.replace(/\x1b\[[\d;]*[A-Za-z]/g, "");
 
+// wide reports whether a character takes two columns in a terminal, for
+// the common East Asian wide and emoji ranges
+function wide(ch) {
+	const c = ch.codePointAt(0);
+	return c >= 0x1100 && c <= 0x115f || c >= 0x2e80 && c <= 0xa4cf || c >= 0xac00 && c <= 0xd7a3 ||
+		c >= 0xf900 && c <= 0xfaff || c >= 0xfe30 && c <= 0xfe4f || c >= 0xff00 && c <= 0xff60 ||
+		c >= 0xffe0 && c <= 0xffe6 || c >= 0x1f300 && c <= 0x1faff || c >= 0x20000 && c <= 0x3fffd;
+}
+
+// textSize returns the columns and rows of a text drawing, as testdiff
+// measures them, see size in main.go
+function textSize(text) {
+	const lines = stripColors(text).replace(/[ \n]+$/, "").split("\n");
+	const columns = line => Array.from(line.replace(/ +$/, "")).reduce((n, ch) => n + (wide(ch) ? 2 : 1), 0);
+	return [Math.max(0, ...lines.map(columns)), lines.length];
+}
+
+// textStats counts the edges of a text drawing as drawn, as textStats in
+// stats.go does: bends, length in cells and crossings of the lines that
+// are not on boxes; node boxes count whole, dashed cluster frames only
+// on their frame
+function textStats(text) {
+	const grid = stripColors(text).split("\n").map(line => {
+		const row = [];
+		for (const ch of line) {
+			row.push(ch);
+			if (wide(ch)) row.push(""); // the second column of a wide one
+		}
+		return row;
+	});
+	const at = (y, x) => grid[y]?.[x] ?? " ";
+	const has = (set, ch) => ch !== "" && set.includes(ch);
+	const topLeft = "╭┌╔┏", topRight = "╮┐╗┓", bottomLeft = "╰└╚┗", bottomRight = "╯┘╝┛";
+	const vertical = "│┃║┊┋┆┇├┤┼╂┝┥┠┨┣┫╟╢╫╬";
+	const horizontal = "─━═┈┉┄┅┬┴┼╂┯┷┰┸┳┻╤╧╥╨╪╬";
+	const dashed = "┊┋┆┇┈┉┄┅", marks = "▲▼◀▶↑↓←→●○";
+	const box = new Set();
+	grid.forEach((row, y) => row.forEach((ch, x) => {
+		if (!has(topLeft, ch)) return;
+		let y2 = y + 1;
+		while (has(vertical, at(y2, x))) y2++;
+		if (!has(bottomLeft, at(y2, x))) return;
+		let x2 = x + 1;
+		while (has(horizontal, at(y2, x2))) x2++;
+		if (!has(bottomRight, at(y2, x2)) || !has(topRight, at(y, x2))) return;
+		for (let yy = y + 1; yy < y2; yy++) if (!has(vertical, at(yy, x2))) return;
+		// the top is not checked, as cluster labels sit on it
+		const frame = has(dashed, at(y + 1, x)) || has(dashed, at(y2, x + 1));
+		for (let yy = y; yy <= y2; yy++) {
+			for (let xx = x; xx <= x2; xx++) {
+				if (!frame || yy === y || yy === y2 || xx === x || xx === x2) box.add(yy + "," + xx);
+			}
+		}
+	}));
+	let corners = 0, length = 0, crossings = 0;
+	grid.forEach((row, y) => row.forEach((ch, x) => {
+		if (ch === "" || box.has(y + "," + x)) return;
+		const line = ch >= "─" && ch <= "╿";
+		if (!line && !has(marks, ch)) return;
+		length++;
+		if (has(topLeft + topRight + bottomLeft + bottomRight, ch)) corners++;
+		if (ch === "╂") crossings++;
+	}));
+	return { corners, length, crossings };
+}
+
+// showEdited shows the size and stats of the new drawing as edited
+function showEdited(change, text) {
+	const edited = {
+		...change, new: text, newSize: textSize(text),
+		newStats: { ...(change.newStats || {}), ...textStats(text) },
+	};
+	const trim = t => stripColors(t).split("\n").map(l => l.replace(/\s+$/, "")).join("\n").replace(/\n+$/, "");
+	const same = trim(text) === trim(change.new || change.old);
+	const label = document.getElementById("newsize");
+	label.replaceChildren(sizeText(change.kind, edited.newSize) + (same ? "" : " edited "), same ? "" : delta(edited));
+	panes[1].parentElement.querySelector(".stats")?.remove();
+	const box = statsBox(edited, "new");
+	if (box) panes[1].parentElement.append(box);
+}
+
 // textEditor edits a text drawing as a grid of cells
 function textEditor(change) {
 	const original = stripColors(change.new || change.old);
@@ -599,7 +680,7 @@ function textEditor(change) {
 	let state = edits.get(change.path) || { rows: toRows(original), undo: [] };
 	let rows = state.rows;
 	let cursor = { r: 0, c: 0 }, sel = null; // sel is [r0, c0, r1, c1], unordered
-	const save = () => { state.rows = rows; edits.set(change.path, state); };
+	const save = () => { state.rows = rows; edits.set(change.path, state); showEdited(change, toText(rows)); };
 	const push = () => { state.undo.push(clone(rows)); if (state.undo.length > 200) state.undo.shift(); };
 
 	const pre = document.createElement("pre");
@@ -669,6 +750,7 @@ function textEditor(change) {
 			rows = moved(drag.start, drag.b, dr, dc);
 			sel = [drag.b[0] + dr, drag.b[1] + dc, drag.b[2] + dr, drag.b[3] + dc];
 			drag.moved = dr !== 0 || dc !== 0;
+			showEdited(change, toText(rows));
 		}
 		render();
 	});
@@ -750,6 +832,7 @@ function textEditor(change) {
 			`and rearranged by hand to show how it could look nicer:\n\n\`\`\`text\n${toText(rows).replace(/\n+$/, "")}\n\`\`\`\n`;
 	}
 	render();
+	showEdited(change, toText(rows));
 	return { kind: "txt", el: pre, palette, key, undo, message, selected: () => !!sel };
 }
 
