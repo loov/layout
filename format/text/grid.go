@@ -209,7 +209,15 @@ func unjog(grid [][]cell) (changed bool) {
 		if added > removed || fewer && added == removed {
 			return false
 		}
-		fg := at(old[0]).fg
+		// the edge of the line, by the arms it draws, not of lines it crosses
+		fg, id := at(old[0]).fg, 0
+		for p, a := range olds {
+			for arm := range 4 {
+				if a&(1<<arm) != 0 && at(p).lines&(1<<arm) != 0 && at(p).owner[arm] != 0 {
+					id = at(p).owner[arm]
+				}
+			}
+		}
 		for p, a := range olds {
 			if news[p] {
 				continue
@@ -229,8 +237,13 @@ func unjog(grid [][]cell) (changed bool) {
 				*q = *head
 			case q.r == '╂' || q.r != ' ' && olds[p] == 0:
 				q.r, q.lines = '╂', up|down|left|right
+				for arm := range 4 {
+					if arms[i]&(1<<arm) != 0 {
+						q.owner[arm] = id
+					}
+				}
 			default:
-				*q = cell{r: corner(arms[i]), fg: fg, lines: arms[i]}
+				*q = cell{r: corner(arms[i]), fg: fg, lines: arms[i], owner: [4]int{id, id, id, id}}
 			}
 		}
 		return true
@@ -711,8 +724,10 @@ func bendLines(grid, cut [][]cell, path []int, next, prev, lo, hi int) (jogs int
 				}
 				// a line along a box stays of the box
 				like := cut[bd.row][bd.at]
-				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid}
-				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid}
+				id := ownerOf(like)
+				owner := [4]int{id, id, id, id}
+				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, owner: owner}
+				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, owner: owner}
 				if !bd.extends {
 					jogs++
 				}
@@ -735,6 +750,16 @@ func corner(lines int) rune {
 		return c
 	}
 	return r
+}
+
+// ownerOf returns the edge that drew a line of c, 0 for none
+func ownerOf(c cell) int {
+	for arm := range 4 {
+		if c.lines&(1<<arm) != 0 && c.owner[arm] != 0 {
+			return c.owner[arm]
+		}
+	}
+	return 0
 }
 
 // free reports whether c is an empty cell that a line can be drawn in
