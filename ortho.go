@@ -144,6 +144,44 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 				want[i], weight[i] = e.towards, 1e9
 			}
 		}
+		// a straight end of edges merged at their other end takes the slot
+		// nearest it, and the rest the other slots in order: an end heading
+		// past it crosses its line rather than push it off it, where the
+		// merged edges run on together and the end would come in along them
+		firm := func(i int) bool {
+			return weight[i] > 1 && graph.merged[list[i].edge][map[bool]int{true: 1, false: 0}[list[i].start]] != 0
+		}
+		at := make([]int, len(list))
+		taken := make([]bool, len(list))
+		for i := range list {
+			if !firm(i) {
+				continue
+			}
+			best := -1
+			for j := range list {
+				if !taken[j] && (best < 0 || absLength(slot(j)-want[i]) < absLength(slot(best)-want[i])) {
+					best = j
+				}
+			}
+			at[i], taken[best] = best, true
+		}
+		j := 0
+		for i := range list {
+			if !firm(i) {
+				for taken[j] {
+					j++
+				}
+				at[i], taken[j] = j, true
+				if weight[i] == 1 {
+					want[i] = slot(j)
+				}
+			}
+		}
+		order := make([]int, len(list))
+		for i := range order {
+			order[at[i]] = i
+		}
+		list, want, weight = permute(list, order), permute(want, order), permute(weight, order)
 		xs := separate(want, weight, spacing, lo, hi)
 		for i, e := range list {
 			if weight[i] > 1 && absLength(xs[i]-want[i]) < spacing/1e3 {
@@ -461,6 +499,15 @@ func jogCycle[J comparable](jogs []J, above func(a, b J) bool) []J {
 		}
 	}
 	return nil
+}
+
+// permute returns the items in the order of the indices
+func permute[T any](items []T, order []int) []T {
+	out := make([]T, len(order))
+	for i, j := range order {
+		out[i] = items[j]
+	}
+	return out
 }
 
 // separate moves the ordered positions want as little as possible, by
