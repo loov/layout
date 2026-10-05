@@ -88,7 +88,8 @@ pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; 
 :root[data-theme="dark"] .thumb,
 :root[data-theme="dark"] .scroll { filter: invert(1) hue-rotate(180deg); }
 :root[data-theme="dark"] .none { filter: invert(1); }
-header .theme { margin-left: auto; }
+#search { margin-left: auto; width: 240px; max-width: 40vw; font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); }
+.card[hidden] { display: none; }
 
 /* edit mode: the new drawing, rearranged by hand, beside the old */
 .edit-only { display: none; }
@@ -124,6 +125,7 @@ pre.editor.moving { cursor: grabbing; }
 <header>
 	<div style="display: flex; align-items: center; gap: 8px">
 		<h1 id="title"></h1>
+		<input type="search" id="search" placeholder="filter by path (/)" aria-label="filter the drawings by path">
 		<button class="theme" title="toggle the theme (t)">◐ theme</button>
 	</div>
 	<div class="sub" id="sub"></div>
@@ -176,11 +178,29 @@ for (const button of document.querySelectorAll(".theme")) button.onclick = toggl
 
 const grid = document.getElementById("grid");
 const detail = document.getElementById("detail");
-{
+const search = document.getElementById("search");
+function summary() {
 	const changed = DATA.changes.filter(c => status(c) !== "same").length;
-	document.getElementById("sub").textContent = changed === DATA.changes.length
+	const shown = DATA.changes.length - [...grid.children].filter(card => card.hidden).length;
+	document.getElementById("sub").textContent = (changed === DATA.changes.length
 		? `${changed} changed drawings`
-		: `${DATA.changes.length} drawings, ${changed} changed`;
+		: `${DATA.changes.length} drawings, ${changed} changed`) +
+		(shown < DATA.changes.length ? `, ${shown} shown` : "");
+}
+summary();
+// the search shows the drawings whose path has it; prev and next go
+// through those
+search.addEventListener("input", () => {
+	const q = search.value.trim().toLowerCase();
+	DATA.changes.forEach((change, i) => { grid.children[i].hidden = !change.path.toLowerCase().includes(q); });
+	summary();
+});
+function advance(dir) {
+	const n = DATA.changes.length;
+	for (let k = 1; k <= n; k++) {
+		const i = ((current + dir * k) % n + n) % n;
+		if (!grid.children[i].hidden) return show(i);
+	}
 }
 document.title = DATA.title;
 document.getElementById("title").textContent = DATA.title;
@@ -531,8 +551,8 @@ for (const pane of panes) {
 	});
 }
 
-document.getElementById("prev").onclick = () => show(current - 1);
-document.getElementById("next").onclick = () => show(current + 1);
+document.getElementById("prev").onclick = () => advance(-1);
+document.getElementById("next").onclick = () => advance(1);
 document.getElementById("zoomin").onclick = () => setZoom(zoom * 1.25);
 document.getElementById("zoomout").onclick = () => setZoom(zoom / 1.25);
 document.getElementById("fit").onclick = () => setZoom(fitZoom());
@@ -548,15 +568,20 @@ document.addEventListener("keydown", e => {
 		if (e.key === "e" && editor.kind === "svg") return stopEdit();
 		return;
 	}
+	if (e.target === search) {
+		if (e.key === "Escape") { search.value = ""; search.dispatchEvent(new Event("input")); search.blur(); }
+		return;
+	}
 	if (e.metaKey || e.ctrlKey || e.altKey) return;
+	if (e.key === "/" && !detail.classList.contains("open")) { e.preventDefault(); return search.focus(); }
 	if (e.key === "e" && detail.classList.contains("open")) { e.preventDefault(); return startEdit(); }
 	if (e.key === "t" && !e.shiftKey) { toggleTheme(); return; }
 	if (!detail.classList.contains("open")) return;
 	const step = e.shiftKey ? 10 : 1;
 	const keys = {
 		Escape: close,
-		j: () => show(current - 1),
-		k: () => show(current + 1),
+		j: () => advance(-1),
+		k: () => advance(1),
 		"+": () => setZoom(zoom * 1.25),
 		"=": () => setZoom(zoom * 1.25),
 		"-": () => setZoom(zoom / 1.25),
