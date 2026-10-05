@@ -109,16 +109,3 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 	c.drawLabels(graph, paths)
 	return c
 }
-
-// mergedEdges returns an id for the edges that the layout merged, the
-// same for those in a group. An edge merges at its start or its end, not
-// both. The ids are negative, apart from those the canvas counts up.
-func mergedEdges(l *layout.Layout) map[*layout.Edge]int {
-	ids := map[*layout.Edge]int{}
-	for i, edge := range l.Graph.Edges {
-		if m := l.Edges[i].Merged; m != [2]int{} {
-			ids[edge] = -max(m[0], m[1])
-		}
-	}
-	return ids
-}

@@ -1,55 +1,10 @@
 package text
 
 import (
-	"strings"
 	"unicode"
 
 	"github.com/loov/layout"
 	"github.com/loov/layout/internal/draw"
-)
-
-// line direction bits of a cell
-const (
-	up = 1 << iota
-	down
-	left
-	right
-)
-
-// glyphs holds the line character for every combination of arm weights
-// (0 none, 1 light, 2 heavy), indexed by up*27 + down*9 + left*3 + right.
-var glyphs = []rune(" ╶╺╴─╼╸╾━╷┌┍┐┬┮┑┭┯╻┎┏┒┰┲┓┱┳╵└┕┘┴┶┙┵┷│├┝┤┼┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╂╊┫╉╋")
-
-var rounded = map[rune]rune{'┌': '╭', '┐': '╮', '└': '╰', '┘': '╯'}
-
-// glyph returns the line character with the arms in lines, drawing the
-// arms in the mask heavy as heavy lines. A lone arm is drawn as a full
-// straight line.
-func glyph(lines, heavy int) rune {
-	if lines&(lines-1) == 0 {
-		lines |= opposite(lines)
-		if heavy != 0 {
-			heavy = lines
-		}
-	}
-	i := 0
-	for _, arm := range []int{up, down, left, right} {
-		w := 0
-		if lines&arm != 0 {
-			w = 1
-		}
-		if heavy&arm != 0 {
-			w = 2
-		}
-		i = i*3 + w
-	}
-	return glyphs[i]
-}
-
-// arrowheads and vees by direction
-var (
-	arrow = [right + 1]rune{up: '▲', down: '▼', left: '◀', right: '▶'}
-	vee   = [right + 1]rune{up: '↑', down: '↓', left: '←', right: '→'}
 )
 
 // canvas is the character grid the graph is drawn on, with what is
@@ -245,32 +200,6 @@ func (c *canvas) hold(x, y int) {
 	}
 }
 
-// clusterLabel returns the label of a cluster on one line, as it is
-// drawn along the top of the frame
-func clusterLabel(cluster *layout.Cluster) string {
-	return strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")
-}
-
-// clusterLabelWidth returns the columns from a cluster's left corner past
-// its label: the label between a space on each side, and the corners
-func clusterLabelWidth(cluster *layout.Cluster) int {
-	return draw.Columns(clusterLabel(cluster)) + 3
-}
-
-// edgeLabel returns the label of the edge at index i as text draws it,
-// and the cell the layout puts its top left corner in
-func (c *canvas) edgeLabel(i int) (label string, x, y int) {
-	at := c.l.Edges[i]
-	label = draw.PlainLabel(c.l.Graph.Edges[i].Label)
-	return label, c.col(at.LabelCenter.X - at.LabelSize.X/2), c.row(at.LabelCenter.Y) - strings.Count(label, "\n")/2
-}
-
-// centered returns the column that centers line between the columns x0
-// and x1 of the borders around it
-func centered(x0, x1 int, line string) int {
-	return (x0 + x1 + 1 - draw.Columns(line)) / 2
-}
-
 // unpair blanks the other half of a wide character in the cell at x, y
 // before the cell is overwritten, so that no half is left to shift the
 // row; before is false when the covered cell is rewritten for the wide
@@ -320,41 +249,6 @@ func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
 	c.set(x1, y1, s[3])
 }
 
-// record draws field texts centered in their boxes with dividers between
-// sibling fields; row maps the top and bottom of fields to the rows of the
-// borders and dividers around them
-func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(layout.Length) int) {
-	if len(rec.Fields) == 0 {
-		x0, y0 := col(origin.X+layout.Length(rec.X0)), row(origin.Y+layout.Length(rec.Y0))
-		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
-		lines := strings.Split(rec.Text, "\n")
-		for i, line := range lines {
-			c.text(centered(x0, x1, line), (y0+y1)/2-(len(lines)-1)/2+i, line)
-		}
-		return
-	}
-	// dividers first, so that field texts win when rows are too coarse
-	for i, field := range rec.Fields {
-		if i == 0 {
-			continue
-		}
-		if rec.Vertical {
-			y := row(origin.Y + layout.Length(field.Y0))
-			for x := col(origin.X+layout.Length(field.X0)) + 1; x < col(origin.X+layout.Length(field.X1)); x++ {
-				c.set(x, y, '─')
-			}
-		} else {
-			x := col(origin.X + layout.Length(field.X0))
-			for y := row(origin.Y+layout.Length(field.Y0)) + 1; y < row(origin.Y+layout.Length(field.Y1)); y++ {
-				c.set(x, y, '│')
-			}
-		}
-	}
-	for _, field := range rec.Fields {
-		c.record(field, origin, col, row)
-	}
-}
-
 // walk draws a run from (x0,y0) to (x1,y1) as a horizontal then a
 // vertical leg.
 func (c *canvas) walk(x0, y0, x1, y1 int) {
@@ -378,83 +272,20 @@ func (c *canvas) walk(x0, y0, x1, y1 int) {
 	}
 }
 
-// marker draws an edge end marker pointing in dir at the end of the edge
-// in cell end. It sits in the gap before the node when the run there is
-// straight, else on the node border. It reports whether style has a
-// marker; styles without a marker of their own draw a normal arrowhead.
-func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
-	if style == layout.ArrowDefault || style == layout.ArrowNone {
-		return false
-	}
-	r := arrow[dir]
-	switch style {
-	case layout.ArrowVee:
-		r = vee[dir]
-	case layout.ArrowDot:
-		r = '●'
-	case layout.ArrowODot:
-		r = '○'
-	}
-	if before := c.at(end[0]-dx(dir), end[1]-dy(dir)); before != nil && before.lines == dir|opposite(dir) {
-		end = [2]int{end[0] - dx(dir), end[1] - dy(dir)}
-	}
-	c.set(end[0], end[1], r)
-	if p := c.at(end[0], end[1]); p != nil {
-		p.solid = true // later runs don't erase it
-	}
-	return true
-}
-
-// arrival returns the direction of the leg of the run between cells a
-// and b that reaches b, pointing at b. walk draws the horizontal leg
-// first, so from b when the run starts at b. Within a cell, it is the
-// direction of the segment from a to b in graph coordinates, p to q.
-func arrival(a, b [2]int, startsAtB bool, p, q layout.Vector) int {
-	horizontal := a[0] != b[0] && (startsAtB || a[1] == b[1])
-	switch {
-	case horizontal && b[0] > a[0]:
-		return right
-	case horizontal:
-		return left
-	case b[1] > a[1]:
-		return down
-	case b[1] < a[1]:
-		return up
-	}
-	switch dx, dy := q.X-p.X, q.Y-p.Y; {
-	case dy < 0 && -dy >= absLength(dx):
-		return up
-	case dx > 0 && dx > absLength(dy):
-		return right
-	case dx < 0 && -dx > absLength(dy):
-		return left
-	}
-	return down
-}
-
-func absLength(v layout.Length) layout.Length {
-	if v < 0 {
-		return -v
-	}
-	return v
-}
-
-func opposite(dir int) int { return [right + 1]int{up: down, down: up, left: right, right: left}[dir] }
-func dx(dir int) int       { return [right + 1]int{left: -1, right: 1}[dir] }
-func dy(dir int) int       { return [right + 1]int{up: -1, down: 1}[dir] }
-func sign(v int) int {
-	if v < 0 {
-		return -1
-	}
-	return 1
-}
-
-// layoutRecord computes the record fields of a node, measuring text as
-// the layout did
-func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *draw.Record {
-	var lineWidth func(string) float64
-	if graph.MeasureText != nil {
-		lineWidth = func(line string) float64 { return float64(graph.MeasureText(line, node.FontName, box.FontSize)) }
-	}
-	return draw.LayoutRecord(box.Label, float64(box.Size.X), float64(box.Size.Y), float64(graph.LineHeight), float64(box.FontSize), lineWidth)
+// cell is a drawn character with its colors, see rgb, and what is
+// needed to join the lines drawn through it
+type cell struct {
+	r      rune
+	fg, bg uint32
+	keep   bool   // inside a node or of text, which carving keeps
+	glue   bool   // beside a label, which carving keeps beside it
+	need   int    // the length a run of these must keep, for a label on it
+	label  int    // the cluster whose label starts here, from 1
+	solid  bool   // covered by a node; edges do not draw there
+	lines  int    // direction mask, for joining edge runs
+	heavy  int    // arms that runs of different edges share
+	owner  [4]int // edge that first drew each arm
+	frame  bool   // of the frame of a cluster
+	node   int    // node whose box covers it, from 1, see canvas.nodes
+	text   int    // edge whose label it is part of, see canvas.drawn
 }
