@@ -134,8 +134,8 @@ pre.editor.moving { cursor: grabbing; }
 	<div class="bar">
 		<span class="title" id="dtitle"></span>
 		<span class="path" id="dpath"></span>
-		<button id="prev" title="previous (k)">◀ prev</button>
-		<button id="next" title="next (j)">next ▶</button>
+		<button id="prev" title="previous (j)">◀ prev</button>
+		<button id="next" title="next (k)">next ▶</button>
 		<button id="zoomout" title="zoom out (-)">−</button>
 		<span id="zoomlabel">100%</span>
 		<button id="zoomin" title="zoom in (+)">+</button>
@@ -148,7 +148,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
 		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it (with ⌥, its lines stay joined), arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
-		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
+		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
 		<div class="panel"><h2>old <span class="dim" id="oldsize"></span></h2><div class="scroll" id="old"></div></div>
@@ -555,8 +555,8 @@ document.addEventListener("keydown", e => {
 	const step = e.shiftKey ? 10 : 1;
 	const keys = {
 		Escape: close,
-		j: () => show(current + 1),
-		k: () => show(current - 1),
+		j: () => show(current - 1),
+		k: () => show(current + 1),
 		"+": () => setZoom(zoom * 1.25),
 		"=": () => setZoom(zoom * 1.25),
 		"-": () => setZoom(zoom / 1.25),
