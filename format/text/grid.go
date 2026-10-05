@@ -20,6 +20,7 @@ type cell struct {
 	lines  int    // direction mask, for joining edge runs
 	heavy  int    // arms that runs of different edges share
 	owner  [4]int // edge that first drew each arm
+	frame  bool   // of the frame of a cluster
 	node   int    // node whose box covers it, from 1, see canvas.nodes
 }
 
@@ -441,8 +442,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 				// a line that turns right after leaving what it joins
 				// needs no cell between, unless it leaves a node for an
 				// arrowhead; and a node needs no blank under it where what
-				// follows is blank or drawn by an edge that leaves the node
-				// there
+				// follows is blank or drawn by an edge, see leaves
 				if across && x > 0 && x+1 < len(line) {
 					before, after := line[x-1], line[x+1]
 					arrow := strings.ContainsRune(markers, after.r)
@@ -452,7 +452,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 						(arrow || arms(after.r) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
 						return 0
 					}
-					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(grid, i, x, lo) {
+					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(grid, i, x) {
 						return 0
 					}
 				}
@@ -594,32 +594,14 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 }
 
 // leaves reports whether the cell after x on line i, below a node in the
-// cell before x, is blank or drawn by an edge that leaves the node: one
-// that starts at a cell beside the node, toward lo, on a neighboring line
-// along the node
-func leaves(grid [][]cell, i, x, lo int) bool {
+// cell before x, is blank or drawn by an edge, which can run right along
+// the node; the frame of a cluster keeps a cell off it
+func leaves(grid [][]cell, i, x int) bool {
 	after := grid[i][x+1]
 	if after.r == ' ' {
 		return after.bg == 0 && !after.keep && !after.glue
 	}
-	if after.lines == 0 {
-		return false // text or a mark
-	}
-	back := bits.TrailingZeros(uint(lo))
-	for _, step := range []int{-1, 1} {
-		for j := i; j >= 0 && j < len(grid) && x < len(grid[j]) && grid[j][x-1].solid; j += step {
-			start := grid[j][x]
-			if start.lines&lo == 0 {
-				continue
-			}
-			for arm := range 4 {
-				if after.lines&(1<<arm) != 0 && after.owner[arm] == start.owner[back] {
-					return true
-				}
-			}
-		}
-	}
-	return false
+	return after.lines != 0 && !after.frame // not text or a mark
 }
 
 // bend is a way for a line crossed by a seam to get from line i-1 to

@@ -31,7 +31,7 @@ func (c *canvas) drawCluster(i int) {
 	b := c.clusterBox(i)
 	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
 	c.ids++
-	c.pen = pen{ink: rgb(cluster.LineColor), dashed: true, edge: c.ids}
+	c.pen = pen{ink: rgb(cluster.LineColor), dashed: true, edge: c.ids, frame: true}
 	c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))
 	c.frame(x0, y0, x1, y1)
 }

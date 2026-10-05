@@ -79,6 +79,7 @@ type pen struct {
 	font   uint32 // color of text
 	dashed bool   // straight runs are dashed
 	edge   int    // edge drawn, so that overlaps show
+	frame  bool   // the frame of a cluster, see cell.frame
 }
 
 // newCanvas returns an empty canvas that fits the graph. One character
@@ -177,6 +178,7 @@ func (c *canvas) line(x, y int, mask int) {
 		}
 	}
 	p.lines |= mask
+	p.frame = p.frame || c.pen.frame
 	p.r = glyph(p.lines, p.heavy)
 	p.fg = c.pen.ink
 	if o := p.owner; p.lines == up|down|left|right && p.heavy == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
