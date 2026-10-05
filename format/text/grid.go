@@ -58,7 +58,8 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 // unjog straightens lines down the grid: two steps aside in a row become
 // one, on the row of the first or of the second, and a last step right
 // before an arrowhead takes the arrowhead along, onto the same box; a
-// turn of the layout and a jog of carving can add up so. Steps are lines
+// turn of the layout and a jog of carving can add up so. A step also
+// slides along its line to where the line crosses fewer lines. Steps are lines
 // of their own, which nothing joins. The new line crosses no more lines
 // than the old, keeps a cell off nodes, and lines with a label beside
 // them stay.
@@ -140,6 +141,8 @@ func unjog(grid [][]cell) (changed bool) {
 	}
 	// reroute moves a line from the old cells to the new ones, ending in
 	// head when it is set, if it can
+	// fewer has reroute take only a new line that crosses fewer lines
+	fewer := false
 	reroute := func(old, path []pos, arms []int, head *cell) bool {
 		olds := map[pos]int{}
 		_, oldArms := cells(down, old...)
@@ -194,7 +197,7 @@ func unjog(grid [][]cell) (changed bool) {
 				}
 			}
 		}
-		if added > removed {
+		if added > removed || fewer && added == removed {
 			return false
 		}
 		fg := at(old[0]).fg
@@ -271,6 +274,34 @@ func unjog(grid [][]cell) (changed bool) {
 			path, arms := cells(down, top, pos{mid.r, c})
 			if reroute(old, path, arms, &head) {
 				changed = true
+			}
+		}
+	}
+	// a step slides along its line to where the line crosses fewer
+	// lines, as two lines can cross twice to swap back
+	fewer = true
+	for r := range grid {
+		for c := range grid[r] {
+			top := pos{r, c}
+			_, b, ok := step(top)
+			if !ok {
+				continue
+			}
+			first := r
+			for is(pos{first - 1, c}, "│╂") {
+				first--
+			}
+			last := bottom(pos{r, b}) - 1
+			old, _ := cells(down, pos{first, c}, top, pos{r, b}, pos{last, b})
+			for row := first; row <= last; row++ {
+				if row == r {
+					continue
+				}
+				path, arms := cells(down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+				if reroute(old, path, arms, nil) {
+					changed = true
+					break
+				}
 			}
 		}
 	}
