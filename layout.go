@@ -1041,6 +1041,41 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		edge.Path = path
 	}
 
+	if graphdef.Splines != SplinesOrtho {
+		// an edge cutting across a label on its way past it in the label's
+		// rank runs straight across the band of the labels there instead
+		band := map[Length]Length{} // half heights by the y of their rank
+		for node := range labelNode {
+			y := Length(node.Center.Y)
+			band[y] = max(band[y], Length(node.Radius.Y))
+		}
+		pad := graphdef.EdgePadding / 2
+		cuts := func(edge *ledge, a, b Vector) bool {
+			for _, other := range graphdef.Edges {
+				if other != edge && other.Label != "" {
+					tl := other.LabelPos.Sub(other.LabelRadius).Sub(Vector{X: pad, Y: pad})
+					br := other.LabelPos.Add(other.LabelRadius).Add(Vector{X: pad, Y: pad})
+					if segmentHitsRect(a, b, tl, br) {
+						return true
+					}
+				}
+			}
+			return false
+		}
+		for _, edge := range graphdef.Edges {
+			for i := len(edge.Path) - 2; i >= 1; i-- {
+				p := edge.Path[i]
+				h, ok := band[p.Y]
+				if ok && (cuts(edge, edge.Path[i-1], p) || cuts(edge, p, edge.Path[i+1])) {
+					if edge.Path[i-1].Y > p.Y {
+						h = -h // reversed edges run up
+					}
+					edge.Path = slices.Replace(edge.Path, i, i+1, Vector{X: p.X, Y: p.Y - h}, Vector{X: p.X, Y: p.Y + h})
+				}
+			}
+		}
+	}
+
 	if graphdef.Splines == SplinesOrtho {
 		// row extents per rank: real node boxes, virtual nodes are flat
 		rows := make([][2]Length, len(positionedGraph.ByRank))
