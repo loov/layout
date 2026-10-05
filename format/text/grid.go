@@ -118,8 +118,8 @@ type move struct {
 
 // slide returns the cells that move the line leaving the turn at r, x
 // toward dir dx cells over, along with the runs it turns from at both
-// ends, or into an arrowhead on a box at the far end, which moves along
-// the box. The line moves only through blanks, of one edge, and its runs
+// ends, or into an arrowhead or a port on a box at the far end, which
+// moves along the box. The line moves only through blanks, of one edge, and its runs
 // only grow over blanks and shrink over themselves.
 func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 	at := func(r, x int) *cell {
@@ -193,6 +193,16 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 			return moves, true
 		case p.lines&opposite(dir) != 0 && bits.OnesCount(uint(p.lines)) == 2 && p.lines&(left|right) != 0 && p.owner[bits.TrailingZeros(uint(opposite(dir)))] == id:
 			return moves, turns(y, p.lines)
+		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
+			// a port on the side of a box moves along its straight side
+			to := at(y, x+dx)
+			if to == nil || to.node != p.node || arms(to.r) != left|right {
+				return nil, false
+			}
+			port, side := *p, *to
+			port.r, side.r = p.r, to.r
+			moves = append(moves, move{y, x, side}, move{y, x + dx, port})
+			return moves, true
 		default:
 			return nil, false
 		}
