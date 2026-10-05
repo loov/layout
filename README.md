@@ -71,8 +71,8 @@ The same graph drawn for a terminal, laid out with `layout.Options{ForText: true
          ╭──────────╮
          │ checkout │
          ╰──┬───┬───╯
-          ╭─╯   ╰─────────────╮
-          ▼                   ▼
+            │   ╰─────────────╮
+            ▼                 ▼
       ╭───────╮            ╭──────╮
       │ build │            │ lint │
       ╰──┬──┬─╯            ╰──┬───╯

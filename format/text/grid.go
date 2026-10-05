@@ -48,18 +48,20 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	// further along them while the columns are carved
 	grid = rows(grid, false)
 	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 1, !sideways, true, false, down, up)
-	if !sideways {
-		unjog(grid)
+	// straightening a line can clear the way for another
+	for !sideways && unjog(grid) {
 	}
 	return rows(grid, true)
 }
 
 // unjog straightens lines down the grid that step aside and back to the
 // column they left, past blanks: a turn of the layout and a jog of
-// carving can cancel out so, and merges two steps the same way into one.
+// carving can cancel out so, merges two steps the same way into one, and
+// takes along the arrowhead of a step right before it. Lines with a label
+// beside them stay, and no line crosses more lines than before.
 // The steps must be lines of their own, with nothing joining or crossing
 // them, and the straight line keeps a cell off nodes.
-func unjog(grid [][]cell) {
+func unjog(grid [][]cell) (changed bool) {
 	at := func(r, c int) *cell {
 		if r < 0 || r >= len(grid) || c < 0 || c >= len(grid[r]) {
 			return nil
@@ -67,12 +69,60 @@ func unjog(grid [][]cell) {
 		return &grid[r][c]
 	}
 	is := func(r, c int, ch rune) bool { p := at(r, c); return p != nil && p.r == ch }
-	// a free cell for a line, which keeps a cell off nodes beside it
-	free := func(r, c int) bool {
+	// lines run on through crossings
+	through := func(r, c int, ch rune) bool { return is(r, c, ch) || is(r, c, '╂') }
+	// a free cell for a line along ch, blank or a line across that it
+	// crosses, which keeps a cell off nodes beside it
+	free := func(r, c int, ch rune) bool {
 		p := at(r, c)
+		across := map[rune]rune{'│': '─', '─': '│'}[ch]
 		beside := func(dc int) bool { q := at(r, c+dc); return q != nil && q.solid }
-		return p != nil && p.r == ' ' && p.bg == 0 && !p.keep && !p.glue && !p.solid && p.need == 0 && p.label == 0 &&
-			!beside(-1) && !beside(1)
+		return p != nil && (p.r == ' ' && p.bg == 0 && !p.keep && !p.glue && p.need == 0 && p.label == 0 || p.r == across) &&
+			!p.solid && !beside(-1) && !beside(1)
+	}
+	// labeled reports whether a label is next to any cell of the line
+	// from r0, c0 to r1, c1, which is to keep beside it
+	labeled := func(r0, c0, r1, c1 int) bool {
+		for r := min(r0, r1); r <= max(r0, r1); r++ {
+			for c := min(c0, c1); c <= max(c0, c1); c++ {
+				for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+					if p := at(r+d[0], c+d[1]); p != nil && !p.solid && (p.glue || p.keep) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}
+	// crossings counts the crossings from r0, c0 to r1, c1, or with
+	// across, the lines there that a new line would cross
+	crossings := func(r0, c0, r1, c1 int, across bool) int {
+		n := 0
+		for r := min(r0, r1); r <= max(r0, r1); r++ {
+			for c := min(c0, c1); c <= max(c0, c1); c++ {
+				if p := at(r, c); p != nil && (p.r == '╂' || across && p.r != ' ') {
+					n++
+				}
+			}
+		}
+		return n
+	}
+	// draw puts a line along ch at r, c, crossing a line there
+	draw := func(r, c int, ch rune, like cell) {
+		if p := at(r, c); p.r != ' ' && p.r != ch {
+			p.r, p.lines = '╂', up|down|left|right
+			return
+		}
+		grid[r][c] = cell{r: ch, fg: like.fg, lines: map[rune]int{'│': up | down, '─': left | right}[ch]}
+	}
+	// erase takes a line along ch off r, c, leaving a line it crossed
+	erase := func(r, c int, ch rune) {
+		if p := at(r, c); p.r == '╂' {
+			p.r = map[rune]rune{'│': '─', '─': '│'}[ch]
+			p.lines = map[rune]int{'│': left | right, '─': up | down}[ch]
+			return
+		}
+		grid[r][c] = cell{r: ' '}
 	}
 	for r1 := range grid {
 		for c1 := range grid[r1] {
@@ -86,47 +136,136 @@ func unjog(grid [][]cell) {
 					continue
 				}
 				c0 := c1 + step.dc
-				for is(r1, c0, '─') {
+				for through(r1, c0, '─') {
 					c0 += step.dc
 				}
 				if !is(r1, c0, step.down) {
 					continue
 				}
 				r2 := r1 + 1
-				for is(r2, c0, '│') {
+				for through(r2, c0, '│') {
 					r2++
 				}
-				if is(r2, c0, step.out) {
-					// a second step the same way: one step, on the lower row
-					clear := true
-					for r := r1 + 1; r < r2; r++ {
-						clear = clear && free(r, c1)
-					}
-					for c := c1; c != c0; c += step.dc {
-						clear = clear && free(r2, c)
-					}
-					if !clear {
-						continue
-					}
-					line := grid[r1][c1]
-					for r := r1 + 1; r < r2; r++ {
-						grid[r][c0] = cell{r: ' '}
-					}
-					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
-						grid[r1][c] = cell{r: ' '}
-						grid[r2][c] = cell{r: '─', fg: line.fg, lines: left | right}
-					}
-					for r := r1; r < r2; r++ {
-						grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
-					}
-					grid[r2][c1] = cell{r: step.out, fg: line.fg, lines: up | map[int]int{-1: left, 1: right}[step.dc]}
+				if labeled(r1, c1, r1, c0) || labeled(r1, c0, r2, c0) {
 					continue
 				}
-				if r2 == r1+1 || !is(r2, c0, step.back) {
+				if is(r2, c0, step.out) {
+					// a second step the same way: one step, on the lower
+					// row, or else on the upper one
+					clear := true
+					for r := r1 + 1; r < r2; r++ {
+						clear = clear && free(r, c1, '│')
+					}
+					for c := c1; c != c0; c += step.dc {
+						clear = clear && free(r2, c, '─')
+					}
+					// no more crossings than before
+					clear = clear && crossings(r1+1, c1, r2-1, c1, true)+crossings(r2, c1, r2, c0-step.dc, true) <=
+						crossings(r1+1, c0, r2-1, c0, false)+crossings(r1, c1+step.dc, r1, c0-step.dc, false)
+					line := grid[r1][c1]
+					if !clear {
+						c2 := c0 + step.dc
+						for through(r2, c2, '─') {
+							c2 += step.dc
+						}
+						if !is(r2, c2, step.down) || labeled(r2, c0, r2, c2) {
+							continue
+						}
+						clear = true
+						for c := c0 + step.dc; c != c2+step.dc; c += step.dc {
+							clear = clear && free(r1, c, '─')
+						}
+						for r := r1 + 1; r < r2; r++ {
+							clear = clear && free(r, c2, '│')
+						}
+						clear = clear && crossings(r1, c0+step.dc, r1, c2-step.dc, true)+crossings(r1+1, c2, r2-1, c2, true) <=
+							crossings(r1+1, c0, r2-1, c0, false)+crossings(r2, c0+step.dc, r2, c2-step.dc, false)
+						if !clear {
+							continue
+						}
+						for r := r1 + 1; r < r2; r++ {
+							erase(r, c0, '│')
+							draw(r, c2, '│', line)
+						}
+						for c := c0; c != c2; c += step.dc {
+							if c == c0 {
+								grid[r1][c] = cell{r: '─', fg: line.fg, lines: left | right}
+							} else {
+								draw(r1, c, '─', line)
+							}
+							erase(r2, c, '─')
+						}
+						grid[r1][c2] = cell{r: step.down, fg: line.fg, lines: down | map[int]int{-1: right, 1: left}[step.dc]}
+						grid[r2][c2] = cell{r: '│', fg: line.fg, lines: up | down}
+						changed = true
+						continue
+					}
+					for r := r1 + 1; r < r2; r++ {
+						erase(r, c0, '│')
+					}
+					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
+						erase(r1, c, '─')
+						if c == c0 {
+							grid[r2][c] = cell{r: '─', fg: line.fg, lines: left | right}
+						} else {
+							draw(r2, c, '─', line)
+						}
+					}
+					grid[r1][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+					for r := r1 + 1; r < r2; r++ {
+						draw(r, c1, '│', line)
+					}
+					grid[r2][c1] = cell{r: step.out, fg: line.fg, lines: up | map[int]int{-1: left, 1: right}[step.dc]}
+					changed = true
+					continue
+				}
+				// the border under both is of one box: no corner between
+				sameBox := func() bool {
+					for c := c0; ; c -= step.dc {
+						p := at(r2+1, c)
+						if p == nil || !p.solid || !strings.ContainsRune("─━═┬┴╤╥", p.r) && c != c0 {
+							return false
+						}
+						if c == c1 {
+							return true
+						}
+					}
+				}
+				if is(r2, c0, '▼') && sameBox() {
+					// a last step before an arrowhead: the arrowhead goes
+					// along, onto the same box; it is solid, so it is out of
+					// the way while checking
+					line, head := grid[r1][c1], grid[r2][c0]
+					grid[r2][c0] = cell{r: ' '}
+					clear := true
+					for r := r1 + 1; r <= r2; r++ {
+						clear = clear && free(r, c1, '│')
+					}
+					clear = clear && crossings(r1+1, c1, r2, c1, true) <=
+						crossings(r1+1, c0, r2-1, c0, false)+crossings(r1, c1+step.dc, r1, c0-step.dc, false)
+					if !clear {
+						grid[r2][c0] = head
+						continue
+					}
+					for r := r1 + 1; r < r2; r++ {
+						erase(r, c0, '│')
+					}
+					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
+						erase(r1, c, '─')
+					}
+					grid[r1][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+					for r := r1 + 1; r < r2; r++ {
+						draw(r, c1, '│', line)
+					}
+					grid[r2][c1] = head
+					changed = true
+					continue
+				}
+				if r2 == r1+1 || !is(r2, c0, step.back) || labeled(r2, c0, r2, c1) {
 					continue
 				}
 				c := c0 - step.dc
-				for c != c1 && is(r2, c, '─') {
+				for c != c1 && through(r2, c, '─') {
 					c -= step.dc
 				}
 				if c != c1 || !is(r2, c1, step.in) {
@@ -134,23 +273,31 @@ func unjog(grid [][]cell) {
 				}
 				clear := true
 				for r := r1 + 1; r < r2; r++ {
-					clear = clear && free(r, c1)
+					clear = clear && free(r, c1, '│')
 				}
+				clear = clear && crossings(r1+1, c1, r2-1, c1, true) <= crossings(r1, c0, r2, c0, false)+
+					crossings(r1, c1+step.dc, r1, c0-step.dc, false)+crossings(r2, c1+step.dc, r2, c0-step.dc, false)
 				if !clear {
 					continue
 				}
 				line := grid[r1][c1]
 				for r := r1; r <= r2; r++ {
-					grid[r][c0] = cell{r: ' '}
-					grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+					erase(r, c0, '│')
+					if r == r1 || r == r2 {
+						grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+					} else {
+						draw(r, c1, '│', line)
+					}
 				}
 				for c := c0 - step.dc; c != c1; c -= step.dc {
-					grid[r1][c] = cell{r: ' '}
-					grid[r2][c] = cell{r: ' '}
+					erase(r1, c, '─')
+					erase(r2, c, '─')
 				}
+				changed = true
 			}
 		}
 	}
+	return changed
 }
 
 // seams removes seams from the lines of grid, one cell from every line,
