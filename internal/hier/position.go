@@ -316,7 +316,8 @@ const (
 // Gansner et al. section 4.2 do: every edge gets a vertex below both of its
 // ends, so that the cost of the edge is how far apart its ends are, and
 // neighbors in a rank stay apart by their widths. Edges between virtual
-// nodes weigh more, so that long edges run straight. The width of the
+// nodes weigh more, so that long edges run straight, and so do the edges
+// of labels, so that a label stays beside its edge. The width of the
 // layout costs too, so that a long edge bends rather than holding a gap
 // open across every rank.
 //
@@ -363,11 +364,17 @@ func positionSimplex(graph *Graph) {
 			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(math.Ceil(float64(gap))))
 		}
 	}
+	// a virtual node with an anchor carries a label beside its edge, which
+	// keeps straighter than a long edge leaving a node, the label beside
+	// it rather than between its bends
+	label := func(node *Node) bool { return node.Virtual && node.Anchor != 0 }
 	weight := func(src, dst *Node) float32 {
 		omega := float32(1)
 		switch {
 		case src.Virtual && dst.Virtual:
 			omega = 8
+		case label(src) || label(dst):
+			omega = 4
 		case src.Virtual || dst.Virtual:
 			omega = 2
 		}
