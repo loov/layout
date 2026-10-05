@@ -59,20 +59,51 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 		x1 = max(x1, x0+w)
 		// an odd number of spare cells can't be split evenly around the
 		// label, give one back on a side that no edge ends next to on the
-		// top or bottom; ends on the sides move onto them, see spreadSides
+		// top or bottom, where spreadSides puts them; ends on the sides
+		// move onto them
 		if spare := x1 - x0 - 1 - draw.TextColumns(label); spare >= 3 && spare%2 == 1 {
-			lo, hi := x1, x0 // the columns of the edge ends
-			end := func(p layout.Vector) {
-				if r := c.row(p.Y); r <= y0 || r >= y1 {
-					lo, hi = min(lo, c.col(p.X)), max(hi, c.col(p.X))
+			type end struct {
+				exact    float64
+				straight bool
+			}
+			var top, bottom []end
+			add := func(path []layout.Vector) {
+				p := path[0]
+				// straight on past the first bend, see spreadSides
+				straight := len(path) < 3 || absLength(path[2].X-path[1].X) < 0.01
+				e := end{float64((p.X - c.origin.X) / c.cellW), straight}
+				switch r := c.row(p.Y); {
+				case r <= y0:
+					top = append(top, e)
+				case r >= y1:
+					bottom = append(bottom, e)
 				}
 			}
 			for i, edge := range c.l.Graph.Edges {
-				if path := c.l.Edges[i].Path; len(path) > 0 && edge.From == node {
-					end(path[0])
+				path := c.l.Edges[i].Path
+				if len(path) == 0 {
+					continue
 				}
-				if path := c.l.Edges[i].Path; len(path) > 0 && edge.To == node {
-					end(path[len(path)-1])
+				if edge.From == node {
+					add(path)
+				}
+				if edge.To == node {
+					back := slices.Clone(path)
+					slices.Reverse(back)
+					add(back)
+				}
+			}
+			lo, hi := x1, x0 // the columns of the edge ends
+			for _, ends := range [][]end{top, bottom} {
+				slices.SortFunc(ends, func(a, b end) int { return cmp.Compare(a.exact, b.exact) })
+				cells := make([]int, len(ends))
+				exact, fixed := make([]float64, len(ends)), make([]bool, len(ends))
+				for n, e := range ends {
+					cells[n], exact[n], fixed[n] = int(e.exact+0.5), e.exact, e.straight
+				}
+				packEnds(cells, exact, fixed)
+				for _, x := range cells {
+					lo, hi = min(lo, x), max(hi, x)
 				}
 			}
 			switch {
@@ -402,22 +433,30 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			return cmp.Or(cmp.Compare(a.path[a.i][key.along], b.path[b.i][key.along]), cmp.Compare(a.toward, b.toward))
 		})
 		want := make([]int, len(ends))
+		exact := make([]float64, len(ends))
 		fixed := make([]bool, len(ends))
 		for n, e := range ends {
-			want[n], fixed[n] = e.path[e.i][key.along], e.fixed
-			// an end is no further from the one before than their distance
-			// in the layout, so that ends about a cell apart stay next to
-			// each other however they round; one going on straight stays
-			if n > 0 && !e.fixed {
-				want[n] = min(want[n], want[n-1]+max(1, int(math.Round(e.exact-ends[n-1].exact))))
-			}
+			want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed
 		}
+		packEnds(want, exact, fixed)
 		for n, at := range spreadRows(want, fixed, lo, hi) {
 			e := ends[n]
 			e.path[e.i][key.along], e.path[e.j][key.along] = at, at
 			for _, f := range e.also {
 				f.path[f.i][key.along], f.path[f.j][key.along] = at, at
 			}
+		}
+	}
+}
+
+// packEnds moves the ends along a side, in order at cells, no further
+// from the end before than their distance at the exact cells where the
+// layout ends them, so that ends about a cell apart stay next to each
+// other however they round. Fixed ends, which go on straight, stay.
+func packEnds(cells []int, exact []float64, fixed []bool) {
+	for n := 1; n < len(cells); n++ {
+		if !fixed[n] {
+			cells[n] = min(cells[n], cells[n-1]+max(1, int(math.Round(exact[n]-exact[n-1]))))
 		}
 	}
 }
