@@ -59,7 +59,7 @@ pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; 
 /* both layers in one cell, so that the stack is as large as either, on
    white, so that what is the same cancels out */
 .onion { display: inline-grid; isolation: isolate; filter: invert(1); background: #fff; touch-action: none; cursor: grab; }
-.onion > * { grid-area: 1 / 1; width: 100%; height: 100%; object-fit: none; object-position: 0 0; background: #fff; }
+.onion > * { grid-area: 1 / 1; justify-self: stretch; align-self: stretch; object-fit: none; object-position: 0 0; background: #fff; }
 .onion.dragging { cursor: grabbing; }
 .onion .new { mix-blend-mode: difference; }
 .context { position: absolute; left: 0; top: 0; opacity: .14; pointer-events: none; }
