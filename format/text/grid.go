@@ -78,8 +78,125 @@ func mergeRows(grid [][]cell) ([][]cell, bool) {
 			grid[r] = row
 			return slices.Delete(grid, r+1, r+2), true
 		}
+		// a line that turns along one of the rows can slide over to
+		// clear the way, a few cells at most
+		for _, end := range []struct{ r, dir int }{{r, up}, {r + 1, down}} {
+			for x := range grid[end.r] {
+				for _, dx := range []int{1, -1, 2, -2, 3, -3} {
+					moves, ok := slide(grid, end.r, x, end.dir, dx)
+					if !ok {
+						continue
+					}
+					a, b := slices.Clone(grid[r]), slices.Clone(grid[r+1])
+					for _, m := range moves {
+						switch m.r {
+						case r:
+							a[m.x] = m.c
+						case r + 1:
+							b[m.x] = m.c
+						}
+					}
+					if row, ok := mergeRow(a, b); ok {
+						for _, m := range moves {
+							grid[m.r][m.x] = m.c
+						}
+						grid[r] = row
+						return slices.Delete(grid, r+1, r+2), true
+					}
+				}
+			}
+		}
 	}
 	return grid, false
+}
+
+// move is a cell to put at r, x
+type move struct {
+	r, x int
+	c    cell
+}
+
+// slide returns the cells that move the line leaving the turn at r, x
+// toward dir dx cells over, along with the runs it turns from at both
+// ends, or into an arrowhead on a box at the far end, which moves along
+// the box. The line moves only through blanks, of one edge, and its runs
+// only grow over blanks and shrink over themselves.
+func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
+	at := func(r, x int) *cell {
+		if r < 0 || r >= len(grid) || x < 0 || x >= len(grid[r]) {
+			return nil
+		}
+		return &grid[r][x]
+	}
+	blank := func(r, x int) bool { c := at(r, x); return c != nil && free(*c) }
+	solid := func(r, x int) bool { c := at(r, x); return c != nil && c.solid }
+	turn := at(r, x)
+	if turn == nil || turn.lines&dir == 0 || bits.OnesCount(uint(turn.lines)) != 2 || turn.lines&(left|right) == 0 {
+		return nil, false
+	}
+	id := turn.owner[bits.TrailingZeros(uint(dir))]
+	step := map[int]int{up: -1, down: 1}[dir]
+	var moves []move
+	// turns moves the turn at row y from x along its run, which grows or
+	// shrinks to meet it at x+dx
+	turns := func(y int, arms int) bool {
+		run := arms & (left | right)
+		side := map[int]int{left: -1, right: 1}[run]
+		lo, hi := min(x, x+dx), max(x, x+dx)
+		for c := lo; c <= hi; c++ {
+			if c == x {
+				continue
+			}
+			p := at(y, c)
+			// toward the run it shrinks over its own run, away from it,
+			// it grows over blanks
+			if dx*side > 0 && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
+				return false
+			}
+		}
+		line := cell{r: '─', fg: turn.fg, lines: left | right, owner: [4]int{id, id, id, id}}
+		for c := lo; c <= hi; c++ {
+			switch {
+			case c == x+dx:
+				moves = append(moves, move{y, c, cell{r: corner(arms), fg: turn.fg, lines: arms, owner: [4]int{id, id, id, id}}})
+			case dx*side > 0:
+				moves = append(moves, move{y, c, cell{r: ' '}})
+			default:
+				moves = append(moves, move{y, c, line})
+			}
+		}
+		return true
+	}
+	if !turns(r, turn.lines) {
+		return nil, false
+	}
+	vertical := cell{r: '│', fg: turn.fg, lines: up | down, owner: [4]int{id, id, id, id}}
+	for y := r + step; ; y += step {
+		p := at(y, x)
+		switch {
+		case p == nil:
+			return nil, false
+		case p.lines == up|down && p.owner[0] == id && !p.solid:
+			// a cell off nodes, as unjog keeps
+			if !blank(y, x+dx) || solid(y, x+dx-1) || solid(y, x+dx+1) {
+				return nil, false
+			}
+			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, vertical})
+			continue
+		case p.solid && p.node == 0 && dir == down:
+			// an arrowhead onto the straight top of a box
+			below, to := at(y+1, x), at(y+1, x+dx)
+			if !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
+				return nil, false
+			}
+			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
+			return moves, true
+		case p.lines&opposite(dir) != 0 && bits.OnesCount(uint(p.lines)) == 2 && p.lines&(left|right) != 0 && p.owner[bits.TrailingZeros(uint(opposite(dir)))] == id:
+			return moves, turns(y, p.lines)
+		default:
+			return nil, false
+		}
+	}
 }
 
 // mergeRow returns the cells of a and b in one row, see mergeRows
