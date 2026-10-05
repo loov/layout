@@ -26,6 +26,10 @@ h1 { font-size: 18px; margin: 0 0 4px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; padding: 12px 20px 40px; }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
 .card:hover, .card:focus-visible { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+.thumbwrap { position: relative; }
+.stats { position: absolute; right: 4px; bottom: 4px; display: flex; gap: 8px; font: 10px/1.3 var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); background: color-mix(in srgb, var(--card) 85%, transparent); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; white-space: nowrap; }
+.stats b { font-weight: 400; color: var(--ink); }
+.panel .stats { font-size: 11px; right: 8px; bottom: 8px; }
 .thumb { height: 190px; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 8px; background: #fff; }
 .thumb img { max-width: 100%; max-height: 100%; }
 .thumb pre { margin: 0; }
@@ -50,7 +54,7 @@ pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; 
 .bar button:hover { border-color: var(--accent); }
 .bar .hint { color: var(--muted); font-size: 12px; width: 100%; }
 .panels { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); min-height: 0; }
-.panel { display: flex; flex-direction: column; background: var(--paper); min-width: 0; min-height: 0; }
+.panel { position: relative; display: flex; flex-direction: column; background: var(--paper); min-width: 0; min-height: 0; }
 .panel h2 { background: var(--card); }
 .panel h2 { margin: 0; padding: 6px 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; gap: 8px; }
 .panel h2 span { text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -232,6 +236,37 @@ function delta(change, short) {
 	return span;
 }
 
+// the diagnostics shown on drawings, see layout.Diagnostics; fewer is better
+const STATS = [["corners", "bends", "corners of edges"], ["length", "len", "length of edges"], ["crossings", "cross", "edge crossings"]];
+
+// statsBox returns a box with the diagnostics of the old or new layout, with
+// how they changed from old to new on the new one
+function statsBox(change, which) {
+	const stats = which === "old" ? change.oldStats : change.newStats;
+	if (!stats) return null;
+	const box = document.createElement("div");
+	box.className = "stats";
+	box.title = Object.entries(stats).map(([k, v]) => `${k}=${v}`).join(" ");
+	for (const [key, name, long] of STATS) {
+		if (!(key in stats)) continue;
+		const item = document.createElement("span");
+		item.title = long;
+		const value = document.createElement("b");
+		value.textContent = Math.round(stats[key]);
+		item.append(name + " ", value);
+		const before = change.oldStats?.[key];
+		if (which === "new" && before !== undefined && Math.round(before) !== Math.round(stats[key])) {
+			const v = Math.round(stats[key] - before);
+			const d = document.createElement("span");
+			d.textContent = v > 0 ? "+" + v : "−" + -v;
+			d.className = v > 0 ? "grow" : "shrink";
+			item.append(d);
+		}
+		box.append(item);
+	}
+	return box;
+}
+
 function status(change) {
 	if (!change.old) return "added";
 	if (!change.new) return "removed";
@@ -259,6 +294,11 @@ DATA.changes.forEach((change, i) => {
 	thumb.className = "thumb";
 	const el = drawing(change.kind, change.new || change.old);
 	thumb.append(el);
+	const thumbwrap = document.createElement("div");
+	thumbwrap.className = "thumbwrap";
+	thumbwrap.append(thumb);
+	const stats = statsBox(change, change.new ? "new" : "old");
+	if (stats) thumbwrap.append(stats);
 	const label = document.createElement("div");
 	label.className = "label";
 	const path = document.createElement("span");
@@ -272,7 +312,7 @@ DATA.changes.forEach((change, i) => {
 	const size = document.createElement("div");
 	size.className = "size";
 	size.append(sizeText(change.kind, change.newSize || change.oldSize, true), " ", delta(change, true));
-	card.append(thumb, label, size);
+	card.append(thumbwrap, label, size);
 	card.addEventListener("click", () => show(i));
 	card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i); } });
 	grid.append(card);
@@ -295,6 +335,11 @@ function show(i) {
 		pane.replaceChildren(text ? drawing(change.kind, text) : none());
 	}
 	panes[2].replaceChildren(onion(change));
+	for (const [pane, which] of [[panes[0], "old"], [panes[1], "new"]]) {
+		pane.parentElement.querySelector(".stats")?.remove();
+		const box = statsBox(change, which);
+		if (box) pane.parentElement.append(box);
+	}
 	detail.classList.add("open");
 	history.replaceState(null, "", "#" + current);
 	// a nudge moves the text a cell, the images a pixel

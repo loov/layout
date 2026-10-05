@@ -43,6 +43,10 @@ type Change struct {
 	// columns and rows of text or pixels of svg; nil when missing
 	OldSize *[2]float64 `json:"oldSize"`
 	NewSize *[2]float64 `json:"newSize"`
+	// OldStats and NewStats are the diagnostics of the layout drawn, see
+	// layout.Diagnostics, by key; nil when missing
+	OldStats map[string]float64 `json:"oldStats"`
+	NewStats map[string]float64 `json:"newStats"`
 }
 
 func main() {
@@ -144,23 +148,42 @@ func collect(commit string, all bool) ([]Change, string, error) {
 	slices.Sort(paths)
 	paths = slices.Compact(paths)
 
+	// the diagnostics of the layouts, as TestDiagnostics records them
+	read := func(path string) string {
+		if commit != "" {
+			return show(commit, path)
+		}
+		data, _ := os.ReadFile(filepath.Join(root, path))
+		return string(data)
+	}
+	oldStats := map[string]map[string]map[string]float64{
+		"svg": diagnostics(show(base, "testdata/diagnostics.txt")),
+		"txt": diagnostics(show(base, "testdata/diagnostics_text.txt")),
+	}
+	newStats := map[string]map[string]map[string]float64{
+		"svg": diagnostics(read("testdata/diagnostics.txt")),
+		"txt": diagnostics(read("testdata/diagnostics_text.txt")),
+	}
+
 	var changes []Change
 	for _, path := range paths {
 		kind := strings.TrimPrefix(filepath.Ext(path), ".")
 		if kind != "svg" && kind != "txt" && kind != "ans" || strings.HasPrefix(filepath.Base(path), "diagnostics") {
 			continue // diagnostics are no drawing
 		}
-		old := show(base, path)
-		var new string
-		if commit != "" {
-			new = show(commit, path)
-		} else if data, err := os.ReadFile(filepath.Join(root, path)); err == nil {
-			new = string(data)
-		}
+		old, new := show(base, path), read(path)
 		if all && (old != "" || new != "") || old != new {
+			// drawings are named as the graph, text colored or not
+			name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+			name = strings.TrimSuffix(name, ".truecolor")
+			stats := "txt"
+			if kind == "svg" {
+				stats = "svg"
+			}
 			changes = append(changes, Change{
 				Path: path, Kind: kind, Old: old, New: new,
 				OldSize: size(kind, old), NewSize: size(kind, new),
+				OldStats: oldStats[stats][name], NewStats: newStats[stats][name],
 			})
 		}
 	}
@@ -195,6 +218,27 @@ func size(kind, content string) *[2]float64 {
 		w = max(w, draw.Columns(strings.TrimRight(line, " ")))
 	}
 	return &[2]float64{float64(w), float64(len(lines))}
+}
+
+// diagnostics parses the lines of a diagnostics file, a name followed by
+// key=value pairs, see layout.Diagnostics.String, into values by key by name
+func diagnostics(content string) map[string]map[string]float64 {
+	stats := map[string]map[string]float64{}
+	for _, line := range strings.Split(content, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		values := map[string]float64{}
+		for _, field := range fields[1:] {
+			key, value, ok := strings.Cut(field, "=")
+			if v, err := strconv.ParseFloat(value, 64); ok && err == nil {
+				values[key] = v
+			}
+		}
+		stats[fields[0]] = values
+	}
+	return stats
 }
 
 // show returns the contents of path at rev, or nothing when it is not there
