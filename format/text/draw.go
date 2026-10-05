@@ -340,7 +340,6 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		toward int     // where the edge heads past the bend, along the side
 		group  int     // the merged ends there, see layout.EdgePath.Merged
 		exact  float64 // where the layout ends the edge along the side, in cells
-		marker bool    // drawn with an arrowhead or another mark, not a junction
 
 		also []end // further edges of a shared start, which follow it
 	}
@@ -387,14 +386,6 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 					end.toward = path[e.k][along]
 				}
 				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
-				mark := edges[k].ArrowTail
-				if e.i != 0 {
-					mark = edges[k].ArrowHead
-					if mark == layout.ArrowDefault && edges[k].Directed {
-						mark = layout.ArrowNormal
-					}
-				}
-				end.marker = mark != layout.ArrowDefault && mark != layout.ArrowNone
 				p := c.l.Edges[k].Path[0]
 				if e.i != 0 {
 					p = c.l.Edges[k].Path[len(c.l.Edges[k].Path)-1]
@@ -449,16 +440,15 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		}
 		packEnds(want, exact, fixed)
 		// an end that turns toward a place along the side goes straight
-		// there instead, past no other end; an arrowhead may go as far as
-		// a corner, see below
+		// there instead, past no other end
 		for n, e := range ends {
-			if e.fixed || e.toward < lo-1 || e.toward > hi+1 {
+			if e.fixed || e.toward < lo || e.toward > hi {
 				continue
 			}
 			past := slices.ContainsFunc(want, func(w int) bool {
 				return w != want[n] && (w-want[n])*(w-e.toward) <= 0
 			})
-			if !past && e.toward >= lo && e.toward <= hi {
+			if !past {
 				want[n], fixed[n] = e.toward, true
 			}
 		}
@@ -473,16 +463,6 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			}
 			if !moved {
 				rows = wide
-			}
-		}
-		// of several ends, the first or last goes on to the corner when
-		// its arrowhead lines up with where the edge comes from, so the
-		// edge runs straight in beside the box; a lone end there would
-		// read as reaching for the corner
-		for _, n := range []int{0, len(ends) - 1} {
-			e := ends[n]
-			if len(ends) > 1 && !e.fixed && e.marker && e.group == 0 && (n == 0 && e.toward == lo-1 || n == len(ends)-1 && e.toward == hi+1) {
-				rows[n] = e.toward
 			}
 		}
 		for n, at := range rows {
