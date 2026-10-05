@@ -32,16 +32,23 @@ type cell struct {
 // joined, so that what is drawn stays connected. Nodes and text stay
 // whole.
 func carve(grid [][]cell, sideways bool) [][]cell {
-	grid = transpose(seams(transpose(grid), " │┃┊┋┆", "▲▼●○", 1, sideways, false, right, left))
 	// seams keep the blanks past the end of lines, trailing rows of them
 	// included; keep one of those as the bottom margin
 	blank := func(row []cell) bool {
 		return !slices.ContainsFunc(row, func(c cell) bool { return c.r != ' ' || c.bg != 0 })
 	}
-	for len(grid) > 1 && blank(grid[len(grid)-1]) && blank(grid[len(grid)-2]) {
-		grid = grid[:len(grid)-1]
+	rows := func(grid [][]cell, stubs bool) [][]cell {
+		grid = transpose(seams(transpose(grid), " │┃┊┋┆", "▲▼●○", 1, sideways, false, stubs, right, left))
+		for len(grid) > 1 && blank(grid[len(grid)-1]) && blank(grid[len(grid)-2]) {
+			grid = grid[:len(grid)-1]
+		}
+		return grid
 	}
-	return seams(grid, " ─━┈┉┄", "◀▶●○", 2, !sideways, true, down, up)
+	// the stubs of lines leaving a node go last: lines can still run
+	// further along them while the columns are carved
+	grid = rows(grid, false)
+	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 2, !sideways, true, false, down, up)
+	return rows(grid, true)
 }
 
 // seams removes seams from the lines of grid, one cell from every line,
@@ -51,12 +58,15 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 // arm next, or the cell of the line after has the arm prev, or one is
 // kept or glued and the other is too or is not blank.
 //
+// With stubs, the first cell of a straight line that goes on past it may
+// go too.
+//
 // With bend set, once no seam is left, a seam that turns can also cross
 // lines joining two lines, as long as it narrows the grid: a line that
 // turns there runs one cell further along, and a straight line jogs over
 // in a blank cell beside it, see bendsAt. Seams prefer the first, which
 // adds no corners.
-func seams(grid [][]cell, straight, markers string, keep int, turn, bend bool, next, prev int) [][]cell {
+func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs bool, next, prev int) [][]cell {
 	// the cost of a seam through a cell, and of each cell it moves along
 	const (
 		trailing = 1 << 20 // past the end of the line, which removes nothing
@@ -116,7 +126,10 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend bool, n
 				// a node needs no blank under it where what follows is
 				// blank or drawn by an edge that leaves the node there
 				if keep == 1 && x > 0 && x+1 < len(line) && !strings.ContainsRune(markers, line[x+1].r) {
-					if c.r == glyph(lo|hi, 0) && arms(line[x-1].r)&hi != 0 && arms(line[x+1].r)&lo != 0 && arms(line[x+1].r) != lo|hi {
+					// or, with stubs, that goes on straight, which keeps a
+					// cell of it
+					if c.r == glyph(lo|hi, 0) && arms(line[x-1].r)&hi != 0 && arms(line[x+1].r)&lo != 0 &&
+						(arms(line[x+1].r) != lo|hi || stubs && line[x+1].r == c.r && line[x+1].bg == c.bg) {
 						return 0
 					}
 					if c.r == ' ' && line[x-1].solid && !line[x+1].solid && leaves(grid, i, x, lo) {
