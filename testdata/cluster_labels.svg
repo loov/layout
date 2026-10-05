@@ -1,0 +1,33 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='974.92004' height='498.84955'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><rect class='cluster' x='501.48004' y='19.5' width='457.44' height='407.5' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='730.2001' y='27.5' font-size='14' fill='#000000'>server</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M249.24002,79 L249.24005,118 Q249.24007,133 249.24007,148 L249.24005,163 '></path><text text-anchor='middle' alignment-baseline='middle' x='301.44006' y='145' font-size='14' fill='#000000'>uplink → hub-in</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M231.32005,188.80865 L178.3579,217.79793 Q165.20001,225 165.20001,240 L165.20001,255 '></path><text text-anchor='middle' alignment-baseline='middle' x='165.02704' y='185.89185' font-size='14' fill='#000000'>usb → serial</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M254.06786,195 L258.7869,210.6395 Q263.12,225 263.12,240 L263.12,255 '></path><text text-anchor='middle' alignment-baseline='middle' x='355.7076' y='225.03595' font-size='14' fill='#000000'>console via extension cable</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M726.42,397.21298 L821.3881,368.76666 Q840.6401,363 840.6401,342.90292 L840.6401,320.99258 Q840.6401,303 822.75745,301.014 L692.4744,286.5453 Q678.56,285 678.56,271 L678.56,271 Q678.56,257 664.82513,254.28828 L547.874,231.19823 Q516.48004,225 484.94382,219.57167 L267.16006,182.08456 '></path><text text-anchor='middle' alignment-baseline='middle' x='713.9391' y='309.36725' font-size='14' fill='#000000'>tx → hub-serial</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M189.56001,279.06622 L210.6,286.0331 Q231.64,293 253.58809,296.08215 L484.79092,328.54993 Q516.48,333 546.5186,344.03088 L687.77997,395.90524 '></path><text text-anchor='middle' alignment-baseline='middle' x='614.34515' y='442.84955' font-size='14' fill='#000000'>null-modem cable with a rather long name here</text>
+<text text-anchor='middle' alignment-baseline='middle' x='614.34515' y='458.84955' font-size='14' fill='#000000'>console, 115200</text>
+<text text-anchor='middle' alignment-baseline='middle' x='614.34515' y='474.84955' font-size='14' fill='#000000'>1 → tty1</text>
+<rect x='16.000006' y='40' width='466.48' height='39' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='249.24' y='51.5' font-size='14' fill='#000000'>switch</text>
+<text text-anchor='middle' alignment-baseline='middle' x='249.24' y='67.5' font-size='14' fill='#000000'>port-a  port-b  port-c  port-d  port-e  port-f  port-g  port-h  port-i  port-j</text>
+<rect x='231.32005' y='163' width='35.84' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='249.24005' y='179' font-size='14' fill='#000000'>hub</text>
+<rect x='140.84001' y='255' width='48.72' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='165.20001' y='271' font-size='14' fill='#000000'>serial</text>
+<rect x='237.64' y='255' width='50.96' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='263.12' y='271' font-size='14' fill='#000000'>router</text>
+<rect x='687.77997' y='387' width='38.64' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='707.1' y='403' font-size='14' fill='#000000'>uart</text>
+<rect x='726.16003' y='43.5' width='35.84' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='744.08' y='59.5' font-size='14' fill='#000000'>gpu</text>
+</g></svg>

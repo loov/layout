@@ -237,6 +237,23 @@ var examples = map[string]func() *layout.Graph{
 		}
 		return graph
 	},
+	// cluster_labels has a long edge label into a cluster that has no room
+	// beside its line, where the other side of the line is across the
+	// cluster box
+	"cluster_labels": func() *layout.Graph {
+		graph := layout.NewDigraph()
+		graph.Shape = layout.Box
+		graph.Node("switch").Label = "switch\nport-a  port-b  port-c  port-d  port-e  port-f  port-g  port-h  port-i  port-j"
+		graph.Edge("switch", "hub").Label = "uplink → hub-in"
+		graph.Edge("hub", "serial").Label = "usb → serial"
+		graph.Edge("hub", "router").Label = "console via extension cable"
+		graph.Edge("uart", "hub").Label = "tx → hub-serial"
+		graph.Edge("serial", "uart").Label = "null-modem cable with a rather long name here\nconsole, 115200\n1 → tty1"
+		graph.Clusters = []*layout.Cluster{
+			{ID: "server", Label: "server", Nodes: []*layout.Node{graph.Node("gpu"), graph.Node("uart")}},
+		}
+		return graph
+	},
 	"record": func() *layout.Graph {
 		graph := layout.NewDigraph()
 		a := graph.Node("A")

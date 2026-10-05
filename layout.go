@@ -1126,7 +1126,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		a, b := edge.Path[top], edge.Path[top+1]
 		edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: min(a.Y, b.Y) - graphdef.EdgePadding - edge.LabelRadius.Y}
 	}
-	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
+	nudgeLabels(graphdef.Edges, graphdef.Nodes, graphdef.Clusters, graphdef.EdgePadding, 2*graphdef.RowPadding, nil)
 }
 
 // flattenPath approximates the rounded corners drawn by the writers
@@ -1291,7 +1291,7 @@ func layoutPinned(graph *lgraph) {
 	for _, edge := range graph.Edges {
 		given[edge] = edge.LabelPos != (Vector{})
 	}
-	defer nudgeLabels(graph.Edges, graph.Nodes, graph.EdgePadding, 2*graph.RowPadding, given)
+	defer nudgeLabels(graph.Edges, graph.Nodes, graph.Clusters, graph.EdgePadding, 2*graph.RowPadding, given)
 	pairs := newPairs(graph)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
@@ -1359,12 +1359,21 @@ func boxClusters(graph *lgraph) {
 }
 
 // nudgeLabels slides edge labels sideways along their rank until they
-// clear every edge path and the labels placed before them. Labels of the
-// edges in keep stay where they are, and the others avoid them.
-func nudgeLabels(edges []*ledge, nodes []*lnode, pad, radius Length, keep map[*ledge]bool) {
-	paths := make([][]Vector, len(edges))
+// clear every edge path, the cluster boxes and the labels placed before
+// them. Labels of the edges in keep stay where they are, and the others
+// avoid them.
+func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radius Length, keep map[*ledge]bool) {
+	paths := make([][]Vector, len(edges), len(edges)+len(clusters))
 	for i, edge := range edges {
 		paths[i] = flattenPath(edge.Path, radius, pad)
+	}
+	// the sides of cluster boxes are lines like edges, after the edge paths
+	for _, cluster := range clusters {
+		tl, br := cluster.TopLeft, cluster.BottomRight
+		if tl.X > br.X {
+			continue // nothing inside
+		}
+		paths = append(paths, []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}, tl})
 	}
 	var placed []*ledge
 	for _, edge := range edges {
