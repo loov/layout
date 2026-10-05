@@ -2006,9 +2006,9 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		}
 		return xs
 	}
-	// the nodes and labels a node has edges to before or after it, past
-	// ranks of labels only, as positioning centers fans; not long edges
-	// past other nodes
+	// the nodes a node has edges to before or after it, past ranks of
+	// labels only, along edges that merge into a fork, as positioning
+	// centers fans; not long edges past other nodes, nor edges with labels
 	real := make([]bool, len(graph.ByRank))
 	for r, layer := range graph.ByRank {
 		real[r] = slices.ContainsFunc(layer, func(node *hier.Node) bool { return !node.Virtual })
@@ -2031,7 +2031,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 				}
 				n = ends[0]
 			}
-			if !n.Virtual || label(n) {
+			if !n.Virtual || label(n) && !graphdef.MergeEdges {
 				out = append(out, n)
 			}
 		}
@@ -2091,6 +2091,11 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		return hi - lo
 	}
 	wide := width()
+	// a cell along the ranks: a column, or a row sideways
+	cell := float32(graphdef.cellWidth())
+	if sideways(graphdef.RankDir) {
+		cell = float32(graphdef.LineHeight)
+	}
 	bends, crossings, overlaps := measure()
 	for range 4 {
 		improved := false
@@ -2098,9 +2103,19 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 			if node.Virtual || fork(node) {
 				continue
 			}
+			// in line with a node it has an edge to, or a cell or two over,
+			// where ends that take slots along the node line up
+			var wants []float32
 			for _, other := range slices.Concat(node.In, node.Out) {
-				want := other.Center.X + other.Anchor - node.Anchor
-				if math.Abs(float64(want-node.Center.X)) < 0.5 || straight(node, other) {
+				if !straight(node, other) {
+					wants = append(wants, other.Center.X+other.Anchor-node.Anchor)
+				}
+			}
+			for _, k := range []float32{1, -1, 2, -2} {
+				wants = append(wants, node.Center.X+k*cell)
+			}
+			for _, want := range wants {
+				if math.Abs(float64(want-node.Center.X)) < 0.5 {
 					continue
 				}
 				before := at()

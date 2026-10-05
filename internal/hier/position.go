@@ -422,15 +422,16 @@ func positionSimplex(graph *Graph, fans bool) {
 
 	// fans: a node with several children goes over the middle of them,
 	// from the bottom up, as far as its neighbors in the rank let it; the
-	// children are the nodes and labels right below, or below ranks of
-	// labels only, not long edges past other nodes
+	// children are the nodes right below, or below ranks of labels only,
+	// along edges that merge into the fork: not long edges past other
+	// nodes, nor edges with labels
 	real := make([]bool, len(graph.ByRank))
 	for r, layer := range graph.ByRank {
 		real[r] = slices.ContainsFunc(layer, func(node *Node) bool { return !node.Virtual })
 	}
 	child := func(c *Node) *Node {
-		for c.Virtual && !label(c) && len(c.Out) == 1 {
-			if real[c.Rank] {
+		for c.Virtual && len(c.Out) == 1 {
+			if real[c.Rank] || label(c) {
 				return nil
 			}
 			c = c.Out[0]
@@ -450,7 +451,7 @@ func positionSimplex(graph *Graph, fans bool) {
 			}
 			first, last, children := float32(math.Inf(1)), float32(math.Inf(-1)), 0
 			for _, out := range node.Out {
-				if c := child(out); c != nil && (!c.Virtual || label(c)) {
+				if c := child(out); c != nil && !c.Virtual {
 					first, last = min(first, x[c.ID]), max(last, x[c.ID])
 					children++
 				}
