@@ -65,6 +65,8 @@ type canvas struct {
 	pen    pen                  // what is drawn with from now on
 	ids    int                  // edge ids handed out
 	merged map[*layout.Edge]int // edge ids of merged edges
+	drawn  map[*layout.Edge]int // edge ids of the edges drawn
+	nodes  map[*layout.Node]int // node ids, from 1, see cell.node
 	loops  map[*layout.Node]int // self-loops per node
 	ended  map[[2]int]bool      // cells where merged edges have ended
 	spread bool                 // edge ends on a side keep a cell apart where there is room

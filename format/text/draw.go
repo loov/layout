@@ -141,7 +141,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		}
 		c.set(x0, y0, '●')
 		if p := c.at(x0, y0); p != nil {
-			p.solid = true
+			p.solid, p.node = true, c.nodes[node]
 		}
 		return
 	}
@@ -153,7 +153,7 @@ func (c *canvas) drawNode(graph *layout.Graph, node *layout.Node) {
 		for x := x0; x <= x1; x++ {
 			c.set(x, y, ' ')
 			if p := c.at(x, y); p != nil {
-				p.solid = true
+				p.solid, p.node = true, c.nodes[node]
 			}
 			if x > x0 && x < x1 && y > y0 && y < y1 {
 				c.hold(x, y) // blanks inside a box are part of it
@@ -553,6 +553,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	if !merged {
 		id = c.ids
 	}
+	c.drawn[edge] = id
 	c.pen = pen{
 		ink:    rgb(edge.LineColor),
 		dashed: edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted,

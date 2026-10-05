@@ -20,6 +20,7 @@ type cell struct {
 	lines  int    // direction mask, for joining edge runs
 	heavy  int    // arms that runs of different edges share
 	owner  [4]int // edge that first drew each arm
+	node   int    // node whose box covers it, from 1, see canvas.nodes
 }
 
 // carve tightens the drawing along seams: it removes a cell from every
@@ -726,8 +727,8 @@ func bendLines(grid, cut [][]cell, path []int, next, prev, lo, hi int) (jogs int
 				like := cut[bd.row][bd.at]
 				id := ownerOf(like)
 				owner := [4]int{id, id, id, id}
-				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, owner: owner}
-				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, owner: owner}
+				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner}
+				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner}
 				if !bd.extends {
 					jogs++
 				}

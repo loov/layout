@@ -27,6 +27,14 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
+	_, grid := carved(l)
+	_, err := io.WriteString(w, encode(grid, opts))
+	return err
+}
+
+// carved draws the graph on a canvas and carves it into the grid that
+// write encodes
+func carved(l *layout.Layout) (*canvas, [][]cell) {
 	// edge ends spread apart look balanced, but can keep carving from
 	// lining an edge up straight: they stay apart unless that bends
 	// edges more, or as much on a larger drawing
@@ -40,8 +48,7 @@ func write(w io.Writer, l *layout.Layout, opts *Options) error {
 		}
 	}
 	c.frameLabels(grid)
-	_, err := io.WriteString(w, encode(grid, opts))
-	return err
+	return c, grid
 }
 
 // better reports whether the carved grid a has fewer bends of edges than
@@ -72,6 +79,10 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 	graph := l.Graph
 	c := newCanvas(l)
 	c.spread = spread
+	c.drawn, c.nodes = map[*layout.Edge]int{}, map[*layout.Node]int{}
+	for i, node := range graph.Nodes {
+		c.nodes[node] = i + 1
+	}
 	for i, cluster := range graph.Clusters {
 		if !cluster.Invisible {
 			c.drawCluster(i)
