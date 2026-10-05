@@ -1,13 +1,14 @@
 package layout
 
 import (
-	"math"
+	"slices"
 
 	"github.com/loov/layout/internal/draw"
 )
 
 // prepareText sets ortho edges and spacing that leaves rows between ranks
-// for horizontal runs and arrowheads: more fan-out needs more rows.
+// for horizontal runs and arrowheads, and room for labels; channels with
+// more runs than fit stretch, see orthoEdges.
 // Sideways, it packs edge ends along the top of nodes, see PackEdgeEnds;
 // otherwise it makes nodes with self-loops tall enough for the loop ends.
 func (graph *lgraph) prepareText() {
@@ -15,21 +16,11 @@ func (graph *lgraph) prepareText() {
 	if graph.LineHeight <= 0 {
 		graph.LineHeight = 16
 	}
-	fan := map[*lnode]int{}
-	labels := false
-	for _, edge := range graph.Edges {
-		fan[edge.From]++
-		fan[edge.To]++
-		labels = labels || edge.Label != ""
-	}
-	rows := 2.0
-	for _, n := range fan {
-		rows = max(rows, 2+math.Sqrt(float64(n)))
-	}
-	if labels {
+	rows := Length(2)
+	if slices.ContainsFunc(graph.Edges, func(edge *ledge) bool { return edge.Label != "" }) {
 		rows += 2
 	}
-	graph.RowPadding = graph.LineHeight * Length(math.Min(rows, 8))
+	graph.RowPadding = graph.LineHeight * rows
 	graph.NodePadding = graph.LineHeight * 2
 	graph.EdgePadding = graph.LineHeight
 
