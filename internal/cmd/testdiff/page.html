@@ -49,6 +49,7 @@ pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; 
 .detail { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; }
 .detail.open { display: flex; }
 .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+.bar .title { color: var(--muted); }
 .bar .path { font-family: var(--mono); font-weight: 600; margin-right: auto; }
 .bar button { font: inherit; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--card); color: var(--ink); cursor: pointer; }
 .bar button:hover { border-color: var(--accent); }
@@ -122,7 +123,7 @@ pre.editor.moving { cursor: grabbing; }
 <body>
 <header>
 	<div style="display: flex; align-items: center; gap: 8px">
-		<h1>testdata changes</h1>
+		<h1 id="title"></h1>
 		<button class="theme" title="toggle the theme (t)">◐ theme</button>
 	</div>
 	<div class="sub" id="sub"></div>
@@ -131,6 +132,7 @@ pre.editor.moving { cursor: grabbing; }
 
 <section class="detail" id="detail" aria-modal="true" role="dialog">
 	<div class="bar">
+		<span class="title" id="dtitle"></span>
 		<span class="path" id="dpath"></span>
 		<button id="prev" title="previous (k)">◀ prev</button>
 		<button id="next" title="next (j)">next ▶</button>
@@ -177,10 +179,12 @@ const detail = document.getElementById("detail");
 {
 	const changed = DATA.changes.filter(c => status(c) !== "same").length;
 	document.getElementById("sub").textContent = changed === DATA.changes.length
-		? `${changed} changed drawings in ${DATA.title}`
-		: `${DATA.changes.length} drawings in ${DATA.title}, ${changed} changed`;
+		? `${changed} changed drawings`
+		: `${DATA.changes.length} drawings, ${changed} changed`;
 }
-document.title = `testdata changes: ${DATA.title}`;
+document.title = DATA.title;
+document.getElementById("title").textContent = DATA.title;
+document.getElementById("dtitle").textContent = DATA.title;
 
 // drawing returns an element showing the contents of a drawing
 function drawing(kind, text) {
