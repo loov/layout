@@ -689,6 +689,36 @@ func init() {
 	}
 }
 
+// TestEdgesApart checks the text drawings for runs that two edges share,
+// which text draws heavy: there the edges can't be told apart, nor which
+// arrowhead is whose. Merged edges are one edge, and draw light; a heavy
+// crossing, ╂, crosses.
+func TestEdgesApart(t *testing.T) {
+	const heavy = "╺╼╸╾━┍┮┑┭┯╻┎┏┒┰┲┓┱┳┕┶┙┵┷┝┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╊┫╉╋┉┋"
+	files, err := filepath.Glob(filepath.Join("testdata", "*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	graphviz, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range append(files, graphviz...) {
+		if strings.HasPrefix(filepath.Base(file), "diagnostics") {
+			continue
+		}
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(data), "\n") {
+			if strings.ContainsAny(line, heavy) {
+				t.Errorf("%s:%d: edges share a run: %s", file, i+1, strings.TrimRight(line, " "))
+			}
+		}
+	}
+}
+
 // TestArrowsBesideNodes checks the text drawings for arrowheads drawn on
 // the top or bottom border of a node, where an edge has no room to end
 // before the node.
