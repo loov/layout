@@ -695,7 +695,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	}
 
 	// a labeled edge between neighbors on a rank needs room between them
-	// for its label, on the right of the left one as for loops, and below
+	// for its label, on the right of the left one as for loops, and beside
 	// the edge within the rank, which it may be taller than, see the
 	// labels of edges along a rank
 	flatBelow := map[*lnode]Length{}
@@ -1141,8 +1141,13 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 		}
 		// labels of edges along a rank have no node of their own; they go
 		// above the middle of the topmost segment, outside an arc, or between
-		// neighbors in the room made for them, below the edge, away from the
-		// arcs over them
+		// neighbors in the room made for them: above the edge top to bottom,
+		// clear of the borders of the nodes, and below in the frame
+		// otherwise, which is right of the edge sideways
+		flat := Length(1)
+		if graphdef.RankDir == TopToBottom {
+			flat = -1
+		}
 		for _, edge := range graphdef.Edges {
 			from, to := orderedGraph.Nodes[nodes[edge.From]], orderedGraph.Nodes[nodes[edge.To]]
 			if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
@@ -1150,7 +1155,11 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 			}
 			if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {
 				a, b := edge.Path[0], edge.Path[len(edge.Path)-1]
-				edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: max(a.Y, b.Y) + graphdef.EdgePadding + edge.LabelRadius.Y}
+				y := max(a.Y, b.Y)
+				if flat < 0 {
+					y = min(a.Y, b.Y)
+				}
+				edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: y + flat*(graphdef.EdgePadding+edge.LabelRadius.Y)}
 				continue
 			}
 			top := 0
