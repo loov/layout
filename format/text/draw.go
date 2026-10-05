@@ -624,7 +624,7 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 		if edge.Label != "" && !edge.Invisible {
 			label, x, y := c.edgeLabel(i)
 			lines := strings.Split(label, "\n")
-			x, y = c.nearEdge(x, y, draw.TextColumns(label), len(lines), paths[i])
+			x, y = c.besideEdge(x, y, draw.TextColumns(label), len(lines), paths[i], c.drawn[edge])
 			c.pen = pen{font: rgb(edge.FontColor)}
 			for k, line := range lines {
 				c.text(x, y+k, line)
@@ -716,13 +716,54 @@ func (c *canvas) frameLabels(grid [][]cell) {
 	}
 }
 
+// besideEdge places a label w cells wide and h tall at x, y against its
+// edge, drawn along path with id: where nearEdge moves it, or against the
+// edge from another side where the lines of other edges are further from
+// it, so that it reads as its edge's
+func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id int) (int, int) {
+	bx, by, _ := c.nearEdge(x, y, w, h, path, [2]int{})
+	best := c.apart(bx, by, w, h, id)
+	for _, side := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+		if sx, sy, ok := c.nearEdge(x, y, w, h, path, side); ok {
+			if d := c.apart(sx, sy, w, h, id); d > best {
+				bx, by, best = sx, sy, d
+			}
+		}
+	}
+	return bx, by
+}
+
+// apart returns how many blank cells at least separate a label w cells
+// wide and h tall at x, y from the lines of edges other than id, up to 3
+func (c *canvas) apart(x, y, w, h, id int) int {
+	for d := range 3 {
+		for row := y - d - 1; row <= y+h+d; row++ {
+			for col := x - d - 1; col <= x+w+d; col++ {
+				if row >= y-d && row < y+h+d && col >= x-d && col < x+w+d {
+					continue // nearer, see the rings before
+				}
+				p := c.at(col, row)
+				if p == nil || p.lines == 0 || p.frame {
+					continue
+				}
+				for arm := range 4 {
+					if p.lines&(1<<arm) != 0 && p.owner[arm] != id {
+						return d
+					}
+				}
+			}
+		}
+	}
+	return 3
+}
+
 // nearEdge moves a label w cells wide and h tall at x, y toward its edge,
-// drawn along
-// path, while a blank row or more than one blank column separates them
-// and the cells it moves into are blank. The layout keeps labels an edge
-// padding from their edge, which is a whole row in text, and rounding can
-// leave a blank row between them.
-func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
+// drawn along path, toward side when it is set, while a blank row or
+// column separates them and the cells it moves into are blank. It reports
+// whether the label ends against the edge. The layout keeps labels an
+// edge padding from their edge, which is a whole row in text, and
+// rounding can leave a blank row between them.
+func (c *canvas) nearEdge(x, y, w, h int, path [][2]int, side [2]int) (int, int, bool) {
 	var cells [][2]int
 	for i := 0; i+1 < len(path); i++ {
 		a, b := path[i], path[i+1]
@@ -742,6 +783,14 @@ func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
 		dx, dy, gap := 0, 0, math.MaxInt
 		for _, p := range cells {
 			beside := p[1] >= y && p[1] < y+h
+			if side != [2]int{} {
+				// only the cells on that side
+				above, below := p[0] >= x && p[0] < x+w && p[1] < y, p[0] >= x && p[0] < x+w && p[1] >= y+h
+				left, right := beside && p[0] < x, beside && p[0] >= x+w
+				if !(side[1] < 0 && above || side[1] > 0 && below || side[0] < 0 && left || side[0] > 0 && right) {
+					continue
+				}
+			}
 			switch {
 			case p[0] >= x && p[0] < x+w && p[1] < y:
 				if d := y - p[1] - 1; d < gap {
@@ -762,11 +811,11 @@ func (c *canvas) nearEdge(x, y, w, h int, path [][2]int) (int, int) {
 			}
 		}
 		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dx, y+dy, w, h) {
-			break
+			return x, y, gap <= 0
 		}
 		x, y = x+dx, y+dy
 	}
-	return x, y
+	return x, y, false
 }
 
 // blank reports whether the w by h cells from x, y are empty
