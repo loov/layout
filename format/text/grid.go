@@ -22,6 +22,7 @@ type cell struct {
 	owner  [4]int // edge that first drew each arm
 	frame  bool   // of the frame of a cluster
 	node   int    // node whose box covers it, from 1, see canvas.nodes
+	text   int    // edge whose label it is part of, see canvas.drawn
 }
 
 // carve tightens the drawing along seams: it removes a cell from every
@@ -64,7 +65,110 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	for merged := !sideways; merged; {
 		grid, merged = mergeRows(grid)
 	}
-	return rows(grid, true)
+	grid = rows(grid, true)
+	hug(grid)
+	return grid
+}
+
+// hug moves a label that another edge's line runs right beside a cell
+// over onto its own edge's line, where carving leaves that a blank cell
+// away from it: next to the other line, it should touch its own
+func hug(grid [][]cell) {
+	at := func(r, x int) *cell {
+		if r < 0 || r >= len(grid) || x < 0 || x >= len(grid[r]) {
+			return nil
+		}
+		return &grid[r][x]
+	}
+	// the lines of edge id, and of other edges, in the cells
+	lines := func(cells [][2]int, id int) (own, other bool) {
+		for _, p := range cells {
+			c := at(p[0], p[1])
+			if c == nil || c.frame || c.text != 0 {
+				continue
+			}
+			for arm := range 4 {
+				if c.lines&(1<<arm) != 0 {
+					own = own || c.owner[arm] == id
+					other = other || c.owner[arm] != id
+				}
+			}
+		}
+		return own, other
+	}
+	// the box of every label
+	boxes := map[int][4]int{} // top, left, bottom, right
+	for r, row := range grid {
+		for x, c := range row {
+			if c.text == 0 {
+				continue
+			}
+			b, ok := boxes[c.text]
+			if !ok {
+				b = [4]int{r, x, r, x}
+			}
+			boxes[c.text] = [4]int{min(b[0], r), min(b[1], x), max(b[2], r), max(b[3], x)}
+		}
+	}
+	// the cells of a side of b, n cells out
+	side := func(b [4]int, dir, n int) [][2]int {
+		var cells [][2]int
+		switch dir {
+		case left, right:
+			x := b[1] - n
+			if dir == right {
+				x = b[3] + n
+			}
+			for r := b[0]; r <= b[2]; r++ {
+				cells = append(cells, [2]int{r, x})
+			}
+		default:
+			r := b[0] - n
+			if dir == down {
+				r = b[2] + n
+			}
+			for x := b[1]; x <= b[3]; x++ {
+				cells = append(cells, [2]int{r, x})
+			}
+		}
+		return cells
+	}
+	for id, b := range boxes {
+		var ring [][2]int
+		for _, dir := range []int{up, down, left, right} {
+			ring = append(ring, side(b, dir, 1)...)
+		}
+		if _, other := lines(ring, id); !other {
+			continue
+		}
+		for _, dir := range []int{left, right, up, down} {
+			if near, _ := lines(side(b, dir, 1), id); near {
+				continue
+			}
+			if own, _ := lines(side(b, dir, 2), id); !own {
+				continue
+			}
+			if slices.ContainsFunc(side(b, dir, 1), func(p [2]int) bool { c := at(p[0], p[1]); return c == nil || !free(*c) && !c.glue || c.solid }) {
+				continue
+			}
+			// move the label, from the far end on
+			cells := []cell{}
+			for r := b[0]; r <= b[2]; r++ {
+				for x := b[1]; x <= b[3]; x++ {
+					cells = append(cells, grid[r][x])
+					grid[r][x] = cell{r: ' ', glue: true}
+				}
+			}
+			i := 0
+			for r := b[0]; r <= b[2]; r++ {
+				for x := b[1]; x <= b[3]; x++ {
+					grid[r+dy(dir)][x+dx(dir)] = cells[i]
+					i++
+				}
+			}
+			break
+		}
+	}
 }
 
 // mergeRows merges the first two neighboring rows with runs along them

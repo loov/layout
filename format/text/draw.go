@@ -628,6 +628,11 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 			c.pen = pen{font: rgb(edge.FontColor)}
 			for k, line := range lines {
 				c.text(x, y+k, line)
+				for col := x; col < x+draw.TextColumns(line); col++ {
+					if p := c.at(col, y+k); p != nil {
+						p.text = c.drawn[edge]
+					}
+				}
 			}
 			// the blanks around the label keep it beside its edge when
 			// carving, see seams
