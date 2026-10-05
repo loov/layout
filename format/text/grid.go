@@ -171,6 +171,19 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 		return nil, false
 	}
 	id := turn.owner[bits.TrailingZeros(uint(dir))]
+	// a dashed line, whose corners are square, stays dashed, see canvas.line
+	dashed := turn.r == glyph(turn.lines, 0)
+	draw := func(lines int) rune {
+		switch {
+		case !dashed:
+			return corner(lines)
+		case lines == up|down:
+			return '┊'
+		case lines == left|right:
+			return '┈'
+		}
+		return glyph(lines, 0)
+	}
 	step := map[int]int{up: -1, down: 1}[dir]
 	var moves []move
 	// turns moves the turn at row y from x along its run, which grows or
@@ -195,11 +208,11 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 				arms = up | down
 			}
 		}
-		line := cell{r: '─', fg: turn.fg, lines: left | right, owner: [4]int{id, id, id, id}}
+		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]int{id, id, id, id}}
 		for c := lo; c <= hi; c++ {
 			switch {
 			case c == x+dx:
-				moves = append(moves, move{y, c, cell{r: corner(arms), fg: turn.fg, lines: arms, owner: [4]int{id, id, id, id}}})
+				moves = append(moves, move{y, c, cell{r: draw(arms), fg: turn.fg, lines: arms, owner: [4]int{id, id, id, id}}})
 			case dx*side > 0:
 				moves = append(moves, move{y, c, cell{r: ' '}})
 			default:
@@ -211,7 +224,7 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 	if !turns(r, turn.lines) {
 		return nil, false
 	}
-	vertical := cell{r: '│', fg: turn.fg, lines: up | down, owner: [4]int{id, id, id, id}}
+	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]int{id, id, id, id}}
 	for y := r + step; ; y += step {
 		p := at(y, x)
 		switch {
