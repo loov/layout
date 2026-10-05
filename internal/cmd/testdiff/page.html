@@ -777,11 +777,28 @@ function textEditor(change) {
 			rows = moved(drag.start, drag.b, dr, dc);
 			sel = [drag.b[0] + dr, drag.b[1] + dc, drag.b[2] + dr, drag.b[3] + dc];
 			drag.moved = dr !== 0 || dc !== 0;
-			for (const j of drag.joins) {
-				// a cell it was joined to that the block now covers is gone
-				if (j.to.r >= sel[0] && j.to.r <= sel[2] && j.to.c >= sel[1] && j.to.c <= sel[3]) continue;
-				connect({ r: j.from.r + dr, c: j.from.c + dc }, j.dir, j.to);
+			// arrowheads move with the block
+			for (const j of drag.joins) if (j.head && !inside(j.from, sel)) rows[j.from.r][j.from.c] = " ";
+			// one line can take the cells another needs, so try a few orders:
+			// the side it moved away from first, the other side first, and
+			// each line first; keep the one that drops the fewest lines, then
+			// the one with the shortest lines
+			const sorted = [...drag.joins].sort((a, b) => (a.from.r - b.from.r) * dr + (a.from.c - b.from.c) * dc);
+			const orders = [sorted, [...sorted].reverse(), ...sorted.map(j => [j, ...sorted.filter(k => k !== j)])];
+			const base = rows;
+			let best = null;
+			for (const order of orders) {
+				rows = clone(base);
+				let score = 0;
+				for (const j of order) {
+					const n = rejoin(drag.start, j, sel, dr, dc);
+					score += n || 10000;
+					// an arrowhead it can't take along stays where it was
+					if (!n && j.head && !inside(j.from, sel) && rows[j.from.r][j.from.c] === " ") rows[j.from.r][j.from.c] = j.head;
+				}
+				if (!best || score < best.score) best = { score, rows };
 			}
+			rows = best.rows;
 			showEdited(change, toText(rows));
 		}
 		render();
@@ -866,13 +883,14 @@ function textEditor(change) {
 	const lineArms = {
 		"─": L | R, "│": U | D, "╭": D | R, "╮": D | L, "╰": U | R, "╯": U | L, "┌": D | R, "┐": D | L, "└": U | R, "┘": U | L,
 		"├": U | D | R, "┤": U | D | L, "┬": D | L | R, "┴": U | L | R, "┼": U | D | L | R, "╂": U | D | L | R,
-		"▲": D, "▼": U, "◀": R, "▶": L, "┈": L | R, "┊": U | D,
+		"▲": D, "▼": U, "◀": R, "▶": L, "↑": D, "↓": U, "←": R, "→": L, "┈": L | R, "┊": U | D,
 	};
 	const lineGlyph = {
 		[U | D]: "│", [L | R]: "─", [D | R]: "╭", [D | L]: "╮", [U | R]: "╰", [U | L]: "╯",
 		[U | D | R]: "├", [U | D | L]: "┤", [D | L | R]: "┬", [U | L | R]: "┴", [U | D | L | R]: "┼",
 		[U]: "│", [D]: "│", [L]: "─", [R]: "─",
 	};
+	const heads = "▲▼◀▶↑↓←→";
 	let stroke = null; // arms of the cells before the stroke, and those it adds
 	const addArm = (p, arm, s = stroke) => {
 		const k = p.r + "," + p.c;
@@ -882,7 +900,7 @@ function textEditor(change) {
 		const straight = mine === (U | D) || mine === (L | R);
 		if (straight && (base.arms === (U | D | L | R) || (base.arms | mine) === (U | D | L | R) && (base.arms === (U | D) || base.arms === (L | R)))) {
 			rows[p.r][p.c] = "╂"; // across a line, or an existing crossing
-		} else if (base.arms === 0 || !"▲▼◀▶".includes(base.ch)) {
+		} else if (!(heads + "●○").includes(base.ch)) {
 			rows[p.r][p.c] = lineGlyph[base.arms | mine] || "┼";
 		}
 	};
@@ -907,7 +925,8 @@ function textEditor(change) {
 		if (e.key === "Alt") stroke = null;
 	}
 	// lines crossing the border of a block of cells: a cell on its edge
-	// with an arm out to a cell outside with an arm back
+	// with an arm out to a cell outside with an arm back, or an arrowhead
+	// outside pointing at it, which moves with the block
 	const steps = { [U]: [-1, 0], [D]: [1, 0], [L]: [0, -1], [R]: [0, 1] };
 	const opposite = { [U]: D, [D]: U, [L]: R, [R]: L };
 	function crossings(grid, b) {
@@ -916,36 +935,140 @@ function textEditor(change) {
 			for (let c = b[1]; c <= b[3]; c++) {
 				for (const dir of [U, D, L, R]) {
 					const [dr, dc] = steps[dir], o = { r: r + dr, c: c + dc };
-					if (o.r >= b[0] && o.r <= b[2] && o.c >= b[1] && o.c <= b[3]) continue; // inside
+					if (inside(o, b)) continue;
 					const outside = grid[o.r]?.[o.c];
 					if ((lineArms[grid[r][c]] || 0) & dir && (lineArms[outside] || 0) & opposite[dir]) {
 						out.push({ from: { r, c }, dir, to: o });
+					} else if (heads.includes(outside) && lineArms[outside] === dir && (lineArms[grid[o.r + dr]?.[o.c + dc]] || 0) & opposite[dir]) {
+						out.push({ from: o, dir, to: { r: o.r + dr, c: o.c + dc }, head: outside });
 					}
 				}
 			}
 		}
 		return out;
 	}
-	// connect draws a line from p, on the edge of a moved block, out in
-	// dir to the cell to it was joined to: half way out, across, and on
-	function connect(p, dir, to) {
+	// rejoin draws the line of join j again after the block moved by dr, dc
+	// to b. It follows the line from the cell it was joined to on past the
+	// cells the block covers, and may end on any plain cell of it further
+	// on, clearing the rest of the line before it.
+	function rejoin(grid, j, b, dr, dc) {
+		const p = { r: j.from.r + dr, c: j.from.c + dc };
+		if (j.head && inside(p, b)) return false;
+		const line = []; // the cells it may end on, with their arm back
+		let prev = j.from, q = j.to;
+		for (let n = 0; n < 1000; n++) {
+			const ch = grid[q.r]?.[q.c], back = toward(q, prev), port = "●○".includes(ch);
+			const arms = "┼╂".includes(ch) || port ? U | D | L | R : lineArms[ch] || 0;
+			if (!(arms & back)) break;
+			const plain = lineGlyph[arms] === ch && [U | D, L | R, D | R, D | L, U | R, U | L].includes(arms);
+			if (!inside(q, b)) {
+				// the first cell out of the block, whatever it is, then plain lines
+				if (line.length && !plain && !port) break;
+				line.push({ q, back });
+				if (!plain) break;
+			} else if (port) break; // an end on a node
+			const on = arms === (U | D | L | R) ? opposite[back] : arms & ~back;
+			if (!steps[on]) break;
+			prev = q;
+			q = { r: q.r + steps[on][0], c: q.c + steps[on][1] };
+		}
+		if (!line.length) return false;
+		const at = new Map(line.map((t, i) => [t.q.r + "," + t.q.c, i]));
+		const grid0 = q => q.r >= 0 && q.c >= 0 && q.r < rows.length && q.c < rows[0].length && !inside(q, b);
+		const to = line[0].q;
+		const end = q => line[at.get(q.r + "," + q.c)];
+		const clear = stop => {
+			for (const t of line) {
+				if (t === stop) break;
+				rows[t.q.r][t.q.c] = " ";
+			}
+		};
+		if (j.head && rows[p.r][p.c] !== " ") {
+			// an arrowhead can end its line where the line already goes its way
+			const t = end(p);
+			if (!t || ((lineArms[rows[p.r][p.c]] || 0) & ~t.back) !== lineArms[j.head]) return false;
+			clear(t);
+			rows[p.r][p.c] = j.head;
+			return 1;
+		}
+		// half way out, across, and on, unless another way is shorter
+		const half = to === j.to && straight(p, j.dir, to, q => grid0(q) && (rows[q.r][q.c] === " " || q === to));
+		// a line ends on an arrowhead or a node's port only the way it came
+		const short = around(p, j.dir, (q, h) => grid0(q) &&
+			(rows[q.r][q.c] === " " || end(q) && (!(heads + "●○").includes(rows[q.r][q.c]) || h === opposite[end(q).back])), end);
+		const path = half && (!short || cost(p, j.dir, half) <= cost(p, j.dir, short)) ? half : short;
+		if (!path) return false;
+		if (j.head) rows[p.r][p.c] = j.head;
+		const last = path[path.length - 1], stop = end(last);
+		clear(stop);
+		// the end loses its arm back, toward where the block was
+		const s = { base: new Map(), mine: new Map() };
+		const arms = (lineArms[rows[last.r][last.c]] || 0) & ~stop.back;
+		s.base.set(last.r + "," + last.c, { arms, ch: lineGlyph[arms] || rows[last.r][last.c] });
+		let a = p;
+		for (const n of path) {
+			const d = toward(a, n);
+			addArm(a, d, s);
+			addArm(n, opposite[d], s);
+			a = n;
+		}
+		return path.length;
+	}
+	// cost is what around counts for a path from p out in dir: a step costs
+	// 1, a turn 4 more
+	function cost(p, dir, path) {
+		let n = 0, a = p, h = dir;
+		for (const q of path) {
+			const d = toward(a, q);
+			n += 1 + (d === h ? 0 : 4);
+			a = q; h = d;
+		}
+		return n;
+	}
+	// toward is the direction from cell a to its neighbour b
+	const toward = (a, b) => b.r < a.r ? U : b.r > a.r ? D : b.c < a.c ? L : R;
+	// straight is the line from p out in dir to the cell to ahead of it:
+	// half way out, across, and on, when its cells are free
+	function straight(p, dir, to, free) {
 		const [ar, ac] = steps[dir];
 		const along = q => q.r * ar + q.c * ac;
 		const dist = along(to) - along(p);
-		if (dist < 1) return; // the block went past it
-		const s = { base: new Map(), mine: new Map() };
-		let q = { ...p };
-		const go = (dr, dc) => {
-			const n = { r: q.r + dr, c: q.c + dc };
-			const d = dr < 0 ? U : dr > 0 ? D : dc < 0 ? L : R;
-			grow(rows, n.r, n.c);
-			addArm(q, d, s);
-			addArm(n, opposite[d], s);
-			q = n;
-		};
+		if (dist < 1) return null;
+		const path = [];
+		let q = p;
+		const go = (dr, dc) => path.push(q = { r: q.r + dr, c: q.c + dc });
 		for (let i = 0; i < Math.max(1, Math.floor(dist / 2)) && along(q) < along(to); i++) go(ar, ac);
 		while (ar ? q.c !== to.c : q.r !== to.r) go(ar ? 0 : Math.sign(to.r - q.r), ar ? Math.sign(to.c - q.c) : 0);
 		while (q.r !== to.r || q.c !== to.c) go(ar, ac);
+		path[path.length - 1] = to;
+		return path.every(free) ? path : null;
+	}
+	// around is the shortest line, with the fewest turns, from p out in dir
+	// through free cells to the first cell that is an end
+	function around(p, dir, free, isEnd) {
+		const key = (q, h) => (q.r * rows[0].length + q.c) * 16 + h;
+		const first = { r: p.r + steps[dir][0], c: p.c + steps[dir][1] };
+		if (!free(first, dir)) return null;
+		// a queue by cost: a step costs 1, a turn 4 more
+		const queue = [[{ q: first, h: dir, prev: null }]], seen = new Set();
+		for (let spent = 0; spent < queue.length; spent++) {
+			for (const n of queue[spent] || []) {
+				if (seen.has(key(n.q, n.h))) continue;
+				seen.add(key(n.q, n.h));
+				if (isEnd(n.q)) {
+					const path = [];
+					for (let m = n; m; m = m.prev) path.unshift(m.q);
+					return path;
+				}
+				for (const h of [U, D, L, R]) {
+					const m = { r: n.q.r + steps[h][0], c: n.q.c + steps[h][1] };
+					if (h === opposite[n.h] || !free(m, h)) continue;
+					const c = spent + 1 + (h === n.h ? 0 : 4);
+					(queue[c] ||= []).push({ q: m, h, prev: n });
+				}
+			}
+		}
+		return null;
 	}
 	// the toolbox: lines in 3x3 grids, each where it points
 	const toolbox = document.createElement("div");
