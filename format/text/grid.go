@@ -111,6 +111,18 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend bool, n
 				}
 			}
 			if x < ends[i] {
+				// a line that turns right after leaving what it joins
+				// needs no cell between, unless an arrowhead follows; and
+				// a node needs no blank under it where what follows is
+				// blank or drawn by an edge that leaves the node there
+				if keep == 1 && x > 0 && x+1 < len(line) && !strings.ContainsRune(markers, line[x+1].r) {
+					if c.r == glyph(lo|hi, 0) && arms(line[x-1].r)&hi != 0 && arms(line[x+1].r)&lo != 0 && arms(line[x+1].r) != lo|hi {
+						return 0
+					}
+					if c.r == ' ' && line[x-1].solid && !line[x+1].solid && leaves(grid, i, x, lo) {
+						return 0
+					}
+				}
 				for k := 1; k <= keep; k++ {
 					// a marker on a run continues it like the line it sits on
 					if b := line[max(x-k, 0)]; x-k < 0 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && strings.ContainsRune(markers, b.r)) {
@@ -246,6 +258,35 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend bool, n
 		clear(forbid)
 		jogging = false
 	}
+}
+
+// leaves reports whether the cell after x on line i, below a node in the
+// cell before x, is blank or drawn by an edge that leaves the node: one
+// that starts at a cell beside the node, toward lo, on a neighboring line
+// along the node
+func leaves(grid [][]cell, i, x, lo int) bool {
+	after := grid[i][x+1]
+	if after.r == ' ' {
+		return after.bg == 0 && !after.keep && !after.glue
+	}
+	if after.lines == 0 {
+		return false // text or a mark
+	}
+	back := bits.TrailingZeros(uint(lo))
+	for _, step := range []int{-1, 1} {
+		for j := i; j >= 0 && j < len(grid) && x < len(grid[j]) && grid[j][x-1].solid; j += step {
+			start := grid[j][x]
+			if start.lines&lo == 0 {
+				continue
+			}
+			for arm := range 4 {
+				if after.lines&(1<<arm) != 0 && after.owner[arm] == start.owner[back] {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 // bend is a way for a line crossed by a seam to get from line i-1 to
