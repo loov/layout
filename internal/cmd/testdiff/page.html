@@ -104,6 +104,9 @@ pre.editor .sel { background: color-mix(in srgb, #2f6fdf 22%, transparent); }
 pre.editor .cur { box-shadow: inset 2px 0 0 #2f6fdf; }
 pre.editor.moving { cursor: grabbing; }
 .svgedit svg [data-drag] { cursor: grab; }
+.svgedit svg .handle { fill: #2f6fdf; stroke: #fff; stroke-width: 1.5; pointer-events: none; }
+.svgedit svg .handle.insert { fill: #fff; stroke: #2f6fdf; }
+.svgedit svg .handle.port { fill: #e07a1f; }
 .svgedit svg [data-drag]:hover { filter: drop-shadow(0 0 2px #2f6fdf); }
 
 @media (max-width: 900px) {
@@ -138,7 +141,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button id="copy" class="edit-only" title="copy the drawing now and as edited, to paste to an assistant">copy</button>
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
-		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it, arrows nudge it (or move the cursor), type or click the palette to draw, Delete clears, ⌘Z undoes. SVG: drag nodes and edge labels; edge ends follow. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
+		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it, arrows nudge it (or move the cursor), type or click the palette to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
 		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
@@ -836,11 +839,14 @@ function textEditor(change) {
 	return { kind: "txt", el: pre, palette, key, undo, message, selected: () => !!sel };
 }
 
-// svgEditor edits an svg drawing by dragging its nodes and edge labels;
-// edge ends at a node follow it, their routes stay
+// svgEditor edits an svg drawing by dragging its nodes, edge labels, and
+// the bends and ends of edges, which show as a circle when hovered; ends
+// slide along the outline of their node, and dragging the middle of a
+// segment adds a bend there. Edge ends at a node follow it, and an edge
+// that changes is drawn through its points without rounding.
 function svgEditor(change) {
 	const original = change.new || change.old;
-	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map() };
+	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map(), changed: new Set() };
 	const wrap = document.createElement("div");
 	wrap.className = "svgedit";
 	const svg = inertSVG(state.svg);
@@ -853,7 +859,7 @@ function svgEditor(change) {
 	for (const el of root.children) {
 		if (el.matches(".edge")) {
 			item = null;
-			edge = { el, cmds: parsePath(el.getAttribute("d")) };
+			edge = { el, pts: polyline(parsePath(el.getAttribute("d"))) };
 			edges.push(edge);
 		} else if (el.matches(".node")) {
 			item = { els: [el], name: "" };
@@ -884,72 +890,210 @@ function svgEditor(change) {
 		}
 		return { x0, y0, x1, y1 };
 	};
-	const ends = e => [e.cmds[0].pts[0], e.cmds.at(-1).pts.at(-1)];
+	// edges are named by the nodes nearest their ends
+	const nodes = items.filter(it => !it.label);
+	const nearest = p => {
+		let best = null, dist = Infinity;
+		for (const it of nodes) {
+			const b = bbox(it);
+			const d = Math.hypot(Math.max(b.x0 - p[0], 0, p[0] - b.x1), Math.max(b.y0 - p[1], 0, p[1] - b.y1));
+			if (d < dist) best = it, dist = d;
+		}
+		return best?.name ?? "?";
+	};
+	// named once the drawing is on the page, where boxes can be measured
+	const named = new Map();
+	const name = e => {
+		if (!named.has(e)) named.set(e, `${nearest(e.pts[0])} → ${nearest(e.pts.at(-1))}`);
+		return named.get(e);
+	};
+	edges.forEach((e, i) => { e.index = i; });
+	const redraw = e => {
+		e.el.setAttribute("d", "M" + e.pts.map(p => p.map(v => Math.round(v * 100) / 100).join(",")).join(" L"));
+		state.changed.add(e.index);
+	};
+
+	// pointer positions in svg units, zoom included
+	const point = ev => {
+		const r = svg.getBoundingClientRect();
+		const vb = svg.viewBox.baseVal;
+		const w = vb?.width || svg.width.baseVal.value, h = vb?.height || svg.height.baseVal.value;
+		return [(ev.clientX - r.left) * w / r.width + (vb?.x || 0), (ev.clientY - r.top) * h / r.height + (vb?.y || 0)];
+	};
+	const scale = () => (svg.viewBox.baseVal?.width || svg.width.baseVal.value) / svg.getBoundingClientRect().width;
+
+	// the circle on the bend, or the middle of a segment, under the pointer
+	const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+	ring.setAttribute("r", 4);
+	ring.setAttribute("class", "handle");
+	ring.style.display = "none";
+	svg.append(ring);
+	const handleAt = ev => {
+		const p = point(ev), reach = 8 * scale();
+		let best = null, dist = reach;
+		for (const e of edges) {
+			const last = e.pts.length - 1;
+			for (let i = 0; i <= last; i++) {
+				const b = e.pts[i];
+				// ends, bends, and the middles of segments to add one at
+				const candidates = [[b[0], b[1], i, false, i === 0 || i === last]];
+				if (i > 0) {
+					const a = e.pts[i - 1];
+					candidates.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, i, true, false]);
+				}
+				for (const [x, y, at, insert, end] of candidates) {
+					const d = Math.hypot(x - p[0], y - p[1]);
+					// points win over middles as near
+					if (d < dist || d <= dist && !insert) best = { e, at, insert, end, x, y }, dist = d;
+				}
+			}
+		}
+		return best;
+	};
+	// the point on the outline of node nearest p, where an end of an edge
+	// stays as it moves: around an ellipse, or else the box
+	const outline = (it, p) => {
+		const shape = it.els[0], b = bbox(it);
+		const cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2;
+		if (shape.tagName === "ellipse" || shape.tagName === "circle") {
+			const rx = (b.x1 - b.x0) / 2, ry = (b.y1 - b.y0) / 2;
+			const a = Math.atan2((p[1] - cy) / ry, (p[0] - cx) / rx);
+			return [cx + rx * Math.cos(a), cy + ry * Math.sin(a)];
+		}
+		const x = Math.min(Math.max(p[0], b.x0), b.x1), y = Math.min(Math.max(p[1], b.y0), b.y1);
+		const sides = [[b.x0, y, x - b.x0], [b.x1, y, b.x1 - x], [x, b.y0, y - b.y0], [x, b.y1, b.y1 - y]];
+		const [sx, sy] = sides.reduce((m, s) => s[2] < m[2] ? s : m);
+		return [sx, sy];
+	};
+	const nodeAt = q => {
+		let best = null, dist = Infinity;
+		for (const it of nodes) {
+			const b = bbox(it);
+			const d = Math.hypot(Math.max(b.x0 - q[0], 0, q[0] - b.x1), Math.max(b.y0 - q[1], 0, q[1] - b.y1));
+			if (d < dist) best = it, dist = d;
+		}
+		return best;
+	};
+	const showRing = h => {
+		ring.style.display = h ? "" : "none";
+		if (!h) return;
+		ring.setAttribute("cx", h.x);
+		ring.setAttribute("cy", h.y);
+		ring.classList.toggle("insert", h.insert);
+		ring.classList.toggle("port", !!h.end);
+	};
 
 	let drag = null;
 	svg.addEventListener("pointerdown", e => {
+		if (e.button !== 0) return;
+		const h = handleAt(e);
 		const it = items.find(it => it.els.some(el => el === e.target || el.contains(e.target)));
-		if (!it || e.button !== 0) return;
+		if (!h && !it) return;
 		e.stopPropagation();
 		e.preventDefault();
 		svg.setPointerCapture(e.pointerId);
+		const before = { svg: svg.outerHTML, moves: new Map(state.moves), changed: new Set(state.changed) };
+		if (h) {
+			if (h.insert) h.e.pts.splice(h.at, 0, [h.x, h.y]);
+			// an end slides along the outline of its node
+			const node = h.end ? nodeAt([h.x, h.y]) : null;
+			drag = { bend: h, node, from: [h.x, h.y], x: e.clientX, y: e.clientY, scale: scale(), before };
+			return;
+		}
 		const b = bbox(it), pad = 10;
 		const near = p => p[0] >= b.x0 - pad && p[0] <= b.x1 + pad && p[1] >= b.y0 - pad && p[1] <= b.y1 + pad;
-		const follow = it.label ? [] : edges.flatMap(edge => ends(edge).filter(near).map(p => ({ edge, p, at: p.slice() })));
+		const follow = it.label ? [] : edges.flatMap(edge => [edge.pts[0], edge.pts.at(-1)].filter(near).map(p => ({ edge, p, at: p.slice() })));
 		drag = {
-			it, x: e.clientX, y: e.clientY, t: { ...it.t }, follow,
-			// svg units per screen pixel, zoom included
-			scale: svg.viewBox.baseVal?.width ? svg.viewBox.baseVal.width / svg.getBoundingClientRect().width : svg.width.baseVal.value / svg.getBoundingClientRect().width,
-			before: { svg: svg.outerHTML, moves: new Map(state.moves) },
+			it, x: e.clientX, y: e.clientY, t: { ...it.t }, follow, scale: scale(), before,
 			center: { x: (b.x0 + b.x1) / 2 - it.t.x, y: (b.y0 + b.y1) / 2 - it.t.y },
 		};
 	});
 	svg.addEventListener("pointermove", e => {
-		if (!drag) return;
+		if (!drag) return showRing(handleAt(e));
 		const dx = (e.clientX - drag.x) * drag.scale, dy = (e.clientY - drag.y) * drag.scale;
+		if (drag.bend) {
+			const { e: edge, at } = drag.bend;
+			const to = [drag.from[0] + dx, drag.from[1] + dy];
+			edge.pts[at] = drag.node ? outline(drag.node, to) : to;
+			redraw(edge);
+			showRing({ x: edge.pts[at][0], y: edge.pts[at][1], insert: false, end: drag.bend.end });
+			return;
+		}
 		drag.it.t = { x: drag.t.x + dx, y: drag.t.y + dy };
 		place(drag.it);
 		for (const f of drag.follow) {
 			f.p[0] = f.at[0] + dx;
 			f.p[1] = f.at[1] + dy;
-			f.edge.el.setAttribute("d", formatPath(f.edge.cmds));
+			redraw(f.edge);
 		}
 	});
-	const stop = () => {
+	svg.addEventListener("pointerleave", () => { if (!drag) showRing(null); });
+	const stop = e => {
 		if (!drag) return;
-		const { it, center } = drag;
-		if (it.t.x !== drag.t.x || it.t.y !== drag.t.y) {
+		const moved = e && (e.clientX !== drag.x || e.clientY !== drag.y);
+		if (drag.bend && moved) {
+			state.undo.push(drag.before);
+		} else if (drag.bend) {
+			// a click adds no bend
+			if (drag.bend.insert) drag.bend.e.pts.splice(drag.bend.at, 1);
+		} else if (drag.it.t.x !== drag.t.x || drag.it.t.y !== drag.t.y) {
+			const { it, center } = drag;
 			state.undo.push(drag.before);
 			const from = state.moves.get(it.name)?.from || { x: center.x + drag.t.x, y: center.y + drag.t.y };
 			state.moves.set(it.name, { from, to: { x: center.x + it.t.x, y: center.y + it.t.y }, label: it.label });
-			state.svg = svg.outerHTML;
-			edits.set(change.path, state);
 		}
+		ring.remove();
+		state.svg = svg.outerHTML;
+		svg.append(ring);
+		edits.set(change.path, state);
 		drag = null;
 	};
 	svg.addEventListener("pointerup", stop);
-	svg.addEventListener("pointercancel", stop);
+	svg.addEventListener("pointercancel", () => stop());
 
 	function undo() {
 		const last = state.undo.pop();
 		if (!last) return;
-		state.svg = last.svg;
-		state.moves = last.moves;
+		Object.assign(state, last);
 		startEdit();
 	}
 	const round = v => Math.round(v);
 	function message() {
 		const lines = [...state.moves].map(([name, m]) =>
 			`- ${m.label ? "label" : "node"} "${name}": (${round(m.from.x)}, ${round(m.from.y)}) → (${round(m.to.x)}, ${round(m.to.y)})`);
-		const nodes = items.filter(it => !it.label).map(it => {
+		const routes = [...state.changed].sort((a, b) => a - b).map(i =>
+			`- ${name(edges[i])}: ${edges[i].pts.map(p => `(${round(p[0])}, ${round(p[1])})`).join(" ")}`);
+		const centers = nodes.map(it => {
 			const b = bbox(it);
 			return `- "${it.name}": (${round((b.x0 + b.x1) / 2)}, ${round((b.y0 + b.y1) / 2)})`;
 		});
 		return `\`${change.path}\`: I dragged parts of the drawing to show how the layout could look nicer. ` +
-			`Coordinates are svg pixels, y down; edge ends follow their nodes, but edges were not rerouted.\n\n` +
-			`Moved:\n${lines.join("\n") || "- nothing"}\n\nAll node centers after the moves:\n${nodes.join("\n")}\n`;
+			`Coordinates are svg pixels, y down.\n\n` +
+			`Moved:\n${lines.join("\n") || "- nothing"}\n\n` +
+			`Edges as redrawn, through their points from start to end:\n${routes.join("\n") || "- none"}\n\n` +
+			`All node centers after the moves:\n${centers.join("\n")}\n`;
 	}
 	return { kind: "svg", el: wrap, key: () => false, undo, message, selected: () => false };
+}
+
+// polyline returns the points an edge path goes through: its ends and the
+// corners, which the svg writer rounds with a curve whose control point
+// is the corner
+function polyline(cmds) {
+	const pts = [];
+	let rounding = false; // the last point starts the curve of a corner
+	for (const [i, c] of cmds.entries()) {
+		if (c.c === "M" || c.c === "L") {
+			for (const p of c.pts) pts.push(p.slice());
+			rounding = c.c === "L";
+		} else if (c.c === "Q" && c.pts.length === 2) {
+			if (rounding && pts.length > 1) pts.pop();
+			pts.push(c.pts[0].slice());
+			if (i === cmds.length - 1) pts.push(c.pts[1].slice());
+			rounding = false;
+		}
+	}
+	return pts;
 }
 
 // inertSVG parses an svg drawing for editing in the page, which unlike an
@@ -976,10 +1120,6 @@ function parsePath(d) {
 		for (let i = 0; i + 1 < n.length; i += 2) pts.push([n[i], n[i + 1]]);
 		return { c: m[1], pts };
 	});
-}
-
-function formatPath(cmds) {
-	return cmds.map(c => c.c + c.pts.map(p => p.map(v => Math.round(v * 100) / 100).join(",")).join(" ")).join(" ");
 }
 
 async function copyText(text) {
