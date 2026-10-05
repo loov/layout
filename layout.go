@@ -638,8 +638,13 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	}
 
 	// packed edge ends need room on each side of a node for its ends an
-	// edge padding apart, from an edge padding in
-	if pack {
+	// edge padding apart, from an edge padding in; for text, ends spread
+	// across a node need a cell each
+	if pack || graphdef.ForText {
+		step := graphdef.EdgePadding / 2
+		if !pack {
+			step = graphdef.cellWidth() / 2
+		}
 		ends := map[*lnode][2]int{} // above and below, by rank
 		// merged ends take one end a group
 		type slot struct {
@@ -675,7 +680,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 			if node.Shape == PointShape {
 				continue // edges meet at the dot
 			}
-			grow := Length(max(e[0], e[1])+1)*graphdef.EdgePadding/2 - node.Radius.X
+			grow := Length(max(e[0], e[1])+1)*step - node.Radius.X
 			if grow <= 0 {
 				continue
 			}

@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"testing"
@@ -652,6 +653,32 @@ func init() {
 			graph := build()
 			graph.MergeEdges = true
 			return graph
+		}
+	}
+}
+
+// TestArrowsBesideNodes checks the text drawings for arrowheads drawn on
+// the top or bottom border of a node, where an edge has no room to end
+// before the node.
+func TestArrowsBesideNodes(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("testdata", "*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	graphviz, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	border := regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨]*[▼▲][─═┬┴╥╨]*[╮┐╗╯┘╝]`)
+	for _, file := range append(files, graphviz...) {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(data), "\n") {
+			if m := border.FindString(line); m != "" {
+				t.Errorf("%s:%d: arrow on a border: %s", file, i+1, m)
+			}
 		}
 	}
 }

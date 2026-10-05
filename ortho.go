@@ -276,6 +276,18 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			tracks = max(tracks, track[i]+1)
 		}
 		top, bottom := rows[k][1], rows[k+1][0]
+		if graph.ForText && tracks > 0 {
+			// text needs a row a track, and two rows between the outer
+			// tracks and the nodes for the bends and the arrows; what is
+			// below moves down to make the room
+			if short := Length(tracks+3)*pad - (bottom - top); short > 0 {
+				graph.shiftBelow((top+bottom)/2, short)
+				for r := k + 1; r < len(rows); r++ {
+					rows[r][0], rows[r][1] = rows[r][0]+short, rows[r][1]+short
+				}
+				bottom += short
+			}
+		}
 		spacing := min(pad, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
 			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
@@ -437,6 +449,34 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 		}
 		if m != [2]int{} {
 			merged[e] = m
+		}
+	}
+}
+
+// shiftBelow moves what lies below y down by d: nodes, edge paths and
+// labels, and the sides of clusters, which stretch across y
+func (graph *lgraph) shiftBelow(y, d Length) {
+	for _, node := range graph.Nodes {
+		if node.Center.Y > y {
+			node.Center.Y += d
+		}
+	}
+	for _, edge := range graph.Edges {
+		for i := range edge.Path {
+			if edge.Path[i].Y > y {
+				edge.Path[i].Y += d
+			}
+		}
+		if edge.Label != "" && edge.LabelPos.Y > y {
+			edge.LabelPos.Y += d
+		}
+	}
+	for _, cluster := range graph.Clusters {
+		if cluster.TopLeft.Y > y {
+			cluster.TopLeft.Y += d
+		}
+		if cluster.BottomRight.Y > y {
+			cluster.BottomRight.Y += d
 		}
 	}
 }

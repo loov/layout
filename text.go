@@ -38,7 +38,7 @@ func (graph *lgraph) prepareText() {
 	if graph.FontSize <= 0 {
 		graph.FontSize = graph.LineHeight * 14 / 16
 	}
-	cellW := graph.FontSize * 0.55
+	cellW := graph.cellWidth()
 	// text draws every label in cells of one size, so edge and cluster
 	// labels, records and HTML tables are measured that way too
 	graph.MeasureText = func(line, _ string, _ Length) Length {
@@ -133,3 +133,7 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 		float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize)), 1)
 	node.Radius.X += grow / 2
 }
+
+// cellWidth returns the width of a character cell of format/text, which
+// draws a cell FontSize*0.55 wide
+func (graph *lgraph) cellWidth() Length { return graph.FontSize * 0.55 }
