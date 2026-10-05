@@ -34,6 +34,10 @@ h1 { font-size: 18px; margin: 0 0 4px; }
 .badge { font-size: 11px; padding: 1px 6px; border-radius: 4px; border: 1px solid currentColor; color: var(--muted); }
 .badge.added { color: var(--added); }
 .badge.removed { color: var(--removed); }
+.size { padding: 0 10px 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.grow { color: var(--removed); }
+.shrink { color: var(--added); }
+.panel h2 .dim { font-variant-numeric: tabular-nums; }
 pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; line-height: 1.15; margin: 0; color: #000; background: #fff; white-space: pre; }
 
 /* detail view */
@@ -110,9 +114,9 @@ header .theme { margin-left: auto; }
 		<div class="hint">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
-		<div class="panel"><h2>old</h2><div class="scroll" id="old"></div></div>
-		<div class="panel"><h2>new</h2><div class="scroll" id="new"></div></div>
-		<div class="panel"><h2>onion skin <span id="offset"></span></h2><div class="scroll" id="onion"></div></div>
+		<div class="panel"><h2>old <span class="dim" id="oldsize"></span></h2><div class="scroll" id="old"></div></div>
+		<div class="panel"><h2>new <span class="dim" id="newsize"></span></h2><div class="scroll" id="new"></div></div>
+		<div class="panel"><h2>onion skin <span class="dim" id="delta"></span> <span id="offset"></span></h2><div class="scroll" id="onion"></div></div>
 	</div>
 </section>
 
@@ -201,6 +205,28 @@ function ansi(text) {
 	return pre;
 }
 
+// sizeText returns the width and height of a drawing: columns and rows of
+// text, pixels of svg
+function sizeText(kind, size, short) {
+	if (!size) return "";
+	const [w, h] = size.map(v => Math.round(v * 10) / 10);
+	if (short) return `${w} × ${h}`;
+	return kind === "svg" ? `${w} × ${h} px` : `${w} cols × ${h} rows`;
+}
+
+// delta returns how much the width and height changed, colored by whether
+// the drawing grew or shrank
+function delta(change, short) {
+	const span = document.createElement("span");
+	if (!change.oldSize || !change.newSize) return span;
+	const sign = v => v > 0 ? "+" + v : v < 0 ? "−" + -v : "±0";
+	const [dw, dh] = change.newSize.map((v, i) => Math.round((v - change.oldSize[i]) * 10) / 10);
+	span.textContent = short ? `(${sign(dw)}, ${sign(dh)})` : `width ${sign(dw)}, height ${sign(dh)}`;
+	if (dw >= 0 && dh >= 0 && dw + dh > 0) span.className = "grow";
+	if (dw <= 0 && dh <= 0 && dw + dh < 0) span.className = "shrink";
+	return span;
+}
+
 function status(change) {
 	if (!change.old) return "added";
 	if (!change.new) return "removed";
@@ -237,7 +263,10 @@ DATA.changes.forEach((change, i) => {
 	badge.className = "badge " + status(change);
 	badge.textContent = status(change);
 	label.append(path, badge);
-	card.append(thumb, label);
+	const size = document.createElement("div");
+	size.className = "size";
+	size.append(sizeText(change.kind, change.newSize || change.oldSize, true), " ", delta(change, true));
+	card.append(thumb, label, size);
 	card.addEventListener("click", () => show(i));
 	card.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); show(i); } });
 	grid.append(card);
@@ -252,6 +281,9 @@ function show(i) {
 	current = (i + DATA.changes.length) % DATA.changes.length;
 	const change = DATA.changes[current];
 	document.getElementById("dpath").textContent = change.path;
+	document.getElementById("oldsize").textContent = sizeText(change.kind, change.oldSize);
+	document.getElementById("newsize").textContent = sizeText(change.kind, change.newSize);
+	document.getElementById("delta").replaceChildren(delta(change));
 	offset = { x: 0, y: 0 };
 	for (const [pane, text] of [[panes[0], change.old], [panes[1], change.new]]) {
 		pane.replaceChildren(text ? drawing(change.kind, text) : none());

@@ -18,9 +18,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
+	"strconv"
 	"strings"
+
+	"github.com/loov/layout/internal/draw"
 )
 
 //go:embed page.html
@@ -33,6 +37,10 @@ type Change struct {
 	Kind string `json:"kind"` // svg, txt or ans
 	Old  string `json:"old"`
 	New  string `json:"new"`
+	// OldSize and NewSize are the width and height of the drawings, in
+	// columns and rows of text or pixels of svg; nil when missing
+	OldSize *[2]float64 `json:"oldSize"`
+	NewSize *[2]float64 `json:"newSize"`
 }
 
 func main() {
@@ -131,10 +139,43 @@ func collect(commit string) ([]Change, string, error) {
 			new = string(data)
 		}
 		if old != new {
-			changes = append(changes, Change{Path: path, Kind: kind, Old: old, New: new})
+			changes = append(changes, Change{
+				Path: path, Kind: kind, Old: old, New: new,
+				OldSize: size(kind, old), NewSize: size(kind, new),
+			})
 		}
 	}
 	return changes, title, nil
+}
+
+var (
+	// escape matches the escape codes of colored text
+	escape = regexp.MustCompile("\x1b\\[[0-9;]*[A-Za-z]")
+	// svgSize matches the size on the root element of an svg
+	svgSize = regexp.MustCompile(`<svg\b[^>]*?\swidth=['"]([0-9.]+)['"][^>]*?\sheight=['"]([0-9.]+)['"]`)
+)
+
+// size returns the width and height of a drawing of kind: the columns and
+// rows of text, without trailing blank lines, or the pixels of an svg
+func size(kind, content string) *[2]float64 {
+	if content == "" {
+		return nil
+	}
+	if kind == "svg" {
+		m := svgSize.FindStringSubmatch(content)
+		if m == nil {
+			return nil
+		}
+		w, _ := strconv.ParseFloat(m[1], 64)
+		h, _ := strconv.ParseFloat(m[2], 64)
+		return &[2]float64{w, h}
+	}
+	lines := strings.Split(strings.TrimRight(escape.ReplaceAllString(content, ""), " \n"), "\n")
+	w := 0
+	for _, line := range lines {
+		w = max(w, draw.Columns(strings.TrimRight(line, " ")))
+	}
+	return &[2]float64{float64(w), float64(len(lines))}
 }
 
 // show returns the contents of path at rev, or nothing when it is not there
