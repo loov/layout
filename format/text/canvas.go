@@ -16,7 +16,7 @@ type canvas struct {
 	origin layout.Vector // graph coordinates of the top left cell
 	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
-	rows   [][]cell
+	rows   grid
 	pen    pen                  // what is drawn with from now on
 	ids    int                  // edge ids handed out
 	merged map[*layout.Edge]int // edge ids of merged edges
@@ -84,7 +84,7 @@ func (c *canvas) sideways() bool {
 // reset makes the canvas w by h blank cells
 func (c *canvas) reset(w, h int) {
 	c.w, c.h = w, h
-	c.rows = make([][]cell, h)
+	c.rows = make(grid, h)
 	for y := range c.rows {
 		c.rows[y] = make([]cell, w)
 		for x := range c.rows[y] {
@@ -288,4 +288,30 @@ type cell struct {
 	frame  bool   // of the frame of a cluster
 	node   int    // node whose box covers it, from 1, see canvas.nodes
 	text   int    // edge whose label it is part of, see canvas.drawn
+}
+
+// grid is the cells of a drawing, by row
+type grid [][]cell
+
+// at returns the cell at row r and column x, or nil off the grid
+func (g grid) at(r, x int) *cell {
+	if r < 0 || r >= len(g) || x < 0 || x >= len(g[r]) {
+		return nil
+	}
+	return &g[r][x]
+}
+
+// transpose returns the grid with its rows as columns
+func (g grid) transpose() grid {
+	if len(g) == 0 {
+		return nil
+	}
+	out := make(grid, len(g[0]))
+	for x := range out {
+		out[x] = make([]cell, len(g))
+		for y := range g {
+			out[x][y] = g[y][x]
+		}
+	}
+	return out
 }

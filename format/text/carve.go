@@ -16,39 +16,39 @@ import (
 // line. Seams along the ranks turn, but not between cells that are
 // joined, so that what is drawn stays connected. Nodes and text stay
 // whole.
-func carve(grid [][]cell, sideways bool) [][]cell {
+func carve(g grid, sideways bool) grid {
 	// seams keep the blanks past the end of lines, trailing rows of them
 	// included; keep one of those as the bottom margin
 	blank := func(row []cell) bool {
 		return !slices.ContainsFunc(row, func(c cell) bool { return c.r != ' ' || c.bg != 0 })
 	}
-	rows := func(grid [][]cell, stubs bool) [][]cell {
-		grid = transpose(seams(transpose(grid), " │┃┊┋┆", "▲▼●○", 1, sideways, false, stubs, right, left))
-		for len(grid) > 1 && blank(grid[len(grid)-1]) && blank(grid[len(grid)-2]) {
-			grid = grid[:len(grid)-1]
+	rows := func(g grid, stubs bool) grid {
+		g = seams(g.transpose(), " │┃┊┋┆", "▲▼●○", 1, sideways, false, stubs, right, left).transpose()
+		for len(g) > 1 && blank(g[len(g)-1]) && blank(g[len(g)-2]) {
+			g = g[:len(g)-1]
 		}
-		return grid
+		return g
 	}
 	// the stubs of lines leaving a node go last: lines can still run
 	// further along them while the columns are carved
-	grid = rows(grid, false)
-	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 1, !sideways, true, false, down, up)
+	g = rows(g, false)
+	g = seams(g, " ─━┈┉┄", "◀▶●○", 1, !sideways, true, false, down, up)
 	// straightening a line can clear the way for another
-	for !sideways && unjog(grid) {
+	for !sideways && unjog(g) {
 	}
 	// rows merge first, as taking a step out can block that, and again
 	// after, as it can clear the way
 	for merged := !sideways; merged; {
-		grid, merged = mergeRows(grid)
+		g, merged = mergeRows(g)
 	}
-	for !sideways && straighten(grid) {
+	for !sideways && straighten(g) {
 	}
 	for merged := !sideways; merged; {
-		grid, merged = mergeRows(grid)
+		g, merged = mergeRows(g)
 	}
-	grid = rows(grid, true)
-	hug(grid)
-	return grid
+	g = rows(g, true)
+	hug(g)
+	return g
 }
 
 // seams removes seams from the lines of grid, one cell from every line,
@@ -66,7 +66,7 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 // turns there runs one cell further along, and a straight line jogs over
 // in a blank cell beside it, see bendsAt. Seams prefer the first, which
 // adds no corners.
-func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs bool, next, prev int) [][]cell {
+func seams(g grid, straight, markers string, keep int, turn, bend, stubs bool, next, prev int) grid {
 	// the cost of a seam through a cell, and of each cell it moves along
 	const (
 		trailing = 1 << 20 // past the end of the line, which removes nothing
@@ -85,17 +85,17 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 	forbid := map[[2]int]bool{}
 	jogging := false // only seams that cross lines are left
 	for {
-		for i := range grid {
-			grid[i] = append(grid[i], cell{r: ' '})
+		for i := range g {
+			g[i] = append(g[i], cell{r: ' '})
 		}
-		n := len(grid)
+		n := len(g)
 		if n == 0 {
-			return grid
+			return g
 		}
-		m := len(grid[0])
+		m := len(g[0])
 		// the cells past the end of each line are blank
 		ends := make([]int, n)
-		for i, line := range grid {
+		for i, line := range g {
 			for x, c := range line {
 				if c.r != ' ' || c.bg != 0 {
 					ends[i] = x + 1
@@ -104,7 +104,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 		}
 		width := slices.Max(ends)
 		cost := func(i, x int) int {
-			line := grid[i]
+			line := g[i]
 			c := line[x]
 			if c.keep || !strings.ContainsRune(straight, c.r) {
 				return blocked
@@ -144,7 +144,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 						(arrow || arms(after.r) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
 						return 0
 					}
-					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(grid, i, x) {
+					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(g, i, x) {
 						return 0
 					}
 				}
@@ -169,7 +169,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 				return blocked
 			}
 			best := blocked
-			for _, b := range bendsAt(grid, i, x, toHi, next, prev, lo, hi) {
+			for _, b := range bendsAt(g, i, x, toHi, next, prev, lo, hi) {
 				if b.extends {
 					best = min(best, extend)
 				} else {
@@ -191,7 +191,7 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 			}
 			joined := make([]bool, m)
 			for x := range m {
-				a, b := grid[i-1][x], grid[i][x]
+				a, b := g[i-1][x], g[i][x]
 				sticky := func(c cell) bool { return c.keep || c.glue }
 				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
 					sticky(a) && (sticky(b) || b.r != ' ') || sticky(b) && a.r != ' '
@@ -245,41 +245,41 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 			}
 		}
 		if best[n-1][end] >= n*trailing {
-			for i := range grid {
-				grid[i] = grid[i][:m-1]
+			for i := range g {
+				g[i] = g[i][:m-1]
 			}
 			if bend && turn && !jogging {
 				jogging = true
 				continue
 			}
-			return grid
+			return g
 		}
 		path := make([]int, n)
 		for i, x := n-1, end; i >= 0; i-- {
 			path[i] = x
 			x = from[i][x]
 		}
-		cut := make([][]cell, n)
+		cut := make(grid, n)
 		for i, x := range path {
-			cut[i] = slices.Delete(slices.Clone(grid[i]), x, x+1)
+			cut[i] = slices.Delete(slices.Clone(g[i]), x, x+1)
 		}
-		jogs, failed, ok := bendLines(grid, cut, path, next, prev, lo, hi)
+		jogs, failed, ok := bendLines(g, cut, path, next, prev, lo, hi)
 		if ok && jogs > 1 {
 			// the cheapest seam left has the fewest jogs; one column is
 			// not worth more than one
-			for i := range grid {
-				grid[i] = grid[i][:m-1]
+			for i := range g {
+				g[i] = g[i][:m-1]
 			}
-			return grid
+			return g
 		}
 		if !ok {
 			forbid[failed] = true
-			for i := range grid {
-				grid[i] = grid[i][:m-1]
+			for i := range g {
+				g[i] = g[i][:m-1]
 			}
 			continue
 		}
-		grid = cut
+		g = cut
 		clear(forbid)
 		jogging = false
 	}
@@ -288,8 +288,8 @@ func seams(grid [][]cell, straight, markers string, keep int, turn, bend, stubs 
 // leaves reports whether the cell after x on line i, below a node in the
 // cell before x, is blank or drawn by an edge, which can run right along
 // the node; the frame of a cluster keeps a cell off it
-func leaves(grid [][]cell, i, x int) bool {
-	after := grid[i][x+1]
+func leaves(g grid, i, x int) bool {
+	after := g[i][x+1]
 	if after.r == ' ' {
 		return after.bg == 0 && !after.keep && !after.glue
 	}
@@ -311,8 +311,8 @@ type bend struct {
 // grid can bend when a seam crosses it toward hi, when toHi is set, or
 // toward lo. Either the cell of the line before or the one of the line
 // after takes the turn, toward a blank cell beside it.
-func bendsAt(grid [][]cell, i, x int, toHi bool, next, prev, lo, hi int) []bend {
-	a, b := grid[i-1], grid[i]
+func bendsAt(g grid, i, x int, toHi bool, next, prev, lo, hi int) []bend {
+	a, b := g[i-1], g[i]
 	plain := func(c cell) bool { return !c.keep && !c.glue && c.r != ' ' && corner(arms(c.r)) == c.r }
 	if x == 0 || x+1 >= len(a) || !plain(a[x]) || !plain(b[x]) || arms(a[x].r)&next == 0 || arms(b[x].r)&prev == 0 {
 		return nil
@@ -325,10 +325,10 @@ func bendsAt(grid [][]cell, i, x int, toHi bool, next, prev, lo, hi int) []bend 
 	// a jog keeps a straight line on both of its ends, off nodes,
 	// arrowheads and other turns
 	straight := func(i int) bool {
-		if i < 0 || i >= len(grid) {
+		if i < 0 || i >= len(g) {
 			return false
 		}
-		c := grid[i][x]
+		c := g[i][x]
 		return !c.keep && !c.solid && c.r == glyph(next|prev, 0)
 	}
 	var out []bend
@@ -351,7 +351,7 @@ func bendsAt(grid [][]cell, i, x int, toHi bool, next, prev, lo, hi int) []bend 
 // two lines of grid, in cut, which is grid with the seam removed; bends
 // that run lines further go first. It returns the number of jogs, or the
 // line and cell of a crossing that has no room to bend.
-func bendLines(grid, cut [][]cell, path []int, next, prev, lo, hi int) (jogs int, failed [2]int, ok bool) {
+func bendLines(g, cut grid, path []int, next, prev, lo, hi int) (jogs int, failed [2]int, ok bool) {
 	// has reports whether the cell at x of line i has the arm, with lines
 	// past the grid having none
 	has := func(i, x, arm int) bool {
@@ -360,11 +360,11 @@ func bendLines(grid, cut [][]cell, path []int, next, prev, lo, hi int) (jogs int
 	for i := 1; i < len(path); i++ {
 		xa, xb := path[i-1], path[i]
 		for x := min(xa, xb) + 1; x < max(xa, xb); x++ {
-			a, b := grid[i-1][x], grid[i][x]
+			a, b := g[i-1][x], g[i][x]
 			if arms(a.r)&next == 0 && arms(b.r)&prev == 0 {
 				continue
 			}
-			bends := bendsAt(grid, i, x, xb > xa, next, prev, lo, hi)
+			bends := bendsAt(g, i, x, xb > xa, next, prev, lo, hi)
 			slices.SortStableFunc(bends, func(p, q bend) int {
 				if p.extends == q.extends {
 					return 0
@@ -430,18 +430,4 @@ func ownerOf(c cell) int {
 // free reports whether c is an empty cell that a line can be drawn in
 func free(c cell) bool {
 	return c.r == ' ' && c.bg == 0 && !c.keep && !c.glue && c.need == 0 && c.label == 0
-}
-
-func transpose(grid [][]cell) [][]cell {
-	if len(grid) == 0 {
-		return nil
-	}
-	out := make([][]cell, len(grid[0]))
-	for x := range out {
-		out[x] = make([]cell, len(grid))
-		for y := range grid {
-			out[x][y] = grid[y][x]
-		}
-	}
-	return out
 }

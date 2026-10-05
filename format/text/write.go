@@ -27,36 +27,36 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
-	_, grid := carved(l)
-	_, err := io.WriteString(w, encode(grid, opts))
+	_, g := carved(l)
+	_, err := io.WriteString(w, encode(g, opts))
 	return err
 }
 
 // carved draws the graph on a canvas and carves it into the grid that
 // write encodes
-func carved(l *layout.Layout) (*canvas, [][]cell) {
+func carved(l *layout.Layout) (*canvas, grid) {
 	// edge ends spread apart look balanced, but can keep carving from
 	// lining an edge up straight: they stay apart unless that bends
 	// edges more, or as much on a larger drawing
 	var c *canvas
-	var grid [][]cell
+	var g grid
 	for _, spread := range []bool{true, false} {
 		d := drawGraph(l, spread)
-		g := carve(d.rows, d.sideways())
-		if c == nil || better(g, grid) {
-			c, grid = d, g
+		carved := carve(d.rows, d.sideways())
+		if c == nil || better(carved, g) {
+			c, g = d, carved
 		}
 	}
-	c.frameLabels(grid)
-	return c, grid
+	c.frameLabels(g)
+	return c, g
 }
 
 // better reports whether the carved grid a has fewer bends of edges than
 // b, or as many in less area
-func better(a, b [][]cell) bool {
-	measure := func(grid [][]cell) (bends, area int) {
+func better(a, b grid) bool {
+	measure := func(g grid) (bends, area int) {
 		width := 0
-		for _, row := range grid {
+		for _, row := range g {
 			for x, c := range row {
 				if !c.solid && strings.ContainsRune("╭╮╰╯", c.r) {
 					bends++
@@ -66,7 +66,7 @@ func better(a, b [][]cell) bool {
 				}
 			}
 		}
-		return bends, width * len(grid)
+		return bends, width * len(g)
 	}
 	ba, aa := measure(a)
 	bb, ab := measure(b)

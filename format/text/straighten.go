@@ -13,28 +13,28 @@ import (
 // leaves the upper row up and the lower row down runs on through both.
 // Nodes, markers, text and the frames of clusters stay where they are. It
 // returns whether it merged two rows.
-func mergeRows(grid [][]cell) ([][]cell, bool) {
+func mergeRows(g grid) (grid, bool) {
 	along := func(row []cell) bool {
 		return slices.ContainsFunc(row, func(c cell) bool { return c.lines&(left|right) != 0 })
 	}
-	for r := 0; r+1 < len(grid); r++ {
-		if !along(grid[r]) || !along(grid[r+1]) {
+	for r := 0; r+1 < len(g); r++ {
+		if !along(g[r]) || !along(g[r+1]) {
 			continue
 		}
-		if row, ok := mergeRow(grid[r], grid[r+1]); ok {
-			grid[r] = row
-			return slices.Delete(grid, r+1, r+2), true
+		if row, ok := mergeRow(g[r], g[r+1]); ok {
+			g[r] = row
+			return slices.Delete(g, r+1, r+2), true
 		}
 		// a line that turns along one of the rows can slide over to
 		// clear the way, a few cells at most
 		for _, end := range []struct{ r, dir int }{{r, up}, {r + 1, down}} {
-			for x := range grid[end.r] {
+			for x := range g[end.r] {
 				for _, dx := range []int{1, -1, 2, -2, 3, -3} {
-					moves, ok := slide(grid, end.r, x, end.dir, dx)
+					moves, ok := slide(g, end.r, x, end.dir, dx)
 					if !ok {
 						continue
 					}
-					a, b := slices.Clone(grid[r]), slices.Clone(grid[r+1])
+					a, b := slices.Clone(g[r]), slices.Clone(g[r+1])
 					for _, m := range moves {
 						switch m.r {
 						case r:
@@ -45,22 +45,22 @@ func mergeRows(grid [][]cell) ([][]cell, bool) {
 					}
 					if row, ok := mergeRow(a, b); ok {
 						for _, m := range moves {
-							grid[m.r][m.x] = m.c
+							g[m.r][m.x] = m.c
 						}
-						grid[r] = row
-						return slices.Delete(grid, r+1, r+2), true
+						g[r] = row
+						return slices.Delete(g, r+1, r+2), true
 					}
 				}
 			}
 		}
 	}
-	return grid, false
+	return g, false
 }
 
 // straighten takes the first step of a line aside out, sliding the line
 // before or after it over, see slide. It returns whether it took one out.
-func straighten(grid [][]cell) bool {
-	for r, row := range grid {
+func straighten(g grid) bool {
+	for r, row := range g {
 		for x, c := range row {
 			// the turn at the left end of a step
 			if c.lines&right == 0 || bits.OnesCount(uint(c.lines)) != 2 || c.lines&(up|down) == 0 {
@@ -74,9 +74,9 @@ func straighten(grid [][]cell) bool {
 				continue
 			}
 			for _, from := range []struct{ x, dx int }{{x, end - x}, {end, x - end}} {
-				if moves, ok := slide(grid, r, from.x, grid[r][from.x].lines&(up|down), from.dx); ok {
+				if moves, ok := slide(g, r, from.x, g[r][from.x].lines&(up|down), from.dx); ok {
 					for _, m := range moves {
-						grid[m.r][m.x] = m.c
+						g[m.r][m.x] = m.c
 					}
 					return true
 				}
@@ -97,16 +97,10 @@ type move struct {
 // ends, or into an arrowhead or a port on a box at the far end, which
 // moves along the box. The line moves only through blanks, of one edge, and its runs
 // only grow over blanks and shrink over themselves.
-func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
-	at := func(r, x int) *cell {
-		if r < 0 || r >= len(grid) || x < 0 || x >= len(grid[r]) {
-			return nil
-		}
-		return &grid[r][x]
-	}
-	blank := func(r, x int) bool { c := at(r, x); return c != nil && free(*c) }
-	solid := func(r, x int) bool { c := at(r, x); return c != nil && c.solid }
-	turn := at(r, x)
+func slide(g grid, r, x, dir, dx int) ([]move, bool) {
+	blank := func(r, x int) bool { c := g.at(r, x); return c != nil && free(*c) }
+	solid := func(r, x int) bool { c := g.at(r, x); return c != nil && c.solid }
+	turn := g.at(r, x)
 	if turn == nil || turn.lines&dir == 0 || bits.OnesCount(uint(turn.lines)) != 2 || turn.lines&(left|right) == 0 {
 		return nil, false
 	}
@@ -136,7 +130,7 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 			if c == x {
 				continue
 			}
-			p := at(y, c)
+			p := g.at(y, c)
 			// toward the run it shrinks over its own run, onto the turn at
 			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
@@ -166,14 +160,14 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 	}
 	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]int{id, id, id, id}}
 	for y := r + step; ; y += step {
-		p := at(y, x)
+		p := g.at(y, x)
 		switch {
 		case p == nil:
 			return nil, false
 		case p.lines&(up|down) == up|down && p.owner[0] == id && p.owner[1] == id && !p.solid:
 			// a line it crosses it crosses where it goes too, and leaves
 			// whole where it was; a cell off nodes, as unjog keeps
-			q := at(y, x+dx)
+			q := g.at(y, x+dx)
 			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.lines == left|right && q.owner[2] != id
 			if (p.lines != up|down && p.lines != up|down|left|right) || !blank(y, x+dx) && !across || solid(y, x+dx-1) || solid(y, x+dx+1) {
 				return nil, false
@@ -192,7 +186,7 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 			continue
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
-			below, to := at(y+1, x), at(y+1, x+dx)
+			below, to := g.at(y+1, x), g.at(y+1, x+dx)
 			if !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
 				return nil, false
 			}
@@ -202,7 +196,7 @@ func slide(grid [][]cell, r, x, dir, dx int) ([]move, bool) {
 			return moves, turns(y, p.lines)
 		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
 			// a port on the side of a box moves along its straight side
-			to := at(y, x+dx)
+			to := g.at(y, x+dx)
 			if to == nil || to.node != p.node || arms(to.r) != left|right {
 				return nil, false
 			}
@@ -282,14 +276,9 @@ func mergeRow(a, b []cell) ([]cell, bool) {
 // of their own, which nothing joins. The new line crosses no more lines
 // than the old, keeps a cell off nodes, and lines with a label beside
 // them stay.
-func unjog(grid [][]cell) (changed bool) {
+func unjog(g grid) (changed bool) {
 	type pos struct{ r, c int }
-	at := func(p pos) *cell {
-		if p.r < 0 || p.r >= len(grid) || p.c < 0 || p.c >= len(grid[p.r]) {
-			return nil
-		}
-		return &grid[p.r][p.c]
-	}
+	at := func(p pos) *cell { return g.at(p.r, p.c) }
 	is := func(p pos, set string) bool { q := at(p); return q != nil && strings.ContainsRune(set, q.r) }
 	// run returns where a line leaving p along the row in dir runs to, and
 	// whether it goes on down there; when it does not, it runs into
@@ -465,8 +454,8 @@ func unjog(grid [][]cell) (changed bool) {
 		}
 		return true
 	}
-	for r := range grid {
-		for c := range grid[r] {
+	for r := range g {
+		for c := range g[r] {
 			top := pos{r, c}
 			if q := at(top); is(top, "├┤┬┴┼") && !q.solid {
 				// a line leaving a junction along the row and a step after
@@ -546,8 +535,8 @@ func unjog(grid [][]cell) (changed bool) {
 	// a step slides along its line to where the line crosses fewer
 	// lines, as two lines can cross twice to swap back
 	fewer = true
-	for r := range grid {
-		for c := range grid[r] {
+	for r := range g {
+		for c := range g[r] {
 			top := pos{r, c}
 			_, b, ok := step(top)
 			if !ok {

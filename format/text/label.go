@@ -115,8 +115,8 @@ func (c *canvas) drawLabels(graph *layout.Graph, paths [][][2]int) {
 
 // frameLabels writes the cluster labels at the cells marked for them on the
 // carved grid, see drawLabels
-func (c *canvas) frameLabels(grid [][]cell) {
-	for _, row := range grid {
+func (c *canvas) frameLabels(g grid) {
+	for _, row := range g {
 		for x := range row {
 			id := row[x].label
 			if id == 0 {
@@ -256,17 +256,11 @@ func (c *canvas) blank(x, y, w, h int) bool {
 // hug moves a label that another edge's line runs right beside a cell
 // over onto its own edge's line, where carving leaves that a blank cell
 // away from it: next to the other line, it should touch its own
-func hug(grid [][]cell) {
-	at := func(r, x int) *cell {
-		if r < 0 || r >= len(grid) || x < 0 || x >= len(grid[r]) {
-			return nil
-		}
-		return &grid[r][x]
-	}
+func hug(g grid) {
 	// the lines of edge id, and of other edges, in the cells
 	lines := func(cells [][2]int, id int) (own, other bool) {
 		for _, p := range cells {
-			c := at(p[0], p[1])
+			c := g.at(p[0], p[1])
 			if c == nil || c.frame || c.text != 0 {
 				continue
 			}
@@ -281,7 +275,7 @@ func hug(grid [][]cell) {
 	}
 	// the box of every label
 	boxes := map[int][4]int{} // top, left, bottom, right
-	for r, row := range grid {
+	for r, row := range g {
 		for x, c := range row {
 			if c.text == 0 {
 				continue
@@ -331,21 +325,21 @@ func hug(grid [][]cell) {
 			if own, _ := lines(side(b, dir, 2), id); !own {
 				continue
 			}
-			if slices.ContainsFunc(side(b, dir, 1), func(p [2]int) bool { c := at(p[0], p[1]); return c == nil || !free(*c) && !c.glue || c.solid }) {
+			if slices.ContainsFunc(side(b, dir, 1), func(p [2]int) bool { c := g.at(p[0], p[1]); return c == nil || !free(*c) && !c.glue || c.solid }) {
 				continue
 			}
 			// move the label, from the far end on
 			cells := []cell{}
 			for r := b[0]; r <= b[2]; r++ {
 				for x := b[1]; x <= b[3]; x++ {
-					cells = append(cells, grid[r][x])
-					grid[r][x] = cell{r: ' ', glue: true}
+					cells = append(cells, g[r][x])
+					g[r][x] = cell{r: ' ', glue: true}
 				}
 			}
 			i := 0
 			for r := b[0]; r <= b[2]; r++ {
 				for x := b[1]; x <= b[3]; x++ {
-					grid[r+dy(dir)][x+dx(dir)] = cells[i]
+					g[r+dy(dir)][x+dx(dir)] = cells[i]
 					i++
 				}
 			}
