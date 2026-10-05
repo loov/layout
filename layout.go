@@ -802,7 +802,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	// position nodes
 	positionedGraph := orderedGraph
 	align := map[Align]hier.Align{AlignBalanced: hier.Balanced, AlignLeft: hier.Left, AlignRight: hier.Right}[opts.Align]
-	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, align)
+	hier.Position(positionedGraph, graphdef.Splines != SplinesOrtho, graphdef.MergeEdges, align)
 
 	// assign final positions, off the center of nodes widened for loops
 	for nodedef, id := range nodes {

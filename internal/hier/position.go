@@ -24,8 +24,9 @@ const (
 // simplex when balanced and by Brandes-Köpf when aligned left or right.
 // With straighten, virtual nodes of long edges move so that the edges run
 // diagonally; orthogonal routing wants them where positioning aligns
-// them, in line with an end, to save bends.
-func Position(graph *Graph, straighten bool, align Align) {
+// them, in line with an end, to save bends. With fans, a balanced node
+// goes over the middle of its children, for edges that merge into a fork.
+func Position(graph *Graph, straighten, fans bool, align Align) {
 	PositionInitial(graph)
 	if len(graph.Nodes) == 0 {
 		return
@@ -38,7 +39,7 @@ func Position(graph *Graph, straighten bool, align Align) {
 			node.Center.X = xs[node.ID]
 		}
 	default:
-		positionSimplex(graph)
+		positionSimplex(graph, fans)
 	}
 	if straighten {
 		StraightenChains(graph)
@@ -324,7 +325,7 @@ const (
 // Many layouts can cost the same, such as with a node anywhere between
 // its two children; a slight pull towards where balanced Brandes-Köpf
 // puts each node picks the one that centers nodes among their neighbors.
-func positionSimplex(graph *Graph) {
+func positionSimplex(graph *Graph, fans bool) {
 	n := graph.NodeCount()
 	edges := 0
 	for _, node := range graph.Nodes {
@@ -392,21 +393,28 @@ func positionSimplex(graph *Graph) {
 	s.run()
 
 	// fans: a node with several children goes over the middle of them,
-	// from the bottom up, as far as its neighbors in the rank let it
+	// from the bottom up, as far as its neighbors in the rank let it; the
+	// children are the nodes and labels right below, not long edges
 	x := make([]float32, n)
 	for _, node := range graph.Nodes {
 		x[node.ID] = float32(s.rank[node.ID])
 	}
 	lo, hi := float32(s.rank[lft]), float32(s.rank[rgt])
-	for r := len(graph.ByRank) - 1; r >= 0; r-- {
+	for r := len(graph.ByRank) - 1; r >= 0 && fans; r-- {
 		layer := graph.ByRank[r]
 		for i, node := range layer {
-			if node.Virtual || len(node.Out) < 2 {
+			if node.Virtual {
 				continue
 			}
-			first, last := float32(math.Inf(1)), float32(math.Inf(-1))
+			first, last, children := float32(math.Inf(1)), float32(math.Inf(-1)), 0
 			for _, child := range node.Out {
-				first, last = min(first, x[child.ID]), max(last, x[child.ID])
+				if !child.Virtual || label(child) {
+					first, last = min(first, x[child.ID]), max(last, x[child.ID])
+					children++
+				}
+			}
+			if children < 2 {
+				continue
 			}
 			left, right := lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor
 			if i > 0 {

@@ -45,7 +45,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 	for _, node := range graph.Nodes {
 		node.Radius = Vector{X: 20, Y: 5}
 	}
-	Position(graph, true, Balanced)
+	Position(graph, true, false, Balanced)
 	for _, layer := range graph.ByRank {
 		for i := 1; i < len(layer); i++ {
 			a, b := layer[i-1], layer[i]

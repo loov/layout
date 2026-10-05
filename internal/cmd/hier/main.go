@@ -198,7 +198,7 @@ func main() {
 
 	info("\nPOSITIONING")
 	start = time.Now()
-	hier.Position(graph, true, hier.Balanced)
+	hier.Position(graph, true, false, hier.Balanced)
 	stop = time.Now()
 	if *verbose {
 		info("   time: %.3f ms", float64(stop.Sub(start).Nanoseconds())/1e6)
