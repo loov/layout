@@ -1,0 +1,176 @@
+package layout
+
+import (
+	"math"
+	"sort"
+)
+
+// spreadWaypoints moves interior path points that several edges share
+// (detours around the same node) sideways so that the edges don't run on
+// top of each other, in the order they head so that they don't cross.
+func spreadWaypoints(edges []*ledge, pad Length) {
+	type at struct {
+		edge  *ledge
+		index int
+		next  Vector // original following point
+	}
+	shared := map[Vector][]at{}
+	for _, edge := range edges {
+		for i := 1; i+1 < len(edge.Path); i++ {
+			shared[edge.Path[i]] = append(shared[edge.Path[i]], at{edge, i, edge.Path[i+1]})
+		}
+	}
+	points := make([]Vector, 0, len(shared))
+	for point, list := range shared {
+		if len(list) > 1 {
+			points = append(points, point)
+		}
+	}
+	sort.Slice(points, func(i, k int) bool {
+		if points[i].X != points[k].X {
+			return points[i].X < points[k].X
+		}
+		return points[i].Y < points[k].Y
+	})
+	for _, point := range points {
+		list := shared[point]
+		// spread along x, so the order of the following points' x keeps
+		// the edges from crossing
+		sort.SliceStable(list, func(i, k int) bool { return list[i].next.X < list[k].next.X })
+		for i, a := range list {
+			offset := (Length(i) - Length(len(list)-1)/2) * 2 * pad
+			a.edge.Path[a.index] = point.Add(Vector{offset, 0})
+		}
+	}
+}
+
+// spreadEnds keeps the attachment points on every node at least minSep
+// apart along the outline so that arrowheads don't stack, pushing the
+// crowded ones apart around their mean direction. Edges pinned to a port
+// keep their point.
+func spreadEnds(graph *lgraph, minSep Length) {
+	type end struct {
+		edge  *ledge
+		start bool
+		angle float64
+		fixed bool // a loop's attachment, which stays where it is
+	}
+	byNode := map[*lnode][]end{}
+	for _, edge := range graph.Edges {
+		if len(edge.Path) < 2 {
+			continue
+		}
+		angle := func(node *lnode, p Vector) float64 {
+			return math.Atan2(float64(p.Y-node.Center.Y), float64(p.X-node.Center.X))
+		}
+		if edge.From == edge.To {
+			byNode[edge.From] = append(byNode[edge.From],
+				end{edge, true, angle(edge.From, edge.Path[0]), true},
+				end{edge, false, angle(edge.From, edge.Path[len(edge.Path)-1]), true})
+			continue
+		}
+		if edge.FromPort == CompassAuto {
+			byNode[edge.From] = append(byNode[edge.From], end{edge, true, angle(edge.From, edge.Path[1]), false})
+		}
+		if edge.ToPort == CompassAuto {
+			byNode[edge.To] = append(byNode[edge.To], end{edge, false, angle(edge.To, edge.Path[len(edge.Path)-2]), false})
+		}
+	}
+	for node, ends := range byNode {
+		if len(ends) < 2 {
+			continue
+		}
+		sort.Slice(ends, func(i, k int) bool { return ends[i].angle < ends[k].angle })
+		// start the sequence after the largest gap so that the ±π seam
+		// never falls between neighbors
+		gap, at := ends[0].angle+2*math.Pi-ends[len(ends)-1].angle, len(ends)-1
+		for i := 1; i < len(ends); i++ {
+			if d := ends[i].angle - ends[i-1].angle; d > gap {
+				gap, at = d, i-1
+			}
+		}
+		for i := range at + 1 {
+			ends[i].angle += 2 * math.Pi
+		}
+		ends = append(ends[at+1:], ends[:at+1]...)
+		// angle step from the arc length on the smaller radius, so that
+		// it is enough along the flat sides of wide nodes too
+		step := float64(minSep) / float64(min(node.Radius.X, node.Radius.Y))
+		for i := 1; i < len(ends); i++ {
+			d := ends[i].angle - ends[i-1].angle
+			if d >= step {
+				continue
+			}
+			switch {
+			case ends[i].fixed && !ends[i-1].fixed:
+				ends[i-1].angle -= step - d
+			case ends[i-1].fixed && !ends[i].fixed:
+				ends[i].angle += step - d
+			case !ends[i].fixed:
+				// split the push, moving everything before along
+				for k := range i {
+					ends[k].angle -= (step - d) / 2
+				}
+				ends[i].angle += (step - d) / 2
+			}
+		}
+		for _, e := range ends {
+			if e.fixed {
+				continue
+			}
+			p := node.Boundary(node.Center.Add(Vector{Length(math.Cos(e.angle)), Length(math.Sin(e.angle))}))
+			if e.start {
+				e.edge.Path[0] = p
+			} else {
+				e.edge.Path[len(e.edge.Path)-1] = p
+			}
+		}
+	}
+}
+
+// loopPath draws a self-loop on the right side of the node
+// pairs numbers the edges between each pair of nodes, which run side by
+// side in pinned and force layouts
+type pairs struct {
+	order        map[*lnode]int // keeps a pair's direction the same both ways
+	count, index map[[2]*lnode]int
+}
+
+func newPairs(graph *lgraph) *pairs {
+	p := &pairs{order: map[*lnode]int{}, count: map[[2]*lnode]int{}, index: map[[2]*lnode]int{}}
+	for i, node := range graph.Nodes {
+		p.order[node] = i
+	}
+	for _, edge := range graph.Edges {
+		if edge.From != edge.To {
+			p.count[p.key(edge)]++
+		}
+	}
+	return p
+}
+
+func (p *pairs) key(edge *ledge) [2]*lnode {
+	if p.order[edge.From] > p.order[edge.To] {
+		return [2]*lnode{edge.To, edge.From}
+	}
+	return [2]*lnode{edge.From, edge.To}
+}
+
+// shift returns the offset of the next edge between its nodes, spacing
+// apart, across the line from the first node of the pair to the second
+func (p *pairs) shift(edge *ledge, spacing Length) Vector {
+	key := p.key(edge)
+	n := p.count[key]
+	if n < 2 {
+		return Vector{}
+	}
+	k := p.index[key]
+	p.index[key]++
+	d := key[1].Center.Sub(key[0].Center)
+	length := Length(math.Hypot(float64(d.X), float64(d.Y)))
+	if length == 0 {
+		return Vector{}
+	}
+	offset := (Length(k) - Length(n-1)/2) * spacing / length
+	return Vector{X: -d.Y * offset, Y: d.X * offset}
+}
