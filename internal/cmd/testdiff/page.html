@@ -292,7 +292,7 @@ function delta(change, short) {
 }
 
 // the diagnostics shown on drawings, see layout.Diagnostics; fewer is better
-const STATS = [["corners", "bends", "corners of edges"], ["length", "len", "length of edges"], ["crossings", "cross", "edge crossings"]];
+const STATS = [["corners", "bends", "corners of edges"], ["length", "len", "length of edges"], ["crossings", "cross", "edge crossings"], ["unbalance", "unbal", "how far forks and joins are off center, in points"]];
 
 // statsBox returns a box with the diagnostics of the old or new layout, with
 // how they changed from old to new on the new one

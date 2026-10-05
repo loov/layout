@@ -52,6 +52,11 @@ type Diagnostics struct {
 	EdgeLength Length
 	// Area is the width times height of the drawing, in points.
 	Area Length
+	// Unbalance is how far forks and joins are off center, in points: for
+	// every node with two or more neighbors in the ranks before it, and
+	// again after it, how far along its rank it is from the middle of the
+	// outermost of them.
+	Unbalance Length
 	// FarLabels counts labels further from their own edge than the text
 	// height, which makes them hard to attribute.
 	FarLabels int
@@ -65,9 +70,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (diag Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f",
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f unbalance=%.0f",
 		diag.NodeOverlaps, diag.EdgeThroughNode, diag.EdgeNearNode, diag.EdgeCrossings, diag.ShallowCrossings, diag.EdgeOverlaps, diag.ParallelEdges, diag.EndOverlaps, diag.Shafts,
-		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area)
+		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area, diag.Unbalance)
 }
 
 // Diagnose computes Diagnostics for a layout.
@@ -313,6 +318,42 @@ func Diagnose(l *Layout) Diagnostics {
 
 	tl, br := graph.Bounds()
 	diag.Area = (br.X - tl.X) * (br.Y - tl.Y)
+
+	// forks and joins off the middle of their neighbors, before and after
+	// along the ranks, whichever way their edges go
+	across, along := func(v Vector) Length { return v.Y }, func(v Vector) Length { return v.X }
+	if graph.RankDir == LeftToRight || graph.RankDir == RightToLeft {
+		across, along = along, across
+	}
+	for _, node := range graph.Nodes {
+		var before, after []*lnode
+		for _, edge := range graph.Edges {
+			other := edge.To
+			if edge.To == node {
+				other = edge.From
+			} else if edge.From != node {
+				continue
+			}
+			switch d := across(other.Center) - across(node.Center); {
+			case d < -eps && !slices.Contains(before, other):
+				before = append(before, other)
+			case d > eps && !slices.Contains(after, other):
+				after = append(after, other)
+			}
+		}
+		for _, side := range [][]*lnode{before, after} {
+			if len(side) < 2 {
+				continue
+			}
+			lo, hi := Length(math.Inf(1)), Length(math.Inf(-1))
+			for _, other := range side {
+				lo, hi = min(lo, along(other.Center)), max(hi, along(other.Center))
+			}
+			if off := absLength(along(node.Center) - (lo+hi)/2); off > eps {
+				diag.Unbalance += off
+			}
+		}
+	}
 
 	// distance from a label box to its own path
 	for _, edge := range graph.Edges {
