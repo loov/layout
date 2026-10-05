@@ -111,7 +111,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 	if graphdef.ForText {
 		graphdef.prepareText()
 	}
-	graphdef.AssignMissingValues()
+	graphdef.assignDefaults()
 	if graphdef.Pinned {
 		layoutPinned(graphdef)
 		return

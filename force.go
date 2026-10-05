@@ -34,7 +34,7 @@ func force(graph *lgraph) {
 	if graph.ForText {
 		graph.prepareText()
 	}
-	graph.AssignMissingValues()
+	graph.assignDefaults()
 	if graph.Pinned {
 		layoutPinned(graph)
 		return

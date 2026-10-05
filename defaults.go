@@ -4,10 +4,10 @@ import (
 	"github.com/loov/layout/internal/draw"
 )
 
-// AssignMissingValues fills in unset padding, font and size values on the
+// assignDefaults fills in unset padding, font and size values on the
 // graph, its nodes and edges from the graph defaults. Node sizes are
 // estimated from their labels.
-func (graph *lgraph) AssignMissingValues() {
+func (graph *lgraph) assignDefaults() {
 	if graph.FontSize <= 0 {
 		graph.FontSize = graph.LineHeight * 14 / 16
 	}
