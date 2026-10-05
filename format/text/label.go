@@ -1,12 +1,12 @@
 package text
 
 import (
-	"github.com/loov/layout"
-	"github.com/loov/layout/internal/draw"
 	"math"
 	"slices"
 	"strings"
-	"unicode"
+
+	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // clusterLabel returns the label of a cluster on one line, as it is
@@ -75,16 +75,7 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 		// those cells
 		b := c.clusterBox(i)
 		text := " " + clusterLabel(cluster) + " "
-		var runes []rune
-		for _, r := range text {
-			switch {
-			case draw.IsZeroWidth(r), unicode.IsControl(r):
-			case draw.IsWide(r):
-				runes = append(runes, r, covered)
-			default:
-				runes = append(runes, r)
-			}
-		}
+		runes := cellRunes(text)
 		fits := func(x, y int) bool {
 			for j, r := range runes {
 				p := c.at(x+j, y)
@@ -123,18 +114,12 @@ func (c *canvas) frameLabels(g grid) {
 			if id == 0 {
 				continue
 			}
-			for _, r := range " " + clusterLabel(c.l.Graph.Clusters[id-1]) + " " {
-				switch {
-				case draw.IsZeroWidth(r), unicode.IsControl(r):
-				case row[x].lines&(up|down) != 0:
-					x++ // a line that crosses the frame, on a space, stays
-				case draw.IsWide(r):
-					row[x].r, row[x].fg, row[x+1].r = r, 0, covered
-					x += 2
-				default:
+			for _, r := range cellRunes(" " + clusterLabel(c.l.Graph.Clusters[id-1]) + " ") {
+				if row[x].lines&(up|down) == 0 {
+					// a line that crosses the frame, on a space, stays
 					row[x].r, row[x].fg = r, 0
-					x++
 				}
+				x++
 			}
 		}
 	}

@@ -122,8 +122,8 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 	var moves []move
 	// turns moves the turn at row y from x along its run, which grows or
 	// shrinks to meet it at x+dx
-	turns := func(y int, arms int) bool {
-		run := arms & (left | right)
+	turns := func(y int, dirs int) bool {
+		run := dirs & (left | right)
 		side := map[int]int{left: -1, right: 1}[run]
 		lo, hi := min(x, x+dx), max(x, x+dx)
 		for c := lo; c <= hi; c++ {
@@ -134,19 +134,19 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 			// toward the run it shrinks over its own run, onto the turn at
 			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
-			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(arms&(up|down)) && p.owner[bits.TrailingZeros(uint(opposite(run)))] == id
+			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(dirs&(up|down)) && p.owner[bits.TrailingZeros(uint(opposite(run)))] == id
 			if dx*side > 0 && !end && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
 				return false
 			}
 			if end {
-				arms = up | down
+				dirs = up | down
 			}
 		}
 		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]int{id, id, id, id}}
 		for c := lo; c <= hi; c++ {
 			switch {
 			case c == x+dx:
-				moves = append(moves, move{y, c, cell{r: draw(arms), fg: turn.fg, lines: arms, owner: [4]int{id, id, id, id}}})
+				moves = append(moves, move{y, c, cell{r: draw(dirs), fg: turn.fg, lines: dirs, owner: [4]int{id, id, id, id}}})
 			case dx*side > 0:
 				moves = append(moves, move{y, c, cell{r: ' '}})
 			default:
@@ -328,7 +328,7 @@ func unjog(g grid) (changed bool) {
 				path = append(path, q)
 			}
 		}
-		arms := make([]int, len(path))
+		dirs := make([]int, len(path))
 		toward := func(from, to pos) int {
 			switch {
 			case to.r < from.r:
@@ -342,23 +342,23 @@ func unjog(g grid) (changed bool) {
 		}
 		for i, p := range path {
 			if i == 0 {
-				arms[i] |= in
+				dirs[i] |= in
 			} else {
-				arms[i] |= toward(p, path[i-1])
+				dirs[i] |= toward(p, path[i-1])
 			}
 			if i == len(path)-1 {
-				arms[i] |= out
+				dirs[i] |= out
 			} else {
-				arms[i] |= toward(p, path[i+1])
+				dirs[i] |= toward(p, path[i+1])
 			}
 		}
-		return path, arms
+		return path, dirs
 	}
 	// reroute moves a line from the old cells to the new ones, both with
 	// the arm in into the first, ending in head when it is set, if it can
 	// fewer has reroute take only a new line that crosses fewer lines
 	fewer := false
-	reroute := func(in int, old, path []pos, arms []int, head *cell) bool {
+	reroute := func(in int, old, path []pos, dirs []int, head *cell) bool {
 		olds := map[pos]int{}
 		_, oldArms := cells(in, down, old...)
 		for i, p := range old {
@@ -390,15 +390,14 @@ func unjog(g grid) (changed bool) {
 			}
 			if _, ok := olds[p]; ok {
 				// a crossing on the old line stays one on the new
-				if q.r == '╂' && arms[i] != up|down && arms[i] != left|right {
+				if q.r == '╂' && dirs[i] != up|down && dirs[i] != left|right {
 					return false
 				}
 				continue
 			}
-			straight := arms[i] == up|down || arms[i] == left|right
-			across := straight && (arms[i] == up|down && q.r == '─' || arms[i] == left|right && q.r == '│')
-			blank := q.r == ' ' && q.bg == 0 && !q.keep && !q.glue && q.need == 0 && q.label == 0
-			if q.solid || !blank && !across {
+			straight := dirs[i] == up|down || dirs[i] == left|right
+			across := straight && (dirs[i] == up|down && q.r == '─' || dirs[i] == left|right && q.r == '│')
+			if q.solid || !free(*q) && !across {
 				return false
 			}
 			if across {
@@ -444,12 +443,12 @@ func unjog(g grid) (changed bool) {
 			case q.r == '╂' || q.r != ' ' && olds[p] == 0:
 				q.r, q.lines = '╂', up|down|left|right
 				for arm := range 4 {
-					if arms[i]&(1<<arm) != 0 {
+					if dirs[i]&(1<<arm) != 0 {
 						q.owner[arm] = id
 					}
 				}
 			default:
-				*q = cell{r: corner(arms[i]), fg: fg, lines: arms[i], owner: [4]int{id, id, id, id}}
+				*q = cell{r: corner(dirs[i]), fg: fg, lines: dirs[i], owner: [4]int{id, id, id, id}}
 			}
 		}
 		return true
@@ -477,8 +476,8 @@ func unjog(g grid) (changed bool) {
 					}
 					end := pos{mid.r, c2}
 					old, _ := cells(back, down, first, pos{r, b}, mid, end)
-					path, arms := cells(back, down, first, pos{r, c2}, end)
-					if reroute(back, old, path, arms, nil) {
+					path, dirs := cells(back, down, first, pos{r, c2}, end)
+					if reroute(back, old, path, dirs, nil) {
 						changed = true
 					}
 				}
@@ -502,8 +501,8 @@ func unjog(g grid) (changed bool) {
 					vias = vias[:1] // the run goes on along the lower row
 				}
 				for _, via := range vias {
-					path, arms := cells(up, out, top, via, end)
-					if reroute(up, old, path, arms, nil) {
+					path, dirs := cells(up, out, top, via, end)
+					if reroute(up, old, path, dirs, nil) {
 						changed = true
 						break
 					}
@@ -526,8 +525,8 @@ func unjog(g grid) (changed bool) {
 			}
 			head := *at(mid)
 			old, _ := cells(up, down, top, pos{r, b}, mid)
-			path, arms := cells(up, down, top, pos{mid.r, c})
-			if reroute(up, old, path, arms, &head) {
+			path, dirs := cells(up, down, top, pos{mid.r, c})
+			if reroute(up, old, path, dirs, &head) {
 				changed = true
 			}
 		}
@@ -552,8 +551,8 @@ func unjog(g grid) (changed bool) {
 				if row == r {
 					continue
 				}
-				path, arms := cells(up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
-				if reroute(up, old, path, arms, nil) {
+				path, dirs := cells(up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+				if reroute(up, old, path, dirs, nil) {
 					changed = true
 					break
 				}

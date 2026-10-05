@@ -180,23 +180,28 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 
 // text writes s from x, y in the color of the pen's font
 func (c *canvas) text(x, y int, s string) {
+	for i, r := range cellRunes(s) {
+		c.put(x+i, y, r, c.pen.font)
+		c.hold(x+i, y)
+	}
+}
+
+// cellRunes returns the characters of s by cell, with covered after a
+// wide character. A cell holds one character, so marks on it are
+// dropped, and so are control characters, which would garble the
+// terminal.
+func cellRunes(s string) []rune {
+	var runes []rune
 	for _, r := range s {
 		switch {
 		case draw.IsZeroWidth(r), unicode.IsControl(r):
-			// a cell holds one character; marks on it are dropped, and
-			// control characters would garble the terminal
 		case draw.IsWide(r):
-			c.put(x, y, r, c.pen.font)
-			c.put(x+1, y, covered, c.pen.font)
-			c.hold(x, y)
-			c.hold(x+1, y)
-			x += 2
+			runes = append(runes, r, covered)
 		default:
-			c.put(x, y, r, c.pen.font)
-			c.hold(x, y)
-			x++
+			runes = append(runes, r)
 		}
 	}
+	return runes
 }
 
 // hold keeps the cell at x, y from being carved away

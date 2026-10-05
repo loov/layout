@@ -67,6 +67,12 @@ type seamAxis struct {
 	lo, hi     int    // the directions along a line, toward its start and end
 }
 
+// straightRun reports whether c is a plain straight run across the lines,
+// off nodes, arrowheads and turns, which a jog can bend
+func (ax seamAxis) straightRun(c cell) bool {
+	return !c.keep && !c.solid && c.r == glyph(ax.next|ax.prev, 0)
+}
+
 var (
 	// the lines are the columns of the drawing, transposed, so seams
 	// take out rows
@@ -349,8 +355,7 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) []bend {
 		if i < 0 || i >= len(g) {
 			return false
 		}
-		c := g[i][x]
-		return !c.keep && !c.solid && c.r == glyph(next|prev, 0)
+		return ax.straightRun(g[i][x])
 	}
 	var out []bend
 	add := func(row, at, to, lines, join int, near, other int) {
@@ -415,8 +420,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 				if bd.row == i {
 					other = i - 1
 				}
-				line := func(c cell) bool { return !c.keep && !c.solid && c.r == glyph(next|prev, 0) }
-				if !bd.extends && (near < 0 || near >= len(cut) || !line(cut[near][bd.at]) || !line(cut[other][bd.to])) {
+				if !bd.extends && (near < 0 || near >= len(cut) || !ax.straightRun(cut[near][bd.at]) || !ax.straightRun(cut[other][bd.to])) {
 					continue
 				}
 				// a line along a box stays of the box
