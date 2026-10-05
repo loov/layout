@@ -19,6 +19,9 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		y      Length
 		next   *jog // second step of a jog split in two, on a lower track
 		split  bool // this is the second step
+		// where the jog, and the merged jogs that take its track, enter
+		// from above and leave below
+		ins, outs []Length
 	}
 	channels := make([][]*jog, len(rows))
 
@@ -175,7 +178,8 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			if k < 0 || rows[k+1][0] > bottom.Y+0.5 {
 				continue // not a rank-to-rank segment
 			}
-			channels[k] = append(channels[k], &jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X})
+			channels[k] = append(channels[k], &jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X,
+				ins: []Length{top.X}, outs: []Length{bottom.X}})
 		}
 		edge.Path = path
 	}
@@ -223,6 +227,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 				return false
 			}
 			f.x0, f.x1 = min(f.x0, j.x0), max(f.x1, j.x1)
+			f.ins, f.outs = append(f.ins, j.ins...), append(f.outs, j.outs...)
 			shared[f] = append(shared[f], j)
 			return true
 		})
@@ -236,8 +241,9 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			for _, l := range jogs {
 				if l.xin == l.x1 && l.x0 == r.x0 && l.x1 == r.x1 {
 					mid := (r.x0 + r.x1) / 2
-					r.next = &jog{edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true}
-					r.x1 = mid
+					r.next = &jog{edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true,
+						ins: []Length{mid}, outs: r.outs}
+					r.x1, r.outs = mid, []Length{mid}
 					jogs = append(jogs, r.next)
 					break
 				}
@@ -257,14 +263,63 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		// a jog entering where another exits goes above it, or the exit
 		// would run down its stub; otherwise keep the sorted order. Where
 		// is within half a pad, as text draws closer runs in one cell
+		near := func(xs, ys []Length) bool {
+			for _, x := range xs {
+				for _, y := range ys {
+					if absLength(x-y) < pad/2 {
+						return true
+					}
+				}
+			}
+			return false
+		}
 		above := func(a, b *jog) bool {
-			return b == a.next || !a.split && b.next == nil && absLength(a.xin-(b.x0+b.x1-b.xin)) < pad/2
+			return b == a.next || !a.split && b.next == nil && near(a.ins, b.outs)
+		}
+		// jogs that must go above each other around a cycle, as longer
+		// chains and swaps over spans that differ can, have no order: the
+		// widest of a cycle splits into two steps, on two tracks, at a
+		// point where no other jog enters or leaves. The first step enters
+		// as the jog did and the second leaves as it did, so nothing needs
+		// to go above the first, which breaks the cycle
+		for range len(jogs) {
+			cycle := jogCycle(jogs, func(a, b *jog) bool { return a != b && above(a, b) })
+			var widest *jog
+			for _, j := range cycle {
+				if !j.split && j.next == nil && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
+					widest = j
+				}
+			}
+			if widest == nil {
+				break
+			}
+			apart := func(x Length) bool {
+				return !slices.ContainsFunc(jogs, func(o *jog) bool {
+					return near(o.ins, []Length{x}) || near(o.outs, []Length{x})
+				})
+			}
+			mid, found := Length(0), false
+			for _, f := range []Length{1.0 / 2, 1.0 / 3, 2.0 / 3, 1.0 / 4, 3.0 / 4} {
+				if mid = widest.x0 + f*(widest.x1-widest.x0); apart(mid) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				break
+			}
+			span := func(xs []Length) (Length, Length) { return min(mid, slices.Min(xs)), max(mid, slices.Max(xs)) }
+			second := &jog{edge: widest.edge, index: widest.index, xin: mid, split: true, ins: []Length{mid}, outs: widest.outs}
+			second.x0, second.x1 = span(widest.outs)
+			widest.x0, widest.x1 = span(widest.ins)
+			widest.next, widest.outs = second, []Length{mid}
+			jogs = append(jogs, second)
 		}
 		ordered := make([]*jog, 0, len(jogs))
 		for len(jogs) > 0 {
 			pick := 0 // on a cycle
 			for i, j := range jogs {
-				if !slices.ContainsFunc(jogs, func(o *jog) bool { return above(o, j) }) {
+				if !slices.ContainsFunc(jogs, func(o *jog) bool { return o != j && above(o, j) }) {
 					pick = i
 					break
 				}
@@ -366,6 +421,46 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			}
 		}
 	}
+}
+
+// jogCycle returns the jogs around a cycle of jogs that must go above
+// each other, or none
+func jogCycle[J comparable](jogs []J, above func(a, b J) bool) []J {
+	const (
+		unseen = iota
+		open
+		done
+	)
+	state := map[J]int{}
+	var stack, cycle []J
+	var visit func(j J) bool
+	visit = func(j J) bool {
+		state[j] = open
+		stack = append(stack, j)
+		for _, o := range jogs {
+			if !above(j, o) {
+				continue
+			}
+			switch state[o] {
+			case open:
+				cycle = stack[slices.Index(stack, o):]
+				return true
+			case unseen:
+				if visit(o) {
+					return true
+				}
+			}
+		}
+		stack = stack[:len(stack)-1]
+		state[j] = done
+		return false
+	}
+	for _, j := range jogs {
+		if state[j] == unseen && visit(j) {
+			return cycle
+		}
+	}
+	return nil
 }
 
 // separate moves the ordered positions want as little as possible, by
