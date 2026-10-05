@@ -135,12 +135,13 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			slot = func(i int) Length { return lo + Length(i)*spacing }
 		}
 		// ends whose route already runs straight across the side keep
-		// that x, so the edge needs no jog; the rest take the slots
+		// that x, so the edge needs no jog; the rest take the slots, and so
+		// do merged ends, which fork from their slot
 		want := make([]Length, len(list))
 		weight := make([]float64, len(list))
 		for i, e := range list {
 			want[i], weight[i] = slot(i), 1
-			if absLength(e.towards-e.x) < 0.01 && e.towards >= lo && e.towards <= hi {
+			if absLength(e.towards-e.x) < 0.01 && e.towards >= lo && e.towards <= hi && len(followers[e.edge]) == 0 {
 				want[i], weight[i] = e.towards, 1e9
 			}
 		}

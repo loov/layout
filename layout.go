@@ -2006,17 +2006,47 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		}
 		return xs
 	}
-	// a node centered over its children, or under its parents, stays: a
-	// balanced fork is worth its bends; long edges aren't of the fork
-	balanced := func(node *hier.Node) bool {
-		for _, ends := range []hier.Nodes{node.In, node.Out} {
-			lo, hi, n := float32(math.Inf(1)), float32(math.Inf(-1)), 0
-			for _, other := range ends {
-				if !other.Virtual {
-					lo, hi, n = min(lo, other.Center.X+other.Anchor), max(hi, other.Center.X+other.Anchor), n+1
+	// the nodes and labels a node has edges to before or after it, past
+	// ranks of labels only, as positioning centers fans; not long edges
+	// past other nodes
+	real := make([]bool, len(graph.ByRank))
+	for r, layer := range graph.ByRank {
+		real[r] = slices.ContainsFunc(layer, func(node *hier.Node) bool { return !node.Virtual })
+	}
+	label := func(node *hier.Node) bool { return node.Virtual && node.Anchor != 0 }
+	neighbors := func(node *hier.Node, before bool) []*hier.Node {
+		var out []*hier.Node
+		next := node.Out
+		if before {
+			next = node.In
+		}
+		for _, n := range next {
+			for n.Virtual && !label(n) && !real[n.Rank] {
+				ends := n.Out
+				if before {
+					ends = n.In
 				}
+				if len(ends) != 1 {
+					break
+				}
+				n = ends[0]
 			}
-			if n >= 2 && math.Abs(float64(node.Center.X+node.Anchor-(lo+hi)/2)) < 1 {
+			if !n.Virtual || label(n) {
+				out = append(out, n)
+			}
+		}
+		return out
+	}
+	// a node centered over its children, or under its parents, stays: a
+	// balanced fork is worth its bends
+	balanced := func(node *hier.Node) bool {
+		for _, before := range []bool{true, false} {
+			ends := neighbors(node, before)
+			lo, hi := float32(math.Inf(1)), float32(math.Inf(-1))
+			for _, other := range ends {
+				lo, hi = min(lo, other.Center.X+other.Anchor), max(hi, other.Center.X+other.Anchor)
+			}
+			if len(ends) >= 2 && math.Abs(float64(node.Center.X+node.Anchor-(lo+hi)/2)) < 1 {
 				return true
 			}
 		}
@@ -2024,10 +2054,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 	}
 	// forks and joins stay where positioning put them, among their edges
 	fork := func(node *hier.Node) bool {
-		real := func(ends hier.Nodes) int {
-			return len(ends) - len(slices.DeleteFunc(slices.Clone(ends), func(n *hier.Node) bool { return !n.Virtual }))
-		}
-		return !node.Virtual && (real(node.In) >= 2 || real(node.Out) >= 2)
+		return !node.Virtual && (len(neighbors(node, true)) >= 2 || len(neighbors(node, false)) >= 2)
 	}
 	// ends slide along a node in text, so an edge between nodes that
 	// overlap across the rank, one end alone on its side, is straight

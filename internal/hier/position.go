@@ -422,7 +422,21 @@ func positionSimplex(graph *Graph, fans bool) {
 
 	// fans: a node with several children goes over the middle of them,
 	// from the bottom up, as far as its neighbors in the rank let it; the
-	// children are the nodes and labels right below, not long edges
+	// children are the nodes and labels right below, or below ranks of
+	// labels only, not long edges past other nodes
+	real := make([]bool, len(graph.ByRank))
+	for r, layer := range graph.ByRank {
+		real[r] = slices.ContainsFunc(layer, func(node *Node) bool { return !node.Virtual })
+	}
+	child := func(c *Node) *Node {
+		for c.Virtual && !label(c) && len(c.Out) == 1 {
+			if real[c.Rank] {
+				return nil
+			}
+			c = c.Out[0]
+		}
+		return c
+	}
 	x := make([]float32, n)
 	for _, node := range graph.Nodes {
 		x[node.ID] = float32(s.rank[node.ID])
@@ -435,9 +449,9 @@ func positionSimplex(graph *Graph, fans bool) {
 				continue
 			}
 			first, last, children := float32(math.Inf(1)), float32(math.Inf(-1)), 0
-			for _, child := range node.Out {
-				if !child.Virtual || label(child) {
-					first, last = min(first, x[child.ID]), max(last, x[child.ID])
+			for _, out := range node.Out {
+				if c := child(out); c != nil && (!c.Virtual || label(c)) {
+					first, last = min(first, x[c.ID]), max(last, x[c.ID])
 					children++
 				}
 			}
@@ -456,6 +470,32 @@ func positionSimplex(graph *Graph, fans bool) {
 			if left <= right {
 				x[node.ID] = min(max((first+last)/2, left), right)
 			}
+		}
+	}
+	// the edges stretched over ranks of labels only run on in line with
+	// the node they end at, so that forks fork right below their node
+	for r, layer := range graph.ByRank {
+		if real[r] || !fans {
+			continue
+		}
+		for i, node := range layer {
+			if !node.Virtual || label(node) || len(node.Out) != 1 {
+				continue
+			}
+			end := child(node.Out[0])
+			if end == nil {
+				continue
+			}
+			want := x[end.ID]
+			if i > 0 {
+				a := layer[i-1]
+				want = max(want, x[a.ID]+float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor))))
+			}
+			if i+1 < len(layer) {
+				b := layer[i+1]
+				want = min(want, x[b.ID]-float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor))))
+			}
+			x[node.ID] = want
 		}
 	}
 	for _, node := range graph.Nodes {
