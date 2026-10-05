@@ -147,7 +147,7 @@ func collect(commit string, all bool) ([]Change, string, error) {
 	var changes []Change
 	for _, path := range paths {
 		kind := strings.TrimPrefix(filepath.Ext(path), ".")
-		if kind != "svg" && kind != "txt" && kind != "ans" || filepath.Base(path) == "diagnostics.txt" {
+		if kind != "svg" && kind != "txt" && kind != "ans" || strings.HasPrefix(filepath.Base(path), "diagnostics") {
 			continue // diagnostics are no drawing
 		}
 		old := show(base, path)

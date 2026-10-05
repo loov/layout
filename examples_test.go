@@ -602,43 +602,58 @@ func TestPinned(t *testing.T) {
 }
 
 // TestDiagnostics records layout.Diagnose for every example and fixture in
-// testdata/diagnostics.txt, so that changes in quality show up in diffs.
+// testdata/diagnostics.txt, and laid out for text, as the .txt drawings
+// are, in testdata/diagnostics_text.txt, so that changes in quality show up
+// in diffs.
 func TestDiagnostics(t *testing.T) {
-	var out bytes.Buffer
 	names := make([]string, 0, len(examples))
 	for name := range examples {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	for _, name := range names {
-		graph := examples[name]()
-		l, err := layout.Hierarchical(graph, exampleOptions[name])
-		if err != nil {
-			t.Fatal(err)
-		}
-		d := layout.Diagnose(l)
-		fmt.Fprintf(&out, "%-12s %v\n", name, d)
-		for _, line := range d.Details {
-			t.Logf("%s: %s", name, line)
-		}
-	}
 	files, _ := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
-	for _, file := range files {
+	parse := func(file string) *layout.Graph {
 		graphs, err := dot.ParseFile(file)
 		if err != nil {
 			t.Fatal(err)
 		}
-		l, err := layout.Hierarchical(graphs[0], layout.Options{})
+		return graphs[0]
+	}
+
+	var out, text bytes.Buffer
+	diagnose := func(out *bytes.Buffer, name string, graph *layout.Graph, opts layout.Options) {
+		l, err := layout.Hierarchical(graph, opts)
 		if err != nil {
 			t.Fatal(err)
 		}
 		d := layout.Diagnose(l)
-		fmt.Fprintf(&out, "%-12s %v\n", strings.TrimSuffix(filepath.Base(file), ".gv"), d)
+		fmt.Fprintf(out, "%-12s %v\n", name, d)
 		for _, line := range d.Details {
-			t.Logf("%s: %s", filepath.Base(file), line)
+			t.Logf("%s: %s", name, line)
 		}
 	}
+	for _, name := range names {
+		diagnose(&out, name, examples[name](), exampleOptions[name])
+	}
+	for _, file := range files {
+		diagnose(&out, strings.TrimSuffix(filepath.Base(file), ".gv"), parse(file), layout.Options{})
+	}
 	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
+
+	// as the text drawings: see TestExamplesText and TestGraphviz
+	for _, name := range names {
+		opts := exampleOptions[name]
+		opts.ForText = true
+		diagnose(&text, name, examples[name](), opts)
+	}
+	for _, file := range files {
+		name := strings.TrimSuffix(filepath.Base(file), ".gv")
+		diagnose(&text, name, parse(file), layout.Options{ForText: true})
+		merged := parse(file)
+		merged.MergeEdges = true
+		diagnose(&text, name+"_merged", merged, layout.Options{ForText: true})
+	}
+	compareGolden(t, filepath.Join("testdata", "diagnostics_text.txt"), text.Bytes())
 }
 
 // diffLines reports the mismatching lines between want and got.

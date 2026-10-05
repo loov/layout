@@ -35,6 +35,8 @@ type Diagnostics struct {
 	JaggedEdges int
 	// BendyEdges counts edges with more than three bends.
 	BendyEdges int
+	// Corners counts the bends of all edges together.
+	Corners int
 	// WavyEdges counts edges whose turns change direction at least twice
 	// (left, right, left), which reads as a wobble.
 	WavyEdges int
@@ -63,9 +65,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (diag Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f",
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f",
 		diag.NodeOverlaps, diag.EdgeThroughNode, diag.EdgeNearNode, diag.EdgeCrossings, diag.ShallowCrossings, diag.EdgeOverlaps, diag.ParallelEdges, diag.EndOverlaps, diag.Shafts,
-		diag.JaggedEdges, diag.BendyEdges, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area)
+		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area)
 }
 
 // Diagnose computes Diagnostics for a layout.
@@ -302,6 +304,7 @@ func Diagnose(l *Layout) Diagnostics {
 			diag.JaggedEdges++
 			diag.Details = append(diag.Details, fmt.Sprintf("edge %v winds %.0f degrees", edge, math.Abs(turn)*180/math.Pi))
 		}
+		diag.Corners += bends
 		if bends > 3 {
 			diag.BendyEdges++
 			diag.Details = append(diag.Details, fmt.Sprintf("edge %v has %d bends", edge, bends))
