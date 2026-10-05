@@ -98,7 +98,12 @@ header .theme { margin-left: auto; }
 .detail.editing .panel:nth-child(3) { display: none; }
 .detail.editing #new { cursor: default; }
 .bar button.on { border-color: var(--accent); color: var(--accent); }
-.palette button { font-family: var(--mono); padding: 2px 6px; min-width: 24px; }
+/* the toolbox over the editor: lines in 3x3 grids, each where it points */
+.toolbox { position: absolute; top: 36px; right: 10px; z-index: 2; display: flex; gap: 8px; align-items: start; padding: 6px; background: color-mix(in srgb, var(--card) 92%, transparent); border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 1px 4px rgb(0 0 0 / .12); }
+.toolbox .patch { display: grid; grid-template-columns: repeat(3, 24px); gap: 2px; }
+.toolbox button { font: 14px/1 var(--mono); width: 24px; height: 24px; padding: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--card); color: var(--ink); cursor: pointer; }
+.toolbox button:hover { border-color: var(--accent); }
+.toolbox .tip { font-size: 11px; color: var(--muted); max-width: 70px; line-height: 1.3; }
 pre.editor { cursor: text; outline: none; }
 pre.editor .sel { background: color-mix(in srgb, #2f6fdf 22%, transparent); }
 pre.editor .cur { box-shadow: inset 2px 0 0 #2f6fdf; }
@@ -135,13 +140,12 @@ pre.editor.moving { cursor: grabbing; }
 		<button id="fit" title="fit (f)">fit</button>
 		<button id="reset" class="view-only" title="reset the onion offset (0)">reset offset</button>
 		<button id="edit" title="rearrange the new drawing by hand (e)">✎ edit</button>
-		<span class="palette edit-only" id="palette"></span>
 		<button id="undo" class="edit-only" title="undo (⌘Z)">undo</button>
 		<button id="revert" class="edit-only" title="drop the edits of this drawing">revert</button>
 		<button id="copy" class="edit-only" title="copy the drawing now and as edited, to paste to an assistant">copy</button>
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
-		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it, arrows nudge it (or move the cursor), type or click the palette to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
+		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it, arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
 		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k next/prev, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
@@ -351,6 +355,7 @@ const panes = ["old", "new", "onion"].map(id => document.getElementById(id));
 
 function show(i) {
 	editor = null;
+	panes[1].parentElement.querySelector(".toolbox")?.remove();
 	detail.classList.remove("editing");
 	document.getElementById("edit").classList.remove("on");
 	current = (i + DATA.changes.length) % DATA.changes.length;
@@ -530,6 +535,7 @@ document.getElementById("fit").onclick = () => setZoom(fitZoom());
 document.getElementById("reset").onclick = () => { offset = { x: 0, y: 0 }; moved(); };
 document.getElementById("close").onclick = close;
 
+document.addEventListener("keyup", e => editor?.keyup?.(e));
 document.addEventListener("keydown", e => {
 	if (editor && detail.classList.contains("open")) {
 		if (e.key === "Escape" && !editor.selected()) return stopEdit();
@@ -572,7 +578,8 @@ function startEdit() {
 	if (!change.new && !change.old) return;
 	editor = change.kind === "svg" ? svgEditor(change) : textEditor(change);
 	panes[1].replaceChildren(editor.el);
-	document.getElementById("palette").replaceChildren(...(editor.palette || []));
+	panes[1].parentElement.querySelector(".toolbox")?.remove();
+	if (editor.toolbox) panes[1].parentElement.append(editor.toolbox);
 	detail.classList.add("editing");
 	document.getElementById("edit").classList.add("on");
 	setZoom(zoom);
@@ -736,6 +743,12 @@ function textEditor(change) {
 		if (inside(p, b)) {
 			drag = { mode: "move", from: p, start: clone(rows), b, moved: false };
 			pre.classList.add("moving");
+		} else if (e.altKey) {
+			// ⌥ drags draw a line, a stroke as with ⌥ and the arrows
+			drag = { mode: "draw" };
+			stroke = null;
+			cursor = p;
+			sel = null;
 		} else {
 			drag = { mode: "select" };
 			cursor = p;
@@ -746,6 +759,16 @@ function textEditor(change) {
 	pre.addEventListener("pointermove", e => {
 		if (!drag) return;
 		const p = cell(e);
+		if (drag.mode === "draw") {
+			// one cell at a time toward the pointer, along the axis it is
+			// further away on
+			while (cursor.r !== p.r || cursor.c !== p.c) {
+				const dr = p.r - cursor.r, dc = p.c - cursor.c;
+				if (Math.abs(dr) >= Math.abs(dc)) drawStep(Math.sign(dr), 0);
+				else drawStep(0, Math.sign(dc));
+			}
+			return;
+		}
 		if (drag.mode === "select") {
 			sel[2] = p.r; sel[3] = p.c;
 		} else {
@@ -764,6 +787,7 @@ function textEditor(change) {
 			state.undo.push(drag.start);
 			save();
 		}
+		if (drag.mode === "draw") stroke = null;
 		drag = null;
 		pre.classList.remove("moving");
 		render();
@@ -783,6 +807,12 @@ function textEditor(change) {
 	function key(e) {
 		const step = e.shiftKey ? 5 : 1;
 		const arrows = { ArrowLeft: [0, -step], ArrowRight: [0, step], ArrowUp: [-step, 0], ArrowDown: [step, 0] };
+		if (!e.altKey) stroke = null;
+		if (e.altKey && arrows[e.key]) {
+			const [dr, dc] = arrows[e.key];
+			for (let i = 0; i < Math.max(Math.abs(dr), Math.abs(dc)); i++) drawStep(Math.sign(dr), Math.sign(dc));
+			return true;
+		}
 		const b = box();
 		if (arrows[e.key]) {
 			let [dr, dc] = arrows[e.key];
@@ -823,20 +853,81 @@ function textEditor(change) {
 		save();
 		render();
 	}
-	const palette = Array.from("─│╭╮╰╯┬┴├┤┼╂▼▲◀▶┈┊", ch => {
-		const button = document.createElement("button");
-		button.textContent = ch;
-		button.title = "draw " + ch + " at the cursor";
-		button.onclick = () => type(ch);
-		return button;
-	});
+	// ⌥ with the arrows draws a line from the cursor, a stroke while ⌥
+	// is held: it turns with rounded corners, joins lines it runs into,
+	// and crosses a straight line it passes straight across
+	const [U, D, L, R] = [1, 2, 4, 8];
+	const lineArms = {
+		"─": L | R, "│": U | D, "╭": D | R, "╮": D | L, "╰": U | R, "╯": U | L, "┌": D | R, "┐": D | L, "└": U | R, "┘": U | L,
+		"├": U | D | R, "┤": U | D | L, "┬": D | L | R, "┴": U | L | R, "┼": U | D | L | R, "╂": U | D | L | R,
+		"▲": D, "▼": U, "◀": R, "▶": L, "┈": L | R, "┊": U | D,
+	};
+	const lineGlyph = {
+		[U | D]: "│", [L | R]: "─", [D | R]: "╭", [D | L]: "╮", [U | R]: "╰", [U | L]: "╯",
+		[U | D | R]: "├", [U | D | L]: "┤", [D | L | R]: "┬", [U | L | R]: "┴", [U | D | L | R]: "┼",
+		[U]: "│", [D]: "│", [L]: "─", [R]: "─",
+	};
+	let stroke = null; // arms of the cells before the stroke, and those it adds
+	const addArm = (p, arm) => {
+		const k = p.r + "," + p.c;
+		if (!stroke.base.has(k)) stroke.base.set(k, { arms: lineArms[rows[p.r][p.c]] || 0, ch: rows[p.r][p.c] });
+		const base = stroke.base.get(k), mine = (stroke.mine.get(k) || 0) | arm;
+		stroke.mine.set(k, mine);
+		const straight = mine === (U | D) || mine === (L | R);
+		if (straight && (base.arms === (U | D | L | R) || (base.arms | mine) === (U | D | L | R) && (base.arms === (U | D) || base.arms === (L | R)))) {
+			rows[p.r][p.c] = "╂"; // across a line, or an existing crossing
+		} else if (base.arms === 0 || !"▲▼◀▶".includes(base.ch)) {
+			rows[p.r][p.c] = lineGlyph[base.arms | mine] || "┼";
+		}
+	};
+	function drawStep(dr, dc) {
+		const to = { r: cursor.r + dr, c: cursor.c + dc };
+		if (to.r < 0 || to.c < 0) return;
+		if (!stroke) {
+			push();
+			stroke = { base: new Map(), mine: new Map() };
+		}
+		grow(rows, to.r, to.c);
+		const dir = dr < 0 ? U : dr > 0 ? D : dc < 0 ? L : R;
+		const back = { [U]: D, [D]: U, [L]: R, [R]: L }[dir];
+		addArm(cursor, dir);
+		addArm(to, back);
+		cursor = to;
+		sel = null;
+		save();
+		render();
+	}
+	function keyup(e) {
+		if (e.key === "Alt") stroke = null;
+	}
+	// the toolbox: lines in 3x3 grids, each where it points
+	const toolbox = document.createElement("div");
+	toolbox.className = "toolbox";
+	for (const patch of [["╭┬╮", "├┼┤", "╰┴╯"], ["│▲╂", "◀─▶", "┊▼┈"]]) {
+		const grid = document.createElement("div");
+		grid.className = "patch";
+		for (const ch of patch.join("")) {
+			const button = document.createElement("button");
+			button.textContent = ch;
+			button.title = "draw " + ch + " at the cursor";
+			button.onclick = () => { stroke = null; type(ch); };
+			grid.append(button);
+		}
+		toolbox.append(grid);
+	}
+	const tip = document.createElement("div");
+	tip.className = "tip";
+	tip.textContent = "⌥ + arrows or drag draw a line";
+	toolbox.append(tip);
+	// the toolbox doesn't start a selection under it
+	toolbox.addEventListener("pointerdown", e => e.stopPropagation());
 	function message() {
 		return `\`${change.path}\` as the layout draws it now:\n\n\`\`\`text\n${original.replace(/\n+$/, "")}\n\`\`\`\n\n` +
 			`and rearranged by hand to show how it could look nicer:\n\n\`\`\`text\n${toText(rows).replace(/\n+$/, "")}\n\`\`\`\n`;
 	}
 	render();
 	showEdited(change, toText(rows));
-	return { kind: "txt", el: pre, palette, key, undo, message, selected: () => !!sel };
+	return { kind: "txt", el: pre, toolbox, key, keyup, undo, message, selected: () => !!sel };
 }
 
 // svgEditor edits an svg drawing by dragging its nodes, edge labels, and
