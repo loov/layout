@@ -10,7 +10,7 @@ components   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 flat         nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=1 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=907 area=50176
 flat_labels  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=913 area=96368
 flat_labels_lr nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=775 area=80823
-flat_merged  nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=1 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=928 area=50176
+flat_merged  nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=6 parallel=3 ends=6 shafts=0 jagged=1 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=928 area=50176
 labels       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=8 wavy=1 back=1 labels=0 far=0 length=1616 area=151558
 loop         nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=505 area=46080
 minimal      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=0 labels=0 far=0 length=430 area=28672

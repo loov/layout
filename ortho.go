@@ -180,6 +180,20 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		edge.Path = path
 	}
 
+	// edges along a rank arc over it, in the bottom of the channel above;
+	// tracks keep above the arcs, see the flat edges in layout.go
+	arcs := make([]Length, len(rows))
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To || edge.From.Center.Y != edge.To.Center.Y || len(edge.Path) != 4 {
+			continue
+		}
+		if y := edge.Path[1].Y; y < edge.Path[0].Y {
+			if k := channelAt(y); k >= 0 && y > rows[k][1] {
+				arcs[k] = max(arcs[k], rows[k+1][0]-y)
+			}
+		}
+	}
+
 	// tracks per channel: overlapping jogs get distinct tracks. Top to
 	// bottom: jogs heading right by entry x descending, then jogs heading
 	// left by entry x ascending, so continuations don't cut through the
@@ -275,18 +289,23 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			}
 			tracks = max(tracks, track[i]+1)
 		}
-		top, bottom := rows[k][1], rows[k+1][0]
+		top, bottom := rows[k][1], rows[k+1][0]-arcs[k]
 		// tracks are a pad apart, or a cell apart in text turned sideways,
 		// where the channel runs across the columns of cells
 		step := pad
 		if graph.ForText && sideways(graph.RankDir) {
 			step = graph.cellWidth()
 		}
+		// above arcs, the arrows are below them, so tracks go right above
+		margin := 3
+		if arcs[k] > 0 {
+			margin = 1
+		}
 		if graph.ForText && tracks > 0 {
 			// text needs a row a track, and two rows between the outer
 			// tracks and the nodes for the bends and the arrows; what is
 			// below moves down to make the room
-			if short := Length(tracks+3)*step - (bottom - top); short > 0 {
+			if short := Length(tracks+margin)*step - (bottom - top); short > 0 {
 				graph.shiftBelow((top+bottom)/2, short)
 				for r := k + 1; r < len(rows); r++ {
 					rows[r][0], rows[r][1] = rows[r][0]+short, rows[r][1]+short
@@ -297,6 +316,9 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		spacing := min(step, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
 			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
+			if arcs[k] > 0 {
+				j.y = bottom - Length(tracks-track[i])*spacing
+			}
 			for _, o := range shared[j] {
 				o.y = j.y
 				channels[k] = append(channels[k], o)
