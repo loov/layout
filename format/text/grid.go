@@ -1,6 +1,7 @@
 package text
 
 import (
+	"cmp"
 	"math/bits"
 	"slices"
 	"strings"
@@ -54,245 +55,221 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	return rows(grid, true)
 }
 
-// unjog straightens lines down the grid that step aside and back to the
-// column they left, past blanks: a turn of the layout and a jog of
-// carving can cancel out so, merges two steps the same way into one, and
-// takes along the arrowhead of a step right before it. Lines with a label
-// beside them stay, and no line crosses more lines than before.
-// The steps must be lines of their own, with nothing joining or crossing
-// them, and the straight line keeps a cell off nodes.
+// unjog straightens lines down the grid: two steps aside in a row become
+// one, on the row of the first or of the second, and a last step right
+// before an arrowhead takes the arrowhead along, onto the same box; a
+// turn of the layout and a jog of carving can add up so. Steps are lines
+// of their own, which nothing joins. The new line crosses no more lines
+// than the old, keeps a cell off nodes, and lines with a label beside
+// them stay.
 func unjog(grid [][]cell) (changed bool) {
-	at := func(r, c int) *cell {
-		if r < 0 || r >= len(grid) || c < 0 || c >= len(grid[r]) {
+	type pos struct{ r, c int }
+	at := func(p pos) *cell {
+		if p.r < 0 || p.r >= len(grid) || p.c < 0 || p.c >= len(grid[p.r]) {
 			return nil
 		}
-		return &grid[r][c]
+		return &grid[p.r][p.c]
 	}
-	is := func(r, c int, ch rune) bool { p := at(r, c); return p != nil && p.r == ch }
-	// lines run on through crossings
-	through := func(r, c int, ch rune) bool { return is(r, c, ch) || is(r, c, '╂') }
-	// a free cell for a line along ch, blank or a line across that it
-	// crosses, which keeps a cell off nodes beside it
-	free := func(r, c int, ch rune) bool {
-		p := at(r, c)
-		across := map[rune]rune{'│': '─', '─': '│'}[ch]
-		beside := func(dc int) bool { q := at(r, c+dc); return q != nil && q.solid }
-		return p != nil && (p.r == ' ' && p.bg == 0 && !p.keep && !p.glue && p.need == 0 && p.label == 0 || p.r == across) &&
-			!p.solid && !beside(-1) && !beside(1)
+	is := func(p pos, set string) bool { q := at(p); return q != nil && strings.ContainsRune(set, q.r) }
+	// step returns the direction of the step of a line that comes down to
+	// p, where it runs along to and whether it goes on down there; when it
+	// does not, it runs into something there, such as an arrowhead
+	step := func(p pos) (dir, to int, turns bool) {
+		dir, end := 1, "╮"
+		switch {
+		case is(p, "╯"):
+			dir, end = -1, "╭"
+		case !is(p, "╰"):
+			return 0, 0, false
+		}
+		c := p.c + dir
+		for is(pos{p.r, c}, "─╂") {
+			c += dir
+		}
+		return dir, c, is(pos{p.r, c}, end)
 	}
-	// labeled reports whether a label is next to any cell of the line
-	// from r0, c0 to r1, c1, which is to keep beside it
-	labeled := func(r0, c0, r1, c1 int) bool {
-		for r := min(r0, r1); r <= max(r0, r1); r++ {
-			for c := min(c0, c1); c <= max(c0, c1); c++ {
-				for _, d := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
-					if p := at(r+d[0], c+d[1]); p != nil && !p.solid && (p.glue || p.keep) {
-						return true
-					}
+	// bottom returns the row where a line going down from p turns or ends
+	bottom := func(p pos) int {
+		r := p.r + 1
+		for is(pos{r, p.c}, "│╂") {
+			r++
+		}
+		return r
+	}
+	// cells returns the cells along the points, with the arms of each in
+	// the line: up into the first, out out of the last
+	cells := func(out int, points ...pos) ([]pos, []int) {
+		var path []pos
+		for i, p := range points {
+			if i == 0 {
+				path = append(path, p)
+				continue
+			}
+			q := path[len(path)-1]
+			dr, dc := cmp.Compare(p.r, q.r), cmp.Compare(p.c, q.c)
+			for q != p {
+				q.r, q.c = q.r+dr, q.c+dc
+				path = append(path, q)
+			}
+		}
+		arms := make([]int, len(path))
+		toward := func(from, to pos) int {
+			switch {
+			case to.r < from.r:
+				return up
+			case to.r > from.r:
+				return down
+			case to.c < from.c:
+				return left
+			}
+			return right
+		}
+		for i, p := range path {
+			if i == 0 {
+				arms[i] |= up
+			} else {
+				arms[i] |= toward(p, path[i-1])
+			}
+			if i == len(path)-1 {
+				arms[i] |= out
+			} else {
+				arms[i] |= toward(p, path[i+1])
+			}
+		}
+		return path, arms
+	}
+	// reroute moves a line from the old cells to the new ones, ending in
+	// head when it is set, if it can
+	reroute := func(old, path []pos, arms []int, head *cell) bool {
+		olds := map[pos]int{}
+		_, oldArms := cells(down, old...)
+		for i, p := range old {
+			olds[p] = oldArms[i]
+		}
+		news := map[pos]bool{}
+		for _, p := range path {
+			news[p] = true
+		}
+		added, removed := 0, 0
+		for p := range olds {
+			if news[p] {
+				continue
+			}
+			for _, d := range []pos{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+				// a label beside the line keeps it
+				if q := at(pos{p.r + d.r, p.c + d.c}); q != nil && !q.solid && (q.glue || q.keep) {
+					return false
+				}
+			}
+			if at(p).r == '╂' {
+				removed++
+			}
+		}
+		for i, p := range path {
+			q := at(p)
+			if q == nil {
+				return false
+			}
+			if _, ok := olds[p]; ok {
+				// a crossing on the old line stays one on the new
+				if q.r == '╂' && arms[i] != up|down && arms[i] != left|right {
+					return false
+				}
+				continue
+			}
+			straight := arms[i] == up|down || arms[i] == left|right
+			across := straight && (arms[i] == up|down && q.r == '─' || arms[i] == left|right && q.r == '│')
+			blank := q.r == ' ' && q.bg == 0 && !q.keep && !q.glue && q.need == 0 && q.label == 0
+			if q.solid || !blank && !across {
+				return false
+			}
+			if across {
+				added++
+			}
+			for _, dc := range []int{-1, 1} {
+				// a cell off nodes, other than an arrowhead that moves
+				n := pos{p.r, p.c + dc}
+				if q := at(n); q != nil && q.solid && olds[n] == 0 {
+					return false
 				}
 			}
 		}
-		return false
-	}
-	// crossings counts the crossings from r0, c0 to r1, c1, or with
-	// across, the lines there that a new line would cross
-	crossings := func(r0, c0, r1, c1 int, across bool) int {
-		n := 0
-		for r := min(r0, r1); r <= max(r0, r1); r++ {
-			for c := min(c0, c1); c <= max(c0, c1); c++ {
-				if p := at(r, c); p != nil && (p.r == '╂' || across && p.r != ' ') {
-					n++
-				}
+		if added > removed {
+			return false
+		}
+		fg := at(old[0]).fg
+		for p, a := range olds {
+			if news[p] {
+				continue
+			}
+			if q := at(p); q.r == '╂' {
+				// the line it crossed goes on
+				q.lines = (up | down | left | right) &^ a
+				q.r = corner(q.lines)
+			} else {
+				*q = cell{r: ' '}
 			}
 		}
-		return n
-	}
-	// draw puts a line along ch at r, c, crossing a line there
-	draw := func(r, c int, ch rune, like cell) {
-		if p := at(r, c); p.r != ' ' && p.r != ch {
-			p.r, p.lines = '╂', up|down|left|right
-			return
+		for i, p := range path {
+			q := at(p)
+			switch {
+			case i == len(path)-1 && head != nil:
+				*q = *head
+			case q.r == '╂' || q.r != ' ' && olds[p] == 0:
+				q.r, q.lines = '╂', up|down|left|right
+			default:
+				*q = cell{r: corner(arms[i]), fg: fg, lines: arms[i]}
+			}
 		}
-		grid[r][c] = cell{r: ch, fg: like.fg, lines: map[rune]int{'│': up | down, '─': left | right}[ch]}
+		return true
 	}
-	// erase takes a line along ch off r, c, leaving a line it crossed
-	erase := func(r, c int, ch rune) {
-		if p := at(r, c); p.r == '╂' {
-			p.r = map[rune]rune{'│': '─', '─': '│'}[ch]
-			p.lines = map[rune]int{'│': left | right, '─': up | down}[ch]
-			return
-		}
-		grid[r][c] = cell{r: ' '}
-	}
-	for r1 := range grid {
-		for c1 := range grid[r1] {
-			// down to c1, then aside to c0, down to r2, and back to c1;
-			// leaving to the left turns at ╯ ╭ ╰ ╮, to the right at ╰ ╮ ╯ ╭
-			for _, step := range []struct {
-				dc                  int
-				out, down, back, in rune
-			}{{-1, '╯', '╭', '╰', '╮'}, {1, '╰', '╮', '╯', '╭'}} {
-				if !is(r1, c1, step.out) {
-					continue
+	for r := range grid {
+		for c := range grid[r] {
+			top := pos{r, c}
+			_, b, ok := step(top)
+			if !ok {
+				continue
+			}
+			mid := pos{bottom(pos{r, b}), b}
+			if dir, c2, turns := step(mid); dir != 0 {
+				// two steps: one, on the lower row or else the upper;
+				// a second that runs into something ends before it
+				end, out := pos{mid.r, c2}, down
+				if !turns {
+					end, out = pos{mid.r, c2 - dir}, map[int]int{-1: left, 1: right}[dir]
 				}
-				c0 := c1 + step.dc
-				for through(r1, c0, '─') {
-					c0 += step.dc
+				old, _ := cells(out, top, pos{r, b}, mid, end)
+				vias := []pos{{mid.r, c}, {r, c2}}
+				if !turns {
+					vias = vias[:1] // the run goes on along the lower row
 				}
-				if !is(r1, c0, step.down) {
-					continue
-				}
-				r2 := r1 + 1
-				for through(r2, c0, '│') {
-					r2++
-				}
-				if labeled(r1, c1, r1, c0) || labeled(r1, c0, r2, c0) {
-					continue
-				}
-				if is(r2, c0, step.out) {
-					// a second step the same way: one step, on the lower
-					// row, or else on the upper one
-					clear := true
-					for r := r1 + 1; r < r2; r++ {
-						clear = clear && free(r, c1, '│')
-					}
-					for c := c1; c != c0; c += step.dc {
-						clear = clear && free(r2, c, '─')
-					}
-					// no more crossings than before
-					clear = clear && crossings(r1+1, c1, r2-1, c1, true)+crossings(r2, c1, r2, c0-step.dc, true) <=
-						crossings(r1+1, c0, r2-1, c0, false)+crossings(r1, c1+step.dc, r1, c0-step.dc, false)
-					line := grid[r1][c1]
-					if !clear {
-						c2 := c0 + step.dc
-						for through(r2, c2, '─') {
-							c2 += step.dc
-						}
-						if !is(r2, c2, step.down) || labeled(r2, c0, r2, c2) {
-							continue
-						}
-						clear = true
-						for c := c0 + step.dc; c != c2+step.dc; c += step.dc {
-							clear = clear && free(r1, c, '─')
-						}
-						for r := r1 + 1; r < r2; r++ {
-							clear = clear && free(r, c2, '│')
-						}
-						clear = clear && crossings(r1, c0+step.dc, r1, c2-step.dc, true)+crossings(r1+1, c2, r2-1, c2, true) <=
-							crossings(r1+1, c0, r2-1, c0, false)+crossings(r2, c0+step.dc, r2, c2-step.dc, false)
-						if !clear {
-							continue
-						}
-						for r := r1 + 1; r < r2; r++ {
-							erase(r, c0, '│')
-							draw(r, c2, '│', line)
-						}
-						for c := c0; c != c2; c += step.dc {
-							if c == c0 {
-								grid[r1][c] = cell{r: '─', fg: line.fg, lines: left | right}
-							} else {
-								draw(r1, c, '─', line)
-							}
-							erase(r2, c, '─')
-						}
-						grid[r1][c2] = cell{r: step.down, fg: line.fg, lines: down | map[int]int{-1: right, 1: left}[step.dc]}
-						grid[r2][c2] = cell{r: '│', fg: line.fg, lines: up | down}
+				for _, via := range vias {
+					path, arms := cells(out, top, via, end)
+					if reroute(old, path, arms, nil) {
 						changed = true
-						continue
-					}
-					for r := r1 + 1; r < r2; r++ {
-						erase(r, c0, '│')
-					}
-					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
-						erase(r1, c, '─')
-						if c == c0 {
-							grid[r2][c] = cell{r: '─', fg: line.fg, lines: left | right}
-						} else {
-							draw(r2, c, '─', line)
-						}
-					}
-					grid[r1][c1] = cell{r: '│', fg: line.fg, lines: up | down}
-					for r := r1 + 1; r < r2; r++ {
-						draw(r, c1, '│', line)
-					}
-					grid[r2][c1] = cell{r: step.out, fg: line.fg, lines: up | map[int]int{-1: left, 1: right}[step.dc]}
-					changed = true
-					continue
-				}
-				// the border under both is of one box: no corner between
-				sameBox := func() bool {
-					for c := c0; ; c -= step.dc {
-						p := at(r2+1, c)
-						if p == nil || !p.solid || !strings.ContainsRune("─━═┬┴╤╥", p.r) && c != c0 {
-							return false
-						}
-						if c == c1 {
-							return true
-						}
+						break
 					}
 				}
-				if is(r2, c0, '▼') && sameBox() {
-					// a last step before an arrowhead: the arrowhead goes
-					// along, onto the same box; it is solid, so it is out of
-					// the way while checking
-					line, head := grid[r1][c1], grid[r2][c0]
-					grid[r2][c0] = cell{r: ' '}
-					clear := true
-					for r := r1 + 1; r <= r2; r++ {
-						clear = clear && free(r, c1, '│')
-					}
-					clear = clear && crossings(r1+1, c1, r2, c1, true) <=
-						crossings(r1+1, c0, r2-1, c0, false)+crossings(r1, c1+step.dc, r1, c0-step.dc, false)
-					if !clear {
-						grid[r2][c0] = head
-						continue
-					}
-					for r := r1 + 1; r < r2; r++ {
-						erase(r, c0, '│')
-					}
-					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
-						erase(r1, c, '─')
-					}
-					grid[r1][c1] = cell{r: '│', fg: line.fg, lines: up | down}
-					for r := r1 + 1; r < r2; r++ {
-						draw(r, c1, '│', line)
-					}
-					grid[r2][c1] = head
-					changed = true
-					continue
-				}
-				if r2 == r1+1 || !is(r2, c0, step.back) || labeled(r2, c0, r2, c1) {
-					continue
-				}
-				c := c0 - step.dc
-				for c != c1 && through(r2, c, '─') {
-					c -= step.dc
-				}
-				if c != c1 || !is(r2, c1, step.in) {
-					continue
-				}
-				clear := true
-				for r := r1 + 1; r < r2; r++ {
-					clear = clear && free(r, c1, '│')
-				}
-				clear = clear && crossings(r1+1, c1, r2-1, c1, true) <= crossings(r1, c0, r2, c0, false)+
-					crossings(r1, c1+step.dc, r1, c0-step.dc, false)+crossings(r2, c1+step.dc, r2, c0-step.dc, false)
-				if !clear {
-					continue
-				}
-				line := grid[r1][c1]
-				for r := r1; r <= r2; r++ {
-					erase(r, c0, '│')
-					if r == r1 || r == r2 {
-						grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
-					} else {
-						draw(r, c1, '│', line)
-					}
-				}
-				for c := c0 - step.dc; c != c1; c -= step.dc {
-					erase(r1, c, '─')
-					erase(r2, c, '─')
-				}
+				continue
+			}
+			if !is(mid, "▼") {
+				continue
+			}
+			// a last step before an arrowhead into a box: the arrowhead
+			// goes along when the box goes on under the line, with no
+			// corner between
+			box := true
+			for x := min(c, b); x <= max(c, b); x++ {
+				p := at(pos{mid.r + 1, x})
+				box = box && p != nil && p.solid && (x == b || strings.ContainsRune("─━═┬┴╤╥", p.r))
+			}
+			if !box {
+				continue
+			}
+			head := *at(mid)
+			old, _ := cells(down, top, pos{r, b}, mid)
+			path, arms := cells(down, top, pos{mid.r, c})
+			if reroute(old, path, arms, &head) {
 				changed = true
 			}
 		}
