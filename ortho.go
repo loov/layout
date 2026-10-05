@@ -68,16 +68,16 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 
 	// ends on side ports step out sideways before turning, instead of
 	// running along the node outline
-	sideways := map[Compass]Length{West: -pad, East: pad}
+	stepOut := map[Compass]Length{West: -pad, East: pad}
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
 		}
-		if dx := sideways[edge.FromPort]; dx != 0 {
+		if dx := stepOut[edge.FromPort]; dx != 0 {
 			p := edge.Path[0]
 			edge.Path = slices.Insert(edge.Path, 1, Vector{p.X + dx, p.Y})
 		}
-		if dx := sideways[edge.ToPort]; dx != 0 {
+		if dx := stepOut[edge.ToPort]; dx != 0 {
 			p := edge.Path[len(edge.Path)-1]
 			edge.Path = slices.Insert(edge.Path, len(edge.Path)-1, Vector{p.X + dx, p.Y})
 		}
@@ -276,11 +276,17 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			tracks = max(tracks, track[i]+1)
 		}
 		top, bottom := rows[k][1], rows[k+1][0]
+		// tracks are a pad apart, or a cell apart in text turned sideways,
+		// where the channel runs across the columns of cells
+		step := pad
+		if graph.ForText && sideways(graph.RankDir) {
+			step = graph.cellWidth()
+		}
 		if graph.ForText && tracks > 0 {
 			// text needs a row a track, and two rows between the outer
 			// tracks and the nodes for the bends and the arrows; what is
 			// below moves down to make the room
-			if short := Length(tracks+3)*pad - (bottom - top); short > 0 {
+			if short := Length(tracks+3)*step - (bottom - top); short > 0 {
 				graph.shiftBelow((top+bottom)/2, short)
 				for r := k + 1; r < len(rows); r++ {
 					rows[r][0], rows[r][1] = rows[r][0]+short, rows[r][1]+short
@@ -288,7 +294,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 				bottom += short
 			}
 		}
-		spacing := min(pad, (bottom-top)/Length(tracks+1))
+		spacing := min(step, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
 			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
 			for _, o := range shared[j] {
