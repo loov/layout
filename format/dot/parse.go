@@ -771,37 +771,7 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 }
 
 func setColor(t *layout.Color, value string) {
-	if value == "" {
-		return
-	}
-
-	if value[0] == '#' { // hex
-		value = value[1:]
-		if len(value) == 6 { // RRGGBB
-			v, err := strconv.ParseInt(value, 16, 64)
-			if err == nil {
-				c := layout.RGB{}
-				c.R = uint8(v >> 16)
-				c.G = uint8(v >> 8)
-				c.B = uint8(v >> 0)
-				*t = c
-			}
-		} else if len(value) == 8 { // RRGGBBAA
-			v, err := strconv.ParseInt(value, 16, 64)
-			if err == nil {
-				c := layout.RGBA{}
-				c.R = uint8(v >> 24)
-				c.G = uint8(v >> 16)
-				c.B = uint8(v >> 8)
-				c.A = uint8(v >> 0)
-				*t = c
-			}
-		}
-		return
-	}
-
-	color, ok := layout.ColorByName(value)
-	if ok {
+	if color, ok := layout.ParseColor(value); ok {
 		*t = color
 	}
 }

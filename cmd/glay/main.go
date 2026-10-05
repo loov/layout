@@ -18,7 +18,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/pprof"
-	"strconv"
 	"strings"
 
 	"github.com/loov/layout"
@@ -129,8 +128,9 @@ func main() {
 		os.Exit(1)
 	}
 	if *bg != "" {
-		textOpts.Background = parseColor(*bg)
-		if textOpts.Background == nil {
+		var ok bool
+		textOpts.Background, ok = layout.ParseColor(*bg)
+		if !ok {
 			errorf("unknown background color %q", *bg)
 			os.Exit(1)
 		}
@@ -309,19 +309,4 @@ func main() {
 		os.Exit(1)
 		return
 	}
-}
-
-// parseColor parses a color name or #RRGGBB, returning nil when invalid
-func parseColor(value string) layout.Color {
-	if hex, ok := strings.CutPrefix(value, "#"); ok {
-		v, err := strconv.ParseUint(hex, 16, 32)
-		if err != nil || len(hex) != 6 {
-			return nil
-		}
-		return layout.RGB{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v)}
-	}
-	if color, ok := layout.ColorByName(value); ok {
-		return color
-	}
-	return nil
 }

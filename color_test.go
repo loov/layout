@@ -24,3 +24,27 @@ func TestHSL(t *testing.T) {
 		}
 	}
 }
+
+// TestParseColor checks the color names and hex forms that dot files and
+// glay flags accept.
+func TestParseColor(t *testing.T) {
+	for _, test := range []struct {
+		value string
+		want  layout.Color
+	}{
+		{"red", layout.RGB{R: 255}},
+		{"Light Blue", layout.RGB{R: 173, G: 216, B: 230}},
+		{"#102030", layout.RGB{R: 0x10, G: 0x20, B: 0x30}},
+		{"#10203040", layout.RGBA{R: 0x10, G: 0x20, B: 0x30, A: 0x40}},
+		{"#123", nil},
+		{"#+12345", nil},
+		{"#gg0000", nil},
+		{"nosuchcolor", nil},
+		{"", nil},
+	} {
+		got, ok := layout.ParseColor(test.value)
+		if got != test.want || ok != (test.want != nil) {
+			t.Errorf("ParseColor(%q) = %v, %v; want %v", test.value, got, ok, test.want)
+		}
+	}
+}

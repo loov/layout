@@ -1,6 +1,10 @@
 package layout
 
-import "math"
+import (
+	"math"
+	"strconv"
+	"strings"
+)
 
 // Color is anything that can be expressed as 8-bit RGBA.
 type Color interface {
@@ -20,6 +24,24 @@ type RGBA struct{ R, G, B, A uint8 }
 
 // RGBA8 implements Color.
 func (rgb RGBA) RGBA8() (r, g, b, a uint8) { return rgb.R, rgb.G, rgb.B, rgb.A }
+
+// ParseColor parses an X11 color name, see ColorByName, or a hex color
+// written #RRGGBB or #RRGGBBAA.
+func ParseColor(value string) (Color, bool) {
+	hex, ok := strings.CutPrefix(value, "#")
+	if !ok {
+		return ColorByName(value)
+	}
+	v, err := strconv.ParseUint(hex, 16, 32)
+	switch {
+	case err != nil:
+	case len(hex) == 6:
+		return RGB{R: uint8(v >> 16), G: uint8(v >> 8), B: uint8(v)}, true
+	case len(hex) == 8:
+		return RGBA{R: uint8(v >> 24), G: uint8(v >> 16), B: uint8(v >> 8), A: uint8(v)}, true
+	}
+	return nil, false
+}
 
 // HSL is an opaque color in hue, saturation and lightness space;
 // hue is in degrees, saturation and lightness in [0, 1].
