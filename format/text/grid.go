@@ -48,7 +48,109 @@ func carve(grid [][]cell, sideways bool) [][]cell {
 	// further along them while the columns are carved
 	grid = rows(grid, false)
 	grid = seams(grid, " ─━┈┉┄", "◀▶●○", 1, !sideways, true, false, down, up)
+	if !sideways {
+		unjog(grid)
+	}
 	return rows(grid, true)
+}
+
+// unjog straightens lines down the grid that step aside and back to the
+// column they left, past blanks: a turn of the layout and a jog of
+// carving can cancel out so, and merges two steps the same way into one.
+// The steps must be lines of their own, with nothing joining or crossing
+// them, and the straight line keeps a cell off nodes.
+func unjog(grid [][]cell) {
+	at := func(r, c int) *cell {
+		if r < 0 || r >= len(grid) || c < 0 || c >= len(grid[r]) {
+			return nil
+		}
+		return &grid[r][c]
+	}
+	is := func(r, c int, ch rune) bool { p := at(r, c); return p != nil && p.r == ch }
+	// a free cell for a line, which keeps a cell off nodes beside it
+	free := func(r, c int) bool {
+		p := at(r, c)
+		beside := func(dc int) bool { q := at(r, c+dc); return q != nil && q.solid }
+		return p != nil && p.r == ' ' && p.bg == 0 && !p.keep && !p.glue && !p.solid && p.need == 0 && p.label == 0 &&
+			!beside(-1) && !beside(1)
+	}
+	for r1 := range grid {
+		for c1 := range grid[r1] {
+			// down to c1, then aside to c0, down to r2, and back to c1;
+			// leaving to the left turns at ╯ ╭ ╰ ╮, to the right at ╰ ╮ ╯ ╭
+			for _, step := range []struct {
+				dc                  int
+				out, down, back, in rune
+			}{{-1, '╯', '╭', '╰', '╮'}, {1, '╰', '╮', '╯', '╭'}} {
+				if !is(r1, c1, step.out) {
+					continue
+				}
+				c0 := c1 + step.dc
+				for is(r1, c0, '─') {
+					c0 += step.dc
+				}
+				if !is(r1, c0, step.down) {
+					continue
+				}
+				r2 := r1 + 1
+				for is(r2, c0, '│') {
+					r2++
+				}
+				if is(r2, c0, step.out) {
+					// a second step the same way: one step, on the lower row
+					clear := true
+					for r := r1 + 1; r < r2; r++ {
+						clear = clear && free(r, c1)
+					}
+					for c := c1; c != c0; c += step.dc {
+						clear = clear && free(r2, c)
+					}
+					if !clear {
+						continue
+					}
+					line := grid[r1][c1]
+					for r := r1 + 1; r < r2; r++ {
+						grid[r][c0] = cell{r: ' '}
+					}
+					for c := c1 + step.dc; c != c0+step.dc; c += step.dc {
+						grid[r1][c] = cell{r: ' '}
+						grid[r2][c] = cell{r: '─', fg: line.fg, lines: left | right}
+					}
+					for r := r1; r < r2; r++ {
+						grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+					}
+					grid[r2][c1] = cell{r: step.out, fg: line.fg, lines: up | map[int]int{-1: left, 1: right}[step.dc]}
+					continue
+				}
+				if r2 == r1+1 || !is(r2, c0, step.back) {
+					continue
+				}
+				c := c0 - step.dc
+				for c != c1 && is(r2, c, '─') {
+					c -= step.dc
+				}
+				if c != c1 || !is(r2, c1, step.in) {
+					continue
+				}
+				clear := true
+				for r := r1 + 1; r < r2; r++ {
+					clear = clear && free(r, c1)
+				}
+				if !clear {
+					continue
+				}
+				line := grid[r1][c1]
+				for r := r1; r <= r2; r++ {
+					grid[r][c0] = cell{r: ' '}
+					grid[r][c1] = cell{r: '│', fg: line.fg, lines: up | down}
+				}
+				for c := c0 - step.dc; c != c1; c -= step.dc {
+					grid[r1][c] = cell{r: ' '}
+					grid[r2][c] = cell{r: ' '}
+				}
+			}
+		}
+	}
 }
 
 // seams removes seams from the lines of grid, one cell from every line,
