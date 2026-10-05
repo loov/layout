@@ -143,6 +143,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button id="zoomin" title="zoom in (+)">+</button>
 		<button id="fit" title="fit (f)">fit</button>
 		<button id="reset" class="view-only" title="reset the onion offset (0)">reset offset</button>
+		<button id="changes" class="view-only" title="show only what changed, with 3 cells around it, while held (p)">changes</button>
 		<button id="edit" title="rearrange the new drawing by hand (e)">✎ edit</button>
 		<button id="undo" class="edit-only" title="undo (⌘Z)">undo</button>
 		<button id="revert" class="edit-only" title="drop the edits of this drawing">revert</button>
@@ -150,7 +151,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
 		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it (with ⌥, its lines stay joined), arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
-		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
+		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. Holding p shows only what changed in text, as lined up by the onion offset. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
 		<div class="panel"><h2>old <span class="dim" id="oldsize"></span></h2><div class="scroll" id="old"></div></div>
@@ -375,6 +376,7 @@ DATA.changes.forEach((change, i) => {
 
 // the detail view
 let current = -1, zoom = 1, offset = { x: 0, y: 0 }, unit = { x: 1, y: 1 };
+let changesOnly = false; // only what changed, see drawPanes
 const panes = ["old", "new", "onion"].map(id => document.getElementById(id));
 
 function show(i) {
@@ -389,9 +391,7 @@ function show(i) {
 	document.getElementById("newsize").textContent = sizeText(change.kind, change.newSize);
 	document.getElementById("delta").replaceChildren(delta(change));
 	offset = { x: 0, y: 0 };
-	for (const [pane, text] of [[panes[0], change.old], [panes[1], change.new]]) {
-		pane.replaceChildren(text ? drawing(change.kind, text) : none());
-	}
+	drawPanes(change);
 	panes[2].replaceChildren(onion(change));
 	for (const [pane, which] of [[panes[0], "old"], [panes[1], "new"]]) {
 		pane.parentElement.querySelector(".stats")?.remove();
@@ -412,6 +412,46 @@ function show(i) {
 	}
 	whenLoaded(() => setZoom(fitZoom()));
 	moved();
+}
+
+// drawPanes draws old and new, with only what changed when changesOnly is
+// set, see masked
+function drawPanes(change) {
+	let [old, now] = [change.old, change.new];
+	let kind = change.kind;
+	const only = changesOnly && kind !== "svg" && old && now;
+	document.getElementById("changes").classList.toggle("on", changesOnly);
+	if (only) {
+		[old, now] = masked(old, now, Math.round(offset.x / unit.x), Math.round(offset.y / unit.y));
+		kind = "txt";
+	}
+	for (const [pane, text] of [[panes[0], old], [panes[1], now]]) {
+		pane.replaceChildren(text ? drawing(kind, text) : none());
+	}
+}
+
+// masked returns the old and new text with the cells that are the same
+// blanked, but for those within reach of a difference: new is moved by dx,
+// dy cells, as the onion skin moves it
+function masked(oldText, newText, dx, dy, reach = 3) {
+	const grid = text => stripColors(text).replace(/\n+$/, "").split("\n").map(line => Array.from(line));
+	const a = grid(oldText), b = grid(newText);
+	const at = (g, r, c) => g[r]?.[c] ?? " ";
+	const r0 = Math.min(0, dy), r1 = Math.max(a.length, b.length + dy);
+	const width = g => Math.max(0, ...g.map(row => row.length));
+	const c0 = Math.min(0, dx), c1 = Math.max(width(a), width(b) + dx);
+	// cells near a difference, in the cells of old
+	const near = new Set();
+	for (let r = r0; r < r1; r++) {
+		for (let c = c0; c < c1; c++) {
+			if (at(a, r, c) === at(b, r - dy, c - dx)) continue;
+			for (let i = r - reach; i <= r + reach; i++) {
+				for (let j = c - reach; j <= c + reach; j++) near.add(i + "," + j);
+			}
+		}
+	}
+	const keep = (g, dr, dc) => g.map((row, r) => row.map((ch, c) => near.has((r + dr) + "," + (c + dc)) ? ch : " ").join("").replace(/\s+$/, "")).join("\n") + "\n";
+	return [keep(a, 0, 0), keep(b, dy, dx)];
 }
 
 function none() {
@@ -473,6 +513,10 @@ function moved() {
 		? `${Math.round(offset.x / unit.x)}, ${Math.round(offset.y / unit.y)} cells`
 		: `${Math.round(offset.x)}, ${Math.round(offset.y)}px`;
 	document.getElementById("offset").textContent = offset.x || offset.y ? "offset " + text : "";
+	if (changesOnly && current >= 0 && !editor) {
+		drawPanes(DATA.changes[current]);
+		setZoom(zoom);
+	}
 }
 
 function whenLoaded(done) {
@@ -557,9 +601,23 @@ document.getElementById("zoomin").onclick = () => setZoom(zoom * 1.25);
 document.getElementById("zoomout").onclick = () => setZoom(zoom / 1.25);
 document.getElementById("fit").onclick = () => setZoom(fitZoom());
 document.getElementById("reset").onclick = () => { offset = { x: 0, y: 0 }; moved(); };
+// changes shows only what changed while p or the button is held
+const changes = on => {
+	if (changesOnly === on || current < 0 || editor) return;
+	changesOnly = on;
+	drawPanes(DATA.changes[current]);
+	setZoom(zoom);
+};
+const button = document.getElementById("changes");
+button.onpointerdown = () => changes(true);
+button.onpointerup = button.onpointerleave = () => changes(false);
+window.addEventListener("blur", () => changes(false));
 document.getElementById("close").onclick = close;
 
-document.addEventListener("keyup", e => editor?.keyup?.(e));
+document.addEventListener("keyup", e => {
+	if (e.key.toLowerCase() === "p") changes(false);
+	editor?.keyup?.(e);
+});
 document.addEventListener("keydown", e => {
 	if (editor && detail.classList.contains("open")) {
 		if (e.key === "Escape" && !editor.selected()) return stopEdit();
@@ -586,6 +644,7 @@ document.addEventListener("keydown", e => {
 		"=": () => setZoom(zoom * 1.25),
 		"-": () => setZoom(zoom / 1.25),
 		f: () => setZoom(fitZoom()),
+		p: () => changes(true),
 		"0": () => { offset = { x: 0, y: 0 }; moved(); },
 		ArrowLeft: () => { offset.x -= step * unit.x; moved(); },
 		ArrowRight: () => { offset.x += step * unit.x; moved(); },
