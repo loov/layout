@@ -15,6 +15,7 @@ func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations) }
 // median sweeps; more sweeps can find better orders on large graphs.
 func OrderRanksN(graph *Graph, iterations int) {
 	OrderRanksDepthFirst(graph)
+	orderFlatEdges(graph)
 	orderClusters(graph)
 
 	best := saveOrder(graph)
@@ -36,7 +37,8 @@ func OrderRanksN(graph *Graph, iterations int) {
 		}
 	}
 	// the best order can be one that no transpose has seen, such as the
-	// depth first one, when every sweep from it ends up worse
+	// depth first one, when every sweep from it ends up worse; it has its
+	// flat edges in order too, or it would win with them reversed
 	graph.ByRank = best
 	best = saveOrder(graph)
 	OrderRanksTranspose(graph)

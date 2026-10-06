@@ -15,8 +15,8 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,32 L59,32 Q70,32 81,32 L169.36,32 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M185.36,80 L185.36,48 '></path><text text-anchor='middle' alignment-baseline='middle' x='235.04' y='64' font-size='14' fill='#000000'>long long long</text>
-<ellipse cx='185.36' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='185.36' y='32' font-size='14' fill='#000000'>b</text>
-<ellipse cx='185.36' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='185.36' y='96' font-size='14' fill='#000000'>c</text>
-<ellipse cx='32' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='32' font-size='14' fill='#000000'>a</text>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,96 L59,96 Q70,96 81,96 L169.36,96 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M185.36,48 L185.36,80 '></path><text text-anchor='middle' alignment-baseline='middle' x='235.04' y='64' font-size='14' fill='#000000'>long long long</text>
+<ellipse cx='185.36' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='185.36' y='96' font-size='14' fill='#000000'>b</text>
+<ellipse cx='185.36' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='185.36' y='32' font-size='14' fill='#000000'>c</text>
+<ellipse cx='32' cy='96' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' fill='#000000'>a</text>
 </g></svg>
