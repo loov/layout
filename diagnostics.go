@@ -54,8 +54,9 @@ type Diagnostics struct {
 	Area Length
 	// Unbalance is how far forks and joins are off center, in points: for
 	// every node with two or more neighbors in the ranks before it, and
-	// again after it, how far along its rank it is from their mean, where
-	// a neighbor counts once for every edge to it.
+	// again after it, how far along its rank it is from their median, as
+	// positioning places it, where a neighbor counts once for every edge
+	// to it.
 	Unbalance Length
 	// FarLabels counts labels further from their own edge than the text
 	// height, which makes them hard to attribute.
@@ -319,7 +320,7 @@ func Diagnose(l *Layout) Diagnostics {
 	tl, br := graph.Bounds()
 	diag.Area = (br.X - tl.X) * (br.Y - tl.Y)
 
-	// forks and joins off the middle of their neighbors, before and after
+	// forks and joins off the median of their neighbors, before and after
 	// along the ranks, whichever way their edges go
 	across, along := func(v Vector) Length { return v.Y }, func(v Vector) Length { return v.X }
 	if graph.RankDir == LeftToRight || graph.RankDir == RightToLeft {
@@ -346,11 +347,13 @@ func Diagnose(l *Layout) Diagnostics {
 			if !slices.ContainsFunc(side, func(other *lnode) bool { return other != side[0] }) {
 				continue // no fork or join
 			}
-			var sum Length
-			for _, other := range side {
-				sum += along(other.Center)
+			at := make([]Length, len(side))
+			for i, other := range side {
+				at[i] = along(other.Center)
 			}
-			if off := absLength(along(node.Center) - sum/Length(len(side))); off > eps {
+			slices.Sort(at)
+			median := (at[(len(at)-1)/2] + at[len(at)/2]) / 2
+			if off := absLength(along(node.Center) - median); off > eps {
 				diag.Unbalance += off
 			}
 		}
