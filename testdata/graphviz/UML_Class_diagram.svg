@@ -1,0 +1,87 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='818.24' height='1547'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#vee)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M300.12,48 L300.12,63 Q300.12,78 300.12,93 L300.12,108 '></path><text text-anchor='middle' alignment-baseline='middle' x='342.52' y='90' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>dependency</text>
+<path class='edge' marker-end='url(#vee)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M325.6,42.852592 L378.67923,65.46041 Q408.12,78 438.16324,89.01831 L453.49188,94.64005 Q473.56,102 489.04462,116.73514 L504.52927,131.47028 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M333.39874,177 L344.00937,188 Q354.62,199 365.23062,210 L375.84125,221 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M505.11893,154.11795 L473.03592,188 Q462.62,199 452.20407,210 L441.78815,221 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M409.12,290 L409.12,305 Q409.12,320 409.12,335 L409.12,350 '></path><text text-anchor='middle' alignment-baseline='middle' x='463.41998' y='332' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>implementation</text>
+<path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M318.48544,789.7571 L286.74426,854.2858 Q272.62,883 257.4951,911.19995 L222.63164,976.2017 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M409.12,861 L409.12,872 Q409.12,883 409.12,894 L409.12,905 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M499.75455,789.7571 L531.4957,854.2858 Q545.62,883 560.74493,911.19995 L595.60834,976.2017 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M216.45515,1310.3523 L246.64104,1375.3014 Q258.12,1400 280.8529,1415 L303.58585,1430 '></path><text text-anchor='middle' alignment-baseline='middle' x='308.807' y='1394.4233' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>aggregation</text>
+<path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M396.3499,1368.6824 L395.46063,1384.7819 Q394.62,1400 391.91812,1415 L389.21628,1430 '></path><path class='edge' marker-end='url(#vee)' marker-start='url(#normal)' stroke='#000000' stroke-dasharray='5' stroke-width='1' d='M592.753,1292.8566 L547.01886,1372.3613 Q531.12,1400 502.98334,1415 L474.8467,1430 '></path><rect x='274.63998' y='16' width='50.96' height='32' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='300.12' y='32' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>Client</text>
+<rect x='132.68' y='108' width='334.88' height='69' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='143.31999' y='142.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>&lt;</text>
+<line x1='153.95999' y1='108' x2='153.95999' y2='177' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='310.76' y='119.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>«interface» I/O&lt;/b&gt;</text>
+<line x1='153.95999' y1='131' x2='467.56' y2='131' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='310.76' y='142.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ property&lt;br align=&#34;left&#34;/&gt;...&lt;br align=&#34;left&#34;/&gt;</text>
+<line x1='153.95999' y1='154' x2='467.56' y2='154' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='310.76' y='165.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ method&lt;br align=&#34;left&#34;/&gt;...&lt;br align=&#34;left&#34;/&gt;</text>
+<circle cx='516.12' cy='142.5' r='16' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></circle><rect x='241.68' y='221' width='334.88' height='69' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='252.31999' y='255.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>&lt;</text>
+<line x1='262.96' y1='221' x2='262.96' y2='290' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='419.76' y='232.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>I/O class&lt;/b&gt;</text>
+<line x1='262.96' y1='244' x2='576.56' y2='244' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='419.76' y='255.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ property&lt;br align=&#34;left&#34;/&gt;...&lt;br align=&#34;left&#34;/&gt;</text>
+<line x1='262.96' y1='267' x2='576.56' y2='267' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='419.76' y='278.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ method&lt;br align=&#34;left&#34;/&gt;...&lt;br align=&#34;left&#34;/&gt;</text>
+<g x='278.29' y='350' width='261.66' height='511' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></g><foreignObject x='278.29' y='350' width='261.66' height='511' font-size='14' font-family='Helvetica,Arial,sans-serif' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tbody><tr> <td> <b>System</b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0">
+					<tbody><tr> <td align="left">+ property</td> </tr>
+					<tr> <td port="ss1" align="left">- Subsystem 1</td> </tr>
+					<tr> <td port="ss2" align="left">- Subsystem 2</td> </tr>
+					<tr> <td port="ss3" align="left">- Subsystem 3</td> </tr>
+					<tr> <td align="left">...</td> </tr>
+				</tbody></table>
+			</td> </tr>
+			<tr> <td align="left">+ method<br/>...<br align="left"/></td> </tr>
+		</tbody></table></body></foreignObject><g x='15.999995' y='905' width='240.24' height='465' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></g><foreignObject x='15.999995' y='905' width='240.24' height='465' font-size='14' font-family='Helvetica,Arial,sans-serif' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tbody><tr> <td> <b>Subsystem 1</b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0">
+					<tbody><tr> <td align="left">+ property</td> </tr>
+					<tr> <td align="left" port="r1">- resource</td> </tr>
+					<tr> <td align="left">...</td> </tr>
+				</tbody></table>
+				</td> </tr>
+			<tr> <td align="left">
+				+ method<br/>
+				...<br align="left"/>
+			</td> </tr>
+		</tbody></table></body></foreignObject><g x='289' y='905' width='240.24' height='465' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></g><foreignObject x='289' y='905' width='240.24' height='465' font-size='14' font-family='Helvetica,Arial,sans-serif' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tbody><tr> <td> <b>Subsystem 2</b> </td> </tr>
+			<tr> <td>
+				<table align="left" border="0" cellborder="0" cellspacing="0">
+					<tbody><tr> <td align="left">+ property</td> </tr>
+					<tr> <td align="left" port="r1">- resource</td> </tr>
+					<tr> <td align="left">...</td> </tr>
+				</tbody></table>
+				</td> </tr>
+			<tr> <td align="left">
+				+ method<br/>
+				...<br align="left"/>
+			</td> </tr>
+		</tbody></table></body></foreignObject><g x='562' y='905' width='240.24' height='465' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></g><foreignObject x='562' y='905' width='240.24' height='465' font-size='14' font-family='Helvetica,Arial,sans-serif' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+			<tbody><tr> <td> <b>Subsystem 3</b> </td> </tr>
+			<tr> <td>
+				<table border="0" cellborder="0" cellspacing="0">
+					<tbody><tr> <td align="left">+ property</td> </tr>
+					<tr> <td align="left" port="r1">- resource</td> </tr>
+					<tr> <td align="left">...</td> </tr>
+				</tbody></table>
+				</td> </tr>
+			<tr> <td align="left">
+				+ method<br/>
+				...<br align="left"/>
+			</td> </tr>
+		</tbody></table></body></foreignObject><rect x='274.56' y='1430' width='211.12' height='101' class='node' fill='#F2F2F2' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='285.19998' y='1480.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>&lt;</text>
+<line x1='295.84' y1='1430' x2='295.84' y2='1531' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='390.76' y='1441.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>Shared resource&lt;/b&gt;</text>
+<line x1='295.84' y1='1453' x2='485.68' y2='1453' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='390.76' y='1464.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ property&lt;br align=&#34;left&#34;/&gt;</text>
+<text text-anchor='middle' alignment-baseline='middle' x='390.76' y='1480.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>				...&lt;br align=&#34;left&#34;/&gt;</text>
+<line x1='295.84' y1='1492' x2='485.68' y2='1492' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='390.76' y='1503.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>+ method&lt;br align=&#34;left&#34;/&gt;</text>
+<text text-anchor='middle' alignment-baseline='middle' x='390.76' y='1519.5' font-size='14' font-family='Helvetica,Arial,sans-serif' fill='#000000'>				...&lt;br align=&#34;left&#34;/&gt;</text>
+</g></svg>

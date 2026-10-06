@@ -1,0 +1,19 @@
+
+  AvantGarde-Book  ──────▶  AvantGarde-Demi  ───────▶  AvantGarde-BookOblique  ──────▶  AvantGarde-DemiOblique
+
+  Bookman-Light  ──────▶  Bookman-Demi  ───────▶  Bookman-LightItalic  ──────▶  Bookman-DemiItalic
+
+  Courier  ──────▶  Courier-Bold  ───────▶  Courier-Oblique  ──────▶  Courier-BoldOblique
+
+  Helvetica  ──────▶  Helvetica-Bold  ───────▶  Helvetica-Oblique  ──────▶  Helvetica-BoldOblique
+
+  Helvetica-Narrow  ──────▶  Helvetica-Narrow-Bold  ───────▶  Helvetica-Narrow-Oblique  ──────▶  Helvetica-Narrow-BoldOblique
+
+  NewCenturySchlbk-Roman  ──────▶  NewCenturySchlbk-Bold  ───────▶  NewCenturySchlbk-Italic  ──────▶  NewCenturySchlbk-BoldItalic
+
+  Palatino-Roman  ──────▶  Palatino-Bold  ───────▶  Palatino-Italic  ──────▶  Palatino-BoldItalic
+
+  Times-Roman  ──────▶  Times-Bold  ───────▶  Times-Italic  ──────▶  Times-BoldItalic
+
+  Symbol  ──────▶  ZapfDingbats  ───────▶  ZapfChancery-MediumItalic
+

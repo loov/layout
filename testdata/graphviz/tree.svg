@@ -1,0 +1,45 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='335.52002' height='220'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M158.02887,39 L133.73357,71 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M175.91702,39 L201.39746,71 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M209.76,94 L209.76,126 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M227.64815,94 L277.4239,126 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M200.60297,149 L175.12253,181 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M218.49112,149 L242.78642,181 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M107.87184,94 L58.096104,126 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M125.759995,94 L125.759995,126 '></path><rect x='141' y='16' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='148' y='27.5' font-size='14' fill='#000000'></text>
+<line x1='155' y1='16' x2='155' y2='39' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='166.76' y='27.5' font-size='14' fill='#000000'>G</text>
+<line x1='178.51999' y1='16' x2='178.51999' y2='39' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='185.51999' y='27.5' font-size='14' fill='#000000'></text>
+<rect x='184' y='71' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='191' y='82.5' font-size='14' fill='#000000'></text>
+<line x1='198' y1='71' x2='198' y2='94' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='209.76' y='82.5' font-size='14' fill='#000000'>E</text>
+<line x1='221.51999' y1='71' x2='221.51999' y2='94' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='228.51999' y='82.5' font-size='14' fill='#000000'></text>
+<rect x='184' y='126' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='191' y='137.5' font-size='14' fill='#000000'></text>
+<line x1='198' y1='126' x2='198' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='209.76' y='137.5' font-size='14' fill='#000000'>B</text>
+<line x1='221.51999' y1='126' x2='221.51999' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='228.51999' y='137.5' font-size='14' fill='#000000'></text>
+<rect x='268' y='126' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='275' y='137.5' font-size='14' fill='#000000'></text>
+<line x1='282' y1='126' x2='282' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='293.76' y='137.5' font-size='14' fill='#000000'>F</text>
+<line x1='305.52002' y1='126' x2='305.52002' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='312.52002' y='137.5' font-size='14' fill='#000000'></text>
+<rect x='99.99999' y='71' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='106.99999' y='82.5' font-size='14' fill='#000000'></text>
+<line x1='113.99999' y1='71' x2='113.99999' y2='94' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='125.759995' y='82.5' font-size='14' fill='#000000'>R</text>
+<line x1='137.51999' y1='71' x2='137.51999' y2='94' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='144.51999' y='82.5' font-size='14' fill='#000000'></text>
+<rect x='99.99999' y='126' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='106.99999' y='137.5' font-size='14' fill='#000000'></text>
+<line x1='113.99999' y1='126' x2='113.99999' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='125.759995' y='137.5' font-size='14' fill='#000000'>H</text>
+<line x1='137.51999' y1='126' x2='137.51999' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='144.51999' y='137.5' font-size='14' fill='#000000'></text>
+<rect x='15.999998' y='126' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='22.999998' y='137.5' font-size='14' fill='#000000'></text>
+<line x1='29.999998' y1='126' x2='29.999998' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='41.76' y='137.5' font-size='14' fill='#000000'>Y</text>
+<line x1='53.519997' y1='126' x2='53.519997' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='60.519997' y='137.5' font-size='14' fill='#000000'></text>
+<rect x='225' y='181' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='232' y='192.5' font-size='14' fill='#000000'></text>
+<line x1='239' y1='181' x2='239' y2='204' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='250.76' y='192.5' font-size='14' fill='#000000'>A</text>
+<line x1='262.52' y1='181' x2='262.52' y2='204' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='269.52' y='192.5' font-size='14' fill='#000000'></text>
+<rect x='141' y='181' width='51.52' height='23' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='148' y='192.5' font-size='14' fill='#000000'></text>
+<line x1='155' y1='181' x2='155' y2='204' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='166.76' y='192.5' font-size='14' fill='#000000'>C</text>
+<line x1='178.51999' y1='181' x2='178.51999' y2='204' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='185.51999' y='192.5' font-size='14' fill='#000000'></text>
+</g></svg>

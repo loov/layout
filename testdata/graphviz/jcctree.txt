@@ -1,0 +1,22 @@
+
+   SPEC
+   │ │
+ ╭─╯ ╰─╮
+ ▼     ▼
+    DEF       DEF
+   │ │ │     │ │ │
+   │ │ ╰─╮   │ │ ╰─╮
+   ▼ ▼   ▼   ▼ ▼   ▼
+
+  insects  SET  ;  cities  ;  SET
+          ││ │               │││││
+     ╭────╯│ ╰─╮    ╭────────╯│││╰──╮
+     │     │   │    │         ││╰─╮ │
+     ▼     ▼   ▼    ▼         ▼▼  ▼ ▼
+
+  ELEMENT  {  }  ELEMENT  ELEMENT  {  ;  }
+     │              │        │
+     ▼              ▼        ▼
+
+  fly  andover  boston
+

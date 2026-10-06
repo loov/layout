@@ -1,0 +1,38 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='358.78003' height='192'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M140.56198,72.5 L212.22,41.81584 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M180.22,94.541504 L220.86,94.68138 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M134.45132,111.5 L212.22,146.67453 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M122.75,146.60185 L220.86,104.33531 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M261.5,32 L293.5,32 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M122.75,161.59058 L212.22,161.64699 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M256.49554,48 L295.76666,80 '></path><rect x='16' y='72.5' width='164.22' height='39' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='58.28' y='84' font-size='14' fill='#000000'>Graphs can</text>
+<text text-anchor='middle' alignment-baseline='middle' x='58.28' y='100' font-size='14' fill='#000000'>be fun</text>
+<line x1='100.56' y1='72.5' x2='100.56' y2='111.5' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='119.11' y='92' font-size='14' fill='#000000'>mid</text>
+<line x1='137.66' y1='72.5' x2='137.66' y2='111.5' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='158.94' y='92' font-size='14' fill='#000000'>right</text>
+<rect x='212.22' y='16' width='49.28' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='219.22' y='32' font-size='14' fill='#000000'></text>
+<line x1='226.22' y1='16' x2='226.22' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='236.86' y='32' font-size='14' fill='#000000'>b</text>
+<line x1='247.5' y1='16' x2='247.5' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='254.5' y='32' font-size='14' fill='#000000'></text>
+<rect x='73.47' y='144' width='49.28' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='80.47' y='160' font-size='14' fill='#000000'></text>
+<line x1='87.47' y1='144' x2='87.47' y2='176' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='98.11' y='160' font-size='14' fill='#000000'>c</text>
+<line x1='108.75' y1='144' x2='108.75' y2='176' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='115.75' y='160' font-size='14' fill='#000000'></text>
+<rect x='293.5' y='16' width='49.28' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='300.5' y='32' font-size='14' fill='#000000'></text>
+<line x1='307.5' y1='16' x2='307.5' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='318.14' y='32' font-size='14' fill='#000000'>x</text>
+<line x1='328.78003' y1='16' x2='328.78003' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='335.78003' y='32' font-size='14' fill='#000000'></text>
+<rect x='212.22' y='144' width='49.28' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='219.22' y='160' font-size='14' fill='#000000'></text>
+<line x1='226.22' y1='144' x2='226.22' y2='176' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='236.86' y='160' font-size='14' fill='#000000'>y</text>
+<line x1='247.5' y1='144' x2='247.5' y2='176' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='254.5' y='160' font-size='14' fill='#000000'></text>
+<rect x='293.5' y='80' width='49.28' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='300.5' y='96' font-size='14' fill='#000000'></text>
+<line x1='307.5' y1='80' x2='307.5' y2='112' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='318.14' y='96' font-size='14' fill='#000000'>z</text>
+<line x1='328.78003' y1='80' x2='328.78003' y2='112' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='335.78003' y='96' font-size='14' fill='#000000'></text>
+<rect x='220.86' y='80' width='32' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='236.86' y='96' font-size='14' fill='#000000'>d</text>
+</g></svg>

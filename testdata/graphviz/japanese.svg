@@ -1,0 +1,25 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='456.48' height='256'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M118.0227,45.72812 L91.81001,65.74508 Q81,74 73,85 L73,85 Q65,96 65,109.60147 L65,136 Q65,160 65,184 L65,208 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M136,48 L136,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M170.52838,34.61774 L287.0525,68.24365 Q307,74 326.96298,79.7024 L346.926,85.4048 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M154.36412,45.620705 L235.26808,82.79905 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M137.81345,111.98904 L141.44475,144.00616 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M152.33826,175.77597 L181.78473,209.56993 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M199.91858,208.1671 L170.25629,173.97693 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-dasharray='1 2' stroke-linecap='round' stroke-width='1' d='M124.09298,175.06049 L81.55884,208.94128 '></path><ellipse cx='136' cy='32' rx='35' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='136' y='32' font-size='14' fill='#000000'>下駄配列</text>
+<ellipse cx='259' cy='96' rx='42' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='259' y='96' font-size='14' fill='#000000'>新下駄配列</text>
+<ellipse cx='65' cy='224' rx='49' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='65' y='224' font-size='14' fill='#000000'>日和下駄配列</text>
+<ellipse cx='143' cy='160' rx='56' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='143' y='160' font-size='14' fill='#000000'>黒塗り下駄配列</text>
+<ellipse cx='209' cy='224' rx='63' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='209' y='224' font-size='14' fill='#000000'>黒塗り桐下駄配列</text>
+<ellipse cx='136' cy='96' rx='49' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='136' y='96' font-size='14' fill='#000000'>塗り下駄配列</text>
+<ellipse cx='387' cy='96' rx='53.48' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='387' y='96' font-size='14' fill='#000000'>新JIS下駄配列</text>
+</g></svg>

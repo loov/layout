@@ -1,0 +1,366 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='2888.48' height='1030'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2261.3257,60.792213 L1965.1212,109.219826 Q1942,113 1925.1349,129.2619 L1908.2699,145.5238 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2265.7083,69.826614 L2063.2498,109.07447 Q2043,113 2028.6796,127.84535 L2014.3591,142.6907 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2272.2947,77.09036 L2168.9875,107.424644 Q2150,113 2134.4873,125.28688 L2118.9744,137.57376 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2283.6313,83.84827 L2217.5137,127.57762 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2312.6777,85.26873 L2300.24,119 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2259.9294,50.72903 L1961.4448,107.065094 Q1930,113 1898,113 L1848.6902,113 Q1829,113 1812.4974,123.74114 L1795.9949,134.48228 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1765.24,190 L1765.24,222 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1729.9264,268.76984 L1479.3737,348.73016 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1410.0214,374.5072 L1312.3203,414.50067 Q1294,422 1278.5083,434.3241 L1263.0167,446.64822 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1417.4791,385.18735 L1361.6504,436.69028 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1444.24,396 L1444.24,428 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1471.0009,385.18735 L1526.8296,436.69028 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1765.24,293 L1765.24,325 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1738.4791,385.18735 L1676.518,432.57016 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1623.799,477.00256 L1603.1394,491.00128 Q1582.48,505 1557.5554,506.24164 L1212.9603,523.4079 Q1181,525 1149,525 L898,525 Q866,525 834.3513,529.72864 L625.0308,561.0031 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M561.4791,591.1874 L505.65045,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M615.00085,591.1874 L670.8295,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M588.24,602 L588.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M557.48505,689.5177 L540.98254,700.25885 Q524.48,711 505.32944,715.5784 L303.36133,763.86426 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M233.02141,786.5072 L135.32031,826.5007 Q116.99999,834 101.50836,846.3241 L86.01672,858.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M240.47913,797.1874 L184.65045,848.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M267.24,808 L267.24,840 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M294.00085,797.1874 L349.82953,848.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M301.45856,786.5072 L399.15967,826.5007 Q417.47998,834 432.97162,846.3241 L448.46326,858.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M588.24,705 L557.4572,795.8596 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M574.1152,805.8136 L560.90063,899.6045 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M556.4288,893.9567 L540.45435,905.47833 Q524.48,917 505.24832,921.25104 L453.35287,932.72217 Q434,937 418.58047,949.4528 L403.16095,961.90564 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M562.3795,901.0445 L502.21902,952.1705 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M588.48224,910.99927 L585.23785,943.01276 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M615.85596,899.3162 L667.4282,951.2054 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M623.06116,888.0856 L716.3747,929.0515 Q734.48,937 750.0472,949.19196 L765.6143,961.3839 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M583.00885,807.7081 L555.35815,892.16473 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M592.00195,807.84937 L551.9451,883.4471 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M600.9251,806.2476 L551.02954,874.0867 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M609.5517,802.79425 L552.71783,864.8423 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M617.4625,797.3248 L556.8164,856.44934 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M623.94995,789.7802 L562.9,849.4858 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M628.07947,780.45844 L570.43854,844.3186 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M629.034,770.19867 L578.90515,841.1334 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M626.5958,760.2189 L587.82446,840.0022 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M621.29877,751.6171 L596.76337,840.9423 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M614.0722,744.98584 L605.29083,843.9397 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M584.7052,737.13293 L634.23895,790.53815 Q656,814 687.7193,818.2293 L1080.359,870.58246 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1083.0935,889.66626 L987.27405,929.4187 Q969,937 953.471,949.2585 L937.9421,961.5169 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1090.709,900.41174 L1036.355,951.4483 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1118.0293,910.992 L1118.7412,943.0032 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1143.524,900.64856 L1201.5415,951.931 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1149.3627,893.45984 L1168.1813,905.2299 Q1187,917 1208.5712,922.23065 L1250.2301,932.3322 Q1269.48,937 1284.9352,949.3889 L1300.3903,961.7778 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1628.595,484.98563 L1611.5375,494.9928 Q1594.48,505 1574.7281,505.98395 L1224.9603,523.4079 Q1193,525 1161.3368,529.63074 L946.0493,561.11664 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M909.24,602 L909.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M882.4791,591.1874 L826.65045,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M775.9452,694.6383 L723.05176,745.2054 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M803.8172,704.96814 L805.2421,737.01276 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M829.4421,693.7452 L888.261,746.1705 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1635.2096,491.3973 L1620.8448,498.19864 Q1606.48,505 1590.7946,507.56393 L1266.9443,560.5003 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1196.0214,580.5072 L1098.3203,620.5007 Q1080,628 1064.5083,640.3241 L1049.0167,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1203.4791,591.1874 L1147.6504,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1121.6628,704.96814 L1120.2379,737.01276 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1149.5348,694.6383 L1202.4282,745.2054 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1230.24,602 L1230.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1257.0009,591.1874 L1312.8296,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1337.24,705 L1337.24,737 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1310.4791,797.1874 L1254.6504,848.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1337.24,808 L1337.24,840 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1367.9949,689.5177 L1384.4974,700.25885 Q1401,711 1419.2227,718.45935 L1517.0214,758.4928 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1524.4791,797.1874 L1468.6504,848.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1551.24,808 L1551.24,840 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1578.0009,797.1874 L1633.8296,848.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1665.4751,498.32355 L1658.24,531 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1624.0214,580.5072 L1526.3203,620.5007 Q1508,628 1492.5083,640.3241 L1477.0167,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1631.4791,591.1874 L1575.6504,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1658.24,602 L1658.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1685.0009,591.1874 L1740.8296,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1692.4586,580.5072 L1790.1597,620.5007 Q1808.48,628 1823.9717,640.3241 L1839.4633,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1695.4753,462.94135 L2156.774,559.3001 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2159.0215,580.5072 L2061.3203,620.5007 Q2043,628 2027.5083,640.3241 L2012.0167,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2166.4792,591.1874 L2110.6504,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2193.24,602 L2193.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2220.0007,591.1874 L2275.8296,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2227.4585,580.5072 L2325.1597,620.5007 Q2343.48,628 2358.9717,640.3241 L2374.4631,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1801.9648,366.38446 L2370.538,457.4875 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2407.24,499 L2407.24,531 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2434.0007,488.18735 L2489.8296,539.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2514.24,602 L2514.24,634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2539.8704,592.25446 L2596.8296,642.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2545.8804,585.2216 L2561.9402,596.61084 Q2578,608 2597.1821,612.43616 L2645.193,623.5396 Q2664.48,628 2679.9717,640.3241 L2695.4631,652.6482 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1802.1873,261.94263 L2584.3022,355.98596 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2621.24,396 L2621.24,428 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2648.0007,385.18735 L2703.8296,436.69028 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2701.4792,488.18735 L2645.6504,539.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2728.24,499 L2728.24,531 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2755.0007,488.18735 L2810.8296,539.69025 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2336.5117,67.00379 L2382.9663,127.57762 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2339.9756,57.522144 L2432.7944,104.12112 Q2450.48,113 2465.9927,125.28688 L2481.5056,137.57376 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2340.2844,47.35631 L2537.7354,107.03253 Q2557.48,113 2571.8005,127.84535 L2586.1208,142.6907 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2337.3726,37.66585 L2635.6711,107.64887 Q2658.48,113 2675.345,129.2619 L2692.2102,145.5238 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M2331.8157,29.423954 L2639.412,105.33301 Q2670.48,113 2702.48,113 L2749.5676,113 Q2771.48,113 2785.1287,130.1425 L2798.777,147.28502 '></path><ellipse cx='2300.24' cy='51.5' rx='40.32' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='27.5' font-size='14' fill='#000000'>ID: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='43.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='59.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='75.5' font-size='14' fill='#000000'>nbr chi: 11</text>
+<ellipse cx='1872.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='130.5' font-size='14' fill='#000000'>ID: 2</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='146.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1979.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='130.5' font-size='14' fill='#000000'>ID: 3</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='146.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2086.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='130.5' font-size='14' fill='#000000'>ID: 4</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='146.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2193.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='130.5' font-size='14' fill='#000000'>ID: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='146.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2300.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='130.5' font-size='14' fill='#000000'>ID: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='146.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1765.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='130.5' font-size='14' fill='#000000'>ID: 7</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='146.5' font-size='14' fill='#000000'>type: 49</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1765.24' cy='257.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='233.5' font-size='14' fill='#000000'>ID: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='249.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='265.5' font-size='14' fill='#000000'>nbr out: 2</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='281.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1444.24' cy='360.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='336.5' font-size='14' fill='#000000'>ID: 9</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='352.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='368.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='384.5' font-size='14' fill='#000000'>nbr chi: 4</text>
+<ellipse cx='1230.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='439.5' font-size='14' fill='#000000'>ID: 10</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='455.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1337.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='439.5' font-size='14' fill='#000000'>ID: 11</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='455.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1444.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='439.5' font-size='14' fill='#000000'>ID: 12</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='455.5' font-size='14' fill='#000000'>type: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1551.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='439.5' font-size='14' fill='#000000'>ID: 13</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='455.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1765.24' cy='360.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='336.5' font-size='14' fill='#000000'>ID: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='352.5' font-size='14' fill='#000000'>type: 39</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='368.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='384.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1658.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='439.5' font-size='14' fill='#000000'>ID: 15</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='455.5' font-size='14' fill='#000000'>type: 55</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='588.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='588.24' y='542.5' font-size='14' fill='#000000'>ID: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='558.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 3</text>
+<ellipse cx='481.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='481.24' y='645.5' font-size='14' fill='#000000'>ID: 17</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='661.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='695.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='695.24' y='645.5' font-size='14' fill='#000000'>ID: 18</text>
+<text text-anchor='middle' alignment-baseline='middle' x='695.24' y='661.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='695.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='695.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='588.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='588.24' y='645.5' font-size='14' fill='#000000'>ID: 19</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='661.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='677.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='267.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='267.24' y='748.5' font-size='14' fill='#000000'>ID: 20</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='764.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 5</text>
+<ellipse cx='53.23999' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='53.23999' y='851.5' font-size='14' fill='#000000'>ID: 21</text>
+<text text-anchor='middle' alignment-baseline='middle' x='53.23999' y='867.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='53.23999' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='53.23999' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='160.23999' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='160.23999' y='851.5' font-size='14' fill='#000000'>ID: 22</text>
+<text text-anchor='middle' alignment-baseline='middle' x='160.23999' y='867.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='160.23999' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='160.23999' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='267.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='267.24' y='851.5' font-size='14' fill='#000000'>ID: 23</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='867.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='267.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='374.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='374.24' y='851.5' font-size='14' fill='#000000'>ID: 24</text>
+<text text-anchor='middle' alignment-baseline='middle' x='374.24' y='867.5' font-size='14' fill='#000000'>type: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='374.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='374.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='481.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='481.24' y='851.5' font-size='14' fill='#000000'>ID: 25</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='867.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='481.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='588.24' cy='772.5' rx='40.88' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='588.24' y='748.5' font-size='14' fill='#000000'>ID: 26</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='764.5' font-size='14' fill='#000000'>type: 41</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='780.5' font-size='14' fill='#000000'>nbr out: 12</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='588.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='588.24' y='851.5' font-size='14' fill='#000000'>ID: 27</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='867.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='588.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 5</text>
+<ellipse cx='370.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='370.24' y='954.5' font-size='14' fill='#000000'>ID: 28</text>
+<text text-anchor='middle' alignment-baseline='middle' x='370.24' y='970.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='370.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='370.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='477.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='477.24' y='954.5' font-size='14' fill='#000000'>ID: 29</text>
+<text text-anchor='middle' alignment-baseline='middle' x='477.24' y='970.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='477.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='477.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='584.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='584.24' y='954.5' font-size='14' fill='#000000'>ID: 30</text>
+<text text-anchor='middle' alignment-baseline='middle' x='584.24' y='970.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='584.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='584.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='691.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='691.24' y='954.5' font-size='14' fill='#000000'>ID: 31</text>
+<text text-anchor='middle' alignment-baseline='middle' x='691.24' y='970.5' font-size='14' fill='#000000'>type: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='691.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='691.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='798.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='798.24' y='954.5' font-size='14' fill='#000000'>ID: 32</text>
+<text text-anchor='middle' alignment-baseline='middle' x='798.24' y='970.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='798.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='798.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1117.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1117.24' y='851.5' font-size='14' fill='#000000'>ID: 33</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1117.24' y='867.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1117.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1117.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 5</text>
+<ellipse cx='905.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='905.24' y='954.5' font-size='14' fill='#000000'>ID: 34</text>
+<text text-anchor='middle' alignment-baseline='middle' x='905.24' y='970.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='905.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='905.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1012.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1012.24' y='954.5' font-size='14' fill='#000000'>ID: 35</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1012.24' y='970.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1012.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1012.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1119.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='954.5' font-size='14' fill='#000000'>ID: 36</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='970.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1226.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='954.5' font-size='14' fill='#000000'>ID: 37</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='970.5' font-size='14' fill='#000000'>type: 20</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1333.24' cy='978.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1333.24' y='954.5' font-size='14' fill='#000000'>ID: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1333.24' y='970.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1333.24' y='986.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1333.24' y='1002.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='909.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='909.24' y='542.5' font-size='14' fill='#000000'>ID: 39</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='558.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='574.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='909.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='909.24' y='645.5' font-size='14' fill='#000000'>ID: 40</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='661.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='909.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='802.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='802.24' y='645.5' font-size='14' fill='#000000'>ID: 41</text>
+<text text-anchor='middle' alignment-baseline='middle' x='802.24' y='661.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='802.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='802.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 3</text>
+<ellipse cx='699.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='699.24' y='748.5' font-size='14' fill='#000000'>ID: 42</text>
+<text text-anchor='middle' alignment-baseline='middle' x='699.24' y='764.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='699.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='699.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='806.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='806.24' y='748.5' font-size='14' fill='#000000'>ID: 43</text>
+<text text-anchor='middle' alignment-baseline='middle' x='806.24' y='764.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='806.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='806.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='913.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='913.24' y='748.5' font-size='14' fill='#000000'>ID: 44</text>
+<text text-anchor='middle' alignment-baseline='middle' x='913.24' y='764.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='913.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='913.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1230.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='542.5' font-size='14' fill='#000000'>ID: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='558.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 4</text>
+<ellipse cx='1016.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1016.24' y='645.5' font-size='14' fill='#000000'>ID: 46</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1016.24' y='661.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1016.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1016.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1123.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1123.24' y='645.5' font-size='14' fill='#000000'>ID: 47</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1123.24' y='661.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1123.24' y='677.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1123.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1119.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='748.5' font-size='14' fill='#000000'>ID: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='764.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1119.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1226.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='748.5' font-size='14' fill='#000000'>ID: 49</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='764.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1226.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1230.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='645.5' font-size='14' fill='#000000'>ID: 50</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='661.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1337.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='645.5' font-size='14' fill='#000000'>ID: 51</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='661.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='677.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1337.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='748.5' font-size='14' fill='#000000'>ID: 52</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='764.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='780.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1230.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='851.5' font-size='14' fill='#000000'>ID: 53</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='867.5' font-size='14' fill='#000000'>type: 54</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1230.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1337.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='851.5' font-size='14' fill='#000000'>ID: 54</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='867.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1337.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1551.24' cy='772.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='748.5' font-size='14' fill='#000000'>ID: 55</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='764.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='780.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='796.5' font-size='14' fill='#000000'>nbr chi: 3</text>
+<ellipse cx='1444.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='851.5' font-size='14' fill='#000000'>ID: 56</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='867.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1551.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='851.5' font-size='14' fill='#000000'>ID: 57</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='867.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1658.24' cy='875.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='851.5' font-size='14' fill='#000000'>ID: 58</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='867.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='883.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='899.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1658.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='542.5' font-size='14' fill='#000000'>ID: 59</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='558.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 5</text>
+<ellipse cx='1444.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='645.5' font-size='14' fill='#000000'>ID: 60</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='661.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1444.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1551.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='645.5' font-size='14' fill='#000000'>ID: 61</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='661.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1551.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1658.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='645.5' font-size='14' fill='#000000'>ID: 62</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='661.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1658.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1765.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='645.5' font-size='14' fill='#000000'>ID: 63</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='661.5' font-size='14' fill='#000000'>type: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1765.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='1872.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='645.5' font-size='14' fill='#000000'>ID: 64</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='661.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1872.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2193.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='542.5' font-size='14' fill='#000000'>ID: 65</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='558.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 5</text>
+<ellipse cx='1979.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='645.5' font-size='14' fill='#000000'>ID: 66</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='661.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='1979.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2086.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='645.5' font-size='14' fill='#000000'>ID: 67</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='661.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2086.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2193.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='645.5' font-size='14' fill='#000000'>ID: 68</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='661.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2193.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2300.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='645.5' font-size='14' fill='#000000'>ID: 69</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='661.5' font-size='14' fill='#000000'>type: 20</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2300.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2407.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='645.5' font-size='14' fill='#000000'>ID: 70</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='661.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2407.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='439.5' font-size='14' fill='#000000'>ID: 71</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='455.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='471.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2407.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='542.5' font-size='14' fill='#000000'>ID: 72</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='558.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2514.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='542.5' font-size='14' fill='#000000'>ID: 73</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='558.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 3</text>
+<ellipse cx='2514.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='645.5' font-size='14' fill='#000000'>ID: 74</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='661.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2621.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='645.5' font-size='14' fill='#000000'>ID: 75</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='661.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2728.24' cy='669.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='645.5' font-size='14' fill='#000000'>ID: 76</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='661.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='677.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='693.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2621.24' cy='360.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='336.5' font-size='14' fill='#000000'>ID: 77</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='352.5' font-size='14' fill='#000000'>type: 45</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='368.5' font-size='14' fill='#000000'>nbr out: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='384.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2621.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='439.5' font-size='14' fill='#000000'>ID: 78</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='455.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2728.24' cy='463.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='439.5' font-size='14' fill='#000000'>ID: 79</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='455.5' font-size='14' fill='#000000'>type: 48</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='471.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='487.5' font-size='14' fill='#000000'>nbr chi: 3</text>
+<ellipse cx='2621.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='542.5' font-size='14' fill='#000000'>ID: 80</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='558.5' font-size='14' fill='#000000'>type: 14</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2728.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='542.5' font-size='14' fill='#000000'>ID: 81</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='558.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2835.24' cy='566.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='542.5' font-size='14' fill='#000000'>ID: 82</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='558.5' font-size='14' fill='#000000'>type: 6</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='574.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='590.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2407.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='130.5' font-size='14' fill='#000000'>ID: 83</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='146.5' font-size='14' fill='#000000'>type: 38</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2407.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2514.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='130.5' font-size='14' fill='#000000'>ID: 84</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='146.5' font-size='14' fill='#000000'>type: 8</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2514.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2621.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='130.5' font-size='14' fill='#000000'>ID: 85</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='146.5' font-size='14' fill='#000000'>type: 1</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2621.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2728.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='130.5' font-size='14' fill='#000000'>ID: 86</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='146.5' font-size='14' fill='#000000'>type: 5</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2728.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+<ellipse cx='2835.24' cy='154.5' rx='37.24' ry='35.5' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='130.5' font-size='14' fill='#000000'>ID: 87</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='146.5' font-size='14' fill='#000000'>type: 16</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='162.5' font-size='14' fill='#000000'>nbr out: 0</text>
+<text text-anchor='middle' alignment-baseline='middle' x='2835.24' y='178.5' font-size='14' fill='#000000'>nbr chi: 0</text>
+</g></svg>

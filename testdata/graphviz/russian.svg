@@ -1,0 +1,29 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='1184.04' height='128'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M139.04059,43.42349 L255.26367,82.79627 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M291.32,48 L291.32,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M497.24002,48 L497.24002,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M105.32,48 L105.32,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M715.5239,46.11312 L756.01575,80.58659 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M830.90393,47.1611 L792.0539,80.57539 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M1077.6,48 L1077.6,80 '></path><ellipse cx='105.32' cy='32' rx='48.16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='105.32' y='32' font-size='14' fill='#000000'>Контрагенты</text>
+<ellipse cx='291.32' cy='96' rx='63.84' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='291.32' y='96' font-size='14' fill='#000000'>БанковскиеСчета</text>
+<ellipse cx='291.32' cy='32' rx='48.16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='291.32' y='32' font-size='14' fill='#000000'>Организации</text>
+<ellipse cx='497.24002' cy='32' rx='94.08' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='497.24002' y='32' font-size='14' fill='#000000'>ВопросыДляАнкетирования</text>
+<ellipse cx='497.24002' cy='96' rx='90.44' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='497.24002' y='96' font-size='14' fill='#000000'>ВариантыОтветовОпросов</text>
+<ellipse cx='105.32' cy='96' rx='89.32' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='105.32' y='96' font-size='14' fill='#000000'>ДоговорыВзаиморасчетов</text>
+<ellipse cx='691.12' cy='32' rx='51.8' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='691.12' y='32' font-size='14' fill='#000000'>Номенклатура</text>
+<ellipse cx='774.12' cy='96' rx='67.48' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='774.12' y='96' font-size='14' fill='#000000'>ЕдиницыИзмерения</text>
+<ellipse cx='857.12' cy='32' rx='82.04' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='857.12' y='32' font-size='14' fill='#000000'>НоменклатурныеГруппы</text>
+<ellipse cx='1077.6' cy='32' rx='63.84' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1077.6' y='32' font-size='14' fill='#000000'>СвойстваОбектов</text>
+<ellipse cx='1077.6' cy='96' rx='90.44' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='1077.6' y='96' font-size='14' fill='#000000'>ЗначенияСвойствОбектов</text>
+</g></svg>

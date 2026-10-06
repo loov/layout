@@ -1,0 +1,27 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='213' height='376'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><rect class='cluster' x='3' y='88' width='94' height='272' fill='#FFFFFF' stroke='#000000'></rect><rect class='cluster' x='103' y='88' width='94' height='272' fill='#FFFFFF' stroke='#000000'></rect><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56,128 L56,176 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M52.95207,207.70702 L46.64299,240.2198 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M46.408493,271.8177 L53.768818,320.15634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M144,128 L144,176 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M147.04793,207.70702 L153.35701,240.2198 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M153.5915,271.8177 L146.23119,320.15634 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M103.66231,44.992596 L65.00804,98.77672 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M118.84476,46.894253 L138.49763,96.97588 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M62.022034,206.82347 L72.01102,231.41173 Q82,256 98.257545,276.97748 L134.19885,323.35336 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M137.97797,206.82347 L127.98898,231.41173 Q118,256 101.742455,276.97748 L65.80115,323.35336 '></path><ellipse cx='56' cy='112' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='112' font-size='14' fill='#000000'>a0</text>
+<ellipse cx='56' cy='192' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='192' font-size='14' fill='#000000'>a1</text>
+<ellipse cx='44' cy='256' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='44' y='256' font-size='14' fill='#000000'>a2</text>
+<ellipse cx='56' cy='336' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='56' y='336' font-size='14' fill='#000000'>a3</text>
+<ellipse cx='144' cy='112' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='144' y='112' font-size='14' fill='#000000'>b0</text>
+<ellipse cx='144' cy='192' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='144' y='192' font-size='14' fill='#000000'>b1</text>
+<ellipse cx='156' cy='256' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='156' y='256' font-size='14' fill='#000000'>b2</text>
+<ellipse cx='144' cy='336' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='144' y='336' font-size='14' fill='#000000'>b3</text>
+<ellipse cx='113' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='113' y='32' font-size='14' fill='#000000'>x</text>
+</g></svg>

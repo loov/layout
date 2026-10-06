@@ -1,0 +1,32 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='293.94' height='165'>
+	<style type="text/css"><![CDATA[
+		.edge { fill: none; }
+	]]></style>
+	<defs>
+		<marker id="normal" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L0,8 L10,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="vee" markerWidth="10" markerHeight="8" refX="9" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <path d="M0,0 L10,4 L0,8 L3,4 z" fill="context-stroke" />
+	    </marker>
+		<marker id="dot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3.5" fill="context-stroke" />
+	    </marker>
+		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
+	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
+	    </marker>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M111.67523,48 L66.368004,98.5 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M142.16534,48 L174.43602,80 '></path><rect x='59.32' y='16' width='133.42' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='76.96' y='32' font-size='14' fill='#000000'>left</text>
+<line x1='94.6' y1='16' x2='94.6' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='122.39' y='32' font-size='14' fill='#000000'>middle</text>
+<line x1='150.18' y1='16' x2='150.18' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='171.45999' y='32' font-size='14' fill='#000000'>right</text>
+<rect x='15.999999' y='98.5' width='74.06' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='33.92' y='114.5' font-size='14' fill='#000000'>one</text>
+<line x1='51.84' y1='98.5' x2='51.84' y2='130.5' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='70.95' y='114.5' font-size='14' fill='#000000'>two</text>
+<rect x='122.119995' y='80' width='155.82' height='69' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='146.83' y='106.5' font-size='14' fill='#000000'>hello</text>
+<text text-anchor='middle' alignment-baseline='middle' x='146.83' y='122.5' font-size='14' fill='#000000'>world</text>
+<line x1='171.54' y1='80' x2='171.54' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='203.45999' y='91.5' font-size='14' fill='#000000'>b</text>
+<line x1='171.54' y1='103' x2='235.38' y2='103' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='182.18' y='114.5' font-size='14' fill='#000000'>c</text>
+<line x1='192.81999' y1='103' x2='192.81999' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='203.45999' y='114.5' font-size='14' fill='#000000'>d</text>
+<line x1='214.1' y1='103' x2='214.1' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='224.74' y='114.5' font-size='14' fill='#000000'>e</text>
+<line x1='171.54' y1='126' x2='235.38' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='203.45999' y='137.5' font-size='14' fill='#000000'>f</text>
+<line x1='235.38' y1='80' x2='235.38' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='246.02' y='114.5' font-size='14' fill='#000000'>g</text>
+<line x1='256.66' y1='80' x2='256.66' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='267.3' y='114.5' font-size='14' fill='#000000'>h</text>
+</g></svg>
