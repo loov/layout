@@ -19,8 +19,6 @@ var notJoined = map[string]string{
 	"ldbxtried_merged":            "n0 -> n448, n448 -> n449",
 	"Linux_kernel_diagram":        "14 edges, such as system -> system_",
 	"Linux_kernel_diagram_merged": "14 edges, such as system -> system_",
-	"sdh":                         "8 edges, such as prTTP_4_2 -> prTTP_5_1",
-	"sdh_merged":                  "8 edges, such as prTTP_4_2 -> prTTP_5_1",
 }
 
 // TestEdgesJoined checks that every drawing joins the two nodes of every

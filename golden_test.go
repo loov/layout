@@ -246,8 +246,6 @@ var knownBad = map[string]map[string]string{
 		"graphviz/ldbxtried_merged.txt":            "edges share runs",
 		"graphviz/Linux_kernel_diagram.txt":        "edges share runs",
 		"graphviz/Linux_kernel_diagram_merged.txt": "edges share runs",
-		"graphviz/sdh.txt":                         "edges share runs",
-		"graphviz/sdh_merged.txt":                  "edges share runs",
 	},
 }
 

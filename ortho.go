@@ -86,6 +86,28 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 	}
 
+	// an edge along a rank arcs over it, see the flat edges in layout.go,
+	// with both ends on the tops of its nodes, which it shares with the
+	// ends of other edges
+	arc := func(edge *ledge) bool {
+		p := edge.Path
+		return edge.From != edge.To && len(p) == 4 && p[0].Y == p[3].Y && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
+	}
+	var arcEnds []*ledge
+	for _, edge := range graph.Edges {
+		if !arc(edge) {
+			continue
+		}
+		arcEnds = append(arcEnds, edge)
+		if edge.FromPort == CompassAuto {
+			k := side{edge.From, false}
+			ends[k] = append(ends[k], end{edge, true, edge.Path[2].X, edge.Path[0].X})
+		}
+		if edge.ToPort == CompassAuto {
+			k := side{edge.To, false}
+			ends[k] = append(ends[k], end{edge, false, edge.Path[1].X, edge.Path[3].X})
+		}
+	}
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
@@ -203,6 +225,11 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 	}
 
+	// arcs go straight up from where their ends moved
+	for _, edge := range arcEnds {
+		edge.Path[1].X, edge.Path[2].X = edge.Path[0].X, edge.Path[3].X
+	}
+
 	// the jogs, and where they enter and leave, in blocks; at most one
 	// for every segment, so that the pointers into them stay put
 	segments := 0
@@ -243,13 +270,41 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	// edges along a rank arc over it, in the bottom of the channel above;
 	// tracks keep above the arcs, see the flat edges in layout.go
 	arcs := make([]Length, len(rows))
+	over := make([][]*ledge, len(rows)) // the arcs in each channel
 	for _, edge := range graph.Edges {
 		if edge.From == edge.To || edge.From.Center.Y != edge.To.Center.Y || len(edge.Path) != 4 {
 			continue
 		}
+		// the channel above the rank of the edge, wherever the arc reaches
 		if y := edge.Path[1].Y; y < edge.Path[0].Y {
-			if k := channelAt(y); k >= 0 && y > rows[k][1] {
+			r := slices.IndexFunc(rows, func(row [2]Length) bool { return row[0] <= edge.From.Center.Y && edge.From.Center.Y <= row[1] })
+			if k := r - 1; k >= 0 {
 				arcs[k] = max(arcs[k], rows[k+1][0]-y)
+				over[k] = append(over[k], edge)
+			}
+		}
+	}
+	if graph.ForText {
+		// text draws the arcs on rows of their own, below the nodes of
+		// the rank above with a row between; the rank of the arcs, and
+		// what is below it, moves down to make the room
+		for k := range arcs {
+			if arcs[k] == 0 {
+				continue
+			}
+			if short := rows[k][1] + graph.LineHeight - (rows[k+1][0] - arcs[k]); short > 0 {
+				below := rows[k][1] + graph.LineHeight/2
+				graph.shiftBelow(below, short)
+				for _, edge := range over[k] {
+					for i := range edge.Path {
+						if edge.Path[i].Y <= below {
+							edge.Path[i].Y += short // above the cut, as high as the arc reaches
+						}
+					}
+				}
+				for r := k + 1; r < len(rows); r++ {
+					rows[r][0], rows[r][1] = rows[r][0]+short, rows[r][1]+short
+				}
 			}
 		}
 	}
