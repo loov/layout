@@ -21,7 +21,8 @@ func TestPlain(t *testing.T) {
 		"<  spaced   <I>out</I>  >":                                            "spaced out",
 		"<<TABLE>\n\t<TR>\n\t\t<TD>a</TD>\n\t\t<TD>b</TD>\n\t</TR>\n</TABLE>>": "a b",
 	} {
-		if got := draw.PlainLabel(label); got != want {
+		// the text, without the sequences of its styles, see draw.Spans
+		if got := draw.StripStyle(draw.PlainLabel(label)); got != want {
 			t.Errorf("draw.PlainLabel(%q) = %q, want %q", label, got, want)
 		}
 	}
@@ -207,5 +208,31 @@ func TestWidenedBoxFits(t *testing.T) {
 	}
 	if !strings.Contains(out.String(), "iiii │") {
 		t.Errorf("right border cut off:\n%s", out.String())
+	}
+}
+
+// TestStyledText checks that bold, italic and colored text of HTML-like
+// labels is written with its escape codes, and plain without them
+func TestStyledText(t *testing.T) {
+	graph := layout.NewDigraph()
+	graph.Node("a").Label = `<<b>bold</b> <i>it</i> <font color="red">red</font>>`
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var plain, colored bytes.Buffer
+	if err := Write(&plain, l); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteColor(&colored, l, Options{Palette: TrueColor}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(plain.String(), "bold it red") {
+		t.Errorf("want the text plain:\n%s", plain.String())
+	}
+	for _, want := range []string{";1;", ";3;", "38;2;255;0;0"} {
+		if !strings.Contains(colored.String(), want) {
+			t.Errorf("want %q in:\n%q", want, colored.String())
+		}
 	}
 }

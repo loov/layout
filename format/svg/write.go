@@ -225,9 +225,43 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 			svg.write(" font-family='%v'", escapeString(fontName))
 		}
 		svg.write(" fill='%v'", dkcolor(color))
-		svg.write(">%v</text>\n", escapeString(line.Text))
+		svg.write(">")
+		for _, span := range draw.Spans(line.Text) {
+			svg.writeSpan(span)
+		}
+		svg.write("</text>\n")
 		top += graph.LineHeight
 	}
+}
+
+// writeSpan writes text in its style, see draw.Style
+func (svg *writer) writeSpan(span draw.Span) {
+	var attrs []string
+	if span.Style.Bold {
+		attrs = append(attrs, "font-weight='bold'")
+	}
+	if span.Style.Italic {
+		attrs = append(attrs, "font-style='italic'")
+	}
+	var lines []string
+	if span.Style.Underline {
+		lines = append(lines, "underline")
+	}
+	if span.Style.Strike {
+		lines = append(lines, "line-through")
+	}
+	if len(lines) > 0 {
+		attrs = append(attrs, "text-decoration='"+strings.Join(lines, " ")+"'")
+	}
+	if color, ok := layout.ParseColor(span.Style.Color); ok {
+		attrs = append(attrs, "fill='"+dkcolor(color)+"'")
+	}
+	if len(attrs) == 0 {
+		svg.write("%v", escapeString(span.Text))
+		return
+	}
+	// alignment-baseline is not inherited, so it is the text's again
+	svg.write("<tspan alignment-baseline='middle' %v>%v</tspan>", strings.Join(attrs, " "), escapeString(span.Text))
 }
 
 // writeLabel writes plain text centered at center, or an HTML-like label

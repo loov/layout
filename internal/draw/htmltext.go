@@ -19,7 +19,7 @@ func PlainLabel(label string) string {
 	}
 	var out strings.Builder
 	for _, n := range nodes {
-		plainText(&out, n, "")
+		plainText(&out, n, "", Style{})
 	}
 	return collapse(out.String())
 }
@@ -62,7 +62,7 @@ func TableRecord(label string, vertical bool) (string, bool) {
 	case border > 0:
 		// a frame alone: one field of all the lines
 		var out strings.Builder
-		plainText(&out, table, "")
+		plainText(&out, table, "", Style{})
 		return escapeRecord(collapse(out.String())), true
 	}
 	return "", false
@@ -88,7 +88,7 @@ func tableFields(table *html.Node) string {
 				}
 			}
 			var out strings.Builder
-			plainText(&out, td, "")
+			plainText(&out, td, "", Style{})
 			cells = append(cells, escapeRecord(collapse(out.String())))
 			only = td
 		}
@@ -169,8 +169,9 @@ func parseHTMLLabel(label string) ([]*html.Node, bool) {
 }
 
 // plainText writes the text of n, see PlainLabel; cell is the mark of
-// where the lines of the cell n is in go
-func plainText(out *strings.Builder, n *html.Node, cell string) {
+// where the lines of the cell n is in go, and style the style of the
+// text around n, see Style
+func plainText(out *strings.Builder, n *html.Node, cell string, style Style) {
 	switch {
 	case n.Type == html.TextNode:
 		// line breaks in the markup are spaces, like in a browser
@@ -194,13 +195,35 @@ func plainText(out *strings.Builder, n *html.Node, cell string) {
 			if c.Type == html.ElementNode && (c.Data == "td" || c.Data == "th") && first {
 				row, first = alignMark(c, ""), false
 			}
-			plainText(out, c, cell)
+			plainText(out, c, cell, style)
 		}
 		out.WriteString(row + "\n")
 		return
+	case n.Data == "b" || n.Data == "i" || n.Data == "u" || n.Data == "s" || n.Data == "font":
+		inner := style
+		switch n.Data {
+		case "b":
+			inner.Bold = true
+		case "i":
+			inner.Italic = true
+		case "u":
+			inner.Underline = true
+		case "s":
+			inner.Strike = true
+		case "font":
+			if color := attr(n, "color"); color != "" {
+				inner.Color = color
+			}
+		}
+		out.WriteString(styleEnd + inner.open())
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			plainText(out, c, cell, inner)
+		}
+		out.WriteString(styleEnd + style.open())
+		return
 	}
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
-		plainText(out, c, cell)
+		plainText(out, c, cell, style)
 	}
 }
 
@@ -219,12 +242,16 @@ func alignMark(n *html.Node, def string) string {
 }
 
 // collapse drops the whitespace of markup from lines, and the lines it
-// leaves empty, as a browser shows them
+// leaves empty, as a browser shows them; a style that goes on past the
+// end of a line starts the next again, see Style
 func collapse(text string) string {
 	var kept []string
+	var style Style
 	for _, line := range Lines(text) {
-		if t := strings.Join(strings.Fields(line.Text), " "); t != "" {
-			kept = append(kept, t+line.Align.Mark())
+		var spans []Span
+		spans, style = spansFrom(line.Text, style)
+		if spans = collapseSpaces(spans); len(spans) > 0 {
+			kept = append(kept, styledLine(spans)+line.Align.Mark())
 		}
 	}
 	return strings.Join(kept, "\n")

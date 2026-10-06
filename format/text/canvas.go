@@ -136,7 +136,7 @@ func (c *canvas) set(x, y int, r rune) { c.put(x, y, r, c.pen.ink) }
 func (c *canvas) put(x, y int, r rune, fg colorID) {
 	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
-		p.r, p.fg, p.lines, p.heavy = r, fg, 0, 0
+		p.r, p.fg, p.lines, p.heavy, p.style = r, fg, 0, 0, 0
 	}
 }
 
@@ -196,12 +196,46 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 	}
 }
 
-// text writes s from x, y in the color of the pen's font
+// text writes s from x, y in the color of the pen's font, or of its
+// spans, see draw.Spans, with their styles
 func (c *canvas) text(x, y int, s string) {
-	for i, r := range cellRunes(s) {
-		c.put(x+i, y, r, c.pen.font)
-		c.hold(x+i, y)
+	for _, span := range draw.Spans(s) {
+		fg := c.pen.font
+		if color, ok := layout.ParseColor(span.Style.Color); ok {
+			fg = c.color(rgb(color))
+		}
+		style := textStyle(span.Style)
+		for _, r := range cellRunes(span.Text) {
+			c.put(x, y, r, fg)
+			if p := c.at(x, y); p != nil {
+				p.style = style
+			}
+			c.hold(x, y)
+			x++
+		}
 	}
+}
+
+// the bits of cell.style, which the escape codes of colored text show
+const (
+	bold = 1 << iota
+	italic
+	underline
+	strike
+)
+
+// textStyle returns the bits of cell.style of a style of text
+func textStyle(style draw.Style) uint8 {
+	var bits uint8
+	for _, on := range []struct {
+		set bool
+		bit uint8
+	}{{style.Bold, bold}, {style.Italic, italic}, {style.Underline, underline}, {style.Strike, strike}} {
+		if on.set {
+			bits |= on.bit
+		}
+	}
+	return bits
 }
 
 // cellRunes returns the characters of s by cell, with covered after a
@@ -319,6 +353,7 @@ type cell struct {
 	lines  uint8     // direction mask, for joining edge runs
 	heavy  uint8     // arms that runs of different edges share
 	kind   uint8     // class of r, which seams keep up to date for their use
+	style  uint8     // the style bits of text, see textStyle
 	keep   bool      // inside a node or of text, which carving keeps
 	glue   bool      // beside a label, which carving keeps beside it
 	solid  bool      // covered by a node; edges do not draw there

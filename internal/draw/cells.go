@@ -6,11 +6,12 @@ import (
 )
 
 // Columns returns the columns s takes in a terminal: two for wide
-// characters, none for marks on the character before and for control
-// characters, which are not drawn
+// characters, none for marks on the character before, for control
+// characters and for the sequences of styles, which are not drawn, see
+// Style
 func Columns(s string) int {
 	n := 0
-	for _, r := range s {
+	for _, r := range StripStyle(s) {
 		switch {
 		case IsZeroWidth(r), unicode.IsControl(r):
 		case IsWide(r):

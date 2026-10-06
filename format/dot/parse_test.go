@@ -392,7 +392,7 @@ func TestInvisible(t *testing.T) {
 // TestRecordText checks that an HTML-like record label keeps its fields
 // and loses its markup
 func TestRecordText(t *testing.T) {
-	got := recordText(`<{<b>«interface» I/O</b> | + a<br align="left"/>b &amp; c}>`)
+	got := draw.StripStyle(recordText(`<{<b>«interface» I/O</b> | + a<br align="left"/>b &amp; c}>`))
 	if want := "{«interface» I/O | + a" + draw.LeftMark + "\nb & c}"; got != want {
 		t.Errorf("recordText = %q, want %q", got, want)
 	}

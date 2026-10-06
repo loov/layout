@@ -183,21 +183,38 @@ func encode(g grid, palette []uint32, opts *Options) string {
 				end = i + 1
 			}
 		}
-		f, b := "39", "49"
+		f, b, st := "39", "49", uint8(0)
 		for _, x := range line[:end] {
 			want, bg := code(x)
-			if x.r == ' ' {
-				want = f // blanks show only the background
+			style := x.style
+			if opts == nil {
+				style = 0
 			}
-			if want != f || bg != b {
-				f, b = want, bg
-				out.WriteString("\x1b[" + f + ";" + b + "m")
+			if x.r == ' ' && style&(underline|strike) == 0 {
+				want, style = f, st // blanks show only the background
+			}
+			if want != f || bg != b || style != st {
+				var codes strings.Builder
+				if style != st {
+					// off, then on, as bold and dim share an off
+					codes.WriteString("22;23;24;29;")
+					for _, on := range []struct {
+						bit  uint8
+						code string
+					}{{bold, "1;"}, {italic, "3;"}, {underline, "4;"}, {strike, "9;"}} {
+						if style&on.bit != 0 {
+							codes.WriteString(on.code)
+						}
+					}
+				}
+				f, b, st = want, bg, style
+				out.WriteString("\x1b[" + codes.String() + f + ";" + b + "m")
 			}
 			if x.r != covered {
 				out.WriteRune(x.r)
 			}
 		}
-		if f != "39" || b != "49" {
+		if f != "39" || b != "49" || st != 0 {
 			out.WriteString("\x1b[0m")
 		}
 		out.WriteByte('\n')

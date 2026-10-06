@@ -76,7 +76,7 @@ func IsZeroWidth(r rune) bool {
 // from per-character width classes.
 func ApproxLineWidth(line string, fontSize float64) float64 {
 	width := 0.0
-	for _, r := range line {
+	for _, r := range StripStyle(line) {
 		var em float64
 		switch {
 		case IsWide(r):
@@ -108,7 +108,7 @@ func TextSize(text string, lineHeight, fontSize float64, lineWidth func(line str
 	}
 	lines := strings.Split(text, "\n")
 	for _, line := range lines {
-		w = max(w, lineWidth(line))
+		w = max(w, lineWidth(StripStyle(line)))
 	}
 	return w, float64(len(lines)) * max(lineHeight, fontSize)
 }
