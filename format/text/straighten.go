@@ -24,7 +24,7 @@ func mergeRows(g grid) (grid, bool) {
 		if !along(g[r]) || !along(g[r+1]) {
 			continue
 		}
-		row, ok := mergeRow(out, g[r], g[r+1])
+		row, stuck, ok := mergeRow(out, g[r], g[r+1])
 		if ok {
 			g[r] = row
 			return slices.Delete(g, r+1, r+2), true
@@ -40,7 +40,9 @@ func mergeRows(g grid) (grid, bool) {
 				for _, dx := range []int{1, -1, 2, -2, 3, -3} {
 					var ok bool
 					moves, ok = slide(moves, g, end.r, x, end.dir, dx)
-					if !ok {
+					// the rows merge cell by cell, so a slide that leaves
+					// the cell they don't merge at as it is can't help
+					if !ok || !slices.ContainsFunc(moves, func(m move) bool { return m.x == stuck && (m.r == r || m.r == r+1) }) {
 						continue
 					}
 					a, b = append(a[:0], g[r]...), append(b[:0], g[r+1]...)
@@ -52,7 +54,7 @@ func mergeRows(g grid) (grid, bool) {
 							b[m.x] = m.c
 						}
 					}
-					row, ok := mergeRow(out, a, b)
+					row, _, ok := mergeRow(out, a, b)
 					out = row
 					if ok {
 						for _, m := range moves {
@@ -231,8 +233,8 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 
 // mergeRow returns the cells of a and b in one row, in out's storage when
 // it has room, see mergeRows; when they don't merge, it returns that
-// storage for the next try
-func mergeRow(out, a, b []cell) ([]cell, bool) {
+// storage for the next try, and the first cell they don't merge at
+func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 	out = slices.Grow(out[:0], max(len(a), len(b)))[:max(len(a), len(b))]
 	for x := range out {
 		p, q := cell{r: ' '}, cell{r: ' '}
@@ -249,14 +251,14 @@ func mergeRow(out, a, b []cell) ([]cell, bool) {
 		switch {
 		case fixed(p) || fixed(q) || p.bg != q.bg:
 			if p.r != ' ' || q.r != ' ' || p.bg != q.bg {
-				return out, false
+				return out, x, false
 			}
 		case p.lines&down != 0 != (q.lines&up != 0):
-			return out, false // a line that ends between them
+			return out, x, false // a line that ends between them
 		case p.lines&up != 0 && q.lines&down != 0 && !link:
-			return out, false // two lines would join
+			return out, x, false // two lines would join
 		case p.lines&(left|right) != 0 && q.lines&(left|right) != 0:
-			return out, false
+			return out, x, false
 		}
 		lines := p.lines&^down | q.lines&^up
 		c := cell{r: ' ', fg: p.fg, bg: p.bg, lines: lines}
@@ -284,7 +286,7 @@ func mergeRow(out, a, b []cell) ([]cell, bool) {
 		}
 		out[x] = c
 	}
-	return out, true
+	return out, -1, true
 }
 
 // unjog straightens lines down the grid: two steps aside in a row become
@@ -334,30 +336,49 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 		return &mk.rows[p.r][p.c]
 	}
 	isNew := func(p pos) bool { m := markAt(p); return m != nil && m.new == mk.try }
-	isOld := func(p pos) bool { m := markAt(p); return m != nil && m.old == mk.try }
+	// the try that marked the old line, which the tries of new lines for
+	// one old keep
+	var oldTry uint32
+	isOld := func(p pos) bool { m := markAt(p); return m != nil && m.old == oldTry }
 	// oldArms returns the arms of the old line at p, none off it
 	oldArms := func(p pos) uint8 {
-		if m := markAt(p); m != nil && m.old == mk.try {
+		if m := markAt(p); m != nil && m.old == oldTry {
 			return m.arms
 		}
 		return 0
 	}
 	var olds []pos
+	// whether a label is beside each of olds, and whether it is a crossing
+	var labeled, crossed []bool
 	// the old line, the new one and the arms of the old in reroute, which
 	// every try routes anew
 	var oldPath, newPath, armsPath []pos
 	var oldDirs, newDirs, armsDirs []uint8
-	reroute := func(in uint8, old, path []pos, dirs []uint8, head *cell) bool {
+	// again tries another new line for the old of the try before
+	reroute := func(in uint8, old []pos, again bool, path []pos, dirs []uint8, head *cell) bool {
 		mk.try++
-		olds = olds[:0]
-		armsPath, armsDirs = route(armsPath, armsDirs, in, down, old...)
-		for i, p := range old {
-			if m := markAt(p); m != nil {
-				if m.old != mk.try {
-					m.old = mk.try
-					olds = append(olds, p)
+		if !again {
+			oldTry = mk.try
+			olds = olds[:0]
+			armsPath, armsDirs = route(armsPath, armsDirs, in, down, old...)
+			for i, p := range old {
+				if m := markAt(p); m != nil {
+					if m.old != oldTry {
+						m.old = oldTry
+						olds = append(olds, p)
+					}
+					m.arms = armsDirs[i]
 				}
-				m.arms = armsDirs[i]
+			}
+			labeled, crossed = labeled[:0], crossed[:0]
+			for _, p := range olds {
+				label := false
+				for _, d := range []pos{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+					if q := at(pos{p.r + d.r, p.c + d.c}); q != nil && !q.solid && (q.glue || q.keep) {
+						label = true
+					}
+				}
+				labeled, crossed = append(labeled, label), append(crossed, at(p).r == '╂')
 			}
 		}
 		for _, p := range path {
@@ -366,17 +387,15 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 			}
 		}
 		added, removed := 0, 0
-		for _, p := range olds {
+		for i, p := range olds {
 			if isNew(p) {
 				continue
 			}
-			for _, d := range []pos{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
-				// a label beside the line keeps it
-				if q := at(pos{p.r + d.r, p.c + d.c}); q != nil && !q.solid && (q.glue || q.keep) {
-					return false
-				}
+			// a label beside the line keeps it
+			if labeled[i] {
+				return false
 			}
-			if at(p).r == '╂' {
+			if crossed[i] {
 				removed++
 			}
 		}
@@ -476,7 +495,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 					end := pos{mid.r, c2}
 					oldPath, oldDirs = route(oldPath, oldDirs, back, down, first, pos{r, b}, mid, end)
 					newPath, newDirs = route(newPath, newDirs, back, down, first, pos{r, c2}, end)
-					if reroute(back, oldPath, newPath, newDirs, nil) {
+					if reroute(back, oldPath, false, newPath, newDirs, nil) {
 						changed = true
 					}
 				}
@@ -499,9 +518,9 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 				if !turns {
 					vias = vias[:1] // the run goes on along the lower row
 				}
-				for _, via := range vias {
+				for i, via := range vias {
 					newPath, newDirs = route(newPath, newDirs, up, out, top, via, end)
-					if reroute(up, oldPath, newPath, newDirs, nil) {
+					if reroute(up, oldPath, i > 0, newPath, newDirs, nil) {
 						changed = true
 						break
 					}
@@ -525,7 +544,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 			head := *at(mid)
 			oldPath, oldDirs = route(oldPath, oldDirs, up, down, top, pos{r, b}, mid)
 			newPath, newDirs = route(newPath, newDirs, up, down, top, pos{mid.r, c})
-			if reroute(up, oldPath, newPath, newDirs, &head) {
+			if reroute(up, oldPath, false, newPath, newDirs, &head) {
 				changed = true
 			}
 		}
@@ -546,15 +565,21 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 			}
 			last := g.bottom(pos{r, b}) - 1
 			oldPath, oldDirs = route(oldPath, oldDirs, up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
+			// a line that crosses none can't cross fewer
+			if !slices.ContainsFunc(oldPath, func(p pos) bool { q := at(p); return q != nil && q.r == '╂' }) {
+				continue
+			}
+			again := false
 			for row := first; row <= last; row++ {
 				if row == r {
 					continue
 				}
 				newPath, newDirs = route(newPath, newDirs, up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
-				if reroute(up, oldPath, newPath, newDirs, nil) {
+				if reroute(up, oldPath, again, newPath, newDirs, nil) {
 					changed = true
 					break
 				}
+				again = true
 			}
 		}
 	}
