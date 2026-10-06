@@ -16,14 +16,19 @@ func mergeRows(g grid) (grid, bool) {
 	along := func(row []cell) bool {
 		return slices.ContainsFunc(row, func(c cell) bool { return c.lines&(left|right) != 0 })
 	}
+	// most tries fail; they reuse these rows, and the one that merges
+	// keeps its row
+	var out, a, b []cell
 	for r := 0; r+1 < len(g); r++ {
 		if !along(g[r]) || !along(g[r+1]) {
 			continue
 		}
-		if row, ok := mergeRow(g[r], g[r+1]); ok {
+		row, ok := mergeRow(out, g[r], g[r+1])
+		if ok {
 			g[r] = row
 			return slices.Delete(g, r+1, r+2), true
 		}
+		out = row
 		// a line that turns along one of the rows can slide over to
 		// clear the way, a few cells at most
 		for _, end := range []struct{ r, dir int }{{r, up}, {r + 1, down}} {
@@ -33,7 +38,7 @@ func mergeRows(g grid) (grid, bool) {
 					if !ok {
 						continue
 					}
-					a, b := slices.Clone(g[r]), slices.Clone(g[r+1])
+					a, b = append(a[:0], g[r]...), append(b[:0], g[r+1]...)
 					for _, m := range moves {
 						switch m.r {
 						case r:
@@ -42,7 +47,9 @@ func mergeRows(g grid) (grid, bool) {
 							b[m.x] = m.c
 						}
 					}
-					if row, ok := mergeRow(a, b); ok {
+					row, ok := mergeRow(out, a, b)
+					out = row
+					if ok {
 						for _, m := range moves {
 							g[m.r][m.x] = m.c
 						}
@@ -209,9 +216,11 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 	}
 }
 
-// mergeRow returns the cells of a and b in one row, see mergeRows
-func mergeRow(a, b []cell) ([]cell, bool) {
-	out := make([]cell, max(len(a), len(b)))
+// mergeRow returns the cells of a and b in one row, in out's storage when
+// it has room, see mergeRows; when they don't merge, it returns that
+// storage for the next try
+func mergeRow(out, a, b []cell) ([]cell, bool) {
+	out = slices.Grow(out[:0], max(len(a), len(b)))[:max(len(a), len(b))]
 	for x := range out {
 		p, q := cell{r: ' '}, cell{r: ' '}
 		if x < len(a) {
@@ -227,14 +236,14 @@ func mergeRow(a, b []cell) ([]cell, bool) {
 		switch {
 		case fixed(p) || fixed(q) || p.bg != q.bg:
 			if p.r != ' ' || q.r != ' ' || p.bg != q.bg {
-				return nil, false
+				return out, false
 			}
 		case p.lines&down != 0 != (q.lines&up != 0):
-			return nil, false // a line that ends between them
+			return out, false // a line that ends between them
 		case p.lines&up != 0 && q.lines&down != 0 && !link:
-			return nil, false // two lines would join
+			return out, false // two lines would join
 		case p.lines&(left|right) != 0 && q.lines&(left|right) != 0:
-			return nil, false
+			return out, false
 		}
 		lines := p.lines&^down | q.lines&^up
 		c := cell{r: ' ', fg: p.fg, bg: p.bg, lines: lines}

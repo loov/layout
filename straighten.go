@@ -53,14 +53,15 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		for _, runs := range [][]segment{horizontal, vertical} {
 			for i, r := range runs {
 				for _, q := range runs[i+1:] {
-					if r.edge == q.edge || merged(r.edge, q.edge) {
+					if r.edge == q.edge {
 						continue
 					}
 					same := r.a.Y == q.a.Y && min(max(r.a.X, r.b.X), max(q.a.X, q.b.X)) > max(min(r.a.X, r.b.X), min(q.a.X, q.b.X))
 					if r.a.X == r.b.X {
 						same = r.a.X == q.a.X && min(max(r.a.Y, r.b.Y), max(q.a.Y, q.b.Y)) > max(min(r.a.Y, r.b.Y), min(q.a.Y, q.b.Y))
 					}
-					if same {
+					// merged looks up maps, so it goes last
+					if same && !merged(r.edge, q.edge) {
 						overlaps++
 					}
 				}
