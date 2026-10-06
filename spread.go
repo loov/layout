@@ -52,8 +52,8 @@ func spreadWaypoints(edges []*ledge, pad Length) {
 func spreadEnds(graph *lgraph, minSep Length) {
 	type end struct {
 		edge  *ledge
-		start bool
 		angle float64
+		start bool
 		fixed bool // a loop's attachment, which stays where it is
 	}
 	byNode := map[*lnode][]end{}
@@ -66,15 +66,15 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		}
 		if edge.From == edge.To {
 			byNode[edge.From] = append(byNode[edge.From],
-				end{edge, true, angle(edge.From, edge.Path[0]), true},
-				end{edge, false, angle(edge.From, edge.Path[len(edge.Path)-1]), true})
+				end{edge, angle(edge.From, edge.Path[0]), true, true},
+				end{edge, angle(edge.From, edge.Path[len(edge.Path)-1]), false, true})
 			continue
 		}
 		if edge.FromPort == CompassAuto {
-			byNode[edge.From] = append(byNode[edge.From], end{edge, true, angle(edge.From, edge.Path[1]), false})
+			byNode[edge.From] = append(byNode[edge.From], end{edge, angle(edge.From, edge.Path[1]), true, false})
 		}
 		if edge.ToPort == CompassAuto {
-			byNode[edge.To] = append(byNode[edge.To], end{edge, false, angle(edge.To, edge.Path[len(edge.Path)-2]), false})
+			byNode[edge.To] = append(byNode[edge.To], end{edge, angle(edge.To, edge.Path[len(edge.Path)-2]), false, false})
 		}
 	}
 	for node, ends := range byNode {

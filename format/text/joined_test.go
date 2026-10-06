@@ -83,15 +83,15 @@ func TestEdgesJoined(t *testing.T) {
 // nodes: no run of cells joined by the edge's arms touches both, right
 // beside them or past an arrowhead or marker beside them
 func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
-	steps := map[int][2]int{up: {-1, 0}, down: {1, 0}, left: {0, -1}, right: {0, 1}}
-	back := map[int]int{up: down, down: up, left: right, right: left}
+	steps := map[uint8][2]int{up: {-1, 0}, down: {1, 0}, left: {0, -1}, right: {0, 1}}
+	back := map[uint8]uint8{up: down, down: up, left: right, right: left}
 	// owns reports whether the edge id draws the arm of the cell
-	owns := func(p *cell, arm, id int) bool {
+	owns := func(p *cell, arm uint8, id int32) bool {
 		return p != nil && p.lines&arm != 0 && p.owner[bits.TrailingZeros(uint(arm))] == id
 	}
 	// touches reports whether the cell is beside the box of the node, or
 	// beside a marker that is
-	touches := func(r, x, node int) bool {
+	touches := func(r, x int, node int32) bool {
 		for _, s := range steps {
 			q := g.at(r+s[0], x+s[1])
 			if q == nil || !q.solid {
@@ -158,7 +158,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 }
 
 // ownsAny reports whether the edge id draws any arm of the cell
-func ownsAny(p *cell, id int) bool {
+func ownsAny(p *cell, id int32) bool {
 	if p == nil {
 		return false
 	}

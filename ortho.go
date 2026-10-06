@@ -203,11 +203,21 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 	}
 
+	// the jogs, and where they enter and leave, in blocks; at most one
+	// for every segment, so that the pointers into them stay put
+	segments := 0
+	for _, edge := range graph.Edges {
+		if routed(edge) {
+			segments += max(len(edge.Path)-1, 0)
+		}
+	}
+	block := make([]jog, 0, segments)
+	xs := make([]Length, 0, 2*segments)
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
 		}
-		path := slices.Clone(edge.Path)
+		path := edge.Path
 		for i := 0; i+1 < len(path); i++ {
 			a, b := path[i], path[i+1]
 			if a.X == b.X {
@@ -221,10 +231,13 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			if k < 0 || rows[k+1][0] > bottom.Y+0.5 {
 				continue // not a rank-to-rank segment
 			}
-			channels[k] = append(channels[k], &jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X,
-				ins: []Length{top.X}, outs: []Length{bottom.X}})
+			// each end its own slice, which appending copies out
+			xs = append(xs, top.X, bottom.X)
+			n := len(xs)
+			block = append(block, jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X,
+				ins: xs[n-2 : n-1 : n-1], outs: xs[n-1 : n : n]})
+			channels[k] = append(channels[k], &block[len(block)-1])
 		}
-		edge.Path = path
 	}
 
 	// edges along a rank arc over it, in the bottom of the channel above;

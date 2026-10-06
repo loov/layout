@@ -69,8 +69,8 @@ type seamOpts struct {
 
 // seamAxis describes the lines of a grid that seams run across
 type seamAxis struct {
-	next, prev int // the arms that join a cell to the line after and before it
-	lo, hi     int // the directions along a line, toward its start and end
+	next, prev uint8 // the arms that join a cell to the line after and before it
+	lo, hi     uint8 // the directions along a line, toward its start and end
 }
 
 // columns reports whether the lines are the columns of the drawing
@@ -177,7 +177,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 				return blocked
 			}
 			// a run kept for a label stays long enough for it, see runs
-			if c.need > 0 && runs[x] <= c.need {
+			if c.need > 0 && runs[x] <= int(c.need) {
 				return blocked
 			}
 			if x < ends[i] {
@@ -421,7 +421,7 @@ func leaves(g grid, i, x int) bool {
 // once the seam is cut.
 type bend struct {
 	row, at, to int
-	lines, join int
+	lines, join uint8
 	extends     bool // the line turned at at, and now runs one cell further
 }
 
@@ -449,7 +449,7 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) (out [2]bend, k int) {
 		}
 		return ax.straightRun(g[i][x])
 	}
-	add := func(row, at, to, lines, join int, near, other int) {
+	add := func(row, at, to int, lines, join uint8, near, other int) {
 		extends := lines == lo|hi
 		if bits.OnesCount(uint(lines)) == 2 && (extends || straight(near) && straight(other)) {
 			out[k] = bend{row, at, to, lines, join, extends}
@@ -473,7 +473,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 	next, prev := ax.next, ax.prev
 	// has reports whether the cell at x of line i has the arm, with lines
 	// past the grid having none
-	has := func(i, x, arm int) bool {
+	has := func(i, x int, arm uint8) bool {
 		return i >= 0 && i < len(cut) && x >= 0 && x < len(cut[i]) && arms(cut[i][x].r)&arm != 0
 	}
 	for i := 1; i < len(path); i++ {
@@ -513,7 +513,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 				// a line along a box stays of the box
 				like := cut[bd.row][bd.at]
 				id := ownerOf(like)
-				owner := [4]int{id, id, id, id}
+				owner := [4]int32{id, id, id, id}
 				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner}
 				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner}
 				if !bd.extends {
@@ -531,7 +531,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 }
 
 // ownerOf returns the edge that drew a line of c, 0 for none
-func ownerOf(c cell) int {
+func ownerOf(c cell) int32 {
 	for arm := range 4 {
 		if c.lines&(1<<arm) != 0 && c.owner[arm] != 0 {
 			return c.owner[arm]

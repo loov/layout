@@ -37,12 +37,13 @@ type ID uint32
 type Node struct {
 	ID ID
 
+	// the flags sit beside ID, in what would be padding
 	Virtual bool
-
-	// Cluster the node belongs to, if any; BorderLeft/BorderRight mark
-	// the virtual border nodes of a cluster
-	Cluster                 *Cluster
+	// BorderLeft/BorderRight mark the virtual border nodes of a cluster
 	BorderLeft, BorderRight bool
+
+	// Cluster the node belongs to, if any
+	Cluster *Cluster
 
 	In  Nodes
 	Out Nodes

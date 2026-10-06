@@ -10,7 +10,7 @@ import (
 // in cell end. It sits in the gap before the node when the run there is
 // straight, else on the node border. It reports whether style has a
 // marker; styles without a marker of their own draw a normal arrowhead.
-func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
+func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) bool {
 	if style == layout.ArrowDefault || style == layout.ArrowNone {
 		return false
 	}
@@ -37,7 +37,7 @@ func (c *canvas) marker(style layout.Arrow, dir int, end [2]int) bool {
 // and b that reaches b, pointing at b. walk draws the horizontal leg
 // first, so from b when the run starts at b. Within a cell, it is the
 // direction of the segment from a to b in graph coordinates, p to q.
-func arrival(a, b [2]int, startsAtB bool, p, q layout.Vector) int {
+func arrival(a, b [2]int, startsAtB bool, p, q layout.Vector) uint8 {
 	horizontal := a[0] != b[0] && (startsAtB || a[1] == b[1])
 	switch {
 	case horizontal && b[0] > a[0]:
@@ -261,7 +261,7 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 		return // pinned nodes can lie outside the canvas
 	}
 	// whether the cell at dx, dy from the end has an arm toward it
-	arm := func(dx, dy, dir int) bool {
+	arm := func(dx, dy int, dir uint8) bool {
 		q := c.at(end[0]+dx, end[1]+dy)
 		return q != nil && q.lines&dir != 0
 	}
@@ -288,11 +288,11 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 // mergedEdges returns an id for the edges that the layout merged, the
 // same for those in a group. An edge merges at its start or its end, not
 // both. The ids are negative, apart from those the canvas counts up.
-func mergedEdges(l *layout.Layout) map[*layout.Edge]int {
-	ids := map[*layout.Edge]int{}
+func mergedEdges(l *layout.Layout) map[*layout.Edge]int32 {
+	ids := map[*layout.Edge]int32{}
 	for i, edge := range l.Graph.Edges {
 		if m := l.Edges[i].Merged; m != [2]int{} {
-			ids[edge] = -max(m[0], m[1])
+			ids[edge] = -int32(max(m[0], m[1]))
 		}
 	}
 	return ids

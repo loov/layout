@@ -21,7 +21,7 @@ var rounded = map[rune]rune{'┌': '╭', '┐': '╮', '└': '╰', '┘': '�
 // glyph returns the line character with the arms in lines, drawing the
 // arms in the mask heavy as heavy lines. A lone arm is drawn as a full
 // straight line.
-func glyph(lines, heavy int) rune {
+func glyph(lines, heavy uint8) rune {
 	if lines&(lines-1) == 0 {
 		lines |= opposite(lines)
 		if heavy != 0 {
@@ -29,7 +29,7 @@ func glyph(lines, heavy int) rune {
 		}
 	}
 	i := 0
-	for _, arm := range []int{up, down, left, right} {
+	for _, arm := range []uint8{up, down, left, right} {
 		w := 0
 		if lines&arm != 0 {
 			w = 1
@@ -48,9 +48,11 @@ var (
 	vee   = [right + 1]rune{up: '↑', down: '↓', left: '←', right: '→'}
 )
 
-func opposite(dir int) int { return [right + 1]int{up: down, down: up, left: right, right: left}[dir] }
-func dx(dir int) int       { return [right + 1]int{left: -1, right: 1}[dir] }
-func dy(dir int) int       { return [right + 1]int{up: -1, down: 1}[dir] }
+func opposite(dir uint8) uint8 {
+	return [right + 1]uint8{up: down, down: up, left: right, right: left}[dir]
+}
+func dx(dir uint8) int { return [right + 1]int{left: -1, right: 1}[dir] }
+func dy(dir uint8) int { return [right + 1]int{up: -1, down: 1}[dir] }
 func sign(v int) int {
 	if v < 0 {
 		return -1
@@ -60,7 +62,7 @@ func sign(v int) int {
 
 // corner returns the line character with the arms in lines, with rounded
 // corners as edges are drawn
-func corner(lines int) rune {
+func corner(lines uint8) rune {
 	r := glyph(lines, 0)
 	if c, ok := rounded[r]; ok {
 		return c
@@ -70,9 +72,9 @@ func corner(lines int) rune {
 
 // arms returns the directions that the line character r joins toward;
 // marks and dots join every way
-func arms(r rune) int {
+func arms(r rune) uint8 {
 	if i := uint32(r - armsFirst); i < uint32(len(armsTable)) {
-		return int(armsTable[i])
+		return armsTable[i]
 	}
 	return 0
 }
@@ -84,16 +86,16 @@ const armsFirst = '\u2190'
 
 var armsTable = func() (table [0x2600 - armsFirst]uint8) {
 	for i := range table {
-		table[i] = uint8(lookupArms(armsFirst + rune(i)))
+		table[i] = lookupArms(armsFirst + rune(i))
 	}
 	return table
 }()
 
 // lookupArms returns arms for any character, see arms
-func lookupArms(r rune) int {
+func lookupArms(r rune) uint8 {
 	if i := slices.Index(glyphs, r); i > 0 {
-		mask := 0
-		for _, arm := range []int{right, left, down, up} {
+		mask := uint8(0)
+		for _, arm := range []uint8{right, left, down, up} {
 			if i%3 != 0 {
 				mask |= arm
 			}
