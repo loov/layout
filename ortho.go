@@ -526,7 +526,7 @@ func separate(want []Length, weight []float64, gap, lo, hi Length) []Length {
 		sum, weight float64
 		n           int
 	}
-	var blocks []block
+	blocks := make([]block, 0, len(want))
 	for i, x := range want {
 		blocks = append(blocks, block{(float64(x) - float64(i)*float64(gap)) * weight[i], weight[i], 1})
 		for len(blocks) > 1 {

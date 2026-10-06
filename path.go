@@ -10,6 +10,20 @@ import (
 // flattenPath approximates the rounded corners drawn by the writers
 // (quadratic curves of the given radius) with two extra points per corner.
 func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
+	return appendFlatPath(nil, path, radius, maxDeviation)
+}
+
+// flatLen returns the length of the path flattenPath returns
+func flatLen(path []Vector) int {
+	if len(path) < 3 {
+		return len(path)
+	}
+	return 3*len(path) - 4
+}
+
+// appendFlatPath appends the flattened path to out, see flattenPath; a
+// path without corners is returned as it is
+func appendFlatPath(out, path []Vector, radius, maxDeviation Length) []Vector {
 	if len(path) < 3 {
 		return path
 	}
@@ -23,7 +37,7 @@ func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
 		}
 		return Vector{X: a.X + (b.X-a.X)*d/l, Y: a.Y + (b.Y-a.Y)*d/l}
 	}
-	out := []Vector{path[0]}
+	out = append(out, path[0])
 	for i := 1; i+1 < len(path); i++ {
 		prev, p, next := path[i-1], path[i], path[i+1]
 		r := Length(draw.CornerRadius(drawPoint(prev), drawPoint(p), drawPoint(next), float64(radius), float64(maxDeviation)))

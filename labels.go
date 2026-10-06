@@ -12,8 +12,21 @@ import (
 // avoid them.
 func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radius Length, keep map[*ledge]bool) {
 	paths := make([][]Vector, len(edges), len(edges)+len(clusters))
+	// all the flattened paths in one block
+	n := 0
+	for _, edge := range edges {
+		n += flatLen(edge.Path)
+	}
+	points := make([]Vector, 0, n)
 	for i, edge := range edges {
-		paths[i] = flattenPath(edge.Path, radius, pad)
+		start := len(points)
+		flat := appendFlatPath(points, edge.Path, radius, pad)
+		if len(edge.Path) < 3 {
+			paths[i] = flat
+			continue
+		}
+		points = flat
+		paths[i] = points[start:len(points):len(points)]
 	}
 	// the sides of cluster boxes are lines like edges, after the edge paths
 	for _, cluster := range clusters {

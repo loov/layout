@@ -798,7 +798,13 @@ func (c *hierComponent) rankPaths(byRank [][]*lnode) map[[2]hier.ID][]Vector {
 
 		sourcedef := c.reverse[source.ID]
 		for _, out := range source.Out {
-			path := []Vector{}
+			// the ends, a point past a flat label and one for every
+			// virtual node, sized at once
+			n := 3
+			for target := out; target.Virtual && len(target.Out) > 0; target = target.Out[0] {
+				n++
+			}
+			path := make([]Vector, 0, n)
 			path = append(path, sourcedef.BottomCenter().Add(Vector{X: c.packed(sourcedef)}))
 			if below := sourcedef.Center.Y + c.flatBelow[sourcedef]; c.graphdef.Splines != SplinesOrtho && below > path[0].Y {
 				// past the label beside the node first, see reserveFlatLabels

@@ -17,12 +17,18 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		ma, mb := graphdef.merged[a], graphdef.merged[b]
 		return ma[0] != 0 && ma[0] == mb[0] || ma[1] != 0 && ma[1] == mb[1]
 	}
+	// the helpers below fill buffers kept across the tries, as each try
+	// runs them over every node and edge, and their results are used up
+	// before they run again
+	type segment struct {
+		a, b Vector
+		edge *ledge
+	}
+	var horizontal, vertical []segment
+	var xs, wants []float32
+	var adjacent, kept []*hier.Node
 	measure := func() (bends, crossings, overlaps int) {
-		type segment struct {
-			a, b Vector
-			edge *ledge
-		}
-		var horizontal, vertical []segment
+		horizontal, vertical = horizontal[:0], vertical[:0]
 		for _, edge := range graphdef.Edges {
 			for i := 1; i < len(edge.Path); i++ {
 				a, b := edge.Path[i-1], edge.Path[i]
@@ -99,7 +105,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		return gap
 	}
 	at := func() []float32 {
-		xs := make([]float32, len(graph.Nodes))
+		xs = slices.Grow(xs[:0], len(graph.Nodes))[:len(graph.Nodes)]
 		for i, node := range graph.Nodes {
 			xs[i] = node.Center.X
 		}
@@ -114,7 +120,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 	}
 	label := func(node *hier.Node) bool { return node.Virtual && node.Anchor != 0 }
 	neighbors := func(node *hier.Node, before bool) []*hier.Node {
-		var out []*hier.Node
+		out := adjacent[:0]
 		next := node.Out
 		if before {
 			next = node.In
@@ -134,6 +140,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 				out = append(out, n)
 			}
 		}
+		adjacent = out
 		return out
 	}
 	// a node centered over its children, or under its parents, stays: a
@@ -204,10 +211,12 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 			}
 			// in line with a node it has an edge to, or a cell or two over,
 			// where ends that take slots along the node line up
-			var wants []float32
-			for _, other := range slices.Concat(node.In, node.Out) {
-				if !straight(node, other) {
-					wants = append(wants, other.Center.X+other.Anchor-node.Anchor)
+			wants = wants[:0]
+			for _, others := range [2][]*hier.Node{node.In, node.Out} {
+				for _, other := range others {
+					if !straight(node, other) {
+						wants = append(wants, other.Center.X+other.Anchor-node.Anchor)
+					}
 				}
 			}
 			for _, k := range []float32{1, -1, 2, -2} {
@@ -218,7 +227,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 					continue
 				}
 				before := at()
-				var kept []*hier.Node
+				kept = kept[:0]
 				for _, n := range graph.Nodes {
 					if !n.Virtual && balanced(n) {
 						kept = append(kept, n)
