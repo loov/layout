@@ -35,7 +35,16 @@ func OrderRanksN(graph *Graph, iterations int) {
 			stale++
 		}
 	}
+	// the best order can be one that no transpose has seen, such as the
+	// depth first one, when every sweep from it ends up worse
 	graph.ByRank = best
+	best = saveOrder(graph)
+	OrderRanksTranspose(graph)
+	orderFlatEdges(graph)
+	orderClusters(graph)
+	if graph.TotalCrossings() >= bestCrossings {
+		graph.ByRank = best
+	}
 	OrderRanksChains(graph)
 	graph.assignPos()
 }

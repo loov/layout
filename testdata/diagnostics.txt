@@ -75,7 +75,7 @@ pgram        nodes=0 through=1 near=3 crossings=812 shallow=479 overlaps=1 paral
 pm2way       nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=561 area=148241 unbalance=113
 pmpipe       nodes=0 through=0 near=3 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=1523 area=154246 unbalance=473
 polypoly     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=742 area=1469372 unbalance=0
-pprof        nodes=0 through=1 near=7 crossings=12 shallow=3 overlaps=0 parallel=2 ends=0 shafts=0 jagged=3 bends=5 corners=42 wavy=5 back=0 labels=0 far=0 length=6679 area=1461893 unbalance=2154
+pprof        nodes=0 through=0 near=6 crossings=7 shallow=2 overlaps=0 parallel=1 ends=0 shafts=0 jagged=2 bends=4 corners=46 wavy=5 back=0 labels=0 far=0 length=6319 area=1392730 unbalance=2000
 proc3d       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=1 jagged=0 bends=0 corners=1 wavy=0 back=0 labels=0 far=0 length=21433 area=5287323 unbalance=226
 psfonttest   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=832 area=547048 unbalance=0
 psg          nodes=0 through=0 near=0 crossings=6 shallow=5 overlaps=0 parallel=0 ends=0 shafts=6 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=40360 area=3428725 unbalance=350

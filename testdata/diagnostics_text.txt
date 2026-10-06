@@ -122,8 +122,8 @@ pmpipe       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=
 pmpipe_merged nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=10 parallel=10 ends=10 shafts=0 jagged=0 bends=2 corners=40 wavy=2 back=0 labels=0 far=0 length=4754 area=434759 unbalance=400
 polypoly     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=1024 area=2086354 unbalance=0
 polypoly_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=1024 area=2086354 unbalance=0
-pprof        nodes=0 through=0 near=0 crossings=12 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=15 corners=90 wavy=15 back=0 labels=0 far=0 length=17577 area=4675942 unbalance=2550
-pprof_merged nodes=0 through=0 near=0 crossings=12 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=15 corners=94 wavy=15 back=0 labels=0 far=0 length=17497 area=4648192 unbalance=2553
+pprof        nodes=0 through=0 near=0 crossings=7 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=14 corners=88 wavy=14 back=0 labels=0 far=0 length=16853 area=4503398 unbalance=2338
+pprof_merged nodes=0 through=0 near=0 crossings=7 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=14 corners=90 wavy=14 back=0 labels=0 far=0 length=16645 area=4476672 unbalance=2338
 proc3d       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=54 wavy=0 back=0 labels=0 far=0 length=17465 area=4126334 unbalance=384
 proc3d_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=51 parallel=51 ends=51 shafts=0 jagged=0 bends=0 corners=58 wavy=0 back=0 labels=0 far=0 length=18214 area=4147070 unbalance=116
 psfonttest   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=1664 area=480240 unbalance=0
