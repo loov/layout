@@ -112,6 +112,10 @@ func seams(g grid, opts seamOpts) grid {
 	// crossings that failed to jog, by line and cell, until a seam is cut
 	forbid := map[[2]int]bool{}
 	jogging := false // only seams that cross lines are left
+	// buffers reused by every pass, which is the whole grid each time
+	var bestBuf, fromBuf, reach, src []int
+	var joined []bool
+	var spare grid
 	for {
 		for i := range g {
 			g[i] = append(g[i], cell{r: ' '})
@@ -205,25 +209,43 @@ func seams(g grid, opts seamOpts) grid {
 			return best
 		}
 		// best[i][x] is the cost of the cheapest seam through the lines up
-		// to i that ends at x, coming from from[i][x] on the line before
+		// to i that ends at x, coming from from[i][x] on the line before.
+		// Past the last cell that isn't plain blank, every column is like
+		// the first one there, which seams prefer as it is further left;
+		// leave them out.
+		w := 0
+		for _, line := range g {
+			for x := len(line) - 1; x >= w; x-- {
+				if line[x] != (cell{r: ' '}) {
+					w = x + 1
+					break
+				}
+			}
+		}
+		w = min(m, w+1)
+		if len(bestBuf) < n*m {
+			bestBuf, fromBuf = make([]int, n*m), make([]int, n*m)
+		}
+		if len(reach) < w {
+			reach, src, joined = make([]int, w), make([]int, w), make([]bool, w)
+		}
 		best, from := make([][]int, n), make([][]int, n)
 		for i := range n {
-			best[i], from[i] = make([]int, m), make([]int, m)
-			for x := range m {
+			best[i], from[i] = bestBuf[i*w:(i+1)*w], fromBuf[i*w:(i+1)*w]
+			for x := range w {
 				best[i][x] = cost(i, x)
 			}
 			if i == 0 {
 				continue
 			}
-			joined := make([]bool, m)
-			for x := range m {
+			for x := range w {
 				a, b := g[i-1][x], g[i][x]
 				sticky := func(c cell) bool { return c.keep || c.glue }
 				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
 					sticky(a) && (sticky(b) || b.r != ' ') || sticky(b) && a.r != ' '
 			}
 			if !turn {
-				for x := range m {
+				for x := range w {
 					best[i][x] += best[i-1][x]
 					from[i][x] = x
 				}
@@ -231,8 +253,7 @@ func seams(g grid, opts seamOpts) grid {
 			}
 			// the cheapest way to x from the line before, moving one cell
 			// at a time and past a joined cell only where it can jog
-			reach, src := make([]int, m), make([]int, m)
-			for x := range m {
+			for x := range w {
 				reach[x], src[x] = best[i-1][x], x
 				if x > 0 {
 					if r := best[i-1][x-1] + 1; r < reach[x] {
@@ -247,7 +268,7 @@ func seams(g grid, opts seamOpts) grid {
 					}
 				}
 			}
-			for x := m - 2; x >= 0; x-- {
+			for x := w - 2; x >= 0; x-- {
 				if r := best[i-1][x+1] + 1; r < reach[x] {
 					reach[x], src[x] = r, x+1
 				}
@@ -259,13 +280,13 @@ func seams(g grid, opts seamOpts) grid {
 					reach[x], src[x] = r, src[x+1]
 				}
 			}
-			for x := range m {
+			for x := range w {
 				best[i][x] += reach[x]
 				from[i][x] = src[x]
 			}
 		}
 		end := 0
-		for x := range m {
+		for x := range w {
 			if best[n-1][x] < best[n-1][end] {
 				end = x
 			}
@@ -285,9 +306,12 @@ func seams(g grid, opts seamOpts) grid {
 			path[i] = x
 			x = from[i][x]
 		}
-		cut := make(grid, n)
+		if len(spare) != n {
+			spare = make(grid, n)
+		}
+		cut := spare
 		for i, x := range path {
-			cut[i] = slices.Delete(slices.Clone(g[i]), x, x+1)
+			cut[i] = append(append(cut[i][:0], g[i][:x]...), g[i][x+1:]...)
 		}
 		jogs, failed, ok := bendLines(g, cut, path, opts.lines)
 		if ok && jogs > 1 {
@@ -305,7 +329,7 @@ func seams(g grid, opts seamOpts) grid {
 			}
 			continue
 		}
-		g = cut
+		g, spare = cut, g
 		clear(forbid)
 		jogging = false
 	}
