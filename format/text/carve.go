@@ -111,25 +111,13 @@ var (
 // seams returns the block that the lines it returns are in, and gives sc
 // the other blocks it is done with.
 func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
-	// the cost of a seam through a cell, and of each cell it moves along
-	const (
-		trailing = 1 << 20 // past the end of the line, which removes nothing
-		blocked  = 1 << 40
-		jog      = 1 << 16 // crossing a straight line, which bends it
-		extend   = 4       // crossing a line where it turns
-	)
-	ax := opts.lines
-	next, prev, lo, hi := opts.lines.next, opts.lines.prev, opts.lines.lo, opts.lines.hi
-	turn, bend, stubs := opts.turn, opts.bend, opts.stubs
-	// the lines run across the ranks when they are columns, see carve
-	across := ax.columns()
-	// a plain line along the lines
-	along := glyph(lo|hi, 0)
-	// crossings that failed to jog, by line and cell, until a seam is cut
-	forbid := map[[2]int]bool{}
-	jogging := false // only seams that cross lines are left
+	p := &seamPass{opts: opts, forbid: map[[2]int]bool{}}
+	// the lines run across the ranks when they are columns, see carve;
+	// along is a plain line along the lines
+	p.across, p.along = opts.lines.columns(), glyph(opts.lines.lo|opts.lines.hi, 0)
+	turn, bend := opts.turn, opts.bend
 	// buffers reused by every pass, which is the whole grid each time
-	var fromBuf, prevBest, curBest, reach, src, ends, runs, path []int
+	var fromBuf, prevBest, curBest, reach, src, path []int
 	var joined []bool
 	var from [][]int
 	// spare holds the next cut, in spareCells
@@ -153,83 +141,19 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			return g, cells
 		}
 		m := len(g[0])
+		p.g = g
 		// the cells past the end of each line are blank
-		ends = slices.Grow(ends[:0], n)[:n]
+		p.ends = slices.Grow(p.ends[:0], n)[:n]
 		for i, line := range g {
-			ends[i] = 0
+			p.ends[i] = 0
 			for x := len(line) - 1; x >= 0; x-- {
 				if line[x].r != ' ' || line[x].bg != 0 {
-					ends[i] = x + 1
+					p.ends[i] = x + 1
 					break
 				}
 			}
 		}
-		width := slices.Max(ends)
-		cost := func(i, x int) int {
-			line := g[i]
-			c := &line[x]
-			if c.keep || c.kind&ax.seam == 0 {
-				return blocked
-			}
-			// a run kept for a label stays long enough for it, see runs
-			if c.need > 0 && runs[x] <= int(c.need) {
-				return blocked
-			}
-			if x < ends[i] {
-				// with stubs, last, blanks keep one of a run before what
-				// follows, and none around the text of labels
-				if stubs && c.r == ' ' && c.bg == 0 && x > 0 && x+1 < len(line) {
-					text := func(p cell) bool { return p.keep && !p.solid }
-					if after := line[x+1]; after.r == ' ' && after.bg == 0 || text(after) || text(line[x-1]) {
-						return 0
-					}
-				}
-				// a line that turns right after leaving what it joins
-				// needs no cell between, unless it leaves a node for an
-				// arrowhead; and a node needs no blank under it where what
-				// follows is blank or drawn by an edge, see leaves
-				if across && x > 0 && x+1 < len(line) {
-					before, after := line[x-1], line[x+1]
-					arrow := after.kind&ax.mark != 0
-					if c.r == along && before.kind&hi != 0 && (after.kind&lo != 0 || arrow) && !(arrow && before.solid) &&
-						// or, with stubs, that goes on straight, which keeps a
-						// cell of it
-						(arrow || after.kind&(up|down|left|right) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
-						return 0
-					}
-					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(g, i, x) {
-						return 0
-					}
-				}
-				// a marker on a run continues it like the line it sits on
-				if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && b.kind&ax.mark != 0) {
-					return blocked
-				}
-				return 0
-			}
-			if jogging && ends[i] == width {
-				// a seam with jogs has to narrow the grid
-				return blocked
-			}
-			return trailing
-		}
-		// crossing is the cost of a seam crossing the line at x between
-		// lines i-1 and i, moving toward hi when toHi is set
-		crossing := func(i, x int, toHi bool) int {
-			if !jogging || forbid[[2]int{i, x}] {
-				return blocked
-			}
-			best := blocked
-			bends, k := bendsAt(g, i, x, toHi, opts.lines)
-			for _, b := range bends[:k] {
-				if b.extends {
-					best = min(best, extend)
-				} else {
-					best = min(best, jog)
-				}
-			}
-			return best
-		}
+		p.width = slices.Max(p.ends)
 		// best[i][x] is the cost of the cheapest seam through the lines up
 		// to i that ends at x, coming from from[i][x] on the line before.
 		// Past the last cell that isn't plain blank, every column is like
@@ -260,93 +184,23 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		prevBest, curBest = slices.Grow(prevBest[:0], w)[:w], slices.Grow(curBest[:0], w)[:w]
 		reach, src = slices.Grow(reach[:0], w)[:w], slices.Grow(src[:0], w)[:w]
 		joined = slices.Grow(joined[:0], w)[:w]
-		runs = slices.Grow(runs[:0], m)[:m]
+		p.runs = slices.Grow(p.runs[:0], m)[:m]
 		for i := range n {
 			from[i] = fromBuf[i*w : (i+1)*w]
-			// the length of the run of equal need around every cell that
-			// has one; those aren't plain blanks, so they are all before w
-			line := g[i][:w]
-			for x := 0; x < len(line); {
-				if line[x].need == 0 {
-					x++
-					continue
-				}
-				k := x + 1
-				for k < len(line) && line[k].need == line[x].need {
-					k++
-				}
-				for p := x; p < k; p++ {
-					runs[p] = k - x
-				}
-				x = k
-			}
 			prevBest, curBest = curBest, prevBest
-			best := curBest
-			for x := range w {
-				best[x] = cost(i, x)
-			}
+			p.costs(i, curBest)
 			if i == 0 {
 				continue
 			}
-			before := prevBest
 			if !turn {
 				for x := range w {
-					best[x] += before[x]
+					curBest[x] += prevBest[x]
 					from[i][x] = x
 				}
 				continue
 			}
-			above, here, joined := g[i-1][:w], g[i][:w], joined[:w]
-			for x := range joined {
-				a, b := &above[x], &here[x]
-				joined[x] = a.kind&next != 0 || b.kind&prev != 0 ||
-					(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
-			}
-			// the cheapest way to x from the line before, moving one cell
-			// at a time and past a joined cell only where it can jog;
-			// crossings cost more than nothing, so one is only worth
-			// pricing where the move would win without it. All are as
-			// long as joined, which spares the bounds checks.
-			before, reach, src, best, from := before[:len(joined)], reach[:len(joined)], src[:len(joined)], best[:len(joined)], from[i][:len(joined)]
-			// the sweeps keep the cell before in last, which spares
-			// reading back what they just stored
-			var last, lastSrc int
-			for x := range joined {
-				cur, curSrc := before[x], x
-				if x > 0 {
-					if r := before[x-1] + 1; r < cur {
-						cur, curSrc = r, x-1
-					}
-					r := last + 1
-					if joined[x-1] && r < cur {
-						r += crossing(i, x-1, true)
-					}
-					if r < cur {
-						cur, curSrc = r, lastSrc
-					}
-				}
-				reach[x], src[x] = cur, curSrc
-				last, lastSrc = cur, curSrc
-			}
-			for x := len(joined) - 2; x >= 0; x-- {
-				cur, curSrc := reach[x], src[x]
-				if r := before[x+1] + 1; r < cur {
-					cur, curSrc = r, x+1
-				}
-				r := last + 1
-				if joined[x+1] && r < cur {
-					r += crossing(i, x+1, false)
-				}
-				if r < cur {
-					cur, curSrc = r, lastSrc
-				}
-				reach[x], src[x] = cur, curSrc
-				last, lastSrc = cur, curSrc
-			}
-			for x := range joined {
-				best[x] += reach[x]
-				from[x] = src[x]
-			}
+			joins(g[i-1][:w], g[i][:w], joined, opts.lines)
+			p.sweep(i, prevBest, curBest, from[i], reach, src, joined)
 		}
 		last := curBest
 		end := 0
@@ -355,12 +209,12 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 				end = x
 			}
 		}
-		if last[end] >= n*trailing {
+		if last[end] >= n*seamTrailing {
 			for i := range g {
 				g[i] = g[i][:m-1]
 			}
-			if bend && turn && !jogging {
-				jogging = true
+			if bend && turn && !p.jogging {
+				p.jogging = true
 				continue
 			}
 			return g, cells
@@ -393,7 +247,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			return g, cells
 		}
 		if !ok {
-			forbid[failed] = true
+			p.forbid[failed] = true
 			for i := range g {
 				g[i] = g[i][:m-1]
 			}
@@ -401,8 +255,194 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		}
 		g, spare = cut, g
 		cells, spareCells = spareCells, cells
-		clear(forbid)
-		jogging = false
+		clear(p.forbid)
+		p.jogging = false
+	}
+}
+
+// the cost of a seam through a cell, and of each cell it moves along
+const (
+	seamTrailing = 1 << 20 // past the end of the line, which removes nothing
+	seamBlocked  = 1 << 40
+	seamJog      = 1 << 16 // crossing a straight line, which bends it
+	seamExtend   = 4       // crossing a line where it turns
+)
+
+// seamPass is what the costs of the seams of one pass of seams depend on.
+// The loops over the cells are methods of their own, rather than parts
+// of seams, so that each has the registers to itself.
+type seamPass struct {
+	g       grid
+	ends    []int // the cells past the end of each line are blank
+	width   int   // the longest line
+	runs    []int // the length of the run of equal need around each cell, see costs
+	jogging bool  // only seams that cross lines are left
+	// crossings that failed to jog, by line and cell, until a seam is cut
+	forbid map[[2]int]bool
+	opts   seamOpts
+	across bool // the lines run across the ranks
+	along  rune // a plain line along the lines
+}
+
+// costs sets best to the cost of a seam through each cell of line i
+func (p *seamPass) costs(i int, best []int) {
+	// the length of the run of equal need around every cell that has one;
+	// those aren't plain blanks, so they are all before the cells costed
+	line := p.g[i][:len(best)]
+	for x := 0; x < len(line); {
+		if line[x].need == 0 {
+			x++
+			continue
+		}
+		k := x + 1
+		for k < len(line) && line[k].need == line[x].need {
+			k++
+		}
+		for q := x; q < k; q++ {
+			p.runs[q] = k - x
+		}
+		x = k
+	}
+	ax, stubs, across, along, runs := p.opts.lines, p.opts.stubs, p.across, p.along, p.runs[:len(best)]
+	lo, hi := ax.lo, ax.hi
+	end := p.ends[i]
+	// past the end, a seam with jogs has to narrow the grid
+	past := seamTrailing
+	if p.jogging && end == p.width {
+		past = seamBlocked
+	}
+	line = p.g[i]
+	text := func(p cell) bool { return p.keep && !p.solid }
+	for x := range best {
+		c := &line[x]
+		if c.keep || c.kind&ax.seam == 0 {
+			best[x] = seamBlocked
+			continue
+		}
+		// a run kept for a label stays long enough for it
+		if c.need > 0 && runs[x] <= int(c.need) {
+			best[x] = seamBlocked
+			continue
+		}
+		if x >= end {
+			best[x] = past
+			continue
+		}
+		// with stubs, last, blanks keep one of a run before what
+		// follows, and none around the text of labels
+		if stubs && c.r == ' ' && c.bg == 0 && x > 0 && x+1 < len(line) {
+			if after := line[x+1]; after.r == ' ' && after.bg == 0 || text(after) || text(line[x-1]) {
+				best[x] = 0
+				continue
+			}
+		}
+		// a line that turns right after leaving what it joins needs no
+		// cell between, unless it leaves a node for an arrowhead; and a
+		// node needs no blank under it where what follows is blank or
+		// drawn by an edge, see leaves
+		if across && x > 0 && x+1 < len(line) {
+			before, after := line[x-1], line[x+1]
+			arrow := after.kind&ax.mark != 0
+			if c.r == along && before.kind&hi != 0 && (after.kind&lo != 0 || arrow) && !(arrow && before.solid) &&
+				// or, with stubs, that goes on straight, which keeps a
+				// cell of it
+				(arrow || after.kind&(up|down|left|right) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
+				best[x] = 0
+				continue
+			}
+			if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(p.g, i, x) {
+				best[x] = 0
+				continue
+			}
+		}
+		// a marker on a run continues it like the line it sits on
+		if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && b.kind&ax.mark != 0) {
+			best[x] = seamBlocked
+			continue
+		}
+		best[x] = 0
+	}
+}
+
+// crossing is the cost of a seam crossing the line at x between lines
+// i-1 and i, moving toward hi when toHi is set
+func (p *seamPass) crossing(i, x int, toHi bool) int {
+	if !p.jogging || p.forbid[[2]int{i, x}] {
+		return seamBlocked
+	}
+	best := seamBlocked
+	bends, k := bendsAt(p.g, i, x, toHi, p.opts.lines)
+	for _, b := range bends[:k] {
+		if b.extends {
+			best = min(best, seamExtend)
+		} else {
+			best = min(best, seamJog)
+		}
+	}
+	return best
+}
+
+// joins sets joined to whether each cell of above joins the one below it
+// in here: the cell above has the arm next, or the one below the arm
+// prev, or one is kept or glued and the other is too or is not blank
+func joins(above, here []cell, joined []bool, ax seamAxis) {
+	next, prev := ax.next, ax.prev
+	above, here = above[:len(joined)], here[:len(joined)]
+	for x := range joined {
+		a, b := &above[x], &here[x]
+		joined[x] = a.kind&next != 0 || b.kind&prev != 0 ||
+			(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
+	}
+}
+
+// sweep adds to best the cheapest way to each cell of line i from the
+// line before, whose costs are in before, moving one cell at a time and
+// past a joined cell only where it can jog, and sets from to where each
+// comes from; reach and src are room for the sweeps. Crossings cost
+// more than nothing, so one is only worth pricing where the move would
+// win without it.
+func (p *seamPass) sweep(i int, before, best, from, reach, src []int, joined []bool) {
+	// all as long as joined, which spares the bounds checks
+	n := len(joined)
+	before, best, from, reach, src = before[:n], best[:n], from[:n], reach[:n], src[:n]
+	// the sweeps keep the cell before in last, which spares reading back
+	// what they just stored
+	var last, lastSrc int
+	for x := range joined {
+		cur, curSrc := before[x], x
+		if x > 0 {
+			if r := before[x-1] + 1; r < cur {
+				cur, curSrc = r, x-1
+			}
+			r := last + 1
+			if joined[x-1] && r < cur {
+				r += p.crossing(i, x-1, true)
+			}
+			if r < cur {
+				cur, curSrc = r, lastSrc
+			}
+		}
+		reach[x], src[x] = cur, curSrc
+		last, lastSrc = cur, curSrc
+	}
+	for x := n - 2; x >= 0; x-- {
+		cur, curSrc := reach[x], src[x]
+		if r := before[x+1] + 1; r < cur {
+			cur, curSrc = r, x+1
+		}
+		r := last + 1
+		if joined[x+1] && r < cur {
+			r += p.crossing(i, x+1, false)
+		}
+		if r < cur {
+			cur, curSrc = r, lastSrc
+		}
+		reach[x], src[x] = cur, curSrc
+		last, lastSrc = cur, curSrc
+	}
+	for x := range joined {
+		best[x] += reach[x]
+		from[x] = src[x]
 	}
 }
 
