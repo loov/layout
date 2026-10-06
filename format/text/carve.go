@@ -128,9 +128,11 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 	// the class of every cell, which the passes check over and over;
 	// cells seams make get theirs as they are made
 	blank := cell{r: ' ', kind: class(' ')}
-	for _, line := range g {
+	p.needs = make([]bool, len(g))
+	for i, line := range g {
 		for x := range line {
 			line[x].kind = class(line[x].r)
+			p.needs[i] = p.needs[i] || line[x].need > 0
 		}
 	}
 	for {
@@ -144,6 +146,8 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		m := len(g[0])
 		p.g = g
 		// the cells past the end of each line are blank
+		// the ends of the pass before, for the costs kept from it, see cut
+		p.prevEnds = append(p.prevEnds[:0], p.ends...)
 		p.ends = slices.Grow(p.ends[:0], n)[:n]
 		for i, line := range g {
 			p.ends[i] = 0
@@ -155,6 +159,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			}
 		}
 		p.width = slices.Max(p.ends)
+		p.endsMoved()
 		// best[i][x] is the cost of the cheapest seam through the lines up
 		// to i that ends at x, coming from from[i][x] on the line before.
 		// Past the last cell that isn't plain blank, every column is like
@@ -189,19 +194,22 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		for i := range n {
 			from[i] = fromBuf[i*w : (i+1)*w]
 			prevBest, curBest = curBest, prevBest
-			p.costs(i, curBest)
+			codes := p.costs(i, w)
 			if i == 0 {
+				for x, c := range codes {
+					curBest[x] = costOf[c]
+				}
 				continue
 			}
 			if !turn {
-				for x := range w {
-					curBest[x] += prevBest[x]
+				for x, c := range codes {
+					curBest[x] = costOf[c] + prevBest[x]
 					from[i][x] = x
 				}
 				continue
 			}
 			joins(g[i-1][:w], g[i][:w], joined, opts.lines)
-			p.sweep(i, prevBest, curBest, from[i], reach, src, joined)
+			p.sweep(i, prevBest, curBest, codes, from[i], reach, src, joined)
 		}
 		last := curBest
 		end := 0
@@ -238,7 +246,8 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		for i, x := range path {
 			cut[i] = append(append(cut[i][:0], g[i][:x]...), g[i][x+1:]...)
 		}
-		jogs, failed, ok := bendLines(g, cut, path, opts.lines)
+		p.bent = p.bent[:0]
+		jogs, failed, ok := bendLines(g, cut, path, opts.lines, &p.bent)
 		if ok && jogs > 1 {
 			// the cheapest seam left has the fewest jogs; one column is
 			// not worth more than one
@@ -258,6 +267,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		cells, spareCells = spareCells, cells
 		clear(p.forbid)
 		p.jogging = false
+		p.cut(cut, path)
 	}
 }
 
@@ -283,13 +293,117 @@ type seamPass struct {
 	opts   seamOpts
 	across bool // the lines run across the ranks
 	along  rune // a plain line along the lines
+
+	// the costs of the cells of each line, kept from pass to pass, as a
+	// cut only changes those around where it goes, see cut; full marks
+	// the lines whose costs all need working out again, dirty the cells
+	// that do, and cachedJogging what the costs were worked out with
+	cache    [][]costCode
+	full     []bool
+	dirty    [][]int
+	prevEnds []int
+	bent     [][2]int // the cells the last cut bent, see bendLines
+	// blocks marks the lines whose costs were worked out with the cells
+	// past their end blocked, see lineCosts
+	blocks []bool
+	// needs marks the lines with runs kept for labels; cuts don't add any
+	needs []bool
 }
 
-// costs sets best to the cost of a seam through each cell of line i
-func (p *seamPass) costs(i int, best []int) {
-	// the length of the run of equal need around every cell that has one;
-	// those aren't plain blanks, so they are all before the cells costed
-	line := p.g[i][:len(best)]
+// cut moves the costs kept for the lines along with the cut through path
+// of the grid, now g, and marks what the cut changed: the cells beside
+// it, the cells it bent and those beside them, and the lines with runs
+// kept for labels, whose lengths a cut can change
+func (p *seamPass) cut(g grid, path []int) {
+	for i, x := range path {
+		if row := p.cache[i]; x < len(row) {
+			p.cache[i] = append(row[:x], row[x+1:]...)
+		}
+		p.dirty[i] = append(p.dirty[i], x-1, x)
+		if p.needs[i] {
+			p.full[i] = true
+		}
+	}
+	for _, b := range p.bent {
+		p.dirty[b[0]] = append(p.dirty[b[0]], b[1]-1, b[1], b[1]+1)
+	}
+}
+
+// endsMoved marks the cells whose costs a move of the end of their line
+// changes, between where it was, after the cut, and where it is
+func (p *seamPass) endsMoved() {
+	if len(p.prevEnds) != len(p.ends) {
+		return
+	}
+	for i, end := range p.ends {
+		was := p.prevEnds[i]
+		for x := min(was-1, end) - 1; x <= max(was, end)+1; x++ {
+			p.dirty[i] = append(p.dirty[i], x)
+		}
+	}
+}
+
+// costs returns the costs of a seam through each of the first w cells of
+// line i, see costCode, working out only those that the costs kept from
+// the pass before don't have, see cut
+func (p *seamPass) costs(i, w int) []costCode {
+	if p.cache == nil {
+		// one block for the costs of every line, and for the cells marked
+		// on it, as many as a pass usually marks
+		n := len(p.g)
+		const marks = 8
+		costs, dirty := make([]costCode, n*w), make([]int, n*marks)
+		p.cache, p.dirty = make([][]costCode, n), make([][]int, n)
+		for k := range n {
+			p.cache[k] = costs[k*w : k*w : (k+1)*w]
+			p.dirty[k] = dirty[k*marks : k*marks : (k+1)*marks]
+		}
+		p.full, p.blocks = make([]bool, n), make([]bool, n)
+	}
+	// past the end of the longest lines, costs depend on jogging
+	blocks := p.jogging && p.ends[i] == p.width
+	row := p.cache[i]
+	if p.full[i] || len(row) < w || blocks != p.blocks[i] {
+		row = slices.Grow(row[:0], w)[:w]
+		if p.needs[i] {
+			p.lineRuns(i, w)
+		}
+		p.lineCosts(i, row, 0, w)
+		p.full[i], p.blocks[i] = false, blocks
+	} else {
+		row = row[:w]
+		if len(p.dirty[i]) > 0 && p.needs[i] {
+			p.lineRuns(i, w)
+		}
+		for _, x := range p.dirty[i] {
+			if x >= 0 && x < len(row) {
+				p.lineCosts(i, row, x, x+1)
+			}
+		}
+	}
+	p.cache[i] = row
+	p.dirty[i] = p.dirty[i][:0]
+	return row
+}
+
+// costCode is one of the costs a seam has through a cell, see costOf;
+// costs keeps them for the lines from pass to pass, a byte a cell
+type costCode uint8
+
+const (
+	costFree costCode = iota
+	costTrailing
+	costBlocked
+)
+
+// costOf is the cost of each costCode
+var costOf = [...]int{costFree: 0, costTrailing: seamTrailing, costBlocked: seamBlocked}
+
+// lineRuns sets runs to the length of the run of equal need around every
+// cell of the first w of line i that has one; those aren't plain blanks,
+// so they are all before w
+func (p *seamPass) lineRuns(i, w int) {
+	line := p.g[i][:w]
 	for x := 0; x < len(line); {
 		if line[x].need == 0 {
 			x++
@@ -304,25 +418,30 @@ func (p *seamPass) costs(i int, best []int) {
 		}
 		x = k
 	}
+}
+
+// lineCosts sets best[from:to] to the costs of a seam through those cells
+// of line i, with the runs of line i, see runs
+func (p *seamPass) lineCosts(i int, best []costCode, from, to int) {
 	ax, stubs, across, along, runs := p.opts.lines, p.opts.stubs, p.across, p.along, p.runs[:len(best)]
 	lo, hi := ax.lo, ax.hi
 	end := p.ends[i]
 	// past the end, a seam with jogs has to narrow the grid
-	past := seamTrailing
+	past := costTrailing
 	if p.jogging && end == p.width {
-		past = seamBlocked
+		past = costBlocked
 	}
-	line = p.g[i]
+	line := p.g[i]
 	text := func(p cell) bool { return p.keep && !p.solid }
-	for x := range best {
+	for x := from; x < to; x++ {
 		c := &line[x]
 		if c.keep || c.kind&ax.seam == 0 {
-			best[x] = seamBlocked
+			best[x] = costBlocked
 			continue
 		}
 		// a run kept for a label stays long enough for it
 		if c.need > 0 && runs[x] <= int(c.need) {
-			best[x] = seamBlocked
+			best[x] = costBlocked
 			continue
 		}
 		if x >= end {
@@ -333,7 +452,7 @@ func (p *seamPass) costs(i int, best []int) {
 		// follows, and none around the text of labels
 		if stubs && c.r == ' ' && c.bg == 0 && x > 0 && x+1 < len(line) {
 			if after := line[x+1]; after.r == ' ' && after.bg == 0 || text(after) || text(line[x-1]) {
-				best[x] = 0
+				best[x] = costFree
 				continue
 			}
 		}
@@ -348,20 +467,20 @@ func (p *seamPass) costs(i int, best []int) {
 				// or, with stubs, that goes on straight, which keeps a
 				// cell of it
 				(arrow || after.kind&(up|down|left|right) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
-				best[x] = 0
+				best[x] = costFree
 				continue
 			}
 			if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(p.g, i, x) {
-				best[x] = 0
+				best[x] = costFree
 				continue
 			}
 		}
 		// a marker on a run continues it like the line it sits on
 		if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && b.kind&ax.mark != 0) {
-			best[x] = seamBlocked
+			best[x] = costBlocked
 			continue
 		}
-		best[x] = 0
+		best[x] = costFree
 	}
 }
 
@@ -396,16 +515,16 @@ func joins(above, here []cell, joined []bool, ax seamAxis) {
 	}
 }
 
-// sweep adds to best the cheapest way to each cell of line i from the
-// line before, whose costs are in before, moving one cell at a time and
+// sweep sets best to the costs of the cells of line i, in codes, and the
+// cheapest way to each from the line before, whose costs are in before, moving one cell at a time and
 // past a joined cell only where it can jog, and sets from to where each
 // comes from; reach and src are room for the sweeps. Crossings cost
 // more than nothing, so one is only worth pricing where the move would
 // win without it.
-func (p *seamPass) sweep(i int, before, best, from, reach, src []int, joined []bool) {
+func (p *seamPass) sweep(i int, before, best []int, codes []costCode, from, reach, src []int, joined []bool) {
 	// all as long as joined, which spares the bounds checks
 	n := len(joined)
-	before, best, from, reach, src = before[:n], best[:n], from[:n], reach[:n], src[:n]
+	before, best, codes, from, reach, src = before[:n], best[:n], codes[:n], from[:n], reach[:n], src[:n]
 	// the sweeps keep the cell before in last, which spares reading back
 	// what they just stored
 	var last, lastSrc int
@@ -442,7 +561,7 @@ func (p *seamPass) sweep(i int, before, best, from, reach, src []int, joined []b
 		last, lastSrc = cur, curSrc
 	}
 	for x := range joined {
-		best[x] += reach[x]
+		best[x] = costOf[codes[x]] + reach[x]
 		from[x] = src[x]
 	}
 }
@@ -513,7 +632,9 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) (out [2]bend, k int) {
 // two lines of grid, in cut, which is grid with the seam removed; bends
 // that run lines further go first. It returns the number of jogs, or the
 // line and cell of a crossing that has no room to bend.
-func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, ok bool) {
+//
+// The cells it bends are appended to bent, by line and cell.
+func bendLines(g, cut grid, path []int, ax seamAxis, bent *[][2]int) (jogs int, failed [2]int, ok bool) {
 	next, prev := ax.next, ax.prev
 	// has reports whether the cell at x of line i has the arm, with lines
 	// past the grid having none
@@ -560,6 +681,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 				owner := [4]edgeID{id, id, id, id}
 				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.lines))}
 				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.join))}
+				*bent = append(*bent, [2]int{bd.row, bd.at}, [2]int{bd.row, bd.to})
 				if !bd.extends {
 					jogs++
 				}
