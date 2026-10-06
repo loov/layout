@@ -46,7 +46,43 @@ func OrderRanksN(graph *Graph, iterations int) {
 		graph.ByRank = best
 	}
 	OrderRanksChains(graph)
+	orderTies(graph)
 	graph.assignPos()
+}
+
+// orderTies puts neighbors in a rank that are as good either way, in
+// crossings and edge length, in input order, which is the order of their
+// ids; it keeps clusters together and flat edges left to right
+func orderTies(graph *Graph) {
+	flat := map[[2]ID]bool{}
+	for _, edge := range graph.Flat {
+		flat[[2]ID{edge[0].ID, edge[1].ID}] = true
+		flat[[2]ID{edge[1].ID, edge[0].ID}] = true
+	}
+	graph.assignPos()
+	// every swap puts a pair in order, so this ends
+	for changed := true; changed; {
+		changed = false
+		for _, layer := range graph.ByRank {
+			for i := 0; i+1 < len(layer); i++ {
+				left, right := layer[i], layer[i+1]
+				if right.ID > left.ID || left.Cluster != right.Cluster ||
+					left.BorderLeft || left.BorderRight || right.BorderLeft || right.BorderRight ||
+					flat[[2]ID{left.ID, right.ID}] {
+					continue
+				}
+				if before, after := graph.crossingsBothWays(left, right); before != after {
+					continue
+				}
+				if graph.edgeLength(left, i)+graph.edgeLength(right, i+1) != graph.edgeLength(left, i+1)+graph.edgeLength(right, i) {
+					continue
+				}
+				layer[i], layer[i+1] = right, left
+				left.Pos, right.Pos = i+1, i
+				changed = true
+			}
+		}
+	}
 }
 
 // saveOrder returns a copy of the current rank ordering
