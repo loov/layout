@@ -169,3 +169,104 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		placed = append(placed, edge)
 	}
 }
+
+// placeEndLabels places the head and tail labels beside the ends of their
+// edges, just past the nodes: on the first side, stepping further along
+// the edge up to its middle, where a label covers no node, edge or label
+// placed before it, or else where it covers no node or label, crossing
+// lines, or else right past the end. Layouts keep no room for them, so in
+// tight ones they can cover what is there.
+func (g *lgraph) placeEndLabels() {
+	pad := g.EdgePadding
+	type box struct{ tl, br Vector }
+	var placed []box
+	for _, edge := range g.Edges {
+		if edge.Label != "" {
+			placed = append(placed, box{edge.LabelPos.Sub(edge.LabelRadius), edge.LabelPos.Add(edge.LabelRadius)})
+		}
+	}
+	covers := func(tl, br Vector) bool {
+		for _, node := range g.Nodes {
+			if node.Left() < br.X && tl.X < node.Right() && node.Top() < br.Y && tl.Y < node.Bottom() {
+				return true
+			}
+		}
+		for _, b := range placed {
+			if b.tl.X < br.X && tl.X < b.br.X && b.tl.Y < br.Y && tl.Y < b.br.Y {
+				return true
+			}
+		}
+		return false
+	}
+	crosses := func(tl, br Vector) bool {
+		for _, edge := range g.Edges {
+			for i := 0; i+1 < len(edge.Path); i++ {
+				if segmentHitsRect(edge.Path[i], edge.Path[i+1], tl, br) {
+					return true
+				}
+			}
+		}
+		return false
+	}
+	for _, edge := range g.Edges {
+		n := len(edge.Path)
+		if n < 2 || edge.Invisible {
+			continue
+		}
+		for _, end := range []struct {
+			label    *endLabel
+			text     string
+			at, next Vector
+		}{
+			{&edge.head, edge.HeadLabel, edge.Path[n-1], edge.Path[n-2]},
+			{&edge.tail, edge.TailLabel, edge.Path[0], edge.Path[1]},
+		} {
+			if end.text == "" {
+				continue
+			}
+			r := end.label.radius
+			// along the edge away from the node, and across it
+			ux, uy := 0.0, 1.0
+			if d := end.next.Sub(end.at); d != (Vector{}) {
+				l := math.Hypot(float64(d.X), float64(d.Y))
+				ux, uy = float64(d.X)/l, float64(d.Y)/l
+			}
+			along := Length(math.Abs(ux))*r.X + Length(math.Abs(uy))*r.Y
+			across := Length(math.Abs(uy))*r.X + Length(math.Abs(ux))*r.Y
+			// no further than the middle of the edge, so that the label
+			// stays nearer its own end
+			var length Length
+			for i := 0; i+1 < n; i++ {
+				d := edge.Path[i+1].Sub(edge.Path[i])
+				length += Length(math.Hypot(float64(d.X), float64(d.Y)))
+			}
+			var spots []Vector
+			for step := range 6 {
+				a := pad + along + Length(step)*pad
+				if step > 0 && a > length/2 {
+					break
+				}
+				a = min(a, length/3) // a short edge has its label over it
+				for _, side := range []Length{1, -1} {
+					c := side * (pad/2 + across)
+					spots = append(spots, end.at.Add(Vector{Length(ux)*a - Length(uy)*c, Length(uy)*a + Length(ux)*c}))
+				}
+			}
+			at, found := spots[0], false
+			for _, lines := range []bool{true, false} {
+				for _, spot := range spots {
+					tl, br := spot.Sub(r), spot.Add(r)
+					if !covers(tl, br) && (!lines || !crosses(tl, br)) {
+						at, found = spot, true
+						break
+					}
+				}
+				if found {
+					break
+				}
+			}
+			end.label.pos = at
+			placed = append(placed, box{at.Sub(r), at.Add(r)})
+		}
+	}
+}

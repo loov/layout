@@ -92,5 +92,21 @@ func (graph *lgraph) assignDefaults() {
 		} else if edge.Label != "" {
 			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)
 		}
+		edge.head.radius = graph.endLabelRadius(edge.HeadLabel, edge.FontName, edge.FontSize)
+		edge.tail.radius = graph.endLabelRadius(edge.TailLabel, edge.FontName, edge.FontSize)
 	}
+}
+
+// endLabelRadius returns the half size of a head or tail label, measured
+// as edge labels are; zero when there is none
+func (graph *lgraph) endLabelRadius(label, fontName string, fontSize Length) Vector {
+	switch {
+	case label == "":
+		return Vector{}
+	case draw.IsHTMLLabel(label) && graph.ForText:
+		return graph.textRadius(draw.PlainLabel(label), fontName, fontSize)
+	case draw.IsHTMLLabel(label):
+		return graph.htmlLabelRadius(label, fontName, fontSize)
+	}
+	return graph.textRadius(label, fontName, fontSize)
 }

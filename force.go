@@ -22,6 +22,7 @@ func Force(graph *Graph, opts ForceOptions) (*Layout, error) {
 	work := newWorkGraph(graph)
 	work.ForText = opts.ForText
 	force(work)
+	work.placeEndLabels()
 	return work.result(), nil
 }
 

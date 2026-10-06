@@ -164,3 +164,88 @@ func samples(path []layout.Vector) []layout.Vector {
 	}
 	return points
 }
+
+// TestEndLabels checks that head and tail labels, parsed from Graphviz
+// headlabel and taillabel, go beside the ends they label, nearer them
+// than the other end, in both layouts and for text, off every node where
+// the hierarchical layout leaves room, and that writing the graph back to
+// dot keeps them.
+func TestEndLabels(t *testing.T) {
+	const src = `digraph { a -> b [headlabel="many" taillabel="one"]; a -> c [taillabel="owns"]; c -> b [headlabel="0..1"] }`
+	lays := map[string]func(*layout.Graph) (*layout.Layout, error){
+		"hierarchical": func(g *layout.Graph) (*layout.Layout, error) { return layout.Hierarchical(g, layout.Options{}) },
+		"text": func(g *layout.Graph) (*layout.Layout, error) {
+			return layout.Hierarchical(g, layout.Options{ForText: true})
+		},
+		"force": func(g *layout.Graph) (*layout.Layout, error) { return layout.Force(g, layout.ForceOptions{}) },
+	}
+	for name, lay := range lays {
+		t.Run(name, func(t *testing.T) {
+			graphs, err := dot.ParseString(src)
+			if err != nil {
+				t.Fatal(err)
+			}
+			graph := graphs[0]
+			if edge := graph.Edges[0]; edge.HeadLabel != "many" || edge.TailLabel != "one" {
+				t.Fatalf("parsed head and tail labels %q %q", edge.HeadLabel, edge.TailLabel)
+			}
+			l, err := lay(graph)
+			if err != nil {
+				t.Fatal(err)
+			}
+			dist := func(a, b layout.Vector) float64 { return math.Hypot(float64(a.X-b.X), float64(a.Y-b.Y)) }
+			for _, edge := range graph.Edges {
+				at := l.Edge(edge)
+				first, last := at.Path[0], at.Path[len(at.Path)-1]
+				for _, end := range []struct {
+					label        string
+					center, size layout.Vector
+					near, far    layout.Vector
+				}{
+					{edge.HeadLabel, at.HeadLabelCenter, at.HeadLabelSize, last, first},
+					{edge.TailLabel, at.TailLabelCenter, at.TailLabelSize, first, last},
+				} {
+					if end.label == "" {
+						continue
+					}
+					if end.size.X <= 0 || end.size.Y <= 0 {
+						t.Errorf("%v %q has size %v", edge, end.label, end.size)
+					}
+					if dist(end.center, end.near) >= dist(end.center, end.far) {
+						t.Errorf("%v %q at %v is not nearer its end %v than %v", edge, end.label, end.center, end.near, end.far)
+					}
+					tl, br := end.center.Sub(layout.Vector{X: end.size.X / 2, Y: end.size.Y / 2}), end.center.Add(layout.Vector{X: end.size.X / 2, Y: end.size.Y / 2})
+					for _, node := range graph.Nodes {
+						if name == "force" {
+							break // packs nodes tighter than labels fit
+						}
+						box := l.Node(node)
+						if box.TopLeft().X < br.X && tl.X < box.BottomRight().X && box.TopLeft().Y < br.Y && tl.Y < box.BottomRight().Y {
+							t.Errorf("%v %q covers node %v", edge, end.label, node)
+						}
+					}
+				}
+			}
+			var out bytes.Buffer
+			if err := dot.Write(&out, l); err != nil {
+				t.Fatal(err)
+			}
+			for _, want := range []string{`headlabel="many"`, `taillabel="one"`, "head_lp=", "tail_lp="} {
+				if !strings.Contains(out.String(), want) {
+					t.Errorf("dot output lacks %s:\n%s", want, out.String())
+				}
+			}
+			if name == "text" {
+				out.Reset()
+				if err := text.Write(&out, l); err != nil {
+					t.Fatal(err)
+				}
+				for _, want := range []string{"many", "one", "owns", "0..1"} {
+					if !strings.Contains(out.String(), want) {
+						t.Errorf("text drawing lacks %s:\n%s", want, out.String())
+					}
+				}
+			}
+		})
+	}
+}

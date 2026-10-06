@@ -140,6 +140,12 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 		if edge.Label != "" {
 			attrs = append(attrs, "label="+labelID(edge.Label), "lp="+quote(pt(at.LabelCenter)))
 		}
+		if edge.HeadLabel != "" {
+			attrs = append(attrs, "headlabel="+labelID(edge.HeadLabel), "head_lp="+quote(pt(at.HeadLabelCenter)))
+		}
+		if edge.TailLabel != "" {
+			attrs = append(attrs, "taillabel="+labelID(edge.TailLabel), "tail_lp="+quote(pt(at.TailLabelCenter)))
+		}
 		if edge.Weight != 1 {
 			attrs = append(attrs, "weight="+strconv.FormatFloat(edge.Weight, 'g', -1, 64))
 		}

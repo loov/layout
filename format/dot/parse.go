@@ -35,8 +35,11 @@
 //     an HTML-like table with borders, or a compass point; the compass
 //     point of a field, as in "node:f0:s", is ignored.
 //   - minlen=0 is ignored; put such nodes in a rank=same subgraph.
-//   - The graph label, labels on subgraphs that are not clusters,
-//     xlabel, headlabel and taillabel are not drawn.
+//   - The graph label, labels on subgraphs that are not clusters and
+//     xlabel are not drawn. headlabel and taillabel go beside the ends
+//     of their edges, see layout.Edge.HeadLabel, in the edge's font;
+//     labelangle, labeldistance, labelfloat and the labelfont attributes
+//     are ignored.
 //   - concentrate shares the starts of ortho edges, see
 //     layout.Graph.MergeEdges; edges into a node stay apart.
 //   - Layout controls such as constraint, group, ordering, compound with
@@ -785,12 +788,13 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 			if p, ok := parsePoint(attr.Val); ok {
 				edge.LabelPos = &p
 			}
-		case "label":
+		case "label", "headlabel", "taillabel":
 			name := edge.From.ID + "--" + edge.To.ID
 			if edge.Directed {
 				name = edge.From.ID + "->" + edge.To.ID
 			}
-			setString(&edge.Label, expandLabel(attr.Val, `\E`, name, `\T`, edge.From.ID, `\H`, edge.To.ID, `\G`, graphID))
+			label := map[string]*string{"label": &edge.Label, "headlabel": &edge.HeadLabel, "taillabel": &edge.TailLabel}[attr.Key]
+			setString(label, expandLabel(attr.Val, `\E`, name, `\T`, edge.From.ID, `\H`, edge.To.ID, `\G`, graphID))
 		case "color":
 			setColor(&edge.LineColor, attr.Val)
 		case "fontcolor":

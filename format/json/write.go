@@ -50,6 +50,12 @@ type Edge struct {
 	Label    string       `json:"label,omitempty"`
 	Path     [][2]float64 `json:"path"`
 	LabelPos *[2]float64  `json:"labelPos,omitempty"`
+	// HeadLabel and TailLabel are drawn beside the ends, at HeadLabelPos
+	// and TailLabelPos, see layout.Edge.HeadLabel
+	HeadLabel    string      `json:"headLabel,omitempty"`
+	HeadLabelPos *[2]float64 `json:"headLabelPos,omitempty"`
+	TailLabel    string      `json:"tailLabel,omitempty"`
+	TailLabelPos *[2]float64 `json:"tailLabelPos,omitempty"`
 
 	Invisible bool `json:"invisible,omitempty"`
 }
@@ -97,6 +103,14 @@ func Convert(l *layout.Layout) Graph {
 		}
 		if edge.Label != "" {
 			e.LabelPos = &[2]float64{float64(at.LabelCenter.X), float64(at.LabelCenter.Y)}
+		}
+		if edge.HeadLabel != "" {
+			e.HeadLabel = edge.HeadLabel
+			e.HeadLabelPos = &[2]float64{float64(at.HeadLabelCenter.X), float64(at.HeadLabelCenter.Y)}
+		}
+		if edge.TailLabel != "" {
+			e.TailLabel = edge.TailLabel
+			e.TailLabelPos = &[2]float64{float64(at.TailLabelCenter.X), float64(at.TailLabelCenter.Y)}
 		}
 		out.Edges = append(out.Edges, e)
 	}

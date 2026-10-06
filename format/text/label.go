@@ -33,6 +33,105 @@ func (c *canvas) edgeLabel(i int) (label string, x, y int) {
 	return label, c.col(at.LabelCenter.X - at.LabelSize.X/2), c.row(at.LabelCenter.Y) - strings.Count(label, "\n")/2
 }
 
+// edgeText writes the lines of a label of edge, w cells wide, at x, y
+func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
+	c.pen = pen{font: c.color(rgb(edge.FontColor))}
+	for k, line := range lines {
+		// within the block of the lines, as there is no box
+		at := x + int(line.Align.Offset(float64(w), float64(draw.Columns(line.Text))))
+		c.text(at, y+k, line.Text)
+		for col := at; col < at+draw.Columns(line.Text); col++ {
+			if p := c.at(col, y+k); p != nil {
+				p.text = c.drawn[edge]
+			}
+		}
+	}
+	// the blanks around the label keep it beside its edge when carving,
+	// see seams
+	for row := y - 1; row <= y+len(lines); row++ {
+		for col := x - 1; col <= x+w; col++ {
+			if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {
+				p.glue = true
+			}
+		}
+	}
+}
+
+// endLabel writes a head or tail label of edge right beside its line,
+// drawn along path from the end it labels, as near that end as there are
+// blank cells for it, on the side nearer center, where the layout put it
+func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector, path [][2]int) {
+	if label == "" {
+		return
+	}
+	label = draw.PlainLabel(label)
+	lines := draw.Lines(label)
+	w, h := draw.TextColumns(label), len(lines)
+	want := [2]int{c.col(center.X), c.row(center.Y)}
+	// blank cells for the text, and around them no box nor other line
+	// than its own edge's
+	id := c.drawn[edge]
+	blank := func(x, y int) bool {
+		for row := y - 1; row <= y+h; row++ {
+			for col := x - 1; col <= x+w; col++ {
+				p := c.at(col, row)
+				inside := row >= y && row < y+h && col >= x && col < x+w
+				switch {
+				case p == nil:
+					return false
+				case inside && (p.r != ' ' || p.solid || p.glue || p.lines != 0):
+					return false
+				case !inside && (p.solid || p.text != 0):
+					return false
+				}
+				for arm := range 4 {
+					if !inside && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
+						return false
+					}
+				}
+			}
+		}
+		return true
+	}
+	// the cells of the line from the end, past the end on the box
+	var cells [][2]int
+	for i := 0; i+1 < len(path); i++ {
+		c.steps(path[i], path[i+1], func(_, to [2]int, _ uint8) { cells = append(cells, to) })
+	}
+	for k, p := range cells {
+		if k+1 < len(cells) && k > 0 && cells[k-1][0] != cells[k+1][0] && cells[k-1][1] != cells[k+1][1] {
+			continue // a turn
+		}
+		// beside the line: on either side of a column, above or below
+		// a row, the side nearer where the layout put it first
+		var spots [][2]int
+		if k+1 < len(cells) && cells[k+1][0] == p[0] || k > 0 && cells[k-1][0] == p[0] {
+			spots = [][2]int{{p[0] + 1, p[1] - h/2}, {p[0] - w, p[1] - h/2}}
+		} else {
+			spots = [][2]int{{p[0] - w/2, p[1] - h}, {p[0] - w/2, p[1] + 1}}
+		}
+		dist := func(s [2]int) int {
+			return max(s[0]+w/2-want[0], want[0]-s[0]-w/2) + max(s[1]+h/2-want[1], want[1]-s[1]-h/2)
+		}
+		if dist(spots[1]) < dist(spots[0]) {
+			spots[0], spots[1] = spots[1], spots[0]
+		}
+		for _, s := range spots {
+			if blank(s[0], s[1]) {
+				c.edgeText(edge, lines, s[0], s[1], w)
+				return
+			}
+		}
+	}
+}
+
+// reversed returns the cells of a path from its last to its first
+func reversed(path [][2]int) [][2]int {
+	out := slices.Clone(path)
+	slices.Reverse(out)
+	return out
+}
+
 // centered returns the column that centers line between the columns x0
 // and x1 of the borders around it
 func centered(x0, x1 int, line string) int {
@@ -62,27 +161,16 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 			lines := draw.Lines(label)
 			w := draw.TextColumns(label)
 			x, y = c.besideEdge(x, y, w, len(lines), paths[i], c.drawn[edge])
-			c.pen = pen{font: c.color(rgb(edge.FontColor))}
-			for k, line := range lines {
-				// within the block of the lines, as there is no box
-				at := x + int(line.Align.Offset(float64(w), float64(draw.Columns(line.Text))))
-				c.text(at, y+k, line.Text)
-				for col := at; col < at+draw.Columns(line.Text); col++ {
-					if p := c.at(col, y+k); p != nil {
-						p.text = c.drawn[edge]
-					}
-				}
-			}
-			// the blanks around the label keep it beside its edge when
-			// carving, see seams
-			for row := y - 1; row <= y+len(lines); row++ {
-				for col := x - 1; col <= x+w; col++ {
-					if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {
-						p.glue = true
-					}
-				}
-			}
+			c.edgeText(edge, lines, x, y, w)
 		}
+	}
+	for i, edge := range graph.Edges {
+		if edge.Invisible || len(paths[i]) < 2 {
+			continue
+		}
+		at := c.l.Edges[i]
+		c.endLabel(edge, edge.HeadLabel, at.HeadLabelCenter, reversed(paths[i]))
+		c.endLabel(edge, edge.TailLabel, at.TailLabelCenter, paths[i])
 	}
 	for i, cluster := range graph.Clusters {
 		if cluster.Label == "" || cluster.Invisible {

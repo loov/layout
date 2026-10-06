@@ -110,8 +110,8 @@ nhg          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 nhg_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=3 corners=14 wavy=3 back=1 labels=0 far=0 length=1501 area=234607 unbalance=0
 ninja        nodes=0 through=0 near=1 crossings=31 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=27 corners=194 wavy=27 back=0 labels=0 far=0 length=57050 area=9705908 unbalance=1123
 ninja_merged nodes=0 through=0 near=0 crossings=31 shallow=0 overlaps=482 parallel=482 ends=482 shafts=0 jagged=0 bends=61 corners=258 wavy=61 back=0 labels=0 far=0 length=57525 area=8945408 unbalance=744
-oldarrows    nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=64 wavy=0 back=0 labels=0 far=0 length=19699 area=920414 unbalance=0
-oldarrows_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=64 wavy=0 back=0 labels=0 far=0 length=19699 area=920414 unbalance=0
+oldarrows    nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=64 wavy=0 back=0 labels=0 far=0 length=19699 area=943818 unbalance=0
+oldarrows_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=64 wavy=0 back=0 labels=0 far=0 length=19699 area=943818 unbalance=0
 ortho        nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2525 area=270336 unbalance=368
 ortho_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2561 area=270336 unbalance=359
 pgram        nodes=0 through=0 near=5 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=100 wavy=0 back=0 labels=0 far=0 length=19672 area=704950 unbalance=32

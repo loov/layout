@@ -40,6 +40,11 @@ type EdgePath struct {
 	// LabelCenter and LabelSize place the label, when the edge has one.
 	LabelCenter Vector
 	LabelSize   Vector
+	// HeadLabelCenter and HeadLabelSize place the head label, and
+	// TailLabelCenter and TailLabelSize the tail label, when the edge has
+	// them, see Edge.HeadLabel.
+	HeadLabelCenter, HeadLabelSize Vector
+	TailLabelCenter, TailLabelSize Vector
 	// FontSize is the edge's own, or the graph default when unset.
 	FontSize Length
 	// Merged is the group of edges this one merges with at its start
@@ -110,10 +115,20 @@ func (l *Layout) Bounds() (min, max Vector) {
 			minvector(&min, p)
 			maxvector(&max, p)
 		}
-		if l.Graph.Edges[i].Label != "" {
-			half := Vector{path.LabelSize.X / 2, path.LabelSize.Y / 2}
-			minvector(&min, path.LabelCenter.Sub(half))
-			maxvector(&max, path.LabelCenter.Add(half))
+		edge := l.Graph.Edges[i]
+		for _, label := range []struct {
+			text         string
+			center, size Vector
+		}{
+			{edge.Label, path.LabelCenter, path.LabelSize},
+			{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
+			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
+		} {
+			if label.text != "" {
+				half := Vector{label.size.X / 2, label.size.Y / 2}
+				minvector(&min, label.center.Sub(half))
+				maxvector(&max, label.center.Add(half))
+			}
 		}
 	}
 	if min.X > max.X { // nothing to bound

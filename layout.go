@@ -29,6 +29,7 @@ func Hierarchical(graph *Graph, opts Options) (*Layout, error) {
 	work := newWorkGraph(graph)
 	work.ForText = opts.ForText
 	hierarchical(work, opts)
+	work.placeEndLabels()
 	return work.result(), nil
 }
 

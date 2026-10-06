@@ -27,6 +27,10 @@ type Edge struct {
 	FontName  string
 	FontSize  Length
 	FontColor Color
+	// HeadLabel and TailLabel are drawn beside the To and From ends, just
+	// past the nodes, in the font of Label, like Graphviz headlabel and
+	// taillabel
+	HeadLabel, TailLabel string
 
 	LineWidth Length
 	LineColor Color

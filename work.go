@@ -52,7 +52,12 @@ type ledge struct {
 	Path        []Vector
 	LabelPos    Vector // center of the label, when Label is set
 	LabelRadius Vector // half size of the label
+	// the labels at the ends, when HeadLabel and TailLabel are set
+	head, tail endLabel
 }
+
+// endLabel is a label at an end of an edge: its center and half size
+type endLabel struct{ pos, radius Vector }
 
 // lcluster is the working copy of a Cluster, of working nodes.
 type lcluster struct {
@@ -170,6 +175,12 @@ func (g *lgraph) result() *Layout {
 			path.LabelCenter = e.LabelPos
 			path.LabelSize = Vector{2 * e.LabelRadius.X, 2 * e.LabelRadius.Y}
 		}
+		if e.HeadLabel != "" {
+			path.HeadLabelCenter, path.HeadLabelSize = e.head.pos, Vector{2 * e.head.radius.X, 2 * e.head.radius.Y}
+		}
+		if e.TailLabel != "" {
+			path.TailLabelCenter, path.TailLabelSize = e.tail.pos, Vector{2 * e.tail.radius.X, 2 * e.tail.radius.Y}
+		}
 		l.Edges = append(l.Edges, path)
 	}
 	for _, c := range g.Clusters {
@@ -192,6 +203,8 @@ func (l *Layout) work() *lgraph {
 		e.Path = path.Path
 		e.LabelPos = path.LabelCenter
 		e.LabelRadius = Vector{path.LabelSize.X / 2, path.LabelSize.Y / 2}
+		e.head = endLabel{path.HeadLabelCenter, Vector{path.HeadLabelSize.X / 2, path.HeadLabelSize.Y / 2}}
+		e.tail = endLabel{path.TailLabelCenter, Vector{path.TailLabelSize.X / 2, path.TailLabelSize.Y / 2}}
 		e.FontSize = path.FontSize
 	}
 	for i, c := range g.Clusters {
@@ -220,6 +233,12 @@ func (g *lgraph) Bounds() (min, max Vector) {
 		if edge.Label != "" {
 			minvector(&min, Vector{edge.LabelPos.X - edge.LabelRadius.X, edge.LabelPos.Y - edge.LabelRadius.Y})
 			maxvector(&max, Vector{edge.LabelPos.X + edge.LabelRadius.X, edge.LabelPos.Y + edge.LabelRadius.Y})
+		}
+		for _, end := range []endLabel{edge.head, edge.tail} {
+			if end.radius != (Vector{}) {
+				minvector(&min, end.pos.Sub(end.radius))
+				maxvector(&max, end.pos.Add(end.radius))
+			}
 		}
 	}
 	if min.X > max.X { // nothing to bound

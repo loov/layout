@@ -353,9 +353,18 @@ func Write(w io.Writer, l *layout.Layout) error {
 
 		svg.write("</path>")
 
-		if edge.Label != "" {
-			labelRadius := layout.Vector{X: path.LabelSize.X / 2, Y: path.LabelSize.Y / 2}
-			svg.writeLabel(graph, edge.Label, path.LabelCenter, labelRadius, path.FontSize, edge.FontName, edge.FontColor)
+		for _, label := range []struct {
+			text         string
+			center, size layout.Vector
+		}{
+			{edge.Label, path.LabelCenter, path.LabelSize},
+			{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
+			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
+		} {
+			if label.text != "" {
+				radius := layout.Vector{X: label.size.X / 2, Y: label.size.Y / 2}
+				svg.writeLabel(graph, label.text, label.center, radius, path.FontSize, edge.FontName, edge.FontColor)
+			}
 		}
 	}
 
