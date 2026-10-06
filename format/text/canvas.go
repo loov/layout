@@ -79,9 +79,7 @@ func newCanvas(l *layout.Layout) *canvas {
 	for i, node := range graph.Nodes {
 		c.nodes[node] = nodeID(i + 1)
 	}
-	if graph.MergeEdges {
-		c.merged = mergedEdges(l)
-	}
+	c.merged = mergedEdges(l)
 	for _, edge := range graph.Edges {
 		if edge.From == edge.To {
 			c.loops[edge.From]++

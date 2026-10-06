@@ -15,8 +15,6 @@ import (
 // whose drawings leave edges unjoined, with which; they are skipped until
 // the bug is fixed. Remove an entry with its fix.
 var notJoined = map[string]string{
-	"arrows":                      "12 edges, such as _box -> lbox",
-	"arrows_merged":               "12 edges, such as _box -> lbox",
 	"ldbxtried":                   "n0 -> n448, n448 -> n449",
 	"ldbxtried_merged":            "n0 -> n448, n448 -> n449",
 	"Linux_kernel_diagram":        "14 edges, such as system -> system_",

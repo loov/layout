@@ -288,12 +288,37 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 // mergedEdges returns an id for the edges that the layout merged, the
 // same for those in a group. An edge merges at its start or its end, not
 // both. The ids are negative, apart from those the canvas counts up.
+//
+// Edges also merge at a point, a dot where they meet, as they have to
+// leave it along one run: at the point they start at, or else the one
+// they end at.
 func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 	ids := map[*layout.Edge]edgeID{}
+	last := 0
 	for i, edge := range l.Graph.Edges {
 		if m := l.Edges[i].Merged; m != [2]int{} {
 			ids[edge] = -edgeID(max(m[0], m[1]))
+			last = max(last, m[0], m[1])
 		}
+	}
+	points := map[*layout.Node]edgeID{}
+	point := func(node *layout.Node) bool { return l.Node(node).Shape == layout.PointShape }
+	for _, edge := range l.Graph.Edges {
+		if _, ok := ids[edge]; ok || edge.From == edge.To {
+			continue
+		}
+		at := edge.From
+		if !point(at) {
+			at = edge.To
+		}
+		if !point(at) {
+			continue
+		}
+		if _, ok := points[at]; !ok {
+			last++
+			points[at] = -edgeID(last)
+		}
+		ids[edge] = points[at]
 	}
 	return ids
 }
