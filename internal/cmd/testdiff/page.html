@@ -44,6 +44,8 @@ h1 { font-size: 18px; margin: 0 0 4px; }
 .shrink { color: var(--added); }
 .panel h2 .dim { font-variant-numeric: tabular-nums; }
 pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; line-height: 1.15; margin: 0; color: #000; background: #fff; white-space: pre; }
+:where(pre.drawing) { position: relative; } /* for the lines, see lines; layers place themselves */
+pre.drawing > svg.lines { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 
 /* detail view */
 .detail { position: fixed; inset: 0; background: var(--bg); display: none; flex-direction: column; }
@@ -219,6 +221,141 @@ function drawing(kind, text) {
 	const pre = document.createElement("pre");
 	pre.className = "drawing";
 	pre.textContent = text;
+	return lines(pre);
+}
+
+// ARMS holds the line characters by the weights of their arms, 0 none, 1
+// light, 2 heavy, at up*27 + down*9 + left*3 + right, as text draws them
+const ARMS = " ╶╺╴─╼╸╾━╷┌┍┐┬┮┑┭┯╻┎┏┒┰┲┓┱┳╵└┕┘┴┶┙┵┷│├┝┤┼┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╂╊┫╉╋";
+
+// DOUBLE holds the arms of double line characters, up, down, left and
+// right, 3 for a double arm
+const DOUBLE = {
+	"═": [0, 0, 3, 3], "║": [3, 3, 0, 0], "╔": [0, 3, 0, 3], "╗": [0, 3, 3, 0], "╚": [3, 0, 0, 3], "╝": [3, 0, 3, 0],
+	"╠": [3, 3, 0, 3], "╣": [3, 3, 3, 0], "╦": [0, 3, 3, 3], "╩": [3, 0, 3, 3], "╬": [3, 3, 3, 3],
+	"╟": [3, 3, 0, 1], "╢": [3, 3, 1, 0], "╤": [0, 1, 3, 3], "╧": [1, 0, 3, 3], "╥": [0, 3, 1, 1], "╨": [3, 0, 1, 1],
+	"╪": [1, 1, 3, 3], "╫": [3, 3, 1, 1],
+};
+
+// STROKES holds the other characters drawn as lines, as polylines of
+// points in a cell from 0, 0 at the top left to 1, 1: diagonals, the
+// eighth blocks along the sides of cells, and the diagonals of Symbols
+// for Legacy Computing
+const STROKES = {
+	"╱": [[0, 1, 1, 0]], "╲": [[0, 0, 1, 1]], "╳": [[0, 1, 1, 0], [0, 0, 1, 1]],
+	"▁": [[0, 0.97, 1, 0.97]], "▔": [[0, 0.03, 1, 0.03]], "▏": [[0.06, 0, 0.06, 1]], "▕": [[0.94, 0, 0.94, 1]],
+	"🯐": [[1, 0.5, 0, 1]], "🯑": [[1, 0, 0, 0.5]], "🯒": [[0, 0, 1, 0.5]], "🯓": [[0, 0.5, 1, 1]],
+	"🯔": [[0, 0, 0.5, 1]], "🯕": [[0.5, 0, 1, 1]], "🯖": [[1, 0, 0.5, 1]], "🯗": [[0.5, 0, 0, 1]],
+	"🯘": [[0, 0, 0.5, 0.5, 1, 0]], "🯙": [[1, 0, 0.5, 0.5, 1, 1]], "🯚": [[0, 1, 0.5, 0.5, 1, 1]], "🯛": [[0, 0, 0.5, 0.5, 0, 1]],
+	"🯜": [[0, 0, 0.5, 1, 1, 0]], "🯝": [[1, 0, 0, 0.5, 1, 1]], "🯞": [[0, 1, 0.5, 0, 1, 1]], "🯟": [[0, 0, 1, 0.5, 0, 1]],
+};
+
+// DASHED holds the dashed line characters: whether vertical, and heavy
+const DASHED = {
+	"┄": [false, false], "┈": [false, false], "╌": [false, false], "┅": [false, true], "┉": [false, true], "╍": [false, true],
+	"┆": [true, false], "┊": [true, false], "╎": [true, false], "┇": [true, true], "┋": [true, true], "╏": [true, true],
+};
+
+// ROUND holds the rounded corners: the arms they join, up or down, and
+// left or right
+const ROUND = { "╭": ["d", "r"], "╮": ["d", "l"], "╰": ["u", "r"], "╯": ["u", "l"] };
+
+// cellPaths returns the svg path data of the line character ch in the
+// cell at column x and row y, with its stroke width, or null when it is
+// not one; a cell is 1 unit wide and tall
+function cellPaths(ch, x, y) {
+	const line = (x0, y0, x1, y1) => `M${x + x0} ${y + y0}L${x + x1} ${y + y1}`;
+	if (STROKES[ch]) return [STROKES[ch].map(p => "M" + p.map((v, i) => i % 2 ? y + v : x + v).join(" ").replace(/(\S+ \S+) /g, "$1L")).join(""), 1];
+	if (ROUND[ch]) {
+		const [v, h] = ROUND[ch];
+		const vy = v === "u" ? 0 : 1, hx = h === "l" ? 0 : 1;
+		return [`M${x + 0.5} ${y + vy}Q${x + 0.5} ${y + 0.5} ${x + hx} ${y + 0.5}`, 1];
+	}
+	if (DASHED[ch]) {
+		const [vertical, heavy] = DASHED[ch];
+		let d = "";
+		for (let i = 0; i < 4; i++) {
+			const a = i / 4 + 0.05, b = i / 4 + 0.2;
+			d += vertical ? line(0.5, a, 0.5, b) : line(a, 0.5, b, 0.5);
+		}
+		return [d, heavy ? 2 : 1];
+	}
+	let arms = DOUBLE[ch];
+	const i = ARMS.indexOf(ch);
+	if (!arms && i > 0) arms = [Math.floor(i / 27), Math.floor(i / 9) % 3, Math.floor(i / 3) % 3, i % 3];
+	if (!arms) return null;
+	// a lone arm draws across the cell, as text does, see glyph
+	const ends = [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]];
+	let d = "", heavy = false;
+	arms.forEach((w, k) => {
+		if (!w) return;
+		const [ex, ey] = ends[k];
+		if (w === 3) {
+			// two lines either side of the middle
+			const o = 0.15, along = k < 2;
+			d += along ? line(0.5 - o, 0.5, 0.5 - o, ey) + line(0.5 + o, 0.5, 0.5 + o, ey) : line(0.5, 0.5 - o, ex, 0.5 - o) + line(0.5, 0.5 + o, ex, 0.5 + o);
+			return;
+		}
+		heavy = heavy || w === 2;
+		d += line(0.5, 0.5, ex, ey);
+	});
+	return [d, heavy ? 2 : 1];
+}
+
+// lines draws the line characters of a text drawing itself, as terminals
+// do: fonts draw them their own size, which leaves gaps between rows, and
+// many lack the diagonals of Symbols for Legacy Computing, which fall back
+// to other fonts. Each becomes a blank, and its strokes, in its color, go
+// in an svg over the drawing, a unit a cell.
+function lines(pre) {
+	pre.querySelector(":scope > svg.lines")?.remove();
+	const cells = []; // x, y, character, color
+	let x = 0, y = 0, cols = 0;
+	const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+		const color = node.parentElement === pre ? "" : node.parentElement.style.color;
+		let out = "", changed = false;
+		for (const ch of node.data) {
+			if (ch === "\n") {
+				y++, x = 0;
+				out += ch;
+				continue;
+			}
+			if (cellPaths(ch, 0, 0)) {
+				cells.push([x, y, ch, color]);
+				out += " ";
+				changed = true;
+			} else {
+				out += ch;
+			}
+			x += wide(ch) ? 2 : 1;
+			cols = Math.max(cols, x);
+		}
+		if (changed) node.data = out;
+	}
+	if (!cells.length) return pre;
+	const rows = (pre.textContent.match(/\n/g) || []).length + (pre.textContent.endsWith("\n") ? 0 : 1);
+	const groups = new Map(); // by color and stroke width
+	for (const [cx, cy, ch, color] of cells) {
+		const [d, width] = cellPaths(ch, cx, cy);
+		const key = color + "|" + width;
+		groups.set(key, (groups.get(key) || "") + d);
+	}
+	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+	svg.setAttribute("class", "lines");
+	svg.setAttribute("viewBox", `0 0 ${cols} ${rows}`);
+	svg.setAttribute("preserveAspectRatio", "none");
+	for (const [key, d] of groups) {
+		const [color, width] = key.split("|");
+		const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+		path.setAttribute("d", d);
+		path.setAttribute("fill", "none");
+		path.setAttribute("stroke", color || "currentColor");
+		path.setAttribute("stroke-width", width);
+		path.setAttribute("vector-effect", "non-scaling-stroke");
+		svg.append(path);
+	}
+	pre.append(svg);
 	return pre;
 }
 
@@ -266,7 +403,7 @@ function ansi(text) {
 		}
 	}
 	put(text.slice(at));
-	return pre;
+	return lines(pre);
 }
 
 // sizeText returns the width and height of a drawing: columns and rows of
@@ -797,6 +934,7 @@ function textEditor(change) {
 			html += "\n";
 		});
 		pre.innerHTML = html;
+		lines(pre);
 	}
 	// grow makes room for the cell at r, c, keeping the grid rectangular
 	function grow(grid, r, c) {
