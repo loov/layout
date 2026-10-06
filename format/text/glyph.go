@@ -71,20 +71,18 @@ func corner(lines int) rune {
 // arms returns the directions that the line character r joins toward;
 // marks and dots join every way
 func arms(r rune) int {
-	if r == ' ' {
-		return 0
-	}
-	if i := r - armsFirst; i >= 0 && int(i) < len(armsTable) {
+	if i := uint32(r - armsFirst); i < uint32(len(armsTable)) {
 		return int(armsTable[i])
 	}
-	return lookupArms(r)
+	return 0
 }
 
-// armsTable holds arms for the box drawing and shape characters, which
-// carving asks for over and over
-const armsFirst = '\u2500'
+// armsTable holds arms from the arrows to the end of the shapes, past the
+// box drawing characters, where every character with arms is; a table
+// keeps arms small enough to inline, as carving asks for every cell
+const armsFirst = '\u2190'
 
-var armsTable = func() (table [0x100]uint8) {
+var armsTable = func() (table [0x2600 - armsFirst]uint8) {
 	for i := range table {
 		table[i] = uint8(lookupArms(armsFirst + rune(i)))
 	}

@@ -252,14 +252,17 @@ func seams(g grid, opts seamOpts) grid {
 		runs = slices.Grow(runs[:0], m)[:m]
 		for i := range n {
 			from[i] = fromBuf[i*w : (i+1)*w]
-			// the length of the run of equal need around every cell
+			// the length of the run of equal need around every cell that
+			// has one
 			line := g[i]
 			for x := 0; x < len(line); {
+				if line[x].need == 0 {
+					x++
+					continue
+				}
 				k := x + 1
-				if line[x].need > 0 {
-					for k < len(line) && line[k].need == line[x].need {
-						k++
-					}
+				for k < len(line) && line[k].need == line[x].need {
+					k++
 				}
 				for p := x; p < k; p++ {
 					runs[p] = k - x
@@ -282,16 +285,19 @@ func seams(g grid, opts seamOpts) grid {
 				}
 				continue
 			}
-			for x := range w {
-				a, b := &g[i-1][x], &g[i][x]
+			above, here, joined := g[i-1][:w], g[i][:w], joined[:w]
+			for x := range joined {
+				a, b := &above[x], &here[x]
 				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
 					(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
 			}
 			// the cheapest way to x from the line before, moving one cell
-			// at a time and past a joined cell only where it can jog
+			// at a time and past a joined cell only where it can jog;
 			// crossings cost more than nothing, so one is only worth
-			// pricing where the move would win without it
-			for x := range w {
+			// pricing where the move would win without it. All are as
+			// long as joined, which spares the bounds checks.
+			before, reach, src, best, from := before[:len(joined)], reach[:len(joined)], src[:len(joined)], best[:len(joined)], from[i][:len(joined)]
+			for x := range joined {
 				reach[x], src[x] = before[x], x
 				if x > 0 {
 					if r := before[x-1] + 1; r < reach[x] {
@@ -306,7 +312,7 @@ func seams(g grid, opts seamOpts) grid {
 					}
 				}
 			}
-			for x := w - 2; x >= 0; x-- {
+			for x := len(joined) - 2; x >= 0; x-- {
 				if r := before[x+1] + 1; r < reach[x] {
 					reach[x], src[x] = r, x+1
 				}
@@ -318,9 +324,9 @@ func seams(g grid, opts seamOpts) grid {
 					reach[x], src[x] = r, src[x+1]
 				}
 			}
-			for x := range w {
+			for x := range joined {
 				best[x] += reach[x]
-				from[i][x] = src[x]
+				from[x] = src[x]
 			}
 		}
 		last := curBest
