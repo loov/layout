@@ -1,9 +1,9 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"slices"
-	"sort"
 )
 
 // nudgeLabels slides edge labels sideways along their rank until they
@@ -124,7 +124,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 						spot{p.Add(Vector{Length(-nx * off), Length(-ny * off)}), d})
 				}
 			}
-			sort.SliceStable(spots, func(i, k int) bool { return spots[i].dist < spots[k].dist })
+			slices.SortStableFunc(spots, func(a, b spot) int { return cmp.Compare(a.dist, b.dist) })
 			for _, s := range spots {
 				if clear(edge, s.at) {
 					edge.LabelPos, found = s.at, true

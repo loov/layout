@@ -1,9 +1,9 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"slices"
-	"sort"
 )
 
 // orthoEdges rewrites edge paths into vertical and horizontal segments.
@@ -101,12 +101,16 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 	}
 	for k, list := range ends {
-		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
+		slices.SortStableFunc(list, func(a, b end) int { return cmp.Compare(a.towards, b.towards) })
 		// merged ends take one slot a group, that of its middle end
 		followers := map[*ledge][]end{}
 		groups := map[int][]end{}
 		list = slices.DeleteFunc(list, func(e end) bool {
-			g := graph.merged[e.edge][map[bool]int{true: 0, false: 1}[e.start]]
+			side := 1
+			if e.start {
+				side = 0
+			}
+			g := graph.merged[e.edge][side]
 			if g != 0 {
 				groups[g] = append(groups[g], e)
 			}
@@ -117,7 +121,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			followers[mid.edge] = slices.Delete(group, len(group)/2, len(group)/2+1)
 			list = append(list, mid)
 		}
-		sort.SliceStable(list, func(i, j int) bool { return list[i].towards < list[j].towards })
+		slices.SortStableFunc(list, func(a, b end) int { return cmp.Compare(a.towards, b.towards) })
 		// slots evenly spread around the center, or packed from the left
 		// an edge padding apart
 		n := Length(len(list))
@@ -288,16 +292,18 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 				}
 			}
 		}
-		sort.SliceStable(jogs, func(i, j int) bool {
-			a, b := jogs[i], jogs[j]
+		slices.SortStableFunc(jogs, func(a, b *jog) int {
 			ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 			if ra != rb {
-				return ra
+				if ra {
+					return -1
+				}
+				return 1
 			}
 			if ra {
-				return a.xin > b.xin
+				return cmp.Compare(b.xin, a.xin)
 			}
-			return a.xin < b.xin
+			return cmp.Compare(a.xin, b.xin)
 		})
 		// a jog entering where another exits goes above it, or the exit
 		// would run down its stub; otherwise keep the sorted order. Where
@@ -430,7 +436,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 	}
 	for edge, js := range byEdge {
-		sort.Slice(js, func(a, b int) bool { return js[a].index > js[b].index })
+		slices.SortFunc(js, func(a, b *jog) int { return cmp.Compare(b.index, a.index) })
 		for _, j := range js {
 			if j.split {
 				continue

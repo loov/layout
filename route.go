@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"slices"
 	"sort"
@@ -16,7 +17,7 @@ type obstacles struct {
 func newObstacles(byRank [][]*lnode, pad Length) *obstacles {
 	obs := &obstacles{byRank: byRank, rowRadius: make([]Length, len(byRank)), colRadius: make([]Length, len(byRank))}
 	for r, nodes := range byRank {
-		sort.Slice(nodes, func(i, k int) bool { return nodes[i].Center.X < nodes[k].Center.X })
+		slices.SortFunc(nodes, func(a, b *lnode) int { return cmp.Compare(a.Center.X, b.Center.X) })
 		for _, node := range nodes {
 			obs.rowRadius[r] = max(obs.rowRadius[r], node.Radius.Y+pad)
 			obs.colRadius[r] = max(obs.colRadius[r], node.Radius.X+pad)

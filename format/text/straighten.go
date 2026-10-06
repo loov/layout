@@ -19,6 +19,7 @@ func mergeRows(g grid) (grid, bool) {
 	// most tries fail; they reuse these rows, and the one that merges
 	// keeps its row
 	var out, a, b []cell
+	var moves []move
 	for r := 0; r+1 < len(g); r++ {
 		if !along(g[r]) || !along(g[r+1]) {
 			continue
@@ -34,7 +35,8 @@ func mergeRows(g grid) (grid, bool) {
 		for _, end := range []struct{ r, dir int }{{r, up}, {r + 1, down}} {
 			for x := range g[end.r] {
 				for _, dx := range []int{1, -1, 2, -2, 3, -3} {
-					moves, ok := slide(g, end.r, x, end.dir, dx)
+					var ok bool
+					moves, ok = slide(moves, g, end.r, x, end.dir, dx)
 					if !ok {
 						continue
 					}
@@ -66,6 +68,7 @@ func mergeRows(g grid) (grid, bool) {
 // straighten takes the first step of a line aside out, sliding the line
 // before or after it over, see slide. It returns whether it took one out.
 func straighten(g grid) bool {
+	var moves []move
 	for r, row := range g {
 		for x, c := range row {
 			// the turn at the left end of a step
@@ -80,7 +83,8 @@ func straighten(g grid) bool {
 				continue
 			}
 			for _, from := range []struct{ x, dx int }{{x, end - x}, {end, x - end}} {
-				if moves, ok := slide(g, r, from.x, g[r][from.x].lines&(up|down), from.dx); ok {
+				var ok bool
+				if moves, ok = slide(moves, g, r, from.x, g[r][from.x].lines&(up|down), from.dx); ok {
 					for _, m := range moves {
 						g[m.r][m.x] = m.c
 					}
@@ -98,17 +102,17 @@ type move struct {
 	c    cell
 }
 
-// slide returns the cells that move the line leaving the turn at r, x
+// slide returns the cells, in moves' storage, that move the line leaving the turn at r, x
 // toward dir dx cells over, along with the runs it turns from at both
 // ends, or into an arrowhead or a port on a box at the far end, which
 // moves along the box. The line moves only through blanks, of one edge, and its runs
 // only grow over blanks and shrink over themselves.
-func slide(g grid, r, x, dir, dx int) ([]move, bool) {
+func slide(moves []move, g grid, r, x, dir, dx int) ([]move, bool) {
 	blank := func(r, x int) bool { c := g.at(r, x); return c != nil && free(*c) }
 	solid := func(r, x int) bool { c := g.at(r, x); return c != nil && c.solid }
 	turn := g.at(r, x)
 	if turn == nil || turn.lines&dir == 0 || bits.OnesCount(uint(turn.lines)) != 2 || turn.lines&(left|right) == 0 {
-		return nil, false
+		return moves, false
 	}
 	id := turn.owner[bits.TrailingZeros(uint(dir))]
 	// a dashed line, whose corners are square, stays dashed, see canvas.line
@@ -125,7 +129,7 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 		return glyph(lines, 0)
 	}
 	step := map[int]int{up: -1, down: 1}[dir]
-	var moves []move
+	moves = moves[:0]
 	// turns moves the turn at row y from x along its run, which grows or
 	// shrinks to meet it at x+dx
 	turns := func(y int, dirs int) bool {
@@ -162,21 +166,21 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 		return true
 	}
 	if !turns(r, turn.lines) {
-		return nil, false
+		return moves, false
 	}
 	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]int{id, id, id, id}}
 	for y := r + step; ; y += step {
 		p := g.at(y, x)
 		switch {
 		case p == nil:
-			return nil, false
+			return moves, false
 		case p.lines&(up|down) == up|down && p.owner[0] == id && p.owner[1] == id && !p.solid:
 			// a line it crosses it crosses where it goes too, and leaves
 			// whole where it was; a cell off nodes, as unjog keeps
 			q := g.at(y, x+dx)
 			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.lines == left|right && q.owner[2] != id
 			if (p.lines != up|down && p.lines != up|down|left|right) || !blank(y, x+dx) && !across || solid(y, x+dx-1) || solid(y, x+dx+1) {
-				return nil, false
+				return moves, false
 			}
 			was := cell{r: ' '}
 			if p.lines != up|down {
@@ -194,7 +198,7 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 			// an arrowhead onto the straight top of a box
 			below, to := g.at(y+1, x), g.at(y+1, x+dx)
 			if !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
-				return nil, false
+				return moves, false
 			}
 			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
 			return moves, true
@@ -204,14 +208,14 @@ func slide(g grid, r, x, dir, dx int) ([]move, bool) {
 			// a port on the side of a box moves along its straight side
 			to := g.at(y, x+dx)
 			if to == nil || to.node != p.node || arms(to.r) != left|right {
-				return nil, false
+				return moves, false
 			}
 			port, side := *p, *to
 			port.r, side.r = p.r, to.r
 			moves = append(moves, move{y, x, side}, move{y, x + dx, port})
 			return moves, true
 		default:
-			return nil, false
+			return moves, false
 		}
 	}
 }
@@ -293,10 +297,15 @@ func unjog(g grid) (changed bool) {
 	// the cells of the old line by their arms, and of the new; every
 	// reroute fills them anew
 	olds, news := map[pos]int{}, map[pos]bool{}
+	// the old line, the new one and the arms of the old in reroute, which
+	// every try routes anew
+	var oldPath, newPath, armsPath []pos
+	var oldDirs, newDirs, armsDirs []int
 	reroute := func(in int, old, path []pos, dirs []int, head *cell) bool {
 		clear(olds)
 		clear(news)
-		_, oldArms := route(in, down, old...)
+		armsPath, armsDirs = route(armsPath, armsDirs, in, down, old...)
+		oldArms := armsDirs
 		for i, p := range old {
 			olds[p] = oldArms[i]
 		}
@@ -410,9 +419,9 @@ func unjog(g grid) (changed bool) {
 						continue
 					}
 					end := pos{mid.r, c2}
-					old, _ := route(back, down, first, pos{r, b}, mid, end)
-					path, dirs := route(back, down, first, pos{r, c2}, end)
-					if reroute(back, old, path, dirs, nil) {
+					oldPath, oldDirs = route(oldPath, oldDirs, back, down, first, pos{r, b}, mid, end)
+					newPath, newDirs = route(newPath, newDirs, back, down, first, pos{r, c2}, end)
+					if reroute(back, oldPath, newPath, newDirs, nil) {
 						changed = true
 					}
 				}
@@ -430,14 +439,14 @@ func unjog(g grid) (changed bool) {
 				if !turns {
 					end, out = pos{mid.r, c2 - dir}, map[int]int{-1: left, 1: right}[dir]
 				}
-				old, _ := route(up, out, top, pos{r, b}, mid, end)
+				oldPath, oldDirs = route(oldPath, oldDirs, up, out, top, pos{r, b}, mid, end)
 				vias := []pos{{mid.r, c}, {r, c2}}
 				if !turns {
 					vias = vias[:1] // the run goes on along the lower row
 				}
 				for _, via := range vias {
-					path, dirs := route(up, out, top, via, end)
-					if reroute(up, old, path, dirs, nil) {
+					newPath, newDirs = route(newPath, newDirs, up, out, top, via, end)
+					if reroute(up, oldPath, newPath, newDirs, nil) {
 						changed = true
 						break
 					}
@@ -459,9 +468,9 @@ func unjog(g grid) (changed bool) {
 				continue
 			}
 			head := *at(mid)
-			old, _ := route(up, down, top, pos{r, b}, mid)
-			path, dirs := route(up, down, top, pos{mid.r, c})
-			if reroute(up, old, path, dirs, &head) {
+			oldPath, oldDirs = route(oldPath, oldDirs, up, down, top, pos{r, b}, mid)
+			newPath, newDirs = route(newPath, newDirs, up, down, top, pos{mid.r, c})
+			if reroute(up, oldPath, newPath, newDirs, &head) {
 				changed = true
 			}
 		}
@@ -481,13 +490,13 @@ func unjog(g grid) (changed bool) {
 				first--
 			}
 			last := g.bottom(pos{r, b}) - 1
-			old, _ := route(up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
+			oldPath, oldDirs = route(oldPath, oldDirs, up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
 			for row := first; row <= last; row++ {
 				if row == r {
 					continue
 				}
-				path, dirs := route(up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
-				if reroute(up, old, path, dirs, nil) {
+				newPath, newDirs = route(newPath, newDirs, up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+				if reroute(up, oldPath, newPath, newDirs, nil) {
 					changed = true
 					break
 				}
@@ -548,14 +557,15 @@ func (g grid) bottom(p pos) int {
 }
 
 // route returns the cells along the points, with the arms of each in
-// the line: in into the first, out out of the last
-func route(in, out int, points ...pos) ([]pos, []int) {
+// the line: in into the first, out out of the last; they are in the
+// storage of path and dirs
+func route(path []pos, dirs []int, in, out int, points ...pos) ([]pos, []int) {
 	n := 1
 	for i := 1; i < len(points); i++ {
 		dr, dc := points[i].r-points[i-1].r, points[i].c-points[i-1].c
 		n += max(dr, -dr) + max(dc, -dc)
 	}
-	path := make([]pos, 0, n)
+	path = slices.Grow(path[:0], n)
 	for i, p := range points {
 		if i == 0 {
 			path = append(path, p)
@@ -568,7 +578,8 @@ func route(in, out int, points ...pos) ([]pos, []int) {
 			path = append(path, q)
 		}
 	}
-	dirs := make([]int, len(path))
+	dirs = slices.Grow(dirs[:0], len(path))[:len(path)]
+	clear(dirs)
 	toward := func(from, to pos) int {
 		switch {
 		case to.r < from.r:

@@ -1,6 +1,7 @@
 package text
 
 import (
+	"slices"
 	"unicode"
 
 	"github.com/loov/layout"
@@ -312,21 +313,49 @@ func (g grid) at(r, x int) *cell {
 	return &g[r][x]
 }
 
-// transpose returns the grid with its rows as columns
-func (g grid) transpose() grid {
+// scratch holds the blocks of cells that carving is done with, for the
+// grids it makes next
+type scratch struct{ free [][]cell }
+
+// take returns a block of n cells, the smallest free one that fits
+func (sc *scratch) take(n int) []cell {
+	best := -1
+	for i, s := range sc.free {
+		if cap(s) >= n && (best < 0 || cap(s) < cap(sc.free[best])) {
+			best = i
+		}
+	}
+	if best < 0 {
+		return make([]cell, n)
+	}
+	s := sc.free[best]
+	sc.free = slices.Delete(sc.free, best, best+1)
+	return s[:n]
+}
+
+// release gives back a block that no grid uses any more
+func (sc *scratch) release(s []cell) {
+	if s != nil {
+		sc.free = append(sc.free, s)
+	}
+}
+
+// transpose returns g with its rows as columns, and the block of cells it
+// is in
+func (sc *scratch) transpose(g grid) (grid, []cell) {
 	if len(g) == 0 {
-		return nil
+		return nil, nil
 	}
 	out := make(grid, len(g[0]))
 	// one block for all rows, each with room for a cell more, which seams
 	// adds to every row
 	n := len(g) + 1
-	cells := make([]cell, len(out)*n)
+	cells := sc.take(len(out) * n)
 	for x := range out {
 		out[x] = cells[x*n : x*n+n-1 : x*n+n]
 		for y := range g {
 			out[x][y] = g[y][x]
 		}
 	}
-	return out
+	return out, cells
 }

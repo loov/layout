@@ -1,8 +1,9 @@
 package layout
 
 import (
+	"cmp"
 	"math"
-	"sort"
+	"slices"
 )
 
 // spreadWaypoints moves interior path points that several edges share
@@ -26,17 +27,17 @@ func spreadWaypoints(edges []*ledge, pad Length) {
 			points = append(points, point)
 		}
 	}
-	sort.Slice(points, func(i, k int) bool {
-		if points[i].X != points[k].X {
-			return points[i].X < points[k].X
+	slices.SortFunc(points, func(a, b Vector) int {
+		if a.X != b.X {
+			return cmp.Compare(a.X, b.X)
 		}
-		return points[i].Y < points[k].Y
+		return cmp.Compare(a.Y, b.Y)
 	})
 	for _, point := range points {
 		list := shared[point]
 		// spread along x, so the order of the following points' x keeps
 		// the edges from crossing
-		sort.SliceStable(list, func(i, k int) bool { return list[i].next.X < list[k].next.X })
+		slices.SortStableFunc(list, func(a, b at) int { return cmp.Compare(a.next.X, b.next.X) })
 		for i, a := range list {
 			offset := (Length(i) - Length(len(list)-1)/2) * 2 * pad
 			a.edge.Path[a.index] = point.Add(Vector{offset, 0})
@@ -80,7 +81,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		if len(ends) < 2 {
 			continue
 		}
-		sort.Slice(ends, func(i, k int) bool { return ends[i].angle < ends[k].angle })
+		slices.SortFunc(ends, func(a, b end) int { return cmp.Compare(a.angle, b.angle) })
 		// start the sequence after the largest gap so that the ±π seam
 		// never falls between neighbors
 		gap, at := ends[0].angle+2*math.Pi-ends[len(ends)-1].angle, len(ends)-1

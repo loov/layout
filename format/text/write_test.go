@@ -489,7 +489,7 @@ func TestCarveKeepsRanks(t *testing.T) {
 				}
 			}
 			at := map[int]int{} // node to its rank line after carving
-			for y, row := range carve(c.rows, c.sideways()) {
+			for y, row := range carve(c.rows, c.sideways(), &scratch{}) {
 				for x, p := range row {
 					if i := int(p.r - 0xE000); i >= 0 && i < len(graph.Nodes) {
 						at[i] = [2]int{x, y}[axis]

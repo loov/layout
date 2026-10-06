@@ -1,8 +1,10 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"math/rand"
+	"slices"
 	"sort"
 )
 
@@ -131,7 +133,7 @@ func force(graph *lgraph) {
 		for i := range order {
 			order[i] = i
 		}
-		sort.Slice(order, func(a, b int) bool { return pos[order[a]][axis] < pos[order[b]][axis] })
+		slices.SortFunc(order, func(a, b int) int { return cmp.Compare(pos[a][axis], pos[b][axis]) })
 		gaps := make([]float64, 0, n)
 		for i := 1; i < n; i++ {
 			gaps = append(gaps, pos[order[i]][axis]-pos[order[i-1]][axis])

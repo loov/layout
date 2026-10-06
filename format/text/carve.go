@@ -15,23 +15,32 @@ import (
 // line. Seams along the ranks turn, but not between cells that are
 // joined, so that what is drawn stays connected. Nodes and text stay
 // whole.
-func carve(g grid, sideways bool) grid {
+//
+// The grids carving makes reuse the cells in sc of those it is done with;
+// the one it returns stays out of sc.
+func carve(g grid, sideways bool, sc *scratch) grid {
+	// the first grid, the canvas's, isn't carving's to reuse
+	var cells []cell
 	// seams keep the blanks past the end of lines, trailing rows of them
 	// included; keep one of those as the bottom margin
 	blank := func(row []cell) bool {
 		return !slices.ContainsFunc(row, func(c cell) bool { return c.r != ' ' || c.bg != 0 })
 	}
-	rows := func(g grid, stubs bool) grid {
-		g = seams(g.transpose(), seamOpts{lines: columnLines, turn: sideways, stubs: stubs}).transpose()
+	rows := func(g grid, cells []cell, stubs bool) (grid, []cell) {
+		t, tcells := sc.transpose(g)
+		sc.release(cells)
+		t, tcells = seams(t, tcells, seamOpts{lines: columnLines, turn: sideways, stubs: stubs}, sc)
+		g, cells = sc.transpose(t)
+		sc.release(tcells)
 		for len(g) > 1 && blank(g[len(g)-1]) && blank(g[len(g)-2]) {
 			g = g[:len(g)-1]
 		}
-		return g
+		return g, cells
 	}
 	// the stubs of lines leaving a node go last: lines can still run
 	// further along them while the columns are carved
-	g = rows(g, false)
-	g = seams(g, seamOpts{lines: rowLines, turn: !sideways, bend: true})
+	g, cells = rows(g, nil, false)
+	g, cells = seams(g, cells, seamOpts{lines: rowLines, turn: !sideways, bend: true}, sc)
 	// straightening a line can clear the way for another
 	for !sideways && unjog(g) {
 	}
@@ -45,7 +54,7 @@ func carve(g grid, sideways bool) grid {
 	for merged := !sideways; merged; {
 		g, merged = mergeRows(g)
 	}
-	g = rows(g, true)
+	g, _ = rows(g, cells, true)
 	hug(g)
 	return g
 }
@@ -112,7 +121,11 @@ var (
 // turns there runs one cell further along, and a straight line jogs over
 // in a blank cell beside it, see bendsAt. Seams prefer the first, which
 // adds no corners.
-func seams(g grid, opts seamOpts) grid {
+//
+// The lines of g are in cells, or in no block of sc's when that is nil;
+// seams returns the block that the lines it returns are in, and gives sc
+// the other blocks it is done with.
+func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 	// the cost of a seam through a cell, and of each cell it moves along
 	const (
 		trailing = 1 << 20 // past the end of the line, which removes nothing
@@ -132,14 +145,17 @@ func seams(g grid, opts seamOpts) grid {
 	var fromBuf, prevBest, curBest, reach, src, ends, runs, path []int
 	var joined []bool
 	var from [][]int
+	// spare holds the next cut, in spareCells
 	var spare grid
+	var spareCells []cell
+	defer func() { sc.release(spareCells) }()
 	for {
 		for i := range g {
 			g[i] = append(g[i], cell{r: ' '})
 		}
 		n := len(g)
 		if n == 0 {
-			return g
+			return g, cells
 		}
 		m := len(g[0])
 		// the cells past the end of each line are blank
@@ -344,20 +360,25 @@ func seams(g grid, opts seamOpts) grid {
 				jogging = true
 				continue
 			}
-			return g
+			return g, cells
 		}
 		path = slices.Grow(path[:0], n)[:n]
 		for i, x := n-1, end; i >= 0; i-- {
 			path[i] = x
 			x = from[i][x]
 		}
-		if len(spare) != n {
+		if spare == nil {
+			// lines as long as these, which the cuts make shorter, with
+			// room for the blank that the next pass adds
+			spareCells = sc.take(n * m)
 			spare = make(grid, n)
+			for i := range spare {
+				spare[i] = spareCells[i*m : i*m : (i+1)*m]
+			}
 		}
 		cut := spare
 		for i, x := range path {
-			// with room for the blank that the next pass adds
-			cut[i] = append(append(slices.Grow(cut[i][:0], len(g[i])), g[i][:x]...), g[i][x+1:]...)
+			cut[i] = append(append(cut[i][:0], g[i][:x]...), g[i][x+1:]...)
 		}
 		jogs, failed, ok := bendLines(g, cut, path, opts.lines)
 		if ok && jogs > 1 {
@@ -366,7 +387,7 @@ func seams(g grid, opts seamOpts) grid {
 			for i := range g {
 				g[i] = g[i][:m-1]
 			}
-			return g
+			return g, cells
 		}
 		if !ok {
 			forbid[failed] = true
@@ -376,6 +397,7 @@ func seams(g grid, opts seamOpts) grid {
 			continue
 		}
 		g, spare = cut, g
+		cells, spareCells = spareCells, cells
 		clear(forbid)
 		jogging = false
 	}

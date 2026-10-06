@@ -1,9 +1,9 @@
 package hier
 
 import (
+	"cmp"
 	"math"
 	"slices"
-	"sort"
 )
 
 // Cluster is a group of nodes drawn inside a common box.
@@ -213,15 +213,15 @@ func orderClusters(graph *Graph) {
 		// mean goes to the side of its neighbors, and with those tied too
 		// before all of the cluster, never among its nodes; equal keys
 		// keep the current order
-		sort.SliceStable(layer, func(i, k int) bool {
-			a, b := index[layer[i]], index[layer[k]]
+		slices.SortStableFunc(layer, func(x, y *Node) int {
+			a, b := index[x], index[y]
 			if c := slices.Compare(keys[a], keys[b]); c != 0 {
-				return c < 0
+				return c
 			}
-			if sa, sb := borderSide(layer[i]), borderSide(layer[k]); sa != sb {
-				return sa < sb
+			if c := cmp.Compare(borderSide(x), borderSide(y)); c != 0 {
+				return c
 			}
-			return a < b
+			return cmp.Compare(a, b)
 		})
 		layer.assignPos()
 	}

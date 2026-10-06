@@ -39,9 +39,10 @@ func carved(l *layout.Layout) (*canvas, grid) {
 	// edges more, or as much on a larger drawing
 	var c *canvas
 	var g grid
+	var sc scratch
 	for _, spread := range []bool{true, false} {
 		d := drawGraph(l, spread)
-		carved := carve(d.rows, d.sideways())
+		carved := carve(d.rows, d.sideways(), &sc)
 		if c == nil || better(carved, g) {
 			c, g = d, carved
 		}
