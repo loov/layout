@@ -56,9 +56,10 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		edge  *ledge
 		angle float64
 		start bool
-		fixed bool // a loop's attachment, which stays where it is
+		fixed bool // a loop's attachment, or a lane's end, which stays where it is
 	}
 	byNode := map[*lnode][]end{}
+	pairs := newPairs(graph)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
 			continue
@@ -74,6 +75,16 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		}
 		if edge.From.Center.Y != edge.To.Center.Y {
 			continue // on a side, see spreadSides
+		}
+		// edges between neighbors that run side by side keep their lanes
+		if len(edge.Path) == 2 && pairs.count[pairs.key(edge)] > 1 {
+			if edge.freeStart() {
+				byNode[edge.From] = append(byNode[edge.From], end{edge, angle(edge.From, edge.Path[0]), true, true})
+			}
+			if edge.freeEnd() {
+				byNode[edge.To] = append(byNode[edge.To], end{edge, angle(edge.To, edge.Path[1]), false, true})
+			}
+			continue
 		}
 		if edge.freeStart() {
 			byNode[edge.From] = append(byNode[edge.From], end{edge, angle(edge.From, edge.Path[1]), true, false})

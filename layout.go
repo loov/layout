@@ -637,6 +637,50 @@ func (c *hierComponent) reserveEnds() {
 			node.pad = node.pad.Add(pad)
 		}
 	}
+	// edges along a rank between the same nodes run side by side, see
+	// assignPaths, so their nodes need room across the rank for them all
+	lanes := map[[2]hier.ID]int{}
+	for _, edge := range c.graphdef.Edges {
+		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+		if edge.From != edge.To && from.Rank == to.Rank {
+			lanes[unorderedPair(from.ID, to.ID)]++
+		}
+	}
+	spacing := c.laneSpacing()
+	for pair, n := range lanes {
+		if n < 2 {
+			continue
+		}
+		for _, id := range pair {
+			node := c.reverse[id]
+			if node.Shape == PointShape {
+				continue
+			}
+			need := Length(n+1)*spacing/2 + outlines(node)
+			if c.graphdef.ForText {
+				need += spacing / 2 // a cell to spare, which rounding can take
+				if sideways(c.graphdef.RankDir) && node.Shape == Octagon {
+					need += spacing // past the slanted corners on the top and bottom
+				}
+			}
+			if grow := need - node.Radius.Y; grow > 0 {
+				node.Radius.Y += grow
+				node.pad.Y += grow
+			}
+		}
+	}
+}
+
+// laneSpacing is how far apart edges along a rank between the same nodes
+// run, side by side across the rank
+func (c *hierComponent) laneSpacing() Length {
+	switch {
+	case !c.graphdef.ForText:
+		return 2 * c.graphdef.EdgePadding
+	case sideways(c.graphdef.RankDir):
+		return c.graphdef.cellWidth() // a column apart
+	}
+	return c.graphdef.LineHeight // a line apart
 }
 
 // reserveFlatLabels makes room for the label of an edge between neighbors
@@ -1122,12 +1166,8 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector) {
 			k := pairIndex[key]
 			pairIndex[key]++
 			spacing := 2 * c.graphdef.EdgePadding
-			if flat := len(path) == 2 && edge.From.Center.Y == edge.To.Center.Y; flat && c.graphdef.ForText {
-				// a cell apart across the rank, which is a column sideways
-				spacing = c.graphdef.LineHeight
-				if sideways(c.graphdef.RankDir) {
-					spacing = c.graphdef.cellWidth()
-				}
+			if flat := len(path) == 2 && edge.From.Center.Y == edge.To.Center.Y; flat {
+				spacing = c.laneSpacing()
 			}
 			offset := (Length(k) - Length(n-1)/2) * spacing
 			path = offsetPath(path, offset, edge.From, edge.To)

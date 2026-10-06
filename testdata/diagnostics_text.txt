@@ -114,8 +114,8 @@ oldarrows    nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 oldarrows_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=64 wavy=0 back=0 labels=0 far=0 length=19699 area=943818 unbalance=0
 ortho        nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2525 area=270336 unbalance=368
 ortho_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2561 area=270336 unbalance=359
-pgram        nodes=0 through=0 near=4 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=102 wavy=0 back=0 labels=0 far=0 length=21434 area=858096 unbalance=44
-pgram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=650 parallel=650 ends=650 shafts=0 jagged=0 bends=0 corners=100 wavy=0 back=0 labels=0 far=0 length=23556 area=676512 unbalance=20
+pgram        nodes=0 through=0 near=4 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=102 wavy=0 back=0 labels=0 far=0 length=21387 area=858096 unbalance=44
+pgram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=650 parallel=650 ends=650 shafts=0 jagged=0 bends=0 corners=100 wavy=0 back=0 labels=0 far=0 length=23508 area=676512 unbalance=20
 pm2way       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=14 wavy=0 back=0 labels=0 far=0 length=1461 area=294773 unbalance=188
 pm2way_merged nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=18 wavy=0 back=0 labels=0 far=0 length=1642 area=303245 unbalance=208
 pmpipe       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=38 wavy=2 back=0 labels=0 far=0 length=4639 area=471303 unbalance=723
