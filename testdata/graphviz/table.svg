@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='707.16003' height='511'>
+<svg xmlns='http://www.w3.org/2000/svg' width='301.44' height='211'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,49 +15,26 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M320.8498,118.601875 L265.6883,172.55255 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M417.26004,118.90277 L477.51672,179.36488 '></path><g x='272.36002' y='16' width='194.32' height='110' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></g><foreignObject x='272.36002' y='16' width='194.32' height='110' font-size='14' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table cellpadding="10" border="0">
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M141.91945,46.613224 L114.044914,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M166.69838,46.521576 L195.69691,80 '></path><g x='124.159996' y='16' width='59.92' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></g><foreignObject x='124.159996' y='16' width='59.92' height='32' font-size='14' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table cellpadding="10" border="0">
 	<tbody><tr>
 	    <td height="30" width="90">a</td>
 	    <td>b</td>
 	    <td>c</td>
 	</tr>
-    </tbody></table></body></foreignObject><g x='403.88' y='158' width='287.28' height='337' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></g><foreignObject x='403.88' y='158' width='287.28' height='337' font-size='14' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table>
-	<tbody><tr>
-	    <td colspan="3">elefantel</td>
-	    <td rowspan="2" valign="bottom" align="right">two</td>
-	</tr><tr>
-	    <td colspan="2" rowspan="2"><table bgcolor="grey">
-		<tbody><tr>
-		    <td>buca</td>
-		</tr><tr>
-		    <td bgcolor="yellow">c</td>
-		</tr><tr>
-		    <td>f</td>
-		</tr>
-	    </tbody></table></td>
-	    <td>patratos</td>
-	</tr><tr>
-	    <td colspan="2" align="right">4</td>
-	</tr>
-	</tbody></table>
-    </body></foreignObject><g x='16.000004' y='158' width='355.04' height='337' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></g><foreignObject x='16.000004' y='158' width='355.04' height='337' font-size='14' color='#000000'><body xmlns="http://www.w3.org/1999/xhtml" style="margin:0;display:flex;align-items:center;justify-content:center;height:100%"><table cellpadding="5">
-	<tbody><tr>
-	    <td rowspan="3">Hello</td>
-	    <td rowspan="2" colspan="3"><table border="4">
-		<tbody><tr>
-		    <td colspan="3">b</td>
-		</tr><tr>
-		    <td>a</td>
-		    <td>dino</td>
-		    <td>y</td>
-		</tr><tr>
-		    <td colspan="3">rhino</td>
-		</tr>
-	    </tbody></table></td>
-	</tr><tr>
-	    <td colspan="2">climb</td>
-	    <td rowspan="2">Up</td>
-	</tr><tr>
-	    <td colspan="3">low</td>
-	</tr>
-    </tbody></table></body></foreignObject></g></svg>
+    </tbody></table></body></foreignObject><rect x='176.79999' y='80' width='108.64' height='115' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='211.485' y='91.5' font-size='14' fill='#000000'>elefantel</text>
+<line x1='246.17' y1='80' x2='246.17' y2='103' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='265.805' y='91.5' font-size='14' fill='#000000'>two</text>
+<line x1='176.79999' y1='103' x2='285.44' y2='103' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='198.36' y='114.5' font-size='14' fill='#000000'>buca</text>
+<line x1='176.79999' y1='126' x2='219.92' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='198.36' y='137.5' font-size='14' fill='#000000'>c</text>
+<line x1='176.79999' y1='149' x2='219.92' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='198.36' y='160.5' font-size='14' fill='#000000'>f</text>
+<line x1='219.92' y1='103' x2='219.92' y2='172' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='252.68' y='137.5' font-size='14' fill='#000000'>patratos</text>
+<line x1='176.79999' y1='172' x2='285.44' y2='172' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='231.12' y='183.5' font-size='14' fill='#000000'>4</text>
+<rect x='16.000002' y='80' width='128.24' height='115' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='38.960003' y='114.5' font-size='14' fill='#000000'>Hello</text>
+<line x1='61.920002' y1='80' x2='61.920002' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='103.08' y='91.5' font-size='14' fill='#000000'>b</text>
+<line x1='61.920002' y1='103' x2='144.24' y2='103' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='72.560005' y='114.5' font-size='14' fill='#000000'>a</text>
+<line x1='83.200005' y1='103' x2='83.200005' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='103.08' y='114.5' font-size='14' fill='#000000'>dino</text>
+<line x1='122.96' y1='103' x2='122.96' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='133.6' y='114.5' font-size='14' fill='#000000'>y</text>
+<line x1='61.920002' y1='126' x2='144.24' y2='126' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='103.08' y='137.5' font-size='14' fill='#000000'>rhino</text>
+<line x1='16.000002' y1='149' x2='144.24' y2='149' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='52.435' y='160.5' font-size='14' fill='#000000'>climb</text>
+<line x1='88.87' y1='149' x2='88.87' y2='172' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='116.555' y='160.5' font-size='14' fill='#000000'>Up</text>
+<line x1='16.000002' y1='172' x2='144.24' y2='172' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='80.12' y='183.5' font-size='14' fill='#000000'>low</text>
+</g></svg>

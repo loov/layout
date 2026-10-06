@@ -43,11 +43,7 @@ func (graph *lgraph) prepareText() {
 		if node.Shape == PointShape {
 			continue
 		}
-		// text draws a table with borders as a record, the borders as
-		// its dividers
-		if rec, ok := draw.TableRecord(node.DefaultLabel(), sideways(graph.RankDir)); ok {
-			node.Label, node.Shape = rec, Record
-		}
+		tableRecord(graph, node)
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight // the layout's default
 		}

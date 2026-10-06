@@ -73,8 +73,10 @@ func TableRecord(label string, vertical bool) (string, bool) {
 // side by side, braced to stack the other way
 func tableFields(table *html.Node) string {
 	var rows []string
+	open := false // the last row is one cell without a border below
 	for _, tr := range rowsOf(table) {
 		var cells []string
+		var only *html.Node // the cell of a row of one
 		for td := tr.FirstChild; td != nil; td = td.NextSibling {
 			if td.Type != html.ElementNode || td.Data != "td" && td.Data != "th" {
 				continue
@@ -88,14 +90,29 @@ func tableFields(table *html.Node) string {
 			var out strings.Builder
 			plainText(&out, td, "")
 			cells = append(cells, escapeRecord(collapse(out.String())))
+			only = td
 		}
-		if len(cells) == 1 {
-			rows = append(rows, cells[0])
-		} else {
+		switch {
+		case len(cells) != 1:
 			rows = append(rows, "{"+strings.Join(cells, "|")+"}")
+			only = nil
+		case open && !side(only, 't'):
+			// no border between the cells of this row and the last:
+			// one field
+			rows[len(rows)-1] += "\n" + cells[0]
+		default:
+			rows = append(rows, cells[0])
 		}
+		open = only != nil && !side(only, 'b')
 	}
 	return strings.Join(rows, "|")
+}
+
+// side reports whether a cell has a border on the side, given as l, t, r
+// or b, as its sides attribute says, all of them when it doesn't
+func side(td *html.Node, side byte) bool {
+	sides := attr(td, "sides")
+	return sides == "" || strings.IndexByte(sides, side) >= 0
 }
 
 // rowsOf returns the rows of a table, also those in its body

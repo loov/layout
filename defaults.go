@@ -25,6 +25,7 @@ func (graph *lgraph) assignDefaults() {
 		if node.Shape == "" {
 			node.Shape = graph.Shape
 		}
+		tableRecord(graph, node)
 
 		if node.FontSize <= 0 {
 			node.FontSize = graph.FontSize

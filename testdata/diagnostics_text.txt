@@ -74,8 +74,8 @@ fig6         nodes=0 through=0 near=0 crossings=64 shallow=0 overlaps=0 parallel
 fig6_merged  nodes=0 through=0 near=0 crossings=77 shallow=0 overlaps=52 parallel=52 ends=52 shafts=0 jagged=0 bends=12 corners=148 wavy=12 back=0 labels=0 far=0 length=30495 area=1893083 unbalance=3188
 fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4589 area=479776 unbalance=378
 fsm_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4583 area=479776 unbalance=450
-git          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=24 wavy=4 back=0 labels=0 far=0 length=3045 area=378067 unbalance=236
-git_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=22 wavy=4 back=0 labels=0 far=0 length=3037 area=391570 unbalance=260
+git          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=24 wavy=4 back=0 labels=0 far=0 length=3045 area=378067 unbalance=228
+git_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=22 wavy=4 back=0 labels=0 far=0 length=3037 area=391570 unbalance=252
 go-package   nodes=0 through=0 near=0 crossings=49 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=16 corners=132 wavy=16 back=0 labels=0 far=0 length=25923 area=1115779 unbalance=3825
 go-package_merged nodes=0 through=0 near=0 crossings=61 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=16 corners=134 wavy=16 back=0 labels=0 far=0 length=26092 area=1100064 unbalance=3770
 grammar      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=48 wavy=0 back=0 labels=0 far=0 length=5828 area=834543 unbalance=411
