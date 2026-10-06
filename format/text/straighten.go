@@ -290,13 +290,16 @@ func unjog(g grid) (changed bool) {
 	// the arm in into the first, ending in head when it is set, if it can
 	// fewer has reroute take only a new line that crosses fewer lines
 	fewer := false
+	// the cells of the old line by their arms, and of the new; every
+	// reroute fills them anew
+	olds, news := map[pos]int{}, map[pos]bool{}
 	reroute := func(in int, old, path []pos, dirs []int, head *cell) bool {
-		olds := map[pos]int{}
+		clear(olds)
+		clear(news)
 		_, oldArms := route(in, down, old...)
 		for i, p := range old {
 			olds[p] = oldArms[i]
 		}
-		news := map[pos]bool{}
 		for _, p := range path {
 			news[p] = true
 		}
@@ -547,7 +550,12 @@ func (g grid) bottom(p pos) int {
 // route returns the cells along the points, with the arms of each in
 // the line: in into the first, out out of the last
 func route(in, out int, points ...pos) ([]pos, []int) {
-	var path []pos
+	n := 1
+	for i := 1; i < len(points); i++ {
+		dr, dc := points[i].r-points[i-1].r, points[i].c-points[i-1].c
+		n += max(dr, -dr) + max(dc, -dc)
+	}
+	path := make([]pos, 0, n)
 	for i, p := range points {
 		if i == 0 {
 			path = append(path, p)

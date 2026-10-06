@@ -318,8 +318,12 @@ func (g grid) transpose() grid {
 		return nil
 	}
 	out := make(grid, len(g[0]))
+	// one block for all rows, each with room for a cell more, which seams
+	// adds to every row
+	n := len(g) + 1
+	cells := make([]cell, len(out)*n)
 	for x := range out {
-		out[x] = make([]cell, len(g))
+		out[x] = cells[x*n : x*n+n-1 : x*n+n]
 		for y := range g {
 			out[x][y] = g[y][x]
 		}

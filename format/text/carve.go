@@ -356,7 +356,8 @@ func seams(g grid, opts seamOpts) grid {
 		}
 		cut := spare
 		for i, x := range path {
-			cut[i] = append(append(cut[i][:0], g[i][:x]...), g[i][x+1:]...)
+			// with room for the blank that the next pass adds
+			cut[i] = append(append(slices.Grow(cut[i][:0], len(g[i])), g[i][:x]...), g[i][x+1:]...)
 		}
 		jogs, failed, ok := bendLines(g, cut, path, opts.lines)
 		if ok && jogs > 1 {
