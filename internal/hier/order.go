@@ -238,29 +238,55 @@ func crossingsByPos(u, v *Node) (uv, vu float32) {
 }
 
 // orderFlatEdges ensures the source of every flat edge is left of its target
-// by moving the target right after the source.
+// by sorting the ranks with misordered flat edges topologically: the
+// leftmost node whose flat sources are all placed goes next, which leaves
+// the other nodes in their order.
 func orderFlatEdges(graph *Graph) {
 	graph.assignPos()
+	preds := map[*Node]int{}
+	succs := map[*Node]Nodes{}
+	misordered := map[int]bool{}
 	for _, edge := range graph.Flat {
 		src, dst := edge[0], edge[1]
-		if src.Pos < dst.Pos {
-			continue
+		if src.Pos > dst.Pos {
+			misordered[src.Rank] = true
 		}
-		layer := graph.ByRank[src.Rank]
-		layer.moveNode(dst.Pos, src.Pos)
+		preds[dst]++
+		succs[src] = append(succs[src], dst)
+	}
+	for rank := range misordered {
+		layer := graph.ByRank[rank]
+		placed := make([]bool, len(layer))
+		sorted := make(Nodes, 0, len(layer))
+		// quadratic in the rank size; a ready queue by position if wide
+		// ranks with flat edges get slow
+		for len(sorted) < len(layer) {
+			// on a cycle of flat edges no node is ready; take the leftmost
+			pick, fallback := -1, -1
+			for i, node := range layer {
+				if placed[i] {
+					continue
+				}
+				if fallback < 0 {
+					fallback = i
+				}
+				if preds[node] == 0 {
+					pick = i
+					break
+				}
+			}
+			if pick < 0 {
+				pick = fallback
+			}
+			placed[pick] = true
+			sorted = append(sorted, layer[pick])
+			for _, dst := range succs[layer[pick]] {
+				preds[dst]--
+			}
+		}
+		copy(layer, sorted)
 		layer.assignPos()
 	}
-}
-
-// moveNode moves the node at index from to index to, shifting the others
-func (nodes Nodes) moveNode(from, to int) {
-	node := nodes[from]
-	if from < to {
-		copy(nodes[from:to], nodes[from+1:to+1])
-	} else {
-		copy(nodes[to+1:from+1], nodes[to:from])
-	}
-	nodes[to] = node
 }
 
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or

@@ -32,8 +32,8 @@ Genetic_Programming nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 pa
 Genetic_Programming_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=17 parallel=17 ends=17 shafts=0 jagged=0 bends=0 corners=76 wavy=0 back=0 labels=0 far=0 length=5284 area=1393920 unbalance=177
 KW91         nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=12 wavy=0 back=0 labels=0 far=0 length=1824 area=435040 unbalance=301
 KW91_merged  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=12 wavy=0 back=0 labels=0 far=0 length=1846 area=435040 unbalance=301
-Linux_kernel_diagram nodes=0 through=0 near=3 crossings=38 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=9 bends=2 corners=56 wavy=2 back=0 labels=0 far=0 length=18269 area=2622639 unbalance=344
-Linux_kernel_diagram_merged nodes=0 through=0 near=3 crossings=38 shallow=0 overlaps=10 parallel=4 ends=11 shafts=0 jagged=9 bends=2 corners=58 wavy=2 back=0 labels=0 far=0 length=18215 area=2565640 unbalance=348
+Linux_kernel_diagram nodes=0 through=0 near=2 crossings=42 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=6 bends=1 corners=50 wavy=1 back=0 labels=0 far=0 length=17862 area=2601142 unbalance=620
+Linux_kernel_diagram_merged nodes=0 through=0 near=2 crossings=46 shallow=0 overlaps=10 parallel=5 ends=10 shafts=0 jagged=6 bends=1 corners=50 wavy=1 back=0 labels=0 far=0 length=17413 area=2488079 unbalance=620
 NaN          nodes=0 through=0 near=0 crossings=20 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=0 bends=15 corners=220 wavy=15 back=7 labels=0 far=0 length=63018 area=5370130 unbalance=3954
 NaN_merged   nodes=0 through=0 near=0 crossings=121 shallow=0 overlaps=149 parallel=149 ends=149 shafts=0 jagged=0 bends=15 corners=218 wavy=15 back=7 labels=0 far=0 length=60974 area=4874266 unbalance=4166
 UML_Class_diagram nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=24 wavy=4 back=0 labels=0 far=0 length=2794 area=715651 unbalance=134
