@@ -300,6 +300,7 @@ type cell struct {
 	text   int32    // edge whose label it is part of, see canvas.drawn
 	lines  uint8    // direction mask, for joining edge runs
 	heavy  uint8    // arms that runs of different edges share
+	kind   uint8    // class of r, which seams keep up to date for their use
 	keep   bool     // inside a node or of text, which carving keeps
 	glue   bool     // beside a label, which carving keeps beside it
 	solid  bool     // covered by a node; edges do not draw there

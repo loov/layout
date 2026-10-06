@@ -71,26 +71,11 @@ type seamOpts struct {
 type seamAxis struct {
 	next, prev uint8 // the arms that join a cell to the line after and before it
 	lo, hi     uint8 // the directions along a line, toward its start and end
+	seam, mark uint8 // the class bits of straight runs and markers, see class
 }
 
 // columns reports whether the lines are the columns of the drawing
 func (ax seamAxis) columns() bool { return ax.next&(left|right) != 0 }
-
-// straight reports whether a seam can take r out of a line
-func (ax seamAxis) straight(r rune) bool {
-	if ax.columns() {
-		return verticalSeam(r)
-	}
-	return horizontalSeam(r)
-}
-
-// marker reports whether r is a marker, which continues the line it sits on
-func (ax seamAxis) marker(r rune) bool {
-	if ax.columns() {
-		return verticalMarker(r)
-	}
-	return horizontalMarker(r)
-}
 
 // straightRun reports whether c is a plain straight run across the lines,
 // off nodes, arrowheads and turns, which a jog can bend
@@ -101,9 +86,9 @@ func (ax seamAxis) straightRun(c cell) bool {
 var (
 	// the lines are the columns of the drawing, transposed, so seams
 	// take out rows
-	columnLines = seamAxis{right, left, up, down}
+	columnLines = seamAxis{right, left, up, down, seamV, markV}
 	// the lines are the rows, so seams take out columns
-	rowLines = seamAxis{down, up, left, right}
+	rowLines = seamAxis{down, up, left, right, seamH, markH}
 )
 
 // seams removes seams from the lines of grid, one cell from every line,
@@ -151,9 +136,17 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 	var spare grid
 	var spareCells []cell
 	defer func() { sc.release(spareCells) }()
+	// the class of every cell, which the passes check over and over;
+	// cells seams make get theirs as they are made
+	blank := cell{r: ' ', kind: class(' ')}
+	for _, line := range g {
+		for x := range line {
+			line[x].kind = class(line[x].r)
+		}
+	}
 	for {
 		for i := range g {
-			g[i] = append(g[i], cell{r: ' '})
+			g[i] = append(g[i], blank)
 		}
 		n := len(g)
 		if n == 0 {
@@ -175,7 +168,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		cost := func(i, x int) int {
 			line := g[i]
 			c := &line[x]
-			if c.keep || !ax.straight(c.r) {
+			if c.keep || c.kind&ax.seam == 0 {
 				return blocked
 			}
 			// a run kept for a label stays long enough for it, see runs
@@ -197,11 +190,11 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 				// follows is blank or drawn by an edge, see leaves
 				if across && x > 0 && x+1 < len(line) {
 					before, after := line[x-1], line[x+1]
-					arrow := ax.marker(after.r)
-					if c.r == along && arms(before.r)&hi != 0 && (arms(after.r)&lo != 0 || arrow) && !(arrow && before.solid) &&
+					arrow := after.kind&ax.mark != 0
+					if c.r == along && before.kind&hi != 0 && (after.kind&lo != 0 || arrow) && !(arrow && before.solid) &&
 						// or, with stubs, that goes on straight, which keeps a
 						// cell of it
-						(arrow || arms(after.r) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
+						(arrow || after.kind&(up|down|left|right) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
 						return 0
 					}
 					if c.r == ' ' && before.solid && !after.solid && !arrow && leaves(g, i, x) {
@@ -209,7 +202,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 					}
 				}
 				// a marker on a run continues it like the line it sits on
-				if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && ax.marker(b.r)) {
+				if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && b.kind&ax.mark != 0) {
 					return blocked
 				}
 				return 0
@@ -245,7 +238,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		w := 0
 		for _, line := range g {
 			for x := len(line) - 1; x >= w; x-- {
-				if line[x] != (cell{r: ' '}) {
+				if line[x] != blank {
 					w = x + 1
 					break
 				}
@@ -306,7 +299,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			above, here, joined := g[i-1][:w], g[i][:w], joined[:w]
 			for x := range joined {
 				a, b := &above[x], &here[x]
-				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
+				joined[x] = a.kind&next != 0 || b.kind&prev != 0 ||
 					(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
 			}
 			// the cheapest way to x from the line before, moving one cell
@@ -524,8 +517,8 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 				like := cut[bd.row][bd.at]
 				id := ownerOf(like)
 				owner := [4]int32{id, id, id, id}
-				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner}
-				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner}
+				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.lines))}
+				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.join))}
 				if !bd.extends {
 					jogs++
 				}

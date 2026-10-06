@@ -72,24 +72,51 @@ func corner(lines uint8) rune {
 
 // arms returns the directions that the line character r joins toward;
 // marks and dots join every way
-func arms(r rune) uint8 {
-	if i := uint32(r - armsFirst); i < uint32(len(armsTable)) {
-		return armsTable[i]
+func arms(r rune) uint8 { return class(r) & (up | down | left | right) }
+
+// the classes of characters that carving checks for every cell, in the
+// bits of class above the arms
+const (
+	seamV = 1 << (4 + iota) // see verticalSeam
+	seamH                   // see horizontalSeam
+	markV                   // see verticalMarker
+	markH                   // see horizontalMarker
+)
+
+// class returns the arms of r with the bits of the classes it is of
+func class(r rune) uint8 {
+	if i := uint32(r - classFirst); i < uint32(len(classTable)) {
+		return classTable[i]
+	}
+	if r == ' ' {
+		return seamV | seamH
 	}
 	return 0
 }
 
-// armsTable holds arms from the arrows to the end of the shapes, past the
-// box drawing characters, where every character with arms is; a table
-// keeps arms small enough to inline, as carving asks for every cell
-const armsFirst = '\u2190'
+// classTable holds class from the arrows to the end of the shapes, past
+// the box drawing characters, where every character with arms or of a
+// class is, other than the blank; a table keeps class small enough to
+// inline, as carving asks for every cell
+const classFirst = '\u2190'
 
-var armsTable = func() (table [0x2600 - armsFirst]uint8) {
+var classTable = func() (table [0x2600 - classFirst]uint8) {
 	for i := range table {
-		table[i] = lookupArms(armsFirst + rune(i))
+		table[i] = lookupClass(classFirst + rune(i))
 	}
 	return table
 }()
+
+// lookupClass returns class for any character, see class
+func lookupClass(r rune) uint8 {
+	c := lookupArms(r)
+	for bit, is := range map[uint8]func(rune) bool{seamV: verticalSeam, seamH: horizontalSeam, markV: verticalMarker, markH: horizontalMarker} {
+		if is(r) {
+			c |= bit
+		}
+	}
+	return c
+}
 
 // lookupArms returns arms for any character, see arms
 func lookupArms(r rune) uint8 {
