@@ -44,10 +44,8 @@ package dot
 
 import (
 	"errors"
-	"html"
 	"io"
 	"math"
-	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -171,7 +169,8 @@ func unquote(s string) string {
 var unescape = strings.NewReplacer(`\\`, `\`, `\"`, `"`, `\n`, "\n")
 
 // expandLabel interprets a label value. In quoted strings \n, \l and \r
-// break lines and names replace their escapes, given as pairs such as
+// break lines, \l and \r with the mark of where the line goes, see
+// draw.Lines, and names replace their escapes, given as pairs such as
 // `\N`, node.ID; other escapes are kept for record labels. A final line
 // break only ends the last line, as in Graphviz. A quoted label that
 // reads as HTML, such as "<init>", gets the literalMark prefix. HTML
@@ -180,7 +179,7 @@ func expandLabel(raw string, names ...string) string {
 	if len(raw) < 2 || raw[0] != '"' || raw[len(raw)-1] != '"' {
 		return raw
 	}
-	escapes := append([]string{`\\`, `\`, `\"`, `"`, `\n`, "\n", `\l`, "\n", `\r`, "\n"}, names...)
+	escapes := append([]string{`\\`, `\`, `\"`, `"`, `\n`, "\n", `\l`, draw.LeftMark + "\n", `\r`, draw.RightMark + "\n"}, names...)
 	label := strings.TrimSuffix(strings.NewReplacer(escapes...).Replace(raw[1:len(raw)-1]), "\n")
 	if draw.IsHTMLLabel(label) {
 		label = literalMark + label
@@ -189,17 +188,8 @@ func expandLabel(raw string, names ...string) string {
 }
 
 // recordText returns the fields of an HTML-like record label, such as
-// <{<b>name</b>|a<br/>b}>, as a plain record label: the markup goes, and
-// a <br> or the end of a table row breaks the line
-func recordText(label string) string {
-	label = htmlBreak.ReplaceAllString(label[1:len(label)-1], "\n")
-	return html.UnescapeString(htmlTag.ReplaceAllString(label, ""))
-}
-
-var (
-	htmlBreak = regexp.MustCompile(`(?i)<br[^>]*>|</tr\s*>`)
-	htmlTag   = regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
-)
+// <{<b>name</b>|a<br/>b}>, as a plain record label, see draw.PlainLabel
+func recordText(label string) string { return draw.PlainLabel(label) }
 
 // literalMark is a zero width space that keeps quoted text in angle
 // brackets from being drawn as an HTML label. It is not visible and

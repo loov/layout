@@ -2,6 +2,7 @@
 package svg
 
 import (
+	"cmp"
 	"fmt"
 	stdhtml "html"
 	"io"
@@ -179,7 +180,8 @@ func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, box layou
 			X: origin.X + layout.Length(rec.X0+rec.X1)/2,
 			Y: origin.Y + layout.Length(rec.Y0+rec.Y1)/2,
 		}
-		svg.writeText(graph, rec.Text, center, box.FontSize, node.FontName, node.FontColor)
+		half := layout.Length(rec.X1-rec.X0) / 2
+		svg.writeText(graph, rec.Text, center, half, box.FontSize, node.FontName, node.FontColor)
 		return
 	}
 	for i, field := range rec.Fields {
@@ -199,13 +201,23 @@ func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, box layou
 	}
 }
 
-// writeText writes multi-line text centered on center
-func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
-	lines := strings.Split(text, "\n")
+// writeText writes multi-line text around center: a line centered on it,
+// or against the left or right side of a box half wide, a font size in,
+// see draw.Lines
+func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vector, half, fontSize layout.Length, fontName string, color layout.Color) {
+	lines := draw.Lines(text)
 	top := center.Y - graph.LineHeight*layout.Length(len(lines))*0.5
 	top += graph.LineHeight * 0.5
+	inset := max(half-cmp.Or(fontSize, graph.FontSize)*0.5, 0)
 	for _, line := range lines {
-		svg.write("<text text-anchor='middle' alignment-baseline='middle' x='%v' y='%v'", center.X, top)
+		anchor, x := "middle", center.X
+		switch line.Align {
+		case draw.Left:
+			anchor, x = "start", center.X-inset
+		case draw.Right:
+			anchor, x = "end", center.X+inset
+		}
+		svg.write("<text text-anchor='%v' alignment-baseline='middle' x='%v' y='%v'", anchor, x, top)
 		if fontSize != 0 {
 			svg.write(" font-size='%v'", fontSize)
 		}
@@ -213,7 +225,7 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 			svg.write(" font-family='%v'", escapeString(fontName))
 		}
 		svg.write(" fill='%v'", dkcolor(color))
-		svg.write(">%v</text>\n", escapeString(line))
+		svg.write(">%v</text>\n", escapeString(line.Text))
 		top += graph.LineHeight
 	}
 }
@@ -222,7 +234,7 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 // as a foreignObject filling the box of the given half size.
 func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
 	if !draw.IsHTMLLabel(label) {
-		svg.writeText(graph, label, center, fontSize, fontName, color)
+		svg.writeText(graph, label, center, radius.X, fontSize, fontName, color)
 		return
 	}
 	svg.write("<foreignObject x='%v' y='%v' width='%v' height='%v'", center.X-radius.X, center.Y-radius.Y, 2*radius.X, 2*radius.Y)

@@ -37,9 +37,14 @@ func parseRecord(s string, vertical bool) (*Record, string) {
 		c := s[0]
 		switch {
 		case c == '\\' && len(s) > 1:
-			if strings.IndexByte("nlr", s[1]) >= 0 {
+			switch s[1] {
+			case 'l':
+				text.WriteString(LeftMark + "\n")
+			case 'r':
+				text.WriteString(RightMark + "\n")
+			case 'n':
 				text.WriteByte('\n')
-			} else {
+			default:
 				text.WriteByte(s[1])
 			}
 			s = s[2:]

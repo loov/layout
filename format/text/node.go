@@ -6,19 +6,18 @@ import (
 	"github.com/loov/layout/internal/draw"
 	"math"
 	"slices"
-	"strings"
 )
 
-// record draws field texts centered in their boxes with dividers between
+// record draws field texts in their boxes, see placed, with dividers between
 // sibling fields; row maps the top and bottom of fields to the rows of the
 // borders and dividers around them
 func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(layout.Length) int) {
 	if len(rec.Fields) == 0 {
 		x0, y0 := col(origin.X+layout.Length(rec.X0)), row(origin.Y+layout.Length(rec.Y0))
 		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
-		lines := strings.Split(rec.Text, "\n")
+		lines := draw.Lines(rec.Text)
 		for i, line := range lines {
-			c.text(centered(x0, x1, line), (y0+y1)/2-(len(lines)-1)/2+i, line)
+			c.text(placed(x0, x1, line), (y0+y1)/2-(len(lines)-1)/2+i, line.Text)
 		}
 		return
 	}
@@ -249,23 +248,51 @@ func (c *canvas) drawNode(node *layout.Node) {
 	c.rect(x0, y0, x1, y1, style)
 	if box.Shape == layout.Record {
 		rec := layoutRecord(graph, node, box)
-		// fields at their share of the rows, which can be more than the
-		// node rounds to
-		inside := func(v layout.Length) int {
-			share := float64((v - box.Top()) / (box.Bottom() - box.Top()))
-			return y0 + int(math.Round(share*float64(y1-y0)))
-		}
 		c.evenRecord(rec, box.TopLeft())
-		c.record(rec, box.TopLeft(), c.col, inside)
+		// the fields take whole rows, see fitRows, in place of their
+		// share of the height
+		fitRows(rec, y0, y1)
+		row := func(v layout.Length) int { return int(math.Round(float64(v))) }
+		c.record(rec, layout.Vector{X: box.TopLeft().X}, c.col, row)
 		return
 	}
-	lines := strings.Split(draw.PlainLabel(box.Label), "\n")
+	lines := draw.Lines(draw.PlainLabel(box.Label))
 	top := (y0 + y1 + 1 - len(lines)) / 2
 	if graph.PackEdgeEnds && c.sideways() {
 		top = y0 + 1 // with the main path, along the first row
 	}
 	for i, line := range lines {
-		c.text(centered(x0, x1, line), top+i, line)
+		c.text(placed(x0, x1, line), top+i, line.Text)
+	}
+}
+
+// fitRows sets the tops and bottoms of the fields of rec to rows from y0
+// to y1, the rows of the borders around it: fields stacked top to bottom
+// take the rows their text needs and a row for the divider between them,
+// see draw.RecordRows, and share the rows to spare in turn
+func fitRows(rec *draw.Record, y0, y1 int) {
+	rec.Y0, rec.Y1 = float64(y0), float64(y1)
+	if !rec.Vertical {
+		for _, field := range rec.Fields {
+			fitRows(field, y0, y1)
+		}
+		return
+	}
+	n := len(rec.Fields)
+	need := make([]int, n)
+	spare := y1 - y0 - 1 - (n - 1)
+	for i, field := range rec.Fields {
+		need[i] = draw.RecordRows(field)
+		spare -= need[i]
+	}
+	for i := 0; spare > 0 && n > 0; i = (i + 1) % n {
+		need[i]++
+		spare--
+	}
+	at := y0
+	for i, field := range rec.Fields {
+		fitRows(field, at, at+need[i]+1)
+		at += need[i] + 1
 	}
 }
 

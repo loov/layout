@@ -12,7 +12,11 @@ import (
 // clusterLabel returns the label of a cluster on one line, as it is
 // drawn along the top of the frame
 func clusterLabel(cluster *layout.Cluster) string {
-	return strings.ReplaceAll(draw.PlainLabel(cluster.Label), "\n", " ")
+	var texts []string
+	for _, line := range draw.Lines(draw.PlainLabel(cluster.Label)) {
+		texts = append(texts, line.Text)
+	}
+	return strings.Join(texts, " ")
 }
 
 // clusterLabelWidth returns the columns from a cluster's left corner past
@@ -35,6 +39,19 @@ func centered(x0, x1 int, line string) int {
 	return (x0 + x1 + 1 - draw.Columns(line)) / 2
 }
 
+// placed returns the column that line starts at between the columns x0
+// and x1 of the borders around it: centered, or a space in from the side
+// it goes against
+func placed(x0, x1 int, line draw.Line) int {
+	switch line.Align {
+	case draw.Left:
+		return x0 + 2
+	case draw.Right:
+		return x1 - 1 - draw.Columns(line.Text)
+	}
+	return centered(x0, x1, line.Text)
+}
+
 // drawLabels writes edge and cluster labels over everything else; paths
 // are the cells of the edges
 func (c *canvas) drawLabels(paths [][][2]int) {
@@ -42,12 +59,15 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 	for i, edge := range graph.Edges {
 		if edge.Label != "" && !edge.Invisible {
 			label, x, y := c.edgeLabel(i)
-			lines := strings.Split(label, "\n")
-			x, y = c.besideEdge(x, y, draw.TextColumns(label), len(lines), paths[i], c.drawn[edge])
+			lines := draw.Lines(label)
+			w := draw.TextColumns(label)
+			x, y = c.besideEdge(x, y, w, len(lines), paths[i], c.drawn[edge])
 			c.pen = pen{font: c.color(rgb(edge.FontColor))}
 			for k, line := range lines {
-				c.text(x, y+k, line)
-				for col := x; col < x+draw.TextColumns(line); col++ {
+				// within the block of the lines, as there is no box
+				at := x + int(line.Align.Offset(float64(w), float64(draw.Columns(line.Text))))
+				c.text(at, y+k, line.Text)
+				for col := at; col < at+draw.Columns(line.Text); col++ {
 					if p := c.at(col, y+k); p != nil {
 						p.text = c.drawn[edge]
 					}
@@ -55,7 +75,6 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 			}
 			// the blanks around the label keep it beside its edge when
 			// carving, see seams
-			w := draw.TextColumns(label)
 			for row := y - 1; row <= y+len(lines); row++ {
 				for col := x - 1; col <= x+w; col++ {
 					if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {

@@ -274,7 +274,10 @@ func arrowBase(tip, next layout.Vector) layout.Vector {
 	return layout.Vector{X: tip.X + d.X*t, Y: tip.Y + d.Y*t}
 }
 
-// quote returns s as a dot string literal
+// quote returns s as a dot string literal, with the marks of where lines
+// go as the escapes they come from, see draw.Lines
 func quote(s string) string {
-	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`, "\n", `\n`).Replace(s) + `"`
+	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`,
+		draw.LeftMark+"\n", `\l`, draw.RightMark+"\n", `\r`, draw.LeftMark, `\l`, draw.RightMark, `\r`,
+		"\n", `\n`).Replace(s) + `"`
 }

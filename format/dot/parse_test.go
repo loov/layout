@@ -242,7 +242,7 @@ func TestLabelEscapes(t *testing.T) {
 	g := graphs[0]
 	for _, tc := range []struct{ got, want string }{
 		{g.Node("a").Label, "a"},
-		{g.Node("b").Label, "in G\nleft\nright"},
+		{g.Node("b").Label, "in G" + draw.LeftMark + "\nleft" + draw.RightMark + "\nright" + draw.LeftMark},
 		{g.Node("c").Label, `\N`},
 		{g.Node("d").Label, "d"},
 		{g.Clusters[0].Label, "cluster_x"},
@@ -393,7 +393,7 @@ func TestInvisible(t *testing.T) {
 // and loses its markup
 func TestRecordText(t *testing.T) {
 	got := recordText(`<{<b>«interface» I/O</b> | + a<br align="left"/>b &amp; c}>`)
-	if want := "{«interface» I/O | + a\nb & c}"; got != want {
+	if want := "{«interface» I/O | + a" + draw.LeftMark + "\nb & c}"; got != want {
 		t.Errorf("recordText = %q, want %q", got, want)
 	}
 }

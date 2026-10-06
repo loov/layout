@@ -81,7 +81,7 @@ func ApproxLineWidth(line string, fontSize float64) float64 {
 		switch {
 		case IsWide(r):
 			em = 1
-		case IsZeroWidth(r):
+		case IsZeroWidth(r), unicode.IsControl(r):
 			em = 0
 		case strings.ContainsRune("il.,:;'|!I", r):
 			em = 0.28
