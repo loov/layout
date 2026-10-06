@@ -23,8 +23,8 @@
 //
 //   - Shapes other than box, rect, rectangle, square, circle,
 //     doublecircle, ellipse, oval, none, plaintext, plain, point, record
-//     and Mrecord use the graph default; that includes diamond. Mrecord
-//     draws with square corners.
+//     and Mrecord draw as boxes; that includes diamond and polygon.
+//     Mrecord draws with square corners.
 //   - Arrowheads other than normal, vee, dot, odot and none draw as a
 //     normal arrowhead.
 //   - Colors are names from the X11 scheme or #RRGGBB and #RRGGBBAA;
@@ -886,7 +886,9 @@ func setShape(t *layout.Shape, value string) {
 	case "record", "Mrecord":
 		*t = layout.Record
 	default:
-		*t = layout.Auto
+		// a box stands in for the shapes drawn as polygons and the rest
+		// that have no drawing of their own yet
+		*t = layout.Box
 	}
 }
 

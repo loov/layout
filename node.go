@@ -189,3 +189,22 @@ func (node *lnode) Boundary(p Vector) Vector {
 	}
 	return Vector{node.Center.X + Length(dx*t), node.Center.Y + Length(dy*t)}
 }
+
+// sideAt returns the point of the outline of node at height y, within it,
+// on the side toward x
+func (node *lnode) sideAt(y, x Length) Vector {
+	y = max(node.Center.Y-node.Radius.Y, min(node.Center.Y+node.Radius.Y, y))
+	w := float64(node.Radius.X)
+	switch node.Shape {
+	case Box, Square, Record:
+	default: // ellipse and circle
+		if ry := float64(node.Radius.Y); ry > 0 {
+			dy := float64(y-node.Center.Y) / ry
+			w *= math.Sqrt(max(0, 1-dy*dy))
+		}
+	}
+	if x < node.Center.X {
+		w = -w
+	}
+	return Vector{node.Center.X + Length(w), y}
+}

@@ -63,7 +63,12 @@ func offsetPath(path []Vector, dx Length, from, to *lnode) []Vector {
 			out[i] = Vector{X: p.X, Y: p.Y + dx}
 		}
 	}
-	if len(out) >= 2 {
+	switch {
+	case along:
+		// straight across, at its own height on both
+		out[0] = from.sideAt(out[0].Y, to.Center.X)
+		out[1] = to.sideAt(out[1].Y, from.Center.X)
+	case len(out) >= 2:
 		out[0] = from.Boundary(out[1])
 		out[len(out)-1] = to.Boundary(out[len(out)-2])
 	}

@@ -1019,15 +1019,18 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector) {
 			path = append(path[:len(path)-1:len(path)-1], edge.To.CompassPoint(edge.ToPort))
 		}
 
-		// text spreads the ends of edges between neighbors along a rank a
-		// cell apart itself, which an offset here, as wide as it is along
-		// the ranks, would only overrun
 		key := pairKey(edge)
-		flat := len(path) == 2 && edge.From.Center.Y == edge.To.Center.Y
-		if n := pairCount[key]; n > 1 && !(flat && c.graphdef.ForText) {
+		if n := pairCount[key]; n > 1 {
 			k := pairIndex[key]
 			pairIndex[key]++
 			spacing := 2 * c.graphdef.EdgePadding
+			if flat := len(path) == 2 && edge.From.Center.Y == edge.To.Center.Y; flat && c.graphdef.ForText {
+				// a cell apart across the rank, which is a column sideways
+				spacing = c.graphdef.LineHeight
+				if sideways(c.graphdef.RankDir) {
+					spacing = c.graphdef.cellWidth()
+				}
+			}
 			offset := (Length(k) - Length(n-1)/2) * spacing
 			path = offsetPath(path, offset, edge.From, edge.To)
 		}
