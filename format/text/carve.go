@@ -230,6 +230,18 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			path[i] = x
 			x = from[i][x]
 		}
+		if !crossesLines(g, path, opts.lines) {
+			// nothing to bend, see bendLines, so the cut needs no copy of
+			// the grid before it: each line moves only what follows
+			for i, x := range path {
+				g[i] = append(g[i][:x], g[i][x+1:]...)
+			}
+			p.bent = p.bent[:0]
+			clear(p.forbid)
+			p.jogging = false
+			p.cut(g, path)
+			continue
+		}
 		if spare == nil {
 			// lines as long as these, which the cuts make shorter, with
 			// room for the blank that the next pass adds
@@ -697,6 +709,20 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) (out [2]bend, k int) {
 		add(i, pb, pa, arms(b[x].r)&^prev|opposite(d), d|prev, i+1, i-1)
 	}
 	return out, k
+}
+
+// crossesLines reports whether the seam through path crosses a line
+// joining two lines of grid where it moves along, which bendLines bends
+func crossesLines(g grid, path []int, ax seamAxis) bool {
+	for i := 1; i < len(path); i++ {
+		xa, xb := path[i-1], path[i]
+		for x := min(xa, xb) + 1; x < max(xa, xb); x++ {
+			if arms(g[i-1][x].r)&ax.next != 0 || arms(g[i][x].r)&ax.prev != 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // bendLines bends the lines that the seam through path crosses between
