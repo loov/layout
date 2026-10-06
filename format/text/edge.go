@@ -203,7 +203,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	}
 	c.drawn[edge] = id
 	c.pen = pen{
-		ink:    rgb(edge.LineColor),
+		ink:    c.color(rgb(edge.LineColor)),
 		dashed: edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted,
 		edge:   id,
 	}
@@ -288,11 +288,11 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 // mergedEdges returns an id for the edges that the layout merged, the
 // same for those in a group. An edge merges at its start or its end, not
 // both. The ids are negative, apart from those the canvas counts up.
-func mergedEdges(l *layout.Layout) map[*layout.Edge]int32 {
-	ids := map[*layout.Edge]int32{}
+func mergedEdges(l *layout.Layout) map[*layout.Edge]int16 {
+	ids := map[*layout.Edge]int16{}
 	for i, edge := range l.Graph.Edges {
 		if m := l.Edges[i].Merged; m != [2]int{} {
-			ids[edge] = -int32(max(m[0], m[1]))
+			ids[edge] = -int16(max(m[0], m[1]))
 		}
 	}
 	return ids

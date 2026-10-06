@@ -7,7 +7,10 @@
 package text
 
 import (
+	"errors"
 	"io"
+	"math"
+	"unicode/utf8"
 
 	"github.com/loov/layout"
 )
@@ -24,10 +27,16 @@ func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
 	return write(w, l, &opts)
 }
 
+// errTooLarge reports a graph with more than cells can tell apart
+var errTooLarge = errors.New("text: graph too large to draw")
+
 // write draws the graph, colored unless opts is nil
 func write(w io.Writer, l *layout.Layout, opts *Options) error {
-	_, g := carved(l)
-	_, err := io.WriteString(w, encode(g, opts))
+	if !fits(l.Graph) {
+		return errTooLarge
+	}
+	c, g := carved(l)
+	_, err := io.WriteString(w, encode(g, c.palette, opts))
 	return err
 }
 
@@ -101,4 +110,21 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 	}
 	c.drawLabels(paths)
 	return c
+}
+
+// fits reports whether the ids of the graph fit the int16 fields of cell:
+// edges and clusters share ids, edges merge in at most two groups each,
+// and a cluster label keeps its length; and whether its colors fit the
+// palette, at most three an element
+func fits(graph *layout.Graph) bool {
+	if len(graph.Nodes) >= math.MaxInt16 || 2*len(graph.Edges)+len(graph.Clusters) >= math.MaxInt16 ||
+		3*(len(graph.Nodes)+len(graph.Edges)+len(graph.Clusters)) >= math.MaxUint16 {
+		return false
+	}
+	for _, cluster := range graph.Clusters {
+		if utf8.RuneCountInString(clusterLabel(cluster))+2 >= math.MaxInt16 {
+			return false
+		}
+	}
+	return true
 }

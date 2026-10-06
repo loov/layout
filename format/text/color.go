@@ -158,18 +158,19 @@ func lightness(color uint32) float64 {
 }
 
 // encode writes the grid as lines of text without trailing blanks,
-// colored with escape codes unless opts is nil
-func encode(g grid, opts *Options) string {
+// colored with escape codes unless opts is nil; the colors of the cells
+// index palette
+func encode(g grid, palette []uint32, opts *Options) string {
 	// the escape code parameters of each pair of cell colors
 	codes := map[[2]uint32][2]string{}
 	code := func(x cell) (string, string) {
 		if opts == nil {
 			return "39", "49"
 		}
-		k := [2]uint32{x.fg, x.bg}
+		k := [2]uint32{palette[x.fg], palette[x.bg]}
 		fb, ok := codes[k]
 		if !ok {
-			fb[0], fb[1] = opts.codes(x.fg, x.bg)
+			fb[0], fb[1] = opts.codes(k[0], k[1])
 			codes[k] = fb
 		}
 		return fb[0], fb[1]

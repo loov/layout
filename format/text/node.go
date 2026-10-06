@@ -73,8 +73,8 @@ func (c *canvas) drawCluster(i int) {
 	b := c.clusterBox(i)
 	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
 	c.ids++
-	c.pen = pen{ink: rgb(cluster.LineColor), dashed: true, edge: c.ids, frame: true}
-	c.fill(x0, y0, x1, y1, rgb(cluster.FillColor))
+	c.pen = pen{ink: c.color(rgb(cluster.LineColor)), dashed: true, edge: c.ids, frame: true}
+	c.fill(x0, y0, x1, y1, c.color(rgb(cluster.FillColor)))
 	c.frame(x0, y0, x1, y1)
 }
 
@@ -183,9 +183,9 @@ func (c *canvas) drawNode(node *layout.Node) {
 		if node.Invisible {
 			return
 		}
-		c.pen = pen{ink: rgb(node.LineColor)}
+		c.pen = pen{ink: c.color(rgb(node.LineColor))}
 		if node.FillColor != nil {
-			c.pen.ink = rgb(node.FillColor)
+			c.pen.ink = c.color(rgb(node.FillColor))
 		}
 		c.set(x0, y0, '●')
 		if p := c.at(x0, y0); p != nil {
@@ -193,9 +193,9 @@ func (c *canvas) drawNode(node *layout.Node) {
 		}
 		return
 	}
-	c.pen = pen{ink: rgb(node.LineColor), font: rgb(node.FontColor)}
+	c.pen = pen{ink: c.color(rgb(node.LineColor)), font: c.color(rgb(node.FontColor))}
 	if !node.Invisible {
-		c.fill(x0, y0, x1, y1, rgb(node.FillColor))
+		c.fill(x0, y0, x1, y1, c.color(rgb(node.FillColor)))
 	}
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {

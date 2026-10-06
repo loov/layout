@@ -44,7 +44,7 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 			label, x, y := c.edgeLabel(i)
 			lines := strings.Split(label, "\n")
 			x, y = c.besideEdge(x, y, draw.TextColumns(label), len(lines), paths[i], c.drawn[edge])
-			c.pen = pen{font: rgb(edge.FontColor)}
+			c.pen = pen{font: c.color(rgb(edge.FontColor))}
 			for k, line := range lines {
 				c.text(x, y+k, line)
 				for col := x; col < x+draw.TextColumns(line); col++ {
@@ -90,9 +90,9 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 			for x := b[0] + 1; x < b[2] && !placed; x++ {
 				if fits(x, y) {
 					for j := range runes {
-						c.at(x+j, y).need = int32(len(runes))
+						c.at(x+j, y).need = int16(len(runes))
 					}
-					c.at(x, y).label = int32(i + 1)
+					c.at(x, y).label = int16(i + 1)
 					placed = true
 				}
 			}
@@ -129,7 +129,7 @@ func (c *canvas) frameLabels(g grid) {
 // edge, drawn along path with id: where nearEdge moves it, or against the
 // edge from another side where the lines of other edges are further from
 // it, so that it reads as its edge's
-func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id int32) (int, int) {
+func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id int16) (int, int) {
 	bx, by, _ := c.nearEdge(x, y, w, h, path, [2]int{})
 	best := c.apart(bx, by, w, h, id)
 	for _, side := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
@@ -144,7 +144,7 @@ func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id int32) (int, int) 
 
 // apart returns how many blank cells at least separate a label w cells
 // wide and h tall at x, y from the lines of edges other than id, up to 3
-func (c *canvas) apart(x, y, w, h int, id int32) int {
+func (c *canvas) apart(x, y, w, h int, id int16) int {
 	for d := range 3 {
 		for row := y - d - 1; row <= y+h+d; row++ {
 			for col := x - d - 1; col <= x+w+d; col++ {
@@ -244,7 +244,7 @@ func (c *canvas) blank(x, y, w, h int) bool {
 // away from it: next to the other line, it should touch its own
 func hug(g grid) {
 	// the lines of edge id, and of other edges, in the cells
-	lines := func(cells [][2]int, id int32) (own, other bool) {
+	lines := func(cells [][2]int, id int16) (own, other bool) {
 		for _, p := range cells {
 			c := g.at(p[0], p[1])
 			if c == nil || c.frame || c.text != 0 {
@@ -260,7 +260,7 @@ func hug(g grid) {
 		return own, other
 	}
 	// the box of every label
-	boxes := map[int32][4]int{} // top, left, bottom, right
+	boxes := map[int16][4]int{} // top, left, bottom, right
 	for r, row := range g {
 		for x, c := range row {
 			if c.text == 0 {

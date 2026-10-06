@@ -19,22 +19,38 @@ type canvas struct {
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	rows   grid
 	pen    pen                    // what is drawn with from now on
-	ids    int32                  // edge ids handed out
-	merged map[*layout.Edge]int32 // edge ids of merged edges
-	drawn  map[*layout.Edge]int32 // edge ids of the edges drawn
-	nodes  map[*layout.Node]int32 // node ids, from 1, see cell.node
+	ids    int16                  // edge ids handed out
+	merged map[*layout.Edge]int16 // edge ids of merged edges
+	drawn  map[*layout.Edge]int16 // edge ids of the edges drawn
+	nodes  map[*layout.Node]int16 // node ids, from 1, see cell.node
 	loops  map[*layout.Node]int   // self-loops per node
 	ended  map[[2]int]bool        // cells where merged edges have ended
 	spread bool                   // edge ends on a side keep a cell apart where there is room
+	// palette holds the colors cells refer to by index, see color;
+	// colors finds the index of a color
+	palette []uint32
+	colors  map[uint32]uint16
+}
+
+// color returns the index of the color, see rgb, in the palette; 0 for
+// the default
+func (c *canvas) color(rgb uint32) uint16 {
+	i, ok := c.colors[rgb]
+	if !ok {
+		i = uint16(len(c.palette))
+		c.palette = append(c.palette, rgb)
+		c.colors[rgb] = i
+	}
+	return i
 }
 
 // pen is what the canvas draws with. Each drawing sets all of it, so
 // that nothing carries over from the drawing before.
 type pen struct {
-	ink    uint32 // color of lines and marks
-	font   uint32 // color of text
+	ink    uint16 // color of lines and marks, see canvas.color
+	font   uint16 // color of text
 	dashed bool   // straight runs are dashed
-	edge   int32  // edge drawn, so that overlaps show
+	edge   int16  // edge drawn, so that overlaps show
 	frame  bool   // the frame of a cluster, see cell.frame
 }
 
@@ -42,7 +58,8 @@ type pen struct {
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
 func newCanvas(l *layout.Layout) *canvas {
 	graph := l.Graph
-	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{}}
+	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{},
+		palette: []uint32{0}, colors: map[uint32]uint16{0: 0}}
 	if c.cellW <= 0 {
 		c.cellW = 8
 	}
@@ -58,9 +75,9 @@ func newCanvas(l *layout.Layout) *canvas {
 		label, x, _ := c.edgeLabel(i)
 		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
-	c.drawn, c.nodes, c.loops = map[*layout.Edge]int32{}, map[*layout.Node]int32{}, map[*layout.Node]int{}
+	c.drawn, c.nodes, c.loops = map[*layout.Edge]int16{}, map[*layout.Node]int16{}, map[*layout.Node]int{}
 	for i, node := range graph.Nodes {
-		c.nodes[node] = int32(i + 1)
+		c.nodes[node] = int16(i + 1)
 	}
 	if graph.MergeEdges {
 		c.merged = mergedEdges(l)
@@ -116,7 +133,7 @@ func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 
 func (c *canvas) set(x, y int, r rune) { c.put(x, y, r, c.pen.ink) }
 
 // put writes r in the color fg over whatever the cell held
-func (c *canvas) put(x, y int, r rune, fg uint32) {
+func (c *canvas) put(x, y int, r rune, fg uint16) {
 	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
 		p.r, p.fg, p.lines, p.heavy = r, fg, 0, 0
@@ -232,7 +249,7 @@ const covered = 0
 
 // fill sets the background of the cells inside the rectangle, unless
 // color is the default
-func (c *canvas) fill(x0, y0, x1, y1 int, color uint32) {
+func (c *canvas) fill(x0, y0, x1, y1 int, color uint16) {
 	if color == 0 {
 		return
 	}
@@ -284,27 +301,28 @@ func (c *canvas) walk(x0, y0, x1, y1 int) {
 	}
 }
 
-// cell is a drawn character with its colors, see rgb, and what is
-// needed to join the lines drawn through it
+// cell is a drawn character with its colors, see canvas.color, and what
+// is needed to join the lines drawn through it
 //
-// Carving copies cells over and over, so they are kept small: ids are
-// int32 and line masks bytes, the 4-byte fields go first and the bytes
-// last, so that none needs padding.
+// Carving copies cells over and over, so they are kept to 32 bytes: ids
+// are int16, see fits, colors index the palette, and line masks are
+// bytes; the fields go from the widest to the narrowest, so that none
+// needs padding.
 type cell struct {
 	r      rune
-	fg, bg uint32
-	owner  [4]int32 // edge that first drew each arm
-	need   int32    // the length a run of these must keep, for a label on it
-	label  int32    // the cluster whose label starts here, from 1
-	node   int32    // node whose box covers it, from 1, see canvas.nodes
-	text   int32    // edge whose label it is part of, see canvas.drawn
-	lines  uint8    // direction mask, for joining edge runs
-	heavy  uint8    // arms that runs of different edges share
-	kind   uint8    // class of r, which seams keep up to date for their use
-	keep   bool     // inside a node or of text, which carving keeps
-	glue   bool     // beside a label, which carving keeps beside it
-	solid  bool     // covered by a node; edges do not draw there
-	frame  bool     // of the frame of a cluster
+	owner  [4]int16 // edge that first drew each arm
+	fg, bg uint16
+	need   int16 // the length a run of these must keep, for a label on it
+	label  int16 // the cluster whose label starts here, from 1
+	node   int16 // node whose box covers it, from 1, see canvas.nodes
+	text   int16 // edge whose label it is part of, see canvas.drawn
+	lines  uint8 // direction mask, for joining edge runs
+	heavy  uint8 // arms that runs of different edges share
+	kind   uint8 // class of r, which seams keep up to date for their use
+	keep   bool  // inside a node or of text, which carving keeps
+	glue   bool  // beside a label, which carving keeps beside it
+	solid  bool  // covered by a node; edges do not draw there
+	frame  bool  // of the frame of a cluster
 }
 
 // grid is the cells of a drawing, by row
