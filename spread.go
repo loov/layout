@@ -47,9 +47,11 @@ func spreadWaypoints(edges []*ledge, pad Length) {
 
 // spreadEnds keeps the attachment points on every node at least minSep
 // apart along the outline so that arrowheads don't stack, pushing the
-// crowded ones apart around their mean direction. Edges pinned to a port
-// keep their point.
+// crowded ones apart around their mean direction. The ends of edges
+// between ranks stay on the side facing the other rank, the top or the
+// bottom, see spreadSides. Edges pinned to a port keep their point.
 func spreadEnds(graph *lgraph, minSep Length) {
+	spreadSides(graph, minSep)
 	type end struct {
 		edge  *ledge
 		angle float64
@@ -69,6 +71,9 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				end{edge, angle(edge.From, edge.Path[0]), true, true},
 				end{edge, angle(edge.From, edge.Path[len(edge.Path)-1]), false, true})
 			continue
+		}
+		if edge.From.Center.Y != edge.To.Center.Y {
+			continue // on a side, see spreadSides
 		}
 		if edge.freeStart() {
 			byNode[edge.From] = append(byNode[edge.From], end{edge, angle(edge.From, edge.Path[1]), true, false})
@@ -97,6 +102,9 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		// angle step from the arc length on the smaller radius, so that
 		// it is enough along the flat sides of wide nodes too
 		step := float64(minSep) / float64(min(node.Radius.X, node.Radius.Y))
+		// as many as go around the node at most, or the push carries the
+		// ends of one side around the corners onto the next
+		step = min(step, math.Pi/float64(len(ends)))
 		for i := 1; i < len(ends); i++ {
 			d := ends[i].angle - ends[i-1].angle
 			if d >= step {
@@ -120,6 +128,66 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				continue
 			}
 			p := node.Boundary(node.Center.Add(Vector{Length(math.Cos(e.angle)), Length(math.Sin(e.angle))}))
+			if e.start {
+				e.edge.Path[0] = p
+			} else {
+				e.edge.Path[len(e.edge.Path)-1] = p
+			}
+		}
+	}
+}
+
+// spreadSides puts the ends of edges between ranks on the side of their
+// node that faces the other rank, the top or the bottom, where they head
+// to, at least minSep apart where the side has the room, as the ranks
+// they come from are, in the order they head
+func spreadSides(graph *lgraph, minSep Length) {
+	type end struct {
+		edge  *ledge
+		start bool
+		want  Length // where the line toward the next point crosses the side
+	}
+	type side struct {
+		node   *lnode
+		bottom bool
+	}
+	sides := map[side][]end{}
+	add := func(node *lnode, edge *ledge, start bool, next Vector) {
+		bottom := next.Y > node.Center.Y
+		dy := absLength(next.Y - node.Center.Y)
+		want := node.Center.X
+		if dy > 0 {
+			want += (next.X - node.Center.X) * node.Radius.Y / dy
+		}
+		k := side{node, bottom}
+		sides[k] = append(sides[k], end{edge, start, want})
+	}
+	for _, edge := range graph.Edges {
+		if edge.From == edge.To || len(edge.Path) < 2 || edge.From.Center.Y == edge.To.Center.Y {
+			continue
+		}
+		if edge.freeStart() {
+			add(edge.From, edge, true, edge.Path[1])
+		}
+		if edge.freeEnd() {
+			add(edge.To, edge, false, edge.Path[len(edge.Path)-2])
+		}
+	}
+	for k, ends := range sides {
+		node := k.node
+		slices.SortStableFunc(ends, func(a, b end) int { return cmp.Compare(a.want, b.want) })
+		gap := min(minSep, 2*node.Radius.X/Length(len(ends)+1))
+		want, weight := make([]Length, len(ends)), make([]float64, len(ends))
+		for i, e := range ends {
+			want[i], weight[i] = e.want, 1
+		}
+		reach := node.Radius.X - gap/2
+		xs := separate(want, weight, gap, node.Center.X-reach, node.Center.X+reach)
+		for i, e := range ends {
+			p := Vector{xs[i], node.Center.Y + node.halfHeightAt(xs[i])}
+			if !k.bottom {
+				p.Y = node.Center.Y - node.halfHeightAt(xs[i])
+			}
 			if e.start {
 				e.edge.Path[0] = p
 			} else {

@@ -34,6 +34,9 @@ type Graph struct {
 	// is the middle. The median ordering puts the neighbors of a node in
 	// the order of their ends on it, see OrderRanksByMedian.
 	Ports map[[2]ID][2]float32
+	// PullFlat has positioning keep the ends of edges along a rank, see
+	// Flat, close together, as it does those of other edges
+	PullFlat bool
 }
 
 // ID is an unique identifier to a Node

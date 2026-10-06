@@ -750,6 +750,10 @@ func (c *hierComponent) position() {
 			c.graph.FamilyGap = float32(c.graphdef.LineHeight)
 		}
 	}
+	// text draws narrow nodes, which edges along a rank have no trouble
+	// reaching across the rank; carving can't yet keep the blank border of
+	// a node without one in line where such a pull lands it
+	c.graph.PullFlat = !c.graphdef.ForText
 	hier.Position(c.graph, c.graphdef.Splines != SplinesOrtho, c.graphdef.MergeEdges, c.align)
 }
 

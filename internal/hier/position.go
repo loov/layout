@@ -333,8 +333,13 @@ func positionSimplex(graph *Graph, fans bool) {
 	}
 	// two more vertices bound the ranks on the left and the right, and
 	// the edge between them costs the width of the drawing; the left one
-	// is also where the pulls are measured from
-	s := &simplex{n: int32(n + edges + 2 + n)}
+	// is also where the pulls are measured from; edges along a rank, see
+	// Flat, get a vertex each after the pulls
+	flats := graph.Flat
+	if !graph.PullFlat {
+		flats = nil
+	}
+	s := &simplex{n: int32(n + edges + 2 + n + len(flats))}
 	lft, rgt := int32(n+edges), int32(n+edges+1)
 	s.addEdge(lft, rgt, widthWeight, 0)
 	settle := balancedKoepf(graph)
@@ -417,6 +422,16 @@ func positionSimplex(graph *Graph, fans bool) {
 			s.addEdge(v, int32(dst.ID), w, max(0, d))
 			v++
 		}
+	}
+	// an edge along a rank costs how far apart its ends are too, with
+	// PullFlat, which keeps a node with only such edges beside the ones it
+	// has them to
+	v = int32(n + edges + 2 + n)
+	for _, flat := range flats {
+		w := graph.Weight(flat[0], flat[1])
+		s.addEdge(v, int32(flat[0].ID), w, 0)
+		s.addEdge(v, int32(flat[1].ID), w, 0)
+		v++
 	}
 	s.run()
 
