@@ -54,8 +54,8 @@ type Diagnostics struct {
 	Area Length
 	// Unbalance is how far forks and joins are off center, in points: for
 	// every node with two or more neighbors in the ranks before it, and
-	// again after it, how far along its rank it is from the middle of the
-	// outermost of them.
+	// again after it, how far along its rank it is from their mean, where
+	// a neighbor counts once for every edge to it.
 	Unbalance Length
 	// FarLabels counts labels further from their own edge than the text
 	// height, which makes them hard to attribute.
@@ -334,22 +334,23 @@ func Diagnose(l *Layout) Diagnostics {
 			} else if edge.From != node {
 				continue
 			}
+			// a neighbor counts once for every edge to it
 			switch d := across(other.Center) - across(node.Center); {
-			case d < -eps && !slices.Contains(before, other):
+			case d < -eps:
 				before = append(before, other)
-			case d > eps && !slices.Contains(after, other):
+			case d > eps:
 				after = append(after, other)
 			}
 		}
 		for _, side := range [][]*lnode{before, after} {
-			if len(side) < 2 {
-				continue
+			if !slices.ContainsFunc(side, func(other *lnode) bool { return other != side[0] }) {
+				continue // no fork or join
 			}
-			lo, hi := Length(math.Inf(1)), Length(math.Inf(-1))
+			var sum Length
 			for _, other := range side {
-				lo, hi = min(lo, along(other.Center)), max(hi, along(other.Center))
+				sum += along(other.Center)
 			}
-			if off := absLength(along(node.Center) - (lo+hi)/2); off > eps {
+			if off := absLength(along(node.Center) - sum/Length(len(side))); off > eps {
 				diag.Unbalance += off
 			}
 		}
