@@ -9,9 +9,9 @@
  │ git diff            │◀┈┈┈┈┐                       ┈┈┈┐  │ git diff --staged │               │ git show                 │◀┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤   local branches    │
  └──────────┬──────────┘     ┊                          ┊  └───────────────────┘               │ git log                  │                     │─────────────────────│
             ┊                ┊                          ┊    ┌────────────────┐                │──────────────────────────│                     │ To view:            │
-            ▼git restore ... ┊                          └┈┈┈▶│     stash      │                │ To change branch:        │                     │ git branch [--list] │
-                             └┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤────────────────│                │ git switch ...           │                     └─────────────────────┘
-         discard                                             │ To view:       │                │ git checkout ...         │
-                                                             │ git stash list │                └──────────────────────────┘
+            ┊git restore ... ┊                          └┈┈┈▶│     stash      │                │ To change branch:        │                     │ git branch [--list] │
+            ▼                └┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┤────────────────│                │ git switch ...           │                     └─────────────────────┘
+                                                             │ To view:       │                │ git checkout ...         │
+         discard                                             │ git stash list │                └──────────────────────────┘
                                                              └────────────────┘
 

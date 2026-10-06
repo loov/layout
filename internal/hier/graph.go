@@ -24,6 +24,10 @@ type Graph struct {
 	// FamilyGap keeps neighbors in a rank further apart that are children
 	// of different fans, so that the children of a node stay together
 	FamilyGap float32
+	// FlatGap keeps neighbors in a rank further apart that have an edge
+	// along the rank between them, see Flat, for the room it takes
+	FlatGap   float32
+	flatPairs map[[2]ID]bool // the neighbors of FlatGap, see Apart
 	// EndGap is how far apart packed ends of edges on a side of a node
 	// are, from its anchor on, within its EndRoom; 0 when they aren't
 	// packed, see Position
@@ -34,9 +38,30 @@ type Graph struct {
 	// is the middle. The median ordering puts the neighbors of a node in
 	// the order of their ends on it, see OrderRanksByMedian.
 	Ports map[[2]ID][2]float32
-	// PullFlat has positioning keep the ends of edges along a rank, see
-	// Flat, close together, as it does those of other edges
-	PullFlat bool
+}
+
+// Apart returns how much further apart than their halves neighbors a and
+// b in a rank keep: FamilyGap between the children of different fans,
+// and FlatGap between nodes with an edge along the rank between them
+func (graph *Graph) Apart(a, b *Node) float32 {
+	gap := float32(0)
+	fan := func(node *Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
+	if fan(a) && fan(b) && a.In[0] != b.In[0] {
+		gap += graph.FamilyGap
+	}
+	if graph.FlatGap > 0 {
+		if graph.flatPairs == nil {
+			graph.flatPairs = map[[2]ID]bool{}
+			for _, flat := range graph.Flat {
+				graph.flatPairs[[2]ID{flat[0].ID, flat[1].ID}] = true
+				graph.flatPairs[[2]ID{flat[1].ID, flat[0].ID}] = true
+			}
+		}
+		if graph.flatPairs[[2]ID{a.ID, b.ID}] {
+			gap += graph.FlatGap
+		}
+	}
+	return gap
 }
 
 // ID is an unique identifier to a Node

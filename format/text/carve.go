@@ -644,9 +644,17 @@ func (p *seamPass) sweep(i int, before, best []int, codes []costCode, from, reac
 		reach[x], src[x] = cur, curSrc
 		last, lastSrc = cur, curSrc
 	}
+	// a seam that moves from s on the line before to x cuts the cell at s
+	// from the one below it and the cell at x from the one above it; where
+	// those are joined, as cells of one node or kept ones are, it goes
+	// straight on instead, which takes both
 	for x := range joined {
-		best[x] = costOf[codes[x]] + reach[x]
-		from[x] = src[x]
+		s, r := src[x], reach[x]
+		if s != x && (joined[x] || joined[s]) {
+			s, r = x, before[x]
+		}
+		best[x] = costOf[codes[x]] + r
+		from[x] = s
 	}
 }
 

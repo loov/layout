@@ -750,10 +750,14 @@ func (c *hierComponent) position() {
 			c.graph.FamilyGap = float32(c.graphdef.LineHeight)
 		}
 	}
-	// text draws narrow nodes, which edges along a rank have no trouble
-	// reaching across the rank; carving can't yet keep the blank border of
-	// a node without one in line where such a pull lands it
-	c.graph.PullFlat = !c.graphdef.ForText
+	if c.graphdef.ForText {
+		// a row or column for the run of an edge along a rank, and one for
+		// its arrowhead, beyond the padding of the nodes
+		c.graph.FlatGap = float32(2 * c.graphdef.cellWidth())
+		if sideways(c.graphdef.RankDir) {
+			c.graph.FlatGap = float32(2 * c.graphdef.LineHeight)
+		}
+	}
 	hier.Position(c.graph, c.graphdef.Splines != SplinesOrtho, c.graphdef.MergeEdges, c.align)
 }
 

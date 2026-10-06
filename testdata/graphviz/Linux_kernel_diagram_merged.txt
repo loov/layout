@@ -1,6 +1,6 @@
 
 
-                                                                                                                                          Linux kernel diagram
+                                                                                                                                           Linux kernel diagram
 
 
                                                                                                                                        ╭────────────────────────────╮

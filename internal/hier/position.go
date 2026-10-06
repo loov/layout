@@ -335,11 +335,7 @@ func positionSimplex(graph *Graph, fans bool) {
 	// the edge between them costs the width of the drawing; the left one
 	// is also where the pulls are measured from; edges along a rank, see
 	// Flat, get a vertex each after the pulls
-	flats := graph.Flat
-	if !graph.PullFlat {
-		flats = nil
-	}
-	s := &simplex{n: int32(n + edges + 2 + n + len(flats))}
+	s := &simplex{n: int32(n + edges + 2 + n + len(graph.Flat))}
 	lft, rgt := int32(n+edges), int32(n+edges+1)
 	s.addEdge(lft, rgt, widthWeight, 0)
 	settle := balancedKoepf(graph)
@@ -366,13 +362,7 @@ func positionSimplex(graph *Graph, fans bool) {
 		for i := 1; i < len(layer); i++ {
 			a, b := layer[i-1], layer[i]
 			// anchors line up, a node reaches Radius.X past its center
-			gap := a.Radius.X - a.Anchor + b.Radius.X + b.Anchor
-			// the fans of different nodes keep apart: children of one
-			// parent each, which has others
-			fan := func(node *Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
-			if fan(a) && fan(b) && a.In[0] != b.In[0] {
-				gap += graph.FamilyGap
-			}
+			gap := a.Radius.X - a.Anchor + b.Radius.X + b.Anchor + graph.Apart(a, b)
 			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(math.Ceil(float64(gap))))
 		}
 	}
@@ -423,11 +413,10 @@ func positionSimplex(graph *Graph, fans bool) {
 			v++
 		}
 	}
-	// an edge along a rank costs how far apart its ends are too, with
-	// PullFlat, which keeps a node with only such edges beside the ones it
-	// has them to
+	// an edge along a rank costs how far apart its ends are too, which
+	// keeps a node with only such edges beside the ones it has them to
 	v = int32(n + edges + 2 + n)
-	for _, flat := range flats {
+	for _, flat := range graph.Flat {
 		w := graph.Weight(flat[0], flat[1])
 		s.addEdge(v, int32(flat[0].ID), w, 0)
 		s.addEdge(v, int32(flat[1].ID), w, 0)
@@ -477,11 +466,11 @@ func positionSimplex(graph *Graph, fans bool) {
 			left, right := lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor
 			if i > 0 {
 				a := layer[i-1]
-				left = x[a.ID] + float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor)))
+				left = x[a.ID] + float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor+graph.Apart(a, node))))
 			}
 			if i+1 < len(layer) {
 				b := layer[i+1]
-				right = x[b.ID] - float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor)))
+				right = x[b.ID] - float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor+graph.Apart(node, b))))
 			}
 			if left <= right {
 				x[node.ID] = min(max((first+last)/2, left), right)

@@ -96,14 +96,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		}
 		return bends, crossings, overlaps
 	}
-	fan := func(node *hier.Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
-	gap := func(a, b *hier.Node) float32 {
-		gap := a.Radius.X + b.Radius.X
-		if fan(a) && fan(b) && a.In[0] != b.In[0] {
-			gap += graph.FamilyGap
-		}
-		return gap
-	}
+	gap := func(a, b *hier.Node) float32 { return a.Radius.X + b.Radius.X + graph.Apart(a, b) }
 	at := func() []float32 {
 		xs = slices.Grow(xs[:0], len(graph.Nodes))[:len(graph.Nodes)]
 		for i, node := range graph.Nodes {
