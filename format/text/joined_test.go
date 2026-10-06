@@ -23,7 +23,6 @@ var notJoined = map[string]string{
 	"Linux_kernel_diagram_merged": "14 edges, such as system -> system_",
 	"sdh":                         "8 edges, such as prTTP_4_2 -> prTTP_5_1",
 	"sdh_merged":                  "8 edges, such as prTTP_4_2 -> prTTP_5_1",
-	"UML_Class_diagram":           "5 edges, such as Interface1 -> Class1",
 }
 
 // TestEdgesJoined checks that every drawing joins the two nodes of every

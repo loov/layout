@@ -44,8 +44,10 @@ package dot
 
 import (
 	"errors"
+	"html"
 	"io"
 	"math"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -186,6 +188,19 @@ func expandLabel(raw string, names ...string) string {
 	return label
 }
 
+// recordText returns the fields of an HTML-like record label, such as
+// <{<b>name</b>|a<br/>b}>, as a plain record label: the markup goes, and
+// a <br> or the end of a table row breaks the line
+func recordText(label string) string {
+	label = htmlBreak.ReplaceAllString(label[1:len(label)-1], "\n")
+	return html.UnescapeString(htmlTag.ReplaceAllString(label, ""))
+}
+
+var (
+	htmlBreak = regexp.MustCompile(`(?i)<br[^>]*>|</tr\s*>`)
+	htmlTag   = regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
+)
+
 // literalMark is a zero width space that keeps quoted text in angle
 // brackets from being drawn as an HTML label. It is not visible and
 // takes no room.
@@ -231,8 +246,12 @@ func (context *parserContext) parse(src *ast.Graph) {
 	context.Graph.Directed = src.Directed
 	context.parseStmts(src.Stmts)
 	for _, node := range context.Graph.Nodes {
-		// record labels are never HTML, and their <port> must lead
+		// record labels are never HTML, and their <port> must lead; an
+		// HTML-like one has HTML text in its fields
 		if node.Shape == layout.Record {
+			if draw.IsHTMLLabel(node.Label) {
+				node.Label = recordText(node.Label)
+			}
 			node.Label = strings.TrimPrefix(node.Label, literalMark)
 		}
 	}

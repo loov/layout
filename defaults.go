@@ -41,7 +41,11 @@ func (graph *lgraph) assignDefaults() {
 		}
 		if !node.FixedSize && node.Shape != PointShape {
 			labelRadius := graph.textRadius(node.DefaultLabel(), node.FontName, node.FontSize)
-			if draw.IsHTMLLabel(node.DefaultLabel()) {
+			switch {
+			case draw.IsHTMLLabel(node.DefaultLabel()) && graph.ForText:
+				// text draws the label's text alone, see draw.PlainLabel
+				labelRadius = graph.textRadius(draw.PlainLabel(node.DefaultLabel()), node.FontName, node.FontSize)
+			case draw.IsHTMLLabel(node.DefaultLabel()):
 				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			}
 			labelRadius.X += node.FontSize * 0.5
@@ -80,7 +84,9 @@ func (graph *lgraph) assignDefaults() {
 		if edge.FontSize <= 0 {
 			edge.FontSize = graph.FontSize
 		}
-		if draw.IsHTMLLabel(edge.Label) {
+		if draw.IsHTMLLabel(edge.Label) && graph.ForText {
+			edge.LabelRadius = graph.textRadius(draw.PlainLabel(edge.Label), edge.FontName, edge.FontSize)
+		} else if draw.IsHTMLLabel(edge.Label) {
 			edge.LabelRadius = graph.htmlLabelRadius(edge.Label, edge.FontName, edge.FontSize)
 		} else if edge.Label != "" {
 			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)

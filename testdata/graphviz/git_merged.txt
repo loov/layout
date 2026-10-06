@@ -1,37 +1,13 @@
 
-                                       git add ...                                                                                                        ┌───────────────┐
-                                       git reset                                                                                  git push ┌┈┈┈┈┈┈┈┈┈┈┈┈┈▶│ remote branch │
-           changes           ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈▶       staging area         git commit                               ┌┈┈┈┈┈┈┈┈┈┘┌┈┈┈┈┈┈┈┈┈┈┈┈┈┤               │
-     in the working tree                                          (cache, index)       ┈┈┈┈┈┈┈┈┈┈┈┈▶          HEAD of           ┈┘          ┊ git pull    └───────────────┘
-          To view:           ┈┈┐                      ┌┈┈┈┈┈         To view:                            the current branch     ◀┈┈┈┈┈┈┈┈┈┈┈┘
-          git diff             └┈  git stash [push]  ┈┘          git diff --staged                            To view:          ◀┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈       local branches
-                                                     ┈┈┈┈┐                                                    git show                                        To view:
-                                                         ┊                                                    git log                                    git branch [--list]
-                             ◀┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐  ┊                                               To change branch:
-                                                      ┊  ┊                                                 git switch ...
-                                                      ┊  ┊                                                git checkout ...
-                                                      ┊  ┊
-                                                      ┊  ┊
-                                                      ┊  ┊
-              ┊git restore ...                        ┊  ┊
-              ▼                                       └┈┐└┈┈┈▶         stash
-                                                        ┊             To view:
-           discard                                      └┈┈┈┈┈     git stash list
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                                     git add ...                                                                                         ┌───────────────┐
+                                     git reset                                                                      git push ┌┈┈┈┈┈┈┈┈┈┈▶│ remote branch │
+        changes        ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈▶    staging area      git commit                         ┌┈┈┈┈┈┈┈┈┈┘┌┈┈┈┈┈┈┈┈┈┈┤               │
+  in the working tree  ┈┈┈┈┈┈┐                               (cache, index)    ┈┈┈┈┈┈┈┈┈┈┈┈▶       HEAD of        ┈┘          ┊ git pull └───────────────┘
+       To view:        ◀┈┈┈┈┐┊                      ┌┈┈┈┈┈      To view:                      the current branch  ◀┈┈┈┈┈┈┈┈┈┈┈┘
+       git diff             ┊└┈  git stash [push]  ┈┘       git diff --staged                      To view:       ◀┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈    local branches
+           ┊                ┊                      ┈┈┈┈┐                                           git show                                  To view:
+           ▼git restore ... ┊                          ┊                                           git log                              git branch [--list]
+                            └┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐└┈┈┈▶      stash                       To change branch:
+        discard                                       ┊          To view:                       git switch ...
+                                                      └┈┈┈┈┈  git stash list                   git checkout ...
 

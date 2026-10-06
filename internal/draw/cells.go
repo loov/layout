@@ -76,7 +76,14 @@ func PlainLabel(label string) string {
 	walk = func(n *html.Node) {
 		switch {
 		case n.Type == html.TextNode:
-			out.WriteString(n.Data)
+			// line breaks in the markup are spaces, like in a browser;
+			// lines break at <br> and table rows
+			out.WriteString(strings.Map(func(r rune) rune {
+				if unicode.IsSpace(r) {
+					return ' '
+				}
+				return r
+			}, n.Data))
 		case n.Type == html.ElementNode && n.Data == "br":
 			out.WriteByte('\n')
 		case n.Type == html.ElementNode && (n.Data == "td" || n.Data == "th"):

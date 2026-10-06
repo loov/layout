@@ -17,8 +17,9 @@ func TestPlain(t *testing.T) {
 		"plain\ntext":               "plain\ntext",
 		"<<B>bold</B>>":             "bold",
 		"<one<br/>two &amp; three>": "one\ntwo & three",
-		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>": "a b\nc",
-		"<  spaced   <I>out</I>  >":                                         "spaced out",
+		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>":    "a b\nc",
+		"<  spaced   <I>out</I>  >":                                            "spaced out",
+		"<<TABLE>\n\t<TR>\n\t\t<TD>a</TD>\n\t\t<TD>b</TD>\n\t</TR>\n</TABLE>>": "a b",
 	} {
 		if got := draw.PlainLabel(label); got != want {
 			t.Errorf("draw.PlainLabel(%q) = %q, want %q", label, got, want)

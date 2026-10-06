@@ -1,25 +1,12 @@
 
-
-                                              a
-                                              b
-                                              c
-
-
-                                            │   │
-                                            │   ╰──────────────────────────╮
-                                            ▼                              ▼
-
-
-
-
-
-                         Hello
-                           b                                           elefantel
-                           a                                              two
-                         dino                                            buca
-                           y                                               c
-                         rhino                                             f
-                         climb                                         patratos
-                          Up                                               4
-                          low
+       a b c
+        │  │
+        │  ▼
+        ▼
+            elefantel two
+  Hello b       buca
+  a dino y        c
+   rhino          f
+  climb Up    patratos
+    low           4
 

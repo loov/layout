@@ -36,8 +36,8 @@ Linux_kernel_diagram nodes=0 through=2 near=2 crossings=18 shallow=0 overlaps=12
 Linux_kernel_diagram_merged nodes=0 through=2 near=2 crossings=18 shallow=0 overlaps=22 parallel=13 ends=15 shafts=9 jagged=12 bends=7 corners=74 wavy=6 back=0 labels=0 far=0 length=18862 area=2694662 unbalance=680
 NaN          nodes=0 through=0 near=0 crossings=28 shallow=0 overlaps=0 parallel=0 ends=2 shafts=0 jagged=0 bends=15 corners=222 wavy=15 back=7 labels=0 far=0 length=65456 area=5393058 unbalance=6689
 NaN_merged   nodes=0 through=0 near=0 crossings=106 shallow=0 overlaps=149 parallel=149 ends=149 shafts=0 jagged=0 bends=14 corners=226 wavy=14 back=7 labels=0 far=0 length=61972 area=4771354 unbalance=6685
-UML_Class_diagram nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=18 wavy=1 back=0 labels=0 far=0 length=3419 area=1622861 unbalance=167
-UML_Class_diagram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=5 parallel=5 ends=5 shafts=0 jagged=0 bends=3 corners=22 wavy=3 back=0 labels=0 far=0 length=3563 area=1622861 unbalance=167
+UML_Class_diagram nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=24 wavy=4 back=0 labels=0 far=0 length=2794 area=701194 unbalance=134
+UML_Class_diagram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=5 parallel=5 ends=5 shafts=0 jagged=0 bends=3 corners=22 wavy=3 back=0 labels=0 far=0 length=2912 area=701194 unbalance=134
 abstract     nodes=0 through=0 near=0 crossings=64 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=13 corners=140 wavy=13 back=0 labels=0 far=0 length=32361 area=2036289 unbalance=3334
 abstract_merged nodes=0 through=0 near=0 crossings=80 shallow=0 overlaps=52 parallel=52 ends=52 shafts=0 jagged=0 bends=13 corners=144 wavy=13 back=0 labels=0 far=0 length=27863 area=1676989 unbalance=3124
 alf          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=34 wavy=0 back=0 labels=0 far=0 length=3895 area=803797 unbalance=399
@@ -74,8 +74,8 @@ fig6         nodes=0 through=0 near=0 crossings=64 shallow=0 overlaps=0 parallel
 fig6_merged  nodes=0 through=0 near=0 crossings=77 shallow=0 overlaps=52 parallel=52 ends=52 shafts=0 jagged=0 bends=12 corners=148 wavy=12 back=0 labels=0 far=0 length=30495 area=1893083 unbalance=3188
 fsm          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4589 area=479776 unbalance=378
 fsm_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=30 wavy=5 back=3 labels=0 far=0 length=4583 area=479776 unbalance=450
-git          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=3 corners=20 wavy=3 back=0 labels=0 far=0 length=3240 area=1051909 unbalance=650
-git_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=22 wavy=4 back=0 labels=0 far=0 length=3256 area=1066856 unbalance=714
+git          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=22 wavy=4 back=0 labels=0 far=0 length=3021 area=324058 unbalance=184
+git_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=20 wavy=4 back=0 labels=0 far=0 length=3005 area=337560 unbalance=200
 go-package   nodes=0 through=0 near=0 crossings=49 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=16 corners=132 wavy=16 back=0 labels=0 far=0 length=25923 area=1115779 unbalance=3825
 go-package_merged nodes=0 through=0 near=0 crossings=61 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=16 corners=134 wavy=16 back=0 labels=0 far=0 length=26092 area=1100064 unbalance=3770
 grammar      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=48 wavy=0 back=0 labels=0 far=0 length=5828 area=834543 unbalance=411
@@ -128,8 +128,8 @@ proc3d       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 proc3d_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=51 parallel=51 ends=51 shafts=0 jagged=0 bends=0 corners=58 wavy=0 back=0 labels=0 far=0 length=18214 area=4147070 unbalance=116
 psfonttest   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=1664 area=480240 unbalance=0
 psfonttest_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=1664 area=480240 unbalance=0
-psg          nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=6 corners=34 wavy=6 back=0 labels=0 far=0 length=27691 area=6661580 unbalance=686
-psg_merged   nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=6 corners=38 wavy=6 back=0 labels=0 far=0 length=27899 area=6661580 unbalance=682
+psg          nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=6 corners=34 wavy=6 back=0 labels=0 far=0 length=6667 area=748202 unbalance=706
+psg_merged   nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=6 corners=38 wavy=6 back=0 labels=0 far=0 length=6875 area=748202 unbalance=694
 record2      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=23654 unbalance=0
 record2_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=23654 unbalance=0
 records      nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=852 area=79451 unbalance=220
@@ -150,8 +150,8 @@ structs      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 structs_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=406 area=82042 unbalance=0
 switch       nodes=0 through=0 near=2 crossings=20 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=16 corners=100 wavy=16 back=0 labels=0 far=0 length=7434 area=316498 unbalance=1536
 switch_merged nodes=0 through=0 near=2 crossings=24 shallow=0 overlaps=8 parallel=8 ends=8 shafts=0 jagged=0 bends=12 corners=100 wavy=12 back=0 labels=0 far=0 length=7546 area=316498 unbalance=1472
-table        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=542 area=422674 unbalance=1
-table_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=574 area=422674 unbalance=0
+table        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=283 area=56566 unbalance=1
+table_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=304 area=56566 unbalance=0
 train11      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=20 wavy=2 back=3 labels=0 far=0 length=6032 area=566746 unbalance=280
 train11_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=26 wavy=4 back=3 labels=0 far=0 length=6192 area=590360 unbalance=504
 trapeziumlr  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=100 wavy=0 back=0 labels=0 far=0 length=17680 area=496250 unbalance=32
