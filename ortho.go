@@ -410,9 +410,21 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		if graph.ForText && sideways(graph.RankDir) {
 			step = graph.cellWidth()
 		}
-		// above arcs, the arrows are below them, so tracks go right above
+		// above arcs, the arrows are below them, so tracks go right above,
+		// high in the channel; and next to the top or bottom of a cluster,
+		// which text draws on a row of its own, where the arrows or bends
+		// are past it, high above a top and low below a bottom
 		margin := 3
-		if arcs[k] > 0 {
+		high, low := arcs[k] > 0, false
+		if graph.ForText && !sideways(graph.RankDir) {
+			crossed := func(x0, x1 Length) bool {
+				return slices.ContainsFunc(jogs, func(j *jog) bool { return j.x0 <= x1 && x0 <= j.x1 })
+			}
+			var lower, upper bool
+			top, bottom, lower, upper = offFrames(graph, crossed, top, bottom)
+			high, low = high || lower, !high && !lower && upper
+		}
+		if high || low {
 			margin = 1
 		}
 		if graph.ForText && tracks > 0 {
@@ -430,8 +442,11 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		spacing := min(step, (bottom-top)/Length(tracks+1))
 		for i, j := range jogs {
 			j.y = (top+bottom)/2 + (Length(track[i])-Length(tracks-1)/2)*spacing
-			if arcs[k] > 0 {
+			switch {
+			case high:
 				j.y = bottom - Length(tracks-track[i])*spacing
+			case low:
+				j.y = top + Length(track[i]+1)*spacing
 			}
 			for _, o := range shared[j] {
 				o.y = j.y
@@ -670,4 +685,28 @@ func (graph *lgraph) shiftBelow(y, d Length) {
 			cluster.BottomRight.Y += d
 		}
 	}
+}
+
+// offFrames narrows the channel from top to bottom to the side of the
+// top or bottom of a cluster that a jog of the channel crosses, as
+// crossed reports for the cluster's span, which text draws on a row of
+// its own: tracks would run along it; the side with the middle of the
+// channel stays. It reports whether it narrowed the bottom and the top.
+func offFrames(graph *lgraph, crossed func(x0, x1 Length) bool, top, bottom Length) (_, _ Length, lower, upper bool) {
+	mid := (top + bottom) / 2
+	for _, cluster := range graph.Clusters {
+		if !crossed(cluster.TopLeft.X, cluster.BottomRight.X) {
+			continue
+		}
+		for _, frame := range []Length{cluster.TopLeft.Y, cluster.BottomRight.Y} {
+			switch {
+			case frame <= top || bottom <= frame:
+			case frame > mid:
+				bottom, lower = min(bottom, frame), true
+			default:
+				top, upper = max(top, frame), true
+			}
+		}
+	}
+	return top, bottom, lower, upper
 }

@@ -668,6 +668,10 @@ func (c *hierComponent) reserveClusterLabels() {
 		pad := float32(c.graphdef.RowPadding / 2)
 		top, bottom := pad, pad
 		switch {
+		case clusterdef.Label == "" && c.graphdef.ForText && !sideways(c.graphdef.RankDir):
+			// a line under the top, where text draws the arrowheads of
+			// edges coming in, as tall as a label's, see placeClusters
+			top += float32(2 * c.graphdef.textRadius(" ", "", c.graphdef.FontSize).Y)
 		case clusterdef.Label == "":
 		case sideways(c.graphdef.RankDir):
 			// the label runs along the ranks; make room for the box to
@@ -756,6 +760,11 @@ func (c *hierComponent) placeClusters() {
 		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
 		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
 		switch {
+		case clusterdef.Label == "" && c.graphdef.ForText && !sideways(c.graphdef.RankDir):
+			// text has no row for an arrowhead into the first node
+			// otherwise, as it draws the top on the line above it; the
+			// rows line up as under a label
+			top -= 2 * c.graphdef.textRadius(" ", "", c.graphdef.FontSize).Y
 		case clusterdef.Label == "":
 		case sideways(c.graphdef.RankDir):
 			if short := c.labelSpan(clusterdef) - (bottom - top); short > 0 {
