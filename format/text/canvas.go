@@ -214,12 +214,14 @@ func (c *canvas) text(x, y int, s string) {
 	}
 }
 
-// the bits of cell.style, which the escape codes of colored text show
+// the bits of cell.style, which the escape codes of colored text show,
+// and pinned, which marks the end of an edge at a field, see canvas.pin
 const (
 	bold = 1 << iota
 	italic
 	underline
 	strike
+	pinned = 1 << 7
 )
 
 // textStyle returns the bits of cell.style of a style of text
@@ -351,7 +353,7 @@ type cell struct {
 	lines  uint8     // direction mask, for joining edge runs
 	heavy  uint8     // arms that runs of different edges share
 	kind   uint8     // class of r, which seams keep up to date for their use
-	style  uint8     // the style bits of text, see textStyle
+	style  uint8     // the style bits of text, see textStyle, or pinned
 	keep   bool      // inside a node or of text, which carving keeps
 	glue   bool      // beside a label, which carving keeps beside it
 	solid  bool      // covered by a node; edges do not draw there

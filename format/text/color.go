@@ -186,7 +186,7 @@ func encode(g grid, palette []uint32, opts *Options) string {
 		f, b, st := "39", "49", uint8(0)
 		for _, x := range line[:end] {
 			want, bg := code(x)
-			style := x.style
+			style := x.style &^ pinned
 			if opts == nil {
 				style = 0
 			}

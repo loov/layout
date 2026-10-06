@@ -110,7 +110,7 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 			if !down {
 				adj = node.Out
 			}
-			node.Coef = medianGridX(adj, node.GridX)
+			node.Coef = medianGridX(graph.portGridX(node, adj, down), node.GridX)
 		}
 		clusterCoef(layer)
 		slices.SortStableFunc(layer, func(a, b *Node) int {
@@ -134,15 +134,27 @@ func assignGridX(graph *Graph) {
 	}
 }
 
-// medianGridX returns the weighted median of adj positions, or fallback when
-// there are no neighbors.
-func medianGridX(adj Nodes, fallback float32) float32 {
-	if len(adj) == 0 {
-		return fallback
-	}
+// portGridX returns where the edges of node to the nodes adj, before it
+// when down is set and after it otherwise, end on them: their GridX, off
+// by where on the node the edge ends, see Graph.Ports
+func (graph *Graph) portGridX(node *Node, adj Nodes, down bool) []float32 {
 	xs := make([]float32, len(adj))
 	for i, n := range adj {
 		xs[i] = n.GridX
+		if down {
+			xs[i] += graph.Ports[[2]ID{n.ID, node.ID}][0]
+		} else {
+			xs[i] += graph.Ports[[2]ID{node.ID, n.ID}][1]
+		}
+	}
+	return xs
+}
+
+// medianGridX returns the weighted median of the positions xs, or
+// fallback when there are none.
+func medianGridX(xs []float32, fallback float32) float32 {
+	if len(xs) == 0 {
+		return fallback
 	}
 	slices.Sort(xs)
 
@@ -217,7 +229,8 @@ func (nodes Nodes) moveNode(from, to int) {
 // shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
 	graph.assignPos()
-	weighted := len(graph.weights) > 0
+	// the cached positions leave out weights and ports
+	weighted := len(graph.weights) > 0 || len(graph.Ports) > 0
 	// a layer only needs another look when it or a neighbor changed
 	dirty := make([]bool, len(graph.ByRank))
 	for i := range dirty {

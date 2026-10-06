@@ -12,6 +12,12 @@ type Edge struct {
 
 	// FromPort and ToPort pin the edge ends to compass points on the nodes
 	FromPort, ToPort Compass
+	// FromField and ToField attach the edge ends to fields of record
+	// nodes, by the names of their ports, such as f1 for "<f1> text":
+	// an end goes on the side of the node facing the other end, across
+	// from the middle of the field. A field the node doesn't have, or a
+	// node that isn't a record, leaves the end free.
+	FromField, ToField string
 	// ArrowHead and ArrowTail select the markers at the To and From ends
 	ArrowHead, ArrowTail Arrow
 

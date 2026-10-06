@@ -28,6 +28,12 @@ type Graph struct {
 	// are, from its anchor on, within its EndRoom; 0 when they aren't
 	// packed, see Position
 	EndGap float32
+	// Ports holds where edges end along their nodes, by the source and
+	// target of the edge as it runs down the ranks: the offsets at each,
+	// as a part of the node's width from its middle, within ±0.5; missing
+	// is the middle. The median ordering puts the neighbors of a node in
+	// the order of their ends on it, see OrderRanksByMedian.
+	Ports map[[2]ID][2]float32
 }
 
 // ID is an unique identifier to a Node

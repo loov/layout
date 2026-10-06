@@ -31,8 +31,9 @@
 //     HSV values, color lists and gradients are ignored.
 //   - Styles other than solid, dashed, dotted, bold, filled and invis
 //     are ignored; rounded and diagonals have no effect.
-//   - Ports name compass points only; a record field port such as
-//     "node:f0" attaches to the node as a whole.
+//   - A port names a field of a record, see layout.Edge.FromField, or of
+//     an HTML-like table with borders, or a compass point; the compass
+//     point of a field, as in "node:f0:s", is ignored.
 //   - minlen=0 is ignored; put such nodes in a rank=same subgraph.
 //   - The graph label, labels on subgraphs that are not clusters,
 //     xlabel, headlabel and taillabel are not drawn.
@@ -187,6 +188,21 @@ func expandLabel(raw string, names ...string) string {
 	return label
 }
 
+// resolvePort returns the field and the compass point of a port on node,
+// see parsePort: a field that the label of the node names, in a <port>
+// of a record or a port of an HTML-like table, is that field and no
+// compass point; otherwise the port is the compass point alone
+func resolvePort(node *layout.Node, field string, compass layout.Compass) (string, layout.Compass) {
+	if field == "" {
+		return "", compass
+	}
+	label := node.Label
+	if strings.Contains(label, "<"+field+">") || strings.Contains(label, `port="`+field+`"`) {
+		return field, layout.CompassAuto
+	}
+	return "", compass
+}
+
 // recordText returns the fields of an HTML-like record label, such as
 // <{<b>name</b>|a<br/>b}>, as a plain record label, see draw.PlainLabel
 func recordText(label string) string { return draw.PlainLabel(label) }
@@ -245,18 +261,9 @@ func (context *parserContext) parse(src *ast.Graph) {
 			node.Label = strings.TrimPrefix(node.Label, literalMark)
 		}
 	}
-	// a port that names a field of a record, such as "n", is that field
-	// and not a compass point; the edge attaches to the node as a whole
-	field := func(node *layout.Node, port layout.Compass) bool {
-		return node.Shape == layout.Record && strings.Contains(node.Label, "<"+string(port)+">")
-	}
 	for _, edge := range context.Graph.Edges {
-		if field(edge.From, edge.FromPort) {
-			edge.FromPort = layout.CompassAuto
-		}
-		if field(edge.To, edge.ToPort) {
-			edge.ToPort = layout.CompassAuto
-		}
+		edge.FromField, edge.FromPort = resolvePort(edge.From, edge.FromField, edge.FromPort)
+		edge.ToField, edge.ToPort = resolvePort(edge.To, edge.ToField, edge.ToPort)
 	}
 	applyGraphAttrs(context.Graph, context.allAttrs)
 	context.pin()
@@ -555,11 +562,11 @@ func (context *parserContext) parseNode(src *ast.NodeStmt) *layout.Node {
 
 func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 	sources := context.ensureVertex(edgeStmt.From)
-	sourcePort := vertexPort(edgeStmt.From)
+	sourceField, sourcePort := vertexPort(edgeStmt.From)
 	to := edgeStmt.To
 	for to != nil {
 		targets := context.ensureVertex(to.Vertex)
-		targetPort := vertexPort(to.Vertex)
+		targetField, targetPort := vertexPort(to.Vertex)
 		for _, source := range sources {
 			for _, target := range targets {
 				if context.mergeStrict(source, target, sourcePort, targetPort, edgeStmt.Attrs) {
@@ -570,8 +577,8 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 				edge.Directed = to.Directed
 				edge.From = source
 				edge.To = target
-				edge.FromPort = sourcePort
-				edge.ToPort = targetPort
+				edge.FromPort, edge.FromField = sourcePort, sourceField
+				edge.ToPort, edge.ToField = targetPort, targetField
 
 				attrs := slices.Concat(context.edgeAttrs, edgeStmt.Attrs)
 				applyEdgeAttrs(context.Graph.ID, edge, attrs)
@@ -584,7 +591,7 @@ func (context *parserContext) parseEdge(edgeStmt *ast.EdgeStmt) {
 		}
 
 		sources = targets
-		sourcePort = targetPort
+		sourceField, sourcePort = targetField, targetPort
 		to = to.To
 	}
 }
@@ -613,14 +620,32 @@ func (context *parserContext) mergeStrict(source, target *layout.Node, sourcePor
 	return true
 }
 
-// vertexPort returns the compass point of a node vertex, if any. Named
-// ports (record fields) are not supported and ignored.
-func vertexPort(v ast.Vertex) layout.Compass {
+// vertexPort returns the field and the compass point of the port of a
+// node vertex, see parsePort
+func vertexPort(v ast.Vertex) (string, layout.Compass) {
 	node, ok := v.(*ast.Node)
-	if !ok || node.Port == nil || node.Port.CompassPoint == ast.CompassPointNone {
-		return layout.CompassAuto
+	if !ok || node.Port == nil {
+		return "", layout.CompassAuto
 	}
-	return parseCompass(node.Port.CompassPoint.String())
+	port := node.Port.ID
+	if node.Port.CompassPoint != ast.CompassPointNone {
+		port += ":" + node.Port.CompassPoint.String()
+	}
+	return parsePort(strings.TrimPrefix(port, ":"))
+}
+
+// parsePort reads a port such as "f1", "f1:s" or "n" as the field of a
+// record and the compass point it names. A name alone that is a compass
+// point is both, until the node shows which, see resolvePorts.
+func parsePort(port string) (field string, compass layout.Compass) {
+	name, side, both := strings.Cut(port, ":")
+	if both {
+		return unquote(name), parseCompass(side)
+	}
+	if compass = parseCompass(name); compass != layout.CompassAuto {
+		return name, compass
+	}
+	return unquote(name), layout.CompassAuto
 }
 
 // parseCompass reads a port such as "n" or "port:n" as its compass point.
@@ -775,9 +800,9 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 		case "arrowtail":
 			tail = layout.Arrow(attr.Val)
 		case "headport":
-			edge.ToPort = parseCompass(attr.Val)
+			edge.ToField, edge.ToPort = parsePort(attr.Val)
 		case "tailport":
-			edge.FromPort = parseCompass(attr.Val)
+			edge.FromField, edge.FromPort = parsePort(attr.Val)
 		case "fontname":
 			setString(&edge.FontName, attr.Val)
 		case "fontsize":

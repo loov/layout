@@ -8,11 +8,12 @@ import (
 
 // marker draws an edge end marker pointing in dir at the end of the edge
 // in cell end. It sits in the gap before the node when the run there is
-// straight, else on the node border. It reports whether style has a
-// marker; styles without a marker of their own draw a normal arrowhead.
-func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) bool {
+// straight, else on the node border. It returns the cell it draws in,
+// and whether style has a marker; styles without a marker of their own
+// draw a normal arrowhead.
+func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) ([2]int, bool) {
 	if style == layout.ArrowDefault || style == layout.ArrowNone {
-		return false
+		return end, false
 	}
 	r := arrow[dir]
 	switch style {
@@ -30,7 +31,7 @@ func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) bool {
 	if p := c.at(end[0], end[1]); p != nil {
 		p.solid = true // later runs don't erase it
 	}
-	return true
+	return end, true
 }
 
 // arrival returns the direction of the leg of the run between cells a
@@ -226,19 +227,32 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
 	}
-	// merged edges share their ends, which get one marker
+	// merged edges share their ends, which get one marker; an end at a
+	// field stays across from it, see pinned
 	if !merged || !c.ended[cells[last]] {
-		if !c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last]) {
+		at, ok := c.marker(head, arrival(cells[last-1], cells[last], false, path[len(path)-2], path[len(path)-1]), cells[last])
+		if !ok {
 			c.join(cells[last], edge.To)
 		}
+		c.pin(at, edge.To, edge.ToField)
 	}
 	if !merged || !c.ended[cells[0]] {
-		if !c.marker(edge.ArrowTail, arrival(cells[1], cells[0], true, path[1], path[0]), cells[0]) {
+		at, ok := c.marker(edge.ArrowTail, arrival(cells[1], cells[0], true, path[1], path[0]), cells[0])
+		if !ok {
 			c.join(cells[0], edge.From)
 		}
+		c.pin(at, edge.From, edge.FromField)
 	}
 	if merged {
 		c.ended[cells[0]], c.ended[cells[last]] = true, true
+	}
+}
+
+// pin marks the end of an edge at a field of node, which straightening
+// leaves in place
+func (c *canvas) pin(end [2]int, node *layout.Node, field string) {
+	if p := c.at(end[0], end[1]); p != nil && c.hasField(node, field) {
+		p.style |= pinned
 	}
 }
 
@@ -301,36 +315,77 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 // same for those in a group. An edge merges at its start or its end, not
 // both. The ids are negative, apart from those the canvas counts up.
 //
-// Edges also merge at a point, a dot where they meet, as they have to
-// leave it along one run: at the point they start at, or else the one
-// they end at.
+// Edges also merge where they meet: at a point, a dot that they have to
+// leave along one run, or at a field of a record that more than one
+// starts or ends at, where they end at one cell. Edges that meet at
+// both ends join the groups there into one.
 func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
-	ids := map[*layout.Edge]edgeID{}
-	last := 0
-	for i, edge := range l.Graph.Edges {
-		if m := l.Edges[i].Merged; m != [2]int{} {
-			ids[edge] = -edgeID(max(m[0], m[1]))
-			last = max(last, m[0], m[1])
+	// where edges meet: a group the layout merged, a point, or a field of
+	// a node, which edges start and end at alike
+	type meet struct {
+		node  *layout.Node
+		field string
+		group int
+	}
+	point := func(node *layout.Node) bool { return l.Node(node).Shape == layout.PointShape }
+	count := map[meet]int{}
+	for _, edge := range l.Graph.Edges {
+		if edge.FromField != "" {
+			count[meet{node: edge.From, field: edge.FromField}]++
+		}
+		if edge.ToField != "" {
+			count[meet{node: edge.To, field: edge.ToField}]++
 		}
 	}
-	points := map[*layout.Node]edgeID{}
-	point := func(node *layout.Node) bool { return l.Node(node).Shape == layout.PointShape }
-	for _, edge := range l.Graph.Edges {
-		if _, ok := ids[edge]; ok || edge.From == edge.To {
+	meets := func(i int, edge *layout.Edge) []meet {
+		var out []meet
+		if m := l.Edges[i].Merged; m != [2]int{} {
+			out = append(out, meet{group: max(m[0], m[1])})
+		}
+		for _, m := range []meet{{node: edge.From, field: edge.FromField}, {node: edge.To, field: edge.ToField}} {
+			switch {
+			case point(m.node):
+				out = append(out, meet{node: m.node})
+			case m.field != "" && count[m] > 1:
+				out = append(out, m)
+			}
+		}
+		return out
+	}
+	// an edge that meets others at more than one place joins the groups
+	// there into one, as it draws in one id
+	parent := map[meet]meet{}
+	var root func(m meet) meet
+	root = func(m meet) meet {
+		if p, ok := parent[m]; ok && p != m {
+			parent[m] = root(p)
+			return parent[m]
+		}
+		return m
+	}
+	for i, edge := range l.Graph.Edges {
+		if edge.From == edge.To {
 			continue
 		}
-		at := edge.From
-		if !point(at) {
-			at = edge.To
+		ms := meets(i, edge)
+		for _, m := range ms[min(1, len(ms)):] {
+			if a, b := root(ms[0]), root(m); a != b {
+				parent[a] = b
+			}
 		}
-		if !point(at) {
+	}
+	ids := map[*layout.Edge]edgeID{}
+	groups := map[meet]edgeID{}
+	for i, edge := range l.Graph.Edges {
+		ms := meets(i, edge)
+		if len(ms) == 0 || edge.From == edge.To {
 			continue
 		}
-		if _, ok := points[at]; !ok {
-			last++
-			points[at] = -edgeID(last)
+		r := root(ms[0])
+		if _, ok := groups[r]; !ok {
+			groups[r] = -edgeID(len(groups) + 1)
 		}
-		ids[edge] = points[at]
+		ids[edge] = groups[r]
 	}
 	return ids
 }

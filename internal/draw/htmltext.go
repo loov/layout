@@ -28,9 +28,9 @@ func PlainLabel(label string) string {
 // a record label, see ParseRecord, which text draws with the borders as
 // dividers: the rows stack and the cells of a row are side by side; a
 // cell holds its lines, or the fields of a table in it with borders of
-// its own. The fields stack top to bottom at the top level when vertical
-// is set, as ParseRecord is told. It reports false for other labels.
-// Spans of rows and columns are not kept.
+// its own, and its port names the field. The fields stack top to bottom
+// at the top level when vertical is set, as ParseRecord is told. It
+// reports false for other labels. Spans of rows and columns are not kept.
 func TableRecord(label string, vertical bool) (string, bool) {
 	nodes, ok := parseHTMLLabel(label)
 	if !ok {
@@ -89,7 +89,11 @@ func tableFields(table *html.Node) string {
 			}
 			var out strings.Builder
 			plainText(&out, td, "", Style{})
-			cells = append(cells, escapeRecord(collapse(out.String())))
+			cell := escapeRecord(collapse(out.String()))
+			if port := attr(td, "port"); port != "" {
+				cell = "<" + escapeRecord(port) + ">" + cell
+			}
+			cells = append(cells, cell)
 			only = td
 		}
 		switch {

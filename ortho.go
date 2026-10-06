@@ -101,11 +101,11 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			continue
 		}
 		arcEnds = append(arcEnds, edge)
-		if edge.FromPort == CompassAuto {
+		if edge.freeStart() {
 			k := side{edge.From, false}
 			ends[k] = append(ends[k], end{edge, true, edge.Path[2].X, edge.Path[0].X})
 		}
-		if edge.ToPort == CompassAuto {
+		if edge.freeEnd() {
 			k := side{edge.To, false}
 			ends[k] = append(ends[k], end{edge, false, edge.Path[1].X, edge.Path[3].X})
 		}
@@ -115,11 +115,11 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			continue
 		}
 		down := edge.Path[0].Y < edge.Path[len(edge.Path)-1].Y
-		if edge.FromPort == CompassAuto {
+		if edge.freeStart() {
 			k := side{edge.From, down}
 			ends[k] = append(ends[k], end{edge, true, edge.Path[1].X, edge.Path[0].X})
 		}
-		if edge.ToPort == CompassAuto {
+		if edge.freeEnd() {
 			k := side{edge.To, !down}
 			ends[k] = append(ends[k], end{edge, false, edge.Path[len(edge.Path)-2].X, edge.Path[len(edge.Path)-1].X})
 		}

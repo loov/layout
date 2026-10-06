@@ -116,6 +116,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 		layoutPinned(graphdef)
 		return
 	}
+	graphdef.resolveFields()
 
 	// edges are updated in place below, an edge listed twice only once
 	edges := uniqueEdges(graphdef.Edges)
@@ -326,6 +327,7 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	c.build()
 	c.rank()
 	c.addClusters()
+	c.fieldPorts()
 	c.order()
 	c.reserveEnds()
 	c.reserveFlatLabels()
@@ -1034,6 +1036,12 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector) {
 		if edge.ToPort != CompassAuto {
 			path[len(path)-1] = edge.To.CompassPoint(edge.ToPort)
 		}
+		if edge.FromField != "" {
+			path[0] = c.graphdef.fieldEnd(edge.From, edge.FromField, path[1])
+		}
+		if edge.ToField != "" {
+			path[len(path)-1] = c.graphdef.fieldEnd(edge.To, edge.ToField, path[len(path)-2])
+		}
 		edge.Path = path
 	}
 }
@@ -1103,10 +1111,10 @@ func (c *hierComponent) shapePaths() {
 		for _, edge := range c.graphdef.Edges {
 			if edge.From != edge.To && len(edge.Path) > 2 {
 				from, to := edge.Path[0], edge.Path[len(edge.Path)-1]
-				if edge.FromPort == CompassAuto {
+				if edge.freeStart() {
 					from = edge.From.Boundary(edge.To.Center)
 				}
-				if edge.ToPort == CompassAuto {
+				if edge.freeEnd() {
 					to = edge.To.Boundary(edge.From.Center)
 				}
 				edge.Path = []Vector{from, to}

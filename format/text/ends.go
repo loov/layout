@@ -3,6 +3,7 @@ package text
 import (
 	"cmp"
 	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 	"maps"
 	"math"
 	"slices"
@@ -47,7 +48,11 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		for _, e := range []struct {
 			i, j, k int
 			node    *layout.Node
-		}{{0, 1, 2, edges[k].From}, {last, last - 1, last - 2, edges[k].To}} {
+			field   string
+		}{{0, 1, 2, edges[k].From, edges[k].FromField}, {last, last - 1, last - 2, edges[k].To, edges[k].ToField}} {
+			if c.hasField(e.node, e.field) {
+				continue // the layout put it across from its field
+			}
 			b := c.boxes[e.node]
 			at, bend := path[e.i], path[e.j]
 			for along := range 2 {
@@ -209,4 +214,14 @@ func boolInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// hasField reports whether node is a record with a field named field,
+// see layout.Edge.FromField
+func (c *canvas) hasField(node *layout.Node, field string) bool {
+	box := c.l.Node(node)
+	if field == "" || box.Shape != layout.Record {
+		return false
+	}
+	return draw.ParseRecord(box.Label, c.sideways()).Field(field) != nil
 }

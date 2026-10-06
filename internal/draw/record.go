@@ -7,6 +7,7 @@ import "strings"
 // top left corner and filled in by LayoutRecord.
 type Record struct {
 	Text     string
+	Port     string // the name in the <port> the field starts with
 	Fields   []*Record
 	Vertical bool // sub-fields are stacked top to bottom
 
@@ -28,7 +29,8 @@ func parseRecord(s string, vertical bool) (*Record, string) {
 	grouped := false // the pending field is a brace group, not text
 	flush := func() {
 		if !grouped {
-			rec.Fields = append(rec.Fields, &Record{Text: cleanRecordText(text.String())})
+			port, field := cleanRecordText(text.String())
+			rec.Fields = append(rec.Fields, &Record{Text: field, Port: port})
 		}
 		text.Reset()
 		grouped = false
@@ -79,16 +81,30 @@ func parseRecord(s string, vertical bool) (*Record, string) {
 	return rec, ""
 }
 
-// cleanRecordText strips a <port> prefix; parseRecord already turned
-// escapes into the characters they stand for
-func cleanRecordText(s string) string {
+// cleanRecordText splits the name of a <port> prefix off the text of a
+// field; parseRecord already turned escapes into the characters they
+// stand for
+func cleanRecordText(s string) (port, text string) {
 	s = strings.TrimSpace(s)
 	if strings.HasPrefix(s, "<") {
 		if end := strings.Index(s, ">"); end >= 0 {
-			s = strings.TrimSpace(s[end+1:])
+			return strings.TrimSpace(s[1:end]), strings.TrimSpace(s[end+1:])
 		}
 	}
-	return s
+	return "", s
+}
+
+// Field returns the field of rec whose port is named port, or nil
+func (rec *Record) Field(port string) *Record {
+	if rec.Port == port {
+		return rec
+	}
+	for _, field := range rec.Fields {
+		if f := field.Field(port); f != nil {
+			return f
+		}
+	}
+	return nil
 }
 
 // LayoutRecord parses a record label, see ParseRecord, and computes the field boxes for a

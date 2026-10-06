@@ -208,7 +208,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
 			below, to := g.at(y+1, x), g.at(y+1, x+dx)
-			if !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
+			if p.style&pinned != 0 || !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
 				return moves, false
 			}
 			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
@@ -218,7 +218,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
 			// a port on the side of a box moves along its straight side
 			to := g.at(y, x+dx)
-			if to == nil || to.node != p.node || arms(to.r) != left|right {
+			if p.style&pinned != 0 || to == nil || to.node != p.node || arms(to.r) != left|right {
 				return moves, false
 			}
 			port, side := *p, *to
@@ -527,7 +527,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 				}
 				continue
 			}
-			if g.runeAt(mid) != '▼' {
+			if g.runeAt(mid) != '▼' || at(mid).style&pinned != 0 {
 				continue
 			}
 			// a last step before an arrowhead into a box: the arrowhead

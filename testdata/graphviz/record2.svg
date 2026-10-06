@@ -15,7 +15,7 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M60.24,48 L60.24,80 '></path><rect x='16.000002' y='16' width='88.48' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32.800003' y='32' font-size='14' fill='#000000'>foo</text>
+	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32.800003,48 L60.24,80 '></path><rect x='16.000002' y='16' width='88.48' height='32' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32.800003' y='32' font-size='14' fill='#000000'>foo</text>
 <line x1='49.600002' y1='16' x2='49.600002' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='60.24' y='32' font-size='14' fill='#000000'>x</text>
 <line x1='70.880005' y1='16' x2='70.880005' y2='48' stroke='#000000' stroke-width='1'/><text text-anchor='middle' alignment-baseline='middle' x='87.68' y='32' font-size='14' fill='#000000'>bar</text>
 <rect x='22.160002' y='80' width='76.16' height='69' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32.800003' y='114.5' font-size='14' fill='#000000'>a</text>

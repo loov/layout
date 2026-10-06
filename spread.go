@@ -70,10 +70,10 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				end{edge, angle(edge.From, edge.Path[len(edge.Path)-1]), false, true})
 			continue
 		}
-		if edge.FromPort == CompassAuto {
+		if edge.freeStart() {
 			byNode[edge.From] = append(byNode[edge.From], end{edge, angle(edge.From, edge.Path[1]), true, false})
 		}
-		if edge.ToPort == CompassAuto {
+		if edge.freeEnd() {
 			byNode[edge.To] = append(byNode[edge.To], end{edge, angle(edge.To, edge.Path[len(edge.Path)-2]), false, false})
 		}
 	}
