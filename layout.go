@@ -901,9 +901,9 @@ func (c *hierComponent) finish() {
 	c.placeNodes()
 	c.placeClusters()
 	byRank := c.realByRank()
-	paths := c.rankPaths(byRank)
+	paths := c.rankPaths()
 	c.flatPaths(paths, byRank)
-	c.assignPaths(paths)
+	c.assignPaths(paths, byRank)
 	c.crossLabelBands()
 	c.shapePaths()
 	c.placeFlatLabels()
@@ -987,8 +987,7 @@ func (c *hierComponent) realByRank() [][]*lnode {
 // rankPaths returns the paths of the edges between ranks, along their
 // virtual nodes, by the hierarchical nodes they join; labels go beside the
 // middle virtual node
-func (c *hierComponent) rankPaths(byRank [][]*lnode) map[[2]hier.ID][]Vector {
-	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
+func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
 	edgePaths := map[[2]hier.ID][]Vector{}
 	for _, source := range c.graph.Nodes {
 		if source.Virtual {
@@ -1051,13 +1050,6 @@ func (c *hierComponent) rankPaths(byRank [][]*lnode) map[[2]hier.ID][]Vector {
 				path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
 			}
 
-			if c.graphdef.Splines != SplinesOrtho {
-				// orthogonal edges run on virtual node columns and rank
-				// channels, which are free of nodes by construction
-				path = routeAround(path, obstacles, sourcedef, targetdef, c.graphdef.EdgePadding)
-				path = routeAroundClusters(path, c.graphdef.Clusters, sourcedef, targetdef, c.graphdef.EdgePadding)
-			}
-
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
 	}
@@ -1112,7 +1104,8 @@ func (c *hierComponent) flatPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]
 
 // assignPaths gives every edge its path, self-loops their own; edges
 // between the same pair of nodes share one route, so they are spread out
-func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector) {
+func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]*lnode) {
+	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
 	pairKey := func(edge *ledge) [2]hier.ID { return unorderedPair(c.nodes[edge.From], c.nodes[edge.To]) }
 	pairCount := map[[2]hier.ID]int{}
 	for _, edge := range c.graphdef.Edges {
@@ -1186,6 +1179,13 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector) {
 		}
 		if edge.ToField != "" {
 			path[len(path)-1] = c.graphdef.fieldEnd(edge.To, edge.ToField, path[len(path)-2])
+		}
+		if c.graphdef.Splines != SplinesOrtho && edge.From.Center.Y != edge.To.Center.Y {
+			// around nodes once the ends are final, ports and fields
+			// included; orthogonal edges run on virtual node columns and
+			// rank channels, which are free of nodes by construction
+			path = routeAround(path, obstacles, edge.From, edge.To, c.graphdef.EdgePadding)
+			path = routeAroundClusters(path, c.graphdef.Clusters, edge.From, edge.To, c.graphdef.EdgePadding)
 		}
 		edge.Path = path
 	}
