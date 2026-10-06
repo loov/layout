@@ -297,33 +297,77 @@ func mergeRow(out, a, b []cell) ([]cell, bool) {
 // of their own, which nothing joins. The new line crosses no more lines
 // than the old, keeps a cell off nodes, and lines with a label beside
 // them stay.
-func unjog(g grid) (changed bool) {
+// rerouteMarks marks the cells of the lines unjog reroutes, see unjog; it
+// is kept across the calls of unjog on one grid, as the tries go on
+// counting, so that the marks of earlier tries never need clearing
+type rerouteMarks struct {
+	rows [][]rerouteMark
+	try  uint32
+}
+
+// rerouteMark marks a cell of the old line of a try, with its arms, and of
+// the new
+type rerouteMark struct {
+	old, new uint32
+	arms     uint8
+}
+
+func unjog(g grid, mk *rerouteMarks) (changed bool) {
 	at := func(p pos) *cell { return g.at(p.r, p.c) }
 	// reroute moves a line from the old cells to the new ones, both with
 	// the arm in into the first, ending in head when it is set, if it can
 	// fewer has reroute take only a new line that crosses fewer lines
 	fewer := false
-	// the cells of the old line by their arms, and of the new; every
-	// reroute fills them anew
-	olds, news := map[pos]uint8{}, map[pos]bool{}
+	// the cells of the old line, with their arms, and of the new are
+	// marked with the try they are of, so that every reroute marks them
+	// anew without clearing; olds lists the cells of the old line
+	if len(mk.rows) < len(g) {
+		mk.rows = append(mk.rows, make([][]rerouteMark, len(g)-len(mk.rows))...)
+	}
+	markAt := func(p pos) *rerouteMark {
+		if p.r < 0 || p.r >= len(g) || p.c < 0 || p.c >= len(g[p.r]) {
+			return nil
+		}
+		if len(mk.rows[p.r]) < len(g[p.r]) {
+			mk.rows[p.r] = append(mk.rows[p.r], make([]rerouteMark, len(g[p.r])-len(mk.rows[p.r]))...)
+		}
+		return &mk.rows[p.r][p.c]
+	}
+	isNew := func(p pos) bool { m := markAt(p); return m != nil && m.new == mk.try }
+	isOld := func(p pos) bool { m := markAt(p); return m != nil && m.old == mk.try }
+	// oldArms returns the arms of the old line at p, none off it
+	oldArms := func(p pos) uint8 {
+		if m := markAt(p); m != nil && m.old == mk.try {
+			return m.arms
+		}
+		return 0
+	}
+	var olds []pos
 	// the old line, the new one and the arms of the old in reroute, which
 	// every try routes anew
 	var oldPath, newPath, armsPath []pos
 	var oldDirs, newDirs, armsDirs []uint8
 	reroute := func(in uint8, old, path []pos, dirs []uint8, head *cell) bool {
-		clear(olds)
-		clear(news)
+		mk.try++
+		olds = olds[:0]
 		armsPath, armsDirs = route(armsPath, armsDirs, in, down, old...)
-		oldArms := armsDirs
 		for i, p := range old {
-			olds[p] = oldArms[i]
+			if m := markAt(p); m != nil {
+				if m.old != mk.try {
+					m.old = mk.try
+					olds = append(olds, p)
+				}
+				m.arms = armsDirs[i]
+			}
 		}
 		for _, p := range path {
-			news[p] = true
+			if m := markAt(p); m != nil {
+				m.new = mk.try
+			}
 		}
 		added, removed := 0, 0
-		for p := range olds {
-			if news[p] {
+		for _, p := range olds {
+			if isNew(p) {
 				continue
 			}
 			for _, d := range []pos{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
@@ -341,7 +385,7 @@ func unjog(g grid) (changed bool) {
 			if q == nil {
 				return false
 			}
-			if _, ok := olds[p]; ok {
+			if isOld(p) {
 				// a crossing on the old line stays one on the new
 				if q.r == '╂' && dirs[i] != up|down && dirs[i] != left|right {
 					return false
@@ -359,7 +403,7 @@ func unjog(g grid) (changed bool) {
 			for _, dc := range []int{-1, 1} {
 				// a cell off nodes, other than an arrowhead that moves
 				n := pos{p.r, p.c + dc}
-				if q := at(n); q != nil && q.solid && olds[n] == 0 {
+				if q := at(n); q != nil && q.solid && oldArms(n) == 0 {
 					return false
 				}
 			}
@@ -369,15 +413,17 @@ func unjog(g grid) (changed bool) {
 		}
 		// the edge of the line, by the arms it draws, not of lines it crosses
 		fg, id := at(old[0]).fg, edgeID(0)
-		for p, a := range olds {
+		for _, p := range olds {
+			a := oldArms(p)
 			for arm := range 4 {
 				if a&(1<<arm) != 0 && at(p).lines&(1<<arm) != 0 && at(p).owner[arm] != 0 {
 					id = at(p).owner[arm]
 				}
 			}
 		}
-		for p, a := range olds {
-			if news[p] {
+		for _, p := range olds {
+			a := oldArms(p)
+			if isNew(p) {
 				continue
 			}
 			if q := at(p); q.r == '╂' {
@@ -393,7 +439,7 @@ func unjog(g grid) (changed bool) {
 			switch {
 			case i == len(path)-1 && head != nil:
 				*q = *head
-			case q.r == '╂' || q.r != ' ' && olds[p] == 0:
+			case q.r == '╂' || q.r != ' ' && oldArms(p) == 0:
 				q.r, q.lines = '╂', up|down|left|right
 				for arm := range 4 {
 					if dirs[i]&(1<<arm) != 0 {

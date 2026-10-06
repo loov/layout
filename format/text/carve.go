@@ -42,7 +42,8 @@ func carve(g grid, sideways bool, sc *scratch) grid {
 	g, cells = rows(g, nil, false)
 	g, cells = seams(g, cells, seamOpts{lines: rowLines, turn: !sideways, bend: true}, sc)
 	// straightening a line can clear the way for another
-	for !sideways && unjog(g) {
+	var marks rerouteMarks
+	for !sideways && unjog(g, &marks) {
 	}
 	// rows merge first, as taking a step out can block that, and again
 	// after, as it can clear the way

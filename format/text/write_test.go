@@ -590,7 +590,8 @@ func TestUnjogJunction(t *testing.T) {
   │   ╰─────╮
   │         │
 `)
-	for unjog(g) {
+	var marks rerouteMarks
+	for unjog(g, &marks) {
 	}
 	want := text(grid(`
   │          
