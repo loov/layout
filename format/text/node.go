@@ -111,28 +111,39 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 	} else {
 		y1 = max(y1, y0+h)
 	}
+	if !c.sideways() {
+		// a cell for every end along the top and bottom between the
+		// corners, as the layout reserves, which rounding can fall a
+		// cell short of
+		top, bottom := c.sideEnds(node, y0, y1)
+		x1 = max(x1, x0+max(len(top), len(bottom))+1)
+	}
 	return [4]int{x0, y0, x1, y1}
 }
 
-// evenLabel gives back one of an odd number of spare cells, which can't be
-// split evenly around the label of node, on a side that no edge ends next
-// to on the top or bottom, where spreadSides puts them; ends on the sides
-// move onto them. It returns the new left and right columns of the box.
-func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
-	type end struct {
-		exact    float64
-		straight bool
-	}
-	var top, bottom []end
+// sideEnd is where an edge ends along the top or bottom of a node, in
+// cells, and whether it goes on straight past the first bend
+type sideEnd struct {
+	exact    float64
+	straight bool
+}
+
+// sideEnds returns the ends of edges along the top and the bottom of a
+// node whose box is on rows y0 to y1, and of edges that come straight
+// down or up to it
+func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd) {
 	add := func(path []layout.Vector) {
 		p := path[0]
 		// straight on past the first bend, see spreadSides
 		straight := len(path) < 3 || absLength(path[2].X-path[1].X) < 0.01
-		e := end{float64((p.X - c.origin.X) / c.cellW), straight}
+		e := sideEnd{float64((p.X - c.origin.X) / c.cellW), straight}
+		// an end straight down onto a rounder outline, which curves
+		// below the top, ends on the top of the box too, see spreadSides
+		vertical := len(path) > 1 && absLength(path[1].X-p.X) < 0.01
 		switch r := c.row(p.Y); {
-		case r <= y0:
+		case r <= y0 || vertical && path[1].Y < p.Y:
 			top = append(top, e)
-		case r >= y1:
+		case r >= y1 || vertical && path[1].Y > p.Y:
 			bottom = append(bottom, e)
 		}
 	}
@@ -150,9 +161,21 @@ func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
 			add(back)
 		}
 	}
+	return top, bottom
+}
+
+// evenLabel gives back one of an odd number of spare cells, which can't be
+// split evenly around the label of node, on a side that no edge ends next
+// to on the top or bottom, where spreadSides puts them; ends on the sides
+// move onto them. It returns the new left and right columns of the box.
+func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
+	top, bottom := c.sideEnds(node, y0, y1)
+	if max(len(top), len(bottom)) > x1-x0-2 {
+		return x0, x1 // the ends need every cell between the corners
+	}
 	lo, hi := x1, x0 // the columns of the edge ends
-	for _, ends := range [][]end{top, bottom} {
-		slices.SortFunc(ends, func(a, b end) int { return cmp.Compare(a.exact, b.exact) })
+	for _, ends := range [][]sideEnd{top, bottom} {
+		slices.SortFunc(ends, func(a, b sideEnd) int { return cmp.Compare(a.exact, b.exact) })
 		cells := make([]int, len(ends))
 		exact, fixed := make([]float64, len(ends)), make([]bool, len(ends))
 		for n, e := range ends {

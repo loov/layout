@@ -40,14 +40,15 @@
 
 
 
-           System
-         + property
-        - Subsystem 1
-        - Subsystem 2
-        - Subsystem 3
-             ...
-          + method
-             ...
+
+                                           System
+                                         + property
+                                        - Subsystem 1
+                                        - Subsystem 2
+                                        - Subsystem 3
+                                             ...
+                                          + method
+                                             ...
 
 
 
@@ -61,10 +62,10 @@
 
 
 
-   ▲
- ┌┈┼┈┐
- ┊ ┊ ┊
- ↓ ↓ ↓
+                                               ▲
+               ┌┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┼┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐
+               ┊                               ┊                         ┊
+               ↓                               ↓                         ↓
 
 
 
@@ -77,12 +78,12 @@
 
 
 
-        Subsystem 1               Subsystem 2               Subsystem 3
-        + property                + property                + property
-        - resource                - resource                - resource
-            ...                       ...                       ...
-         + method                  + method                  + method
-            ...                       ...                       ...
+         Subsystem 1                     Subsystem 2               Subsystem 3
+         + property                      + property                + property
+         - resource                      - resource                - resource
+             ...                             ...                       ...
+          + method                        + method                  + method
+             ...                             ...                       ...
 
 
 
@@ -95,17 +96,17 @@
 
 
 
- ▲                ▲   ▲
- └┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐ ├┈┈┈┘
-  aggregation   ┊ ┊
-                ↓ ↓
- ┌──────────────────────────────────┐
- │   │     Shared resource</b>      │
- │   │──────────────────────────────│
- │   │ + property<br align="left"/> │
- │ < │    ...<br align="left"/>     │
- │   │──────────────────────────────│
- │   │  + method<br align="left"/>  │
- │   │    ...<br align="left"/>     │
- └──────────────────────────────────┘
+               ▲                             ▲                           ▲
+               └┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┐ ├┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┘
+                 aggregation               ┊ ┊
+                                           ↓ ↓
+                            ┌──────────────────────────────────┐
+                            │   │     Shared resource</b>      │
+                            │   │──────────────────────────────│
+                            │   │ + property<br align="left"/> │
+                            │ < │    ...<br align="left"/>     │
+                            │   │──────────────────────────────│
+                            │   │  + method<br align="left"/>  │
+                            │   │    ...<br align="left"/>     │
+                            └──────────────────────────────────┘
 

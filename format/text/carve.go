@@ -587,14 +587,15 @@ func (p *seamPass) crossing(i, x int, toHi bool) int {
 // joinCells sets joined[from:to] to whether those cells of above join the
 // ones below them in here: the cell above has the arm next, or the one
 // below the arm prev, or one is kept or glued and the other is too or is
-// not blank
+// not blank, or both are of one node, whose outline can be blank
 func joinCells(above, here []cell, joined []bool, from, to int, ax seamAxis) {
 	next, prev := ax.next, ax.prev
 	above, here, joined = above[:to], here[:to], joined[:to]
 	for x := from; x < to; x++ {
 		a, b := &above[x], &here[x]
 		joined[x] = a.kind&next != 0 || b.kind&prev != 0 ||
-			(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
+			(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' ' ||
+			a.node != 0 && a.node == b.node
 	}
 }
 

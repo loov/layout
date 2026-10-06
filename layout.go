@@ -528,7 +528,7 @@ func (c *hierComponent) reserveEnds() {
 			group int
 		}
 		counted := map[slot]bool{}
-		count := func(node *lnode, below bool, group int) {
+		count := func(ends map[*lnode][2]int, node *lnode, below bool, group int) {
 			k := slot{node, below, group}
 			if group != 0 && counted[k] {
 				return
@@ -538,17 +538,35 @@ func (c *hierComponent) reserveEnds() {
 			e[map[bool]int{false: 0, true: 1}[below]]++
 			ends[node] = e
 		}
+		// sideways in text, flat edges leave along the top and bottom of
+		// the drawing, which are the sides of the frame here; they need a
+		// cell each across the frame, as ends between ranks do along it
+		flat := map[*lnode][2]int{} // before and after along the rank
 		for _, edge := range c.graphdef.Edges {
-			from, to := c.graph.Nodes[c.nodes[edge.From]].Rank, c.graph.Nodes[c.nodes[edge.To]].Rank
-			if from == to {
+			from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+			if from.Rank == to.Rank {
+				if c.graphdef.ForText && c.pack && edge.From != edge.To {
+					count(flat, edge.From, from.Pos < to.Pos, c.graphdef.merged[edge][0])
+					count(flat, edge.To, to.Pos < from.Pos, c.graphdef.merged[edge][1])
+				}
 				continue // loops and flat edges leave sideways
 			}
-			below := from < to
+			below := from.Rank < to.Rank
 			if edge.FromPort == CompassAuto {
-				count(edge.From, below, c.graphdef.merged[edge][0])
+				count(ends, edge.From, below, c.graphdef.merged[edge][0])
 			}
 			if edge.ToPort == CompassAuto {
-				count(edge.To, !below, c.graphdef.merged[edge][1])
+				count(ends, edge.To, !below, c.graphdef.merged[edge][1])
+			}
+		}
+		for node, e := range flat {
+			if node.Shape == PointShape {
+				continue
+			}
+			cell := c.graphdef.cellWidth() / 2
+			if grow := Length(max(e[0], e[1])+1)*cell - node.Radius.Y; grow > 0 {
+				node.Radius.Y += grow
+				node.pad.Y += grow
 			}
 		}
 		for node, e := range ends {

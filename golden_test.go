@@ -248,18 +248,8 @@ var knownBad = map[string]map[string]string{
 		"graphviz/ldbxtried_merged.txt":            "edges share runs",
 		"graphviz/Linux_kernel_diagram.txt":        "edges share runs",
 		"graphviz/Linux_kernel_diagram_merged.txt": "edges share runs",
-		"graphviz/NaN_merged.txt":                  "edges share a run",
 		"graphviz/sdh.txt":                         "edges share runs",
 		"graphviz/sdh_merged.txt":                  "edges share runs",
-	},
-	"TestArrowsBesideNodes": {
-		"graphviz/ldbxtried.txt":        "arrow at a corner",
-		"graphviz/ldbxtried_merged.txt": "arrow at a corner",
-		"graphviz/NaN.txt":              "arrow at a corner",
-		"graphviz/pgram.txt":            "arrow at a corner",
-		"graphviz/pgram_merged.txt":     "arrow at a corner",
-		"graphviz/shells.txt":           "arrows at corners",
-		"graphviz/shells_merged.txt":    "arrows at corners",
 	},
 }
 
