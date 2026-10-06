@@ -322,8 +322,9 @@ func (q *costQueue) Pop() any {
 }
 
 // reserve keeps the cells where edges end at fields, which they can't
-// move off, for them, see edgeID, so that the edges drawn before them
-// keep off. Edges that end at one such cell draw as one, merged.
+// move off, and the two cells out from them, for them, see edgeID, so
+// that the edges drawn before them keep off. Edges that end at one such
+// cell draw as one, merged.
 func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 	c.reserved = map[[2]int]edgeID{}
 	by := map[[2]int]*layout.Edge{}
@@ -333,10 +334,15 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 			continue
 		}
 		id++ // see drawEdge
+		path, last := paths[i], len(paths[i])-1
 		ends := []bool{c.hasField(edge.From, edge.FromField), c.hasField(edge.To, edge.ToField)}
-		for k, end := range [][2]int{paths[i][0], paths[i][len(paths[i])-1]} {
+		for k, end := range [][2]int{path[0], path[last]} {
 			if !ends[k] {
 				continue
+			}
+			next, node := path[1], edge.From
+			if k == 1 {
+				next, node = path[last-1], edge.To
 			}
 			own, merged := c.merged[edge]
 			if !merged {
@@ -347,6 +353,16 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 				continue
 			}
 			c.reserved[end], by[end] = own, edge
+			// and the two cells out from it, where its line leaves straight
+			// and a marker goes, see search
+			if out := c.side(end, next, node); out != 0 {
+				for step := 1; step <= 2; step++ {
+					cell := [2]int{end[0] + step*dx(out), end[1] + step*dy(out)}
+					if _, ok := c.reserved[cell]; !ok {
+						c.reserved[cell] = own
+					}
+				}
+			}
 		}
 	}
 }

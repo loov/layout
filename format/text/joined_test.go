@@ -82,47 +82,57 @@ func checkApart(t *testing.T, c *canvas, g grid) {
 	}
 }
 
-// TestEdgesApartRandom checks that random graphs, with ports, fields,
-// loops, labels and merged edges, in every direction, draw no two edges
-// along the same cells
+// TestEdgesApartRandom checks that random graphs, see randomGraph, draw
+// no two edges along the same cells, and join every edge
 func TestEdgesApartRandom(t *testing.T) {
 	seeds := 300
 	if testing.Short() {
 		seeds = 30
 	}
 	for seed := range seeds {
-		rng := rand.New(rand.NewPCG(uint64(seed), 0))
-		graph := layout.NewDigraph()
-		graph.RankDir = []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft}[rng.IntN(4)]
-		graph.MergeEdges = rng.IntN(3) == 0
-		n := 3 + rng.IntN(8)
-		for i := range n {
-			node := graph.Node(fmt.Sprint("n", i))
-			if rng.IntN(4) == 0 {
-				node.Shape = layout.Record
-				node.Label = "<a> a|<b> b|<c> c"
-			}
-		}
-		ports := []layout.Compass{layout.CompassAuto, layout.North, layout.South, layout.East, layout.West}
-		for range n + rng.IntN(2*n) {
-			edge := graph.Edge(fmt.Sprint("n", rng.IntN(n)), fmt.Sprint("n", rng.IntN(n)))
-			if rng.IntN(5) == 0 {
-				edge.Label = "label"
-			}
-			if rng.IntN(5) == 0 && edge.From.Shape == layout.Record {
-				edge.FromField = "abc"[rng.IntN(3):][:1]
-			}
-			if rng.IntN(4) == 0 {
-				edge.FromPort, edge.ToPort = ports[rng.IntN(len(ports))], ports[rng.IntN(len(ports))]
-			}
-		}
-		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		l, err := layout.Hierarchical(randomGraph(uint64(seed)), layout.Options{ForText: true})
 		if err != nil {
 			t.Fatal(err)
 		}
 		c, g := carved(l, false)
-		t.Run(fmt.Sprint(seed), func(t *testing.T) { checkApart(t, c, g) })
+		t.Run(fmt.Sprint(seed), func(t *testing.T) {
+			checkApart(t, c, g)
+			for _, edge := range lost(c, g, l) {
+				t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
+			}
+		})
 	}
+}
+
+// randomGraph returns a random graph for seed, with ports, fields, loops,
+// labels and merged edges, in any direction
+func randomGraph(seed uint64) *layout.Graph {
+	rng := rand.New(rand.NewPCG(seed, 0))
+	graph := layout.NewDigraph()
+	graph.RankDir = []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft}[rng.IntN(4)]
+	graph.MergeEdges = rng.IntN(3) == 0
+	n := 3 + rng.IntN(8)
+	for i := range n {
+		node := graph.Node(fmt.Sprint("n", i))
+		if rng.IntN(4) == 0 {
+			node.Shape = layout.Record
+			node.Label = "<a> a|<b> b|<c> c"
+		}
+	}
+	ports := []layout.Compass{layout.CompassAuto, layout.North, layout.South, layout.East, layout.West}
+	for range n + rng.IntN(2*n) {
+		edge := graph.Edge(fmt.Sprint("n", rng.IntN(n)), fmt.Sprint("n", rng.IntN(n)))
+		if rng.IntN(5) == 0 {
+			edge.Label = "label"
+		}
+		if rng.IntN(5) == 0 && edge.From.Shape == layout.Record {
+			edge.FromField = "abc"[rng.IntN(3):][:1]
+		}
+		if rng.IntN(4) == 0 {
+			edge.FromPort, edge.ToPort = ports[rng.IntN(len(ports))], ports[rng.IntN(len(ports))]
+		}
+	}
+	return graph
 }
 
 // lost returns the visible edges whose line in grid doesn't join their

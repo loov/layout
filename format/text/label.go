@@ -246,7 +246,59 @@ func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int)
 			}
 		}
 	}
+	if !c.blank(bx, by, w, h) {
+		// the text would cover lines, which cuts the edges: the nearest
+		// blank place right beside its own edge instead, see freeBeside
+		bx, by = c.freeBeside(x, y, w, h, path)
+	}
 	return bx, by
+}
+
+// freeBeside returns the place for a label w cells wide and h tall,
+// nearest x, y, where it covers nothing: right beside its edge, drawn
+// along path, on either side of a column of it or above or below a row,
+// or else anywhere; x, y when there is none
+func (c *canvas) freeBeside(x, y, w, h int, path [][2]int) (int, int) {
+	var cells [][2]int
+	for i := 0; i+1 < len(path); i++ {
+		c.steps(path[i], path[i+1], func(from, _ [2]int, _ uint8) { cells = append(cells, from) })
+	}
+	type spot struct{ x, y, dist int }
+	var spots []spot
+	add := func(sx, sy int) {
+		spots = append(spots, spot{sx, sy, max(sx-x, x-sx) + max(sy-y, y-sy)})
+	}
+	for k, p := range cells {
+		vertical := k+1 < len(cells) && cells[k+1][0] == p[0] || k > 0 && cells[k-1][0] == p[0]
+		if vertical {
+			for dy := range h {
+				add(p[0]+1, p[1]-dy)
+				add(p[0]-w, p[1]-dy)
+			}
+		} else {
+			for dx := range w {
+				add(p[0]-dx, p[1]-h)
+				add(p[0]-dx, p[1]+1)
+			}
+		}
+	}
+	slices.SortStableFunc(spots, func(a, b spot) int { return a.dist - b.dist })
+	for _, s := range spots {
+		if c.blank(s.x, s.y, w, h) {
+			return s.x, s.y
+		}
+	}
+	// nowhere beside the edge: the nearest blank place
+	for d := 1; d < c.w+c.h; d++ {
+		for dy := -d; dy <= d; dy++ {
+			for _, dx := range []int{d - max(dy, -dy), max(dy, -dy) - d} {
+				if c.blank(x+dx, y+dy, w, h) {
+					return x + dx, y + dy
+				}
+			}
+		}
+	}
+	return x, y
 }
 
 // apart returns how many blank cells at least separate a label w cells
