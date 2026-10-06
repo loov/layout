@@ -242,8 +242,6 @@ func diffLines(want, got []byte) string {
 // until the bug is fixed. Remove an entry with its fix.
 var knownBad = map[string]map[string]string{
 	"TestEdgesApart": {
-		"graphviz/ldbxtried.txt":                   "edges share runs",
-		"graphviz/ldbxtried_merged.txt":            "edges share runs",
 		"graphviz/Linux_kernel_diagram.txt":        "edges share runs",
 		"graphviz/Linux_kernel_diagram_merged.txt": "edges share runs",
 	},

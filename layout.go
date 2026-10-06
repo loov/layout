@@ -611,6 +611,7 @@ func (c *hierComponent) reserveFlatLabels() {
 
 // sizeNodes assigns the sizes of the hierarchical nodes
 func (c *hierComponent) sizeNodes() {
+	defer c.widenParallel()
 	for id, node := range c.graph.Nodes {
 		if node.Virtual {
 			node.Radius.X = float32(c.graphdef.EdgePadding)
@@ -642,6 +643,33 @@ func (c *hierComponent) sizeNodes() {
 			node.EndRoom = float32(2 * (nodedef.Radius.X - min(c.graphdef.EdgePadding, nodedef.Radius.X)))
 		}
 		node.Radius.Y = float32(max(nodedef.Radius.Y, c.flatBelow[nodedef]) + c.graphdef.RowPadding)
+	}
+}
+
+// widenParallel widens the virtual nodes of the edges between the same
+// two nodes, which share them, by as far as assignPaths spreads the edges
+// apart, so that positioning keeps the other edges clear of them
+func (c *hierComponent) widenParallel() {
+	pairs := map[[2]hier.ID]int{}
+	for _, edge := range c.graphdef.Edges {
+		if edge.From != edge.To {
+			pairs[unorderedPair(c.nodes[edge.From], c.nodes[edge.To])]++
+		}
+	}
+	for _, source := range c.graph.Nodes {
+		if source.Virtual {
+			continue
+		}
+		for _, out := range source.Out {
+			target := out
+			for target.Virtual && len(target.Out) > 0 {
+				target = target.Out[0]
+			}
+			n := pairs[unorderedPair(source.ID, target.ID)]
+			for v := out; n > 1 && v.Virtual && len(v.Out) > 0; v = v.Out[0] {
+				v.Radius.X += float32(Length(n-1) * c.graphdef.EdgePadding)
+			}
+		}
 	}
 }
 
