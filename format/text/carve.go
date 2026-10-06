@@ -119,7 +119,6 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 	turn, bend := opts.turn, opts.bend
 	// buffers reused by every pass, which is the whole grid each time
 	var fromBuf, prevBest, curBest, reach, src, path []int
-	var joined []bool
 	var from [][]int
 	// spare holds the next cut, in spareCells
 	var spare grid
@@ -189,7 +188,6 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		from = slices.Grow(from[:0], n)[:n]
 		prevBest, curBest = slices.Grow(prevBest[:0], w)[:w], slices.Grow(curBest[:0], w)[:w]
 		reach, src = slices.Grow(reach[:0], w)[:w], slices.Grow(src[:0], w)[:w]
-		joined = slices.Grow(joined[:0], w)[:w]
 		p.runs = slices.Grow(p.runs[:0], m)[:m]
 		for i := range n {
 			from[i] = fromBuf[i*w : (i+1)*w]
@@ -208,8 +206,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 				}
 				continue
 			}
-			joins(g[i-1][:w], g[i][:w], joined, opts.lines)
-			p.sweep(i, prevBest, curBest, codes, from[i], reach, src, joined)
+			p.sweep(i, prevBest, curBest, codes, from[i], reach, src, p.joins(i, w))
 		}
 		last := curBest
 		end := 0
@@ -308,6 +305,13 @@ type seamPass struct {
 	blocks []bool
 	// needs marks the lines with runs kept for labels; cuts don't add any
 	needs []bool
+
+	// the joins of each line with the one before, see joins, kept from
+	// pass to pass like the costs: joinFull marks the lines whose joins
+	// all need working out again, joinDirty the cells that do
+	joinCache [][]bool
+	joinFull  []bool
+	joinDirty [][]int
 }
 
 // cut moves the costs kept for the lines along with the cut through path
@@ -327,6 +331,65 @@ func (p *seamPass) cut(g grid, path []int) {
 	for _, b := range p.bent {
 		p.dirty[b[0]] = append(p.dirty[b[0]], b[1]-1, b[1], b[1]+1)
 	}
+	if p.joinCache == nil {
+		return
+	}
+	// left of where the cut goes through either of two lines, their
+	// cells join as before; right of both, as the cells after them did
+	for i := 1; i < len(path); i++ {
+		lo, hi := min(path[i-1], path[i]), max(path[i-1], path[i])
+		if row := p.joinCache[i]; hi < len(row) {
+			p.joinCache[i] = append(row[:hi], row[hi+1:]...)
+		}
+		for x := lo; x < hi; x++ {
+			p.joinDirty[i] = append(p.joinDirty[i], x)
+		}
+	}
+	for _, b := range p.bent {
+		if b[0] >= 1 {
+			p.joinDirty[b[0]] = append(p.joinDirty[b[0]], b[1])
+		}
+		if b[0]+1 < len(path) {
+			p.joinDirty[b[0]+1] = append(p.joinDirty[b[0]+1], b[1])
+		}
+	}
+}
+
+// joins returns whether each of the first w cells of line i joins the one
+// above it, see joinCells, working out only those that the joins kept
+// from the pass before don't have, see cut
+func (p *seamPass) joins(i, w int) []bool {
+	if p.joinCache == nil {
+		n := len(p.g)
+		const marks = 8
+		joined, dirty := make([]bool, n*w), make([]int, n*marks)
+		p.joinCache, p.joinDirty = make([][]bool, n), make([][]int, n)
+		for k := range n {
+			p.joinCache[k] = joined[k*w : k*w : (k+1)*w]
+			p.joinDirty[k] = dirty[k*marks : k*marks : (k+1)*marks]
+		}
+		p.joinFull = make([]bool, n)
+		for k := range p.joinFull {
+			p.joinFull[k] = true
+		}
+	}
+	row := p.joinCache[i]
+	above, here := p.g[i-1], p.g[i]
+	if p.joinFull[i] || len(row) < w {
+		row = slices.Grow(row[:0], w)[:w]
+		joinCells(above, here, row, 0, w, p.opts.lines)
+		p.joinFull[i] = false
+	} else {
+		row = row[:w]
+		for _, x := range p.joinDirty[i] {
+			if x >= 0 && x < w {
+				joinCells(above, here, row, x, x+1, p.opts.lines)
+			}
+		}
+	}
+	p.joinCache[i] = row
+	p.joinDirty[i] = p.joinDirty[i][:0]
+	return row
 }
 
 // endsMoved marks the cells whose costs a move of the end of their line
@@ -502,13 +565,14 @@ func (p *seamPass) crossing(i, x int, toHi bool) int {
 	return best
 }
 
-// joins sets joined to whether each cell of above joins the one below it
-// in here: the cell above has the arm next, or the one below the arm
-// prev, or one is kept or glued and the other is too or is not blank
-func joins(above, here []cell, joined []bool, ax seamAxis) {
+// joinCells sets joined[from:to] to whether those cells of above join the
+// ones below them in here: the cell above has the arm next, or the one
+// below the arm prev, or one is kept or glued and the other is too or is
+// not blank
+func joinCells(above, here []cell, joined []bool, from, to int, ax seamAxis) {
 	next, prev := ax.next, ax.prev
-	above, here = above[:len(joined)], here[:len(joined)]
-	for x := range joined {
+	above, here, joined = above[:to], here[:to], joined[:to]
+	for x := from; x < to; x++ {
 		a, b := &above[x], &here[x]
 		joined[x] = a.kind&next != 0 || b.kind&prev != 0 ||
 			(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
