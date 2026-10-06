@@ -22,8 +22,9 @@
 // Known gaps:
 //
 //   - Shapes other than box, rect, rectangle, square, circle,
-//     doublecircle, ellipse, oval, none, plaintext, plain, point, record
-//     and Mrecord draw as boxes; that includes diamond and polygon.
+//     doublecircle, ellipse, oval, none, plaintext, plain, point, record,
+//     Mrecord, diamond, octagon, doubleoctagon and tripleoctagon draw as
+//     boxes; that includes polygon.
 //     Mrecord draws with square corners.
 //   - Arrowheads other than normal, vee, dot, odot and none draw as a
 //     normal arrowhead.
@@ -243,11 +244,11 @@ type strictEdge struct {
 }
 
 // outlines is what decides a node's peripheries over all of its
-// attribute assignments: Graphviz draws doublecircle with two unless
-// peripheries is set
+// attribute assignments: Graphviz draws doublecircle and doubleoctagon
+// with two, and tripleoctagon with three, unless peripheries is set
 type outlines struct {
-	double bool // the shape is doublecircle
-	set    bool // peripheries was set explicitly
+	shape int  // the outlines of the shape, 0 for one
+	set   bool // peripheries was set explicitly
 }
 
 func (context *parserContext) parse(src *ast.Graph) {
@@ -686,12 +687,9 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		if filled && node.FillColor == nil && color != nil {
 			node.FillColor = color
 		}
-		// doublecircle is a circle with two outlines unless set otherwise
+		// the shape's outlines unless set otherwise
 		if !outlines.set {
-			node.Peripheries = 0
-			if outlines.double {
-				node.Peripheries = 2
-			}
+			node.Peripheries = outlines.shape
 		}
 	}()
 	for _, attr := range attrs {
@@ -710,7 +708,7 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 			setString(&node.Image, attr.Val)
 		case "shape":
 			setShape(&node.Shape, attr.Val)
-			outlines.double = attr.Val == "doublecircle"
+			outlines.shape = map[string]int{"doublecircle": 2, "doubleoctagon": 2, "tripleoctagon": 3}[attr.Val]
 		case "label":
 			setString(&node.Label, expandLabel(attr.Val, `\N`, node.ID, `\G`, graphID))
 			node.NoLabel = node.Label == ""
@@ -887,6 +885,10 @@ func setShape(t *layout.Shape, value string) {
 		*t = layout.None
 	case "point":
 		*t = layout.PointShape
+	case "diamond":
+		*t = layout.Diamond
+	case "octagon", "doubleoctagon", "tripleoctagon":
+		*t = layout.Octagon
 	case "record", "Mrecord":
 		*t = layout.Record
 	default:

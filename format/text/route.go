@@ -22,16 +22,75 @@ func (c *canvas) route(edge *layout.Edge, cells [][2]int) [][2]int {
 	if !merged {
 		id = c.ids + 1 // see drawEdge
 	}
-	if c.clear(cells, id, merged) {
+	last := len(cells) - 1
+	if c.clear(cells, id, merged) && c.onSide(cells[0], cells[1], edge.From) && c.onSide(cells[last], cells[last-1], edge.To) {
 		return cells
 	}
-	last := len(cells) - 1
-	starts := c.endCells(cells[0], edge.From, edge.FromField)
-	goals := c.endCells(cells[last], edge.To, edge.ToField)
+	starts := c.endCells(cells[0], cells[1], edge.From, edge.FromField)
+	goals := c.endCells(cells[last], cells[last-1], edge.To, edge.ToField)
 	if route := c.search(starts, goals, id); route != nil {
 		return route
 	}
 	return cells
+}
+
+// onSide reports whether end, heading to next along the edge, is where
+// an edge can end on the box of node, see sideCells, or off the box, where
+// it stays
+func (c *canvas) onSide(end, next [2]int, node *layout.Node) bool {
+	b, ok := c.boxes[node]
+	if !ok || c.l.Node(node).Shape == layout.PointShape {
+		return true
+	}
+	out := c.side(end, next, node)
+	if out == 0 {
+		return true // off the box
+	}
+	along, at := 0, b[1]
+	switch out {
+	case down:
+		at = b[3]
+	case left:
+		along, at = 1, b[0]
+	case right:
+		along, at = 1, b[2]
+	}
+	lo, hi := c.sideCells(node, along)
+	return end[1-along] == at && end[along] >= lo && end[along] <= hi
+}
+
+// side returns the side of the box of node that end is on, heading to
+// next along the edge: by where it is, or on a corner, or on a diamond
+// of only a few rows, by where it heads; 0 off the box
+func (c *canvas) side(end, next [2]int, node *layout.Node) uint8 {
+	b := c.boxes[node]
+	if end[0] < b[0] || end[0] > b[2] || end[1] < b[1] || end[1] > b[3] {
+		return 0
+	}
+	inX, inY := end[0] > b[0] && end[0] < b[2], end[1] > b[1] && end[1] < b[3]
+	if c.l.Node(node).Shape != layout.Diamond {
+		switch {
+		case end[1] == b[1] && inX:
+			return up
+		case end[1] == b[3] && inX:
+			return down
+		case end[0] == b[0] && inY:
+			return left
+		case end[0] == b[2] && inY:
+			return right
+		}
+	}
+	switch d := [2]int{next[0] - end[0], next[1] - end[1]}; {
+	case max(d[0], -d[0]) >= max(d[1], -d[1]) && d[0] > 0:
+		return right
+	case max(d[0], -d[0]) >= max(d[1], -d[1]) && d[0] < 0:
+		return left
+	case d[1] < 0:
+		return up
+	case d[1] > 0:
+		return down
+	}
+	return 0
 }
 
 // endCell is a cell an edge can end at, with the direction from the box
@@ -43,23 +102,15 @@ type endCell struct {
 }
 
 // endCells returns the cells on the sides of the box of node where an
-// edge can end instead of at end; only end itself for dots, fields and
-// ends not on a side
-func (c *canvas) endCells(end [2]int, node *layout.Node, field string) []endCell {
+// edge can end instead of at end, toward next along the edge, the side it
+// is on first; only end itself for dots and fields
+func (c *canvas) endCells(end, next [2]int, node *layout.Node, field string) []endCell {
 	b, ok := c.boxes[node]
 	out := uint8(0)
-	switch {
-	case !ok:
-	case end[1] == b[1] && end[0] > b[0] && end[0] < b[2]:
-		out = up
-	case end[1] == b[3] && end[0] > b[0] && end[0] < b[2]:
-		out = down
-	case end[0] == b[0] && end[1] > b[1] && end[1] < b[3]:
-		out = left
-	case end[0] == b[2] && end[1] > b[1] && end[1] < b[3]:
-		out = right
+	if ok {
+		out = c.side(end, next, node)
 	}
-	if out == 0 || c.hasField(node, field) || c.l.Node(node).Shape == layout.PointShape {
+	if !ok || c.hasField(node, field) || c.l.Node(node).Shape == layout.PointShape {
 		var cells []endCell
 		for _, dir := range []uint8{up, down, left, right} {
 			if out == 0 || dir == out {
@@ -68,15 +119,12 @@ func (c *canvas) endCells(end [2]int, node *layout.Node, field string) []endCell
 		}
 		return cells
 	}
-	// the cells of the side it is on, then of the other sides, which an
-	// end takes only when it can't leave the side it is on
+	// the cells of the side it is on, see side, then of the other sides,
+	// which an end takes only when it can't leave the side it is on
 	var cells []endCell
-	for _, side := range []uint8{out, up, down, left, right} {
-		if side == out && len(cells) > 0 {
-			continue
-		}
+	for _, side := range []uint8{up, down, left, right} {
 		cost := 0
-		if side != out {
+		if out != 0 && side != out {
 			cost = 50
 		}
 		along, at := 0, b[1]
@@ -88,7 +136,8 @@ func (c *canvas) endCells(end [2]int, node *layout.Node, field string) []endCell
 		case right:
 			along, at = 1, b[2]
 		}
-		for i := b[along] + 1; i < b[along+2]; i++ {
+		lo, hi := c.sideCells(node, along)
+		for i := lo; i <= hi; i++ {
 			cell := [2]int{i, at}
 			if along == 1 {
 				cell = [2]int{at, i}
@@ -202,8 +251,11 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 			break
 		}
 		start := prev[item.state] < 0
+		// a straight cell past the start and before the goal, where the
+		// markers of the ends go, see marker
+		second := !start && prev[prev[item.state]] < 0
 		for nd, dir := range dirs {
-			if dir == opposite(dirs[d]) || start && nd != d {
+			if dir == opposite(dirs[d]) || (start || second) && nd != d {
 				continue
 			}
 			to := [2]int{p[0] + dx(dir), p[1] + dy(dir)}
@@ -211,14 +263,15 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 				continue
 			}
 			g, isGoal := goal[to]
-			if !c.free(p, dir, id, start) || !c.free(to, opposite(dir), id, isGoal && dir == opposite(g.out)) {
+			isGoal = isGoal && dir == opposite(g.out) && nd == d && !start
+			if !c.free(p, dir, id, start) || !c.free(to, opposite(dir), id, isGoal) {
 				continue
 			}
 			next := item.cost + 1
 			if nd != d {
 				next += turn
 			}
-			if isGoal && dir == opposite(g.out) {
+			if isGoal {
 				next += g.cost
 			}
 			nk := state(to, nd)

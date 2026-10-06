@@ -22,12 +22,17 @@ func rgb(color layout.Color) uint32 {
 	return 1<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b)
 }
 
-// Options configure WriteColor.
+// Options configure WriteColor and WriteOptions.
 type Options struct {
 	// Palette selects how colors are written.
 	Palette Palette
 	// Background fills the whole drawing; nil leaves it to the terminal.
 	Background layout.Color
+	// NoLegacyGlyphs draws diamonds without the diagonals of Symbols for
+	// Legacy Computing, such as 🯐, which fewer fonts have, with ╱, ╲, ▁
+	// and ▔ in their place: larger, and with their points on the corners
+	// of cells.
+	NoLegacyGlyphs bool
 }
 
 // Palette selects the colors that WriteColor writes.

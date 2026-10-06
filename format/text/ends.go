@@ -122,8 +122,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 	})
 	for _, key := range keys {
 		ends := sides[key]
-		b := c.boxes[key.node]
-		lo, hi := b[key.along]+1, b[key.along+2]-1
+		lo, hi := c.sideCells(key.node, key.along)
 		if len(ends) > hi-lo+1 {
 			continue // no room; keep them as they are
 		}

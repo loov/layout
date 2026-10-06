@@ -27,7 +27,11 @@ type canvas struct {
 	ended  map[[2]int]bool         // cells where merged edges have ended
 	// cells where edges end at fields, by edge id, see reserve
 	reserved map[[2]int]edgeID
-	spread   bool // edge ends on a side keep a cell apart where there is room
+	// diamonds drawn with a point for each end, see nodeBox
+	pointed map[*layout.Node]bool
+	// no characters of Symbols for Legacy Computing, see Options
+	safe   bool
+	spread bool // edge ends on a side keep a cell apart where there is room
 	// palette holds the colors cells refer to by index, see color;
 	// colors finds the index of a color
 	palette []uint32
@@ -58,9 +62,9 @@ type pen struct {
 
 // newCanvas returns an empty canvas that fits the graph. One character
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
-func newCanvas(l *layout.Layout) *canvas {
+func newCanvas(l *layout.Layout, safe bool) *canvas {
 	graph := l.Graph
-	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{},
+	c := &canvas{l: l, safe: safe, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{}, pointed: map[*layout.Node]bool{},
 		palette: []uint32{0}, colors: map[uint32]colorID{0: 0}}
 	if c.cellW <= 0 {
 		c.cellW = 8

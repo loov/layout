@@ -5,6 +5,7 @@ import (
 	"math/bits"
 	"math/rand/v2"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestEdgesJoined(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, g := carved(l)
+		c, g := carved(l, false)
 		for _, edge := range lost(c, g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 		}
@@ -119,7 +120,7 @@ func TestEdgesApartRandom(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, g := carved(l)
+		c, g := carved(l, false)
 		t.Run(fmt.Sprint(seed), func(t *testing.T) { checkApart(t, c, g) })
 	}
 }
@@ -213,4 +214,45 @@ func ownsAny(p *cell, id edgeID) bool {
 		}
 	}
 	return false
+}
+
+// TestNoLegacyGlyphs checks that the Graphviz files with diamonds, drawn
+// with Options.NoLegacyGlyphs, use no characters of Symbols for Legacy
+// Computing, and join every edge without sharing runs.
+func TestNoLegacyGlyphs(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		graphs, err := dot.ParseFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !slices.ContainsFunc(graphs[0].Nodes, func(n *layout.Node) bool { return n.Shape == layout.Diamond }) {
+			continue
+		}
+		for suffix, merge := range map[string]bool{"": false, "_merged": true} {
+			t.Run(strings.TrimSuffix(filepath.Base(file), ".gv")+suffix, func(t *testing.T) {
+				graph := graphs[0]
+				graph.MergeEdges = merge
+				l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+				if err != nil {
+					t.Fatal(err)
+				}
+				c, g := carved(l, true)
+				for _, edge := range lost(c, g, l) {
+					t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
+				}
+				checkApart(t, c, g)
+				var buf strings.Builder
+				if err := WriteOptions(&buf, l, Options{NoLegacyGlyphs: true}); err != nil {
+					t.Fatal(err)
+				}
+				if i := strings.IndexFunc(buf.String(), func(r rune) bool { return r >= 0x1FB00 && r <= 0x1FBFF }); i >= 0 {
+					t.Errorf("draws %q:\n%s", []rune(buf.String()[i:])[0], buf.String())
+				}
+			})
+		}
+	}
 }

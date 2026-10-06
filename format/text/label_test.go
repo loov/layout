@@ -160,7 +160,7 @@ func TestFitsLayout(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				c := newCanvas(l)
+				c := newCanvas(l, false)
 				for _, node := range graph.Nodes {
 					c.drawNode(node)
 				}

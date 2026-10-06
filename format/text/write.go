@@ -18,32 +18,42 @@ import (
 
 // Write draws the layout as text. One character cell is
 // l.Graph.FontSize*0.55 wide and l.Graph.LineHeight tall.
-func Write(w io.Writer, l *layout.Layout) error { return write(w, l, nil) }
+func Write(w io.Writer, l *layout.Layout) error { return write(w, l, Options{}, false) }
+
+// WriteOptions draws the layout like Write, without colors, with the
+// characters that opts allows, see Options.NoLegacyGlyphs.
+func WriteOptions(w io.Writer, l *layout.Layout, opts Options) error {
+	return write(w, l, opts, false)
+}
 
 // WriteColor draws the graph like Write, with the colors set on nodes,
 // edges and clusters as ANSI escape codes, see Options. Unset colors are
 // left to the terminal, except for lines and text on a fill or
 // background, which are black or white, whichever stands out.
 func WriteColor(w io.Writer, l *layout.Layout, opts Options) error {
-	return write(w, l, &opts)
+	return write(w, l, opts, true)
 }
 
 // errTooLarge reports a graph with more than cells can tell apart
 var errTooLarge = errors.New("text: graph too large to draw")
 
-// write draws the graph, colored unless opts is nil
-func write(w io.Writer, l *layout.Layout, opts *Options) error {
+// write draws the graph, with colors when color is set
+func write(w io.Writer, l *layout.Layout, opts Options, color bool) error {
 	if !fits(l.Graph) {
 		return errTooLarge
 	}
-	c, g := carved(l)
-	_, err := io.WriteString(w, encode(g, c.palette, opts))
+	c, g := carved(l, opts.NoLegacyGlyphs)
+	colors := &opts
+	if !color {
+		colors = nil
+	}
+	_, err := io.WriteString(w, encode(g, c.palette, colors))
 	return err
 }
 
 // carved draws the graph on a canvas and carves it into the grid that
-// write encodes
-func carved(l *layout.Layout) (*canvas, grid) {
+// write encodes; safe leaves out Symbols for Legacy Computing
+func carved(l *layout.Layout, safe bool) (*canvas, grid) {
 	// edge ends spread apart look balanced, but can keep carving from
 	// lining an edge up straight: they stay apart unless that bends
 	// edges more, or as much on a larger drawing
@@ -51,7 +61,7 @@ func carved(l *layout.Layout) (*canvas, grid) {
 	var g grid
 	var sc scratch
 	for _, spread := range []bool{true, false} {
-		d := drawGraph(l, spread)
+		d := drawGraph(l, spread, safe)
 		carved := carve(d.rows, d.sideways(), &sc)
 		if c == nil || better(carved, g) {
 			c, g = d, carved
@@ -89,9 +99,9 @@ func better(a, b grid) bool {
 
 // drawGraph draws the graph on a canvas, before carving; with spread,
 // edge ends on a side keep a cell apart where there is room
-func drawGraph(l *layout.Layout, spread bool) *canvas {
+func drawGraph(l *layout.Layout, spread, safe bool) *canvas {
 	graph := l.Graph
-	c := newCanvas(l)
+	c := newCanvas(l, safe)
 	c.spread = spread
 	for i, cluster := range graph.Clusters {
 		if !cluster.Invisible {

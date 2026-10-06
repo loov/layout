@@ -55,6 +55,23 @@ func (graph *lgraph) assignDefaults() {
 				w, h := draw.RecordSize(node.DefaultLabel(), sideways(graph.RankDir), float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize))
 				labelRadius = Vector{Length(w) / 2, Length(h) / 2}
 			}
+			switch {
+			case node.Shape == Diamond && graph.ForText:
+				// the cells of the diamond text draws, see draw.DiamondSize
+				cols, rows := draw.DiamondSize(draw.PlainLabel(node.DefaultLabel()))
+				labelRadius = Vector{Length(cols-1) / 2 * graph.cellWidth(), Length(rows-1) / 2 * graph.LineHeight}
+			case node.Shape == Diamond:
+				// the text's corners on the slanted sides, padded after
+				pad := Vector{node.FontSize * 0.5, node.FontSize * 0.25}
+				labelRadius = labelRadius.Sub(pad)
+				labelRadius = Vector{2*labelRadius.X + pad.X, 2*labelRadius.Y + pad.Y}
+			case node.Shape == Octagon && !graph.ForText:
+				// the text's corners on the slanted sides, see octagonCut
+				const s = 2 / (1 + octagonCut)
+				pad := Vector{node.FontSize * 0.5, node.FontSize * 0.25}
+				labelRadius = labelRadius.Sub(pad)
+				labelRadius = Vector{s*labelRadius.X + pad.X, s*labelRadius.Y + pad.Y}
+			}
 
 			if node.Radius.X < labelRadius.X {
 				node.Radius.X = labelRadius.X

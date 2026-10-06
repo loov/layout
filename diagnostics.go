@@ -419,6 +419,27 @@ func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	switch node.Shape {
 	case Box, Square, Record, None:
 		return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})
+	case Diamond, Octagon:
+		// clip the segment, in parts of the grown half size, to every side
+		rx, ry := float64(node.Radius.X+pad), float64(node.Radius.Y+pad)
+		if rx <= 0 || ry <= 0 {
+			return false
+		}
+		ax, ay := float64(a.X-node.Center.X)/rx, float64(a.Y-node.Center.Y)/ry
+		dx, dy := float64(b.X-a.X)/rx, float64(b.Y-a.Y)/ry
+		t0, t1, hit := 0.0, 1.0, true
+		sides(node.Shape.polygon(), func(nx, ny, h float64) {
+			num, den := h-(nx*ax+ny*ay), nx*dx+ny*dy
+			switch {
+			case den == 0:
+				hit = hit && num > 0
+			case den > 0:
+				t1 = min(t1, num/den)
+			default:
+				t0 = max(t0, num/den)
+			}
+		})
+		return hit && t0 < t1
 	}
 	// ellipse: scale to a unit circle and test the distance from the center;
 	// circles are drawn with the larger radius

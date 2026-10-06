@@ -21,7 +21,45 @@ const (
 	// PointShape is a small filled circle without a label, like Graphviz point;
 	// it marks where edges start or meet, such as an automaton's start.
 	PointShape Shape = "point"
+	// Diamond and Octagon are the polygons of Graphviz diamond and octagon,
+	// sized to hold the label inside the slanted sides.
+	Diamond Shape = "diamond"
+	Octagon Shape = "octagon"
 )
+
+// octagonCut is where the slanted sides of an octagon meet its straight
+// ones, as a part of its half size from the middle: tan 22.5°, which makes
+// a square octagon regular
+const octagonCut = 0.41421356
+
+// polygon returns the corners of the outline of a polygon shape, as parts
+// of its half size from the middle, clockwise from the top; nil for the
+// other shapes
+func (shape Shape) polygon() []Vector {
+	switch shape {
+	case Diamond:
+		return []Vector{{0, -1}, {1, 0}, {0, 1}, {-1, 0}}
+	case Octagon:
+		const c = octagonCut
+		return []Vector{{-c, -1}, {c, -1}, {1, -c}, {1, c}, {c, 1}, {-c, 1}, {-1, c}, {-1, -c}}
+	}
+	return nil
+}
+
+// sides calls side with the outward normal n and offset h of every side
+// of a polygon from shape.polygon, so that a point v, as parts of the half
+// size, is inside when n·v <= h for every side
+func sides(corners []Vector, side func(nx, ny, h float64)) {
+	for i, a := range corners {
+		b := corners[(i+1)%len(corners)]
+		nx, ny := float64(b.Y-a.Y), float64(a.X-b.X)
+		h := nx*float64(a.X) + ny*float64(a.Y)
+		if h < 0 {
+			nx, ny, h = -nx, -ny, -h
+		}
+		side(nx, ny, h)
+	}
+}
 
 // Splines selects how edge paths are drawn.
 type Splines string

@@ -169,6 +169,18 @@ func (box NodeBox) Boundary(p Vector) Vector { return box.node().Boundary(p) }
 // compass direction, or the center for Center and CompassAuto.
 func (box NodeBox) CompassPoint(c Compass) Vector { return box.node().CompassPoint(c) }
 
+// Outline returns the corners of the outline of a polygon shape, such as
+// Diamond, within the box shrunk by inset on every side, clockwise from
+// the top; nil for shapes that are not polygons.
+func (box NodeBox) Outline(inset Length) []Vector {
+	corners := box.Shape.polygon()
+	r := Vector{box.Size.X/2 - inset, box.Size.Y/2 - inset}
+	for i, c := range corners {
+		corners[i] = Vector{box.Center.X + c.X*r.X, box.Center.Y + c.Y*r.Y}
+	}
+	return corners
+}
+
 // node returns the working node with the box's geometry
 func (box NodeBox) node() *lnode {
 	return &lnode{Node: Node{Shape: box.Shape}, Center: box.Center, Radius: Vector{box.Size.X / 2, box.Size.Y / 2}}

@@ -423,7 +423,8 @@ func TestMultilineStack(t *testing.T) {
 }
 
 // Round shapes, and Auto drawn as an ellipse, get rounded corners; other
-// shapes square ones, and double outlines double ones.
+// shapes square ones, and double outlines double ones. Octagons and
+// diamonds are drawn along the sides of the cells.
 func TestCorners(t *testing.T) {
 	for _, tc := range []struct {
 		shape       layout.Shape
@@ -436,7 +437,9 @@ func TestCorners(t *testing.T) {
 		{layout.Box, 1, "┌"},
 		{layout.Square, 1, "┌"},
 		{layout.Record, 1, "┌"},
-		{"diamond", 1, "┌"},
+		{"hexagon", 1, "┌"}, // shapes without a drawing of their own
+		{layout.Octagon, 1, "╱"},
+		{layout.Diamond, 1, "🯞"},
 		{layout.Circle, 2, "╔"},
 	} {
 		graph := layout.NewDigraph()
@@ -476,7 +479,7 @@ func TestCarveKeepsRanks(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c := drawGraph(l, true)
+			c := drawGraph(l, true, false)
 			// mark the top left corner of every node to find it after carving
 			axis := 1 // the rows of the ranks
 			if c.sideways() {

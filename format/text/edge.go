@@ -282,6 +282,9 @@ func (c *canvas) join(end [2]int, node *layout.Node) {
 	if shape := c.l.Node(node).Shape; shape == layout.None || shape == layout.PointShape || node.Invisible {
 		return // no border to join
 	}
+	if shape := c.l.Node(node).Shape; shape == layout.Diamond || shape == layout.Octagon {
+		return // drawn along the sides of the cells, which lines only touch
+	}
 	p := c.at(end[0], end[1])
 	if p == nil {
 		return // pinned nodes can lie outside the canvas

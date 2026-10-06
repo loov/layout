@@ -103,6 +103,28 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 			x0, x1 = c.evenLabel(node, x0, y0, x1, y1)
 		}
 	}
+	if box.Shape == layout.Diamond && c.safe {
+		// of steps, see stepDiamond, or steep without a label
+		cols, rows := 4, 4
+		if k := draw.StepDiamondSteps(label); label != "" {
+			cols, rows = 4*k+2, 2*k+2
+		}
+		x0, y0 = (x0+x1+1-cols)/2, (y0+y1+1-rows)/2
+		return [4]int{x0, y0, x0 + cols - 1, y0 + rows - 1}
+	}
+	if box.Shape == layout.Diamond {
+		// pointed when every point has at most one end, see diamond,
+		// else with its points on the corners of cells, see cornerDiamond
+		c.pointed[node] = c.pointsFor(node)
+		if c.pointed[node] {
+			k := draw.DiamondSteps(label)
+			x0, y0 = (x0+x1)/2-(2*k-1), (y0+y1)/2-k
+			return [4]int{x0, y0, x0 + 4*k - 2, y0 + 2*k}
+		}
+		k := draw.CornerDiamondSteps(label)
+		x0, y0 = (x0+x1+1)/2-2*k, (y0+y1+1)/2-k
+		return [4]int{x0, y0, x0 + 4*k - 1, y0 + 2*k - 1}
+	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
 	if box.Shape == layout.Record {
@@ -116,6 +138,9 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 		// cell short of
 		top, bottom := c.sideEnds(node, y0, y1)
 		x1 = max(x1, x0+max(len(top), len(bottom))+1)
+		if box.Shape == layout.Octagon {
+			x1 = max(x1, x0+max(len(top), len(bottom))+3) // past the slanted corners
+		}
 	}
 	return [4]int{x0, y0, x1, y1}
 }
@@ -247,7 +272,31 @@ func (c *canvas) drawNode(node *layout.Node) {
 	case box.Shape == layout.Circle, box.Shape == layout.Ellipse, box.Shape == layout.Auto:
 		style = "╭╮╰╯─│"
 	}
-	c.rect(x0, y0, x1, y1, style)
+	switch box.Shape {
+	case layout.Octagon:
+		c.octagon(x0, y0, x1, y1)
+	case layout.Diamond:
+		lines := draw.Lines(draw.PlainLabel(box.Label))
+		top := y0 + (y1-y0)/2 - (len(lines)-1)/2
+		switch {
+		case c.safe && box.Label == "":
+			c.steepDiamond(x0, y0)
+		case c.safe:
+			c.stepDiamond(x0, y0, x1, y1)
+			top = y0 + (y1-y0-1)/2 - (len(lines)-1)/2
+		case c.pointed[node]:
+			c.diamond(x0, y0, x1, y1)
+		default:
+			c.cornerDiamond(x0, y0, x1, y1)
+			top = y0 + (y1-y0+1)/2 - (len(lines)+1)/2
+		}
+		for i, line := range lines {
+			c.text(placed(x0, x1, line), top+i, line.Text)
+		}
+		return
+	default:
+		c.rect(x0, y0, x1, y1, style)
+	}
 	if box.Shape == layout.Record {
 		rec := layoutRecord(graph, node, box)
 		c.evenRecord(rec, box.TopLeft())
@@ -323,4 +372,220 @@ func setLeft(rec *draw.Record, x float64) {
 			setLeft(field, x)
 		}
 	}
+}
+
+// octagon draws the outline of an octagon in the box x0, y0 to x1, y1,
+// along the sides of the cells: slanted corners a cell in, see sideCells
+//
+//	 ╱▔▔▔▔▔╲
+//	▕  lbl  ▏
+//	 ╲▁▁▁▁▁╱
+func (c *canvas) octagon(x0, y0, x1, y1 int) {
+	for x := x0 + 2; x <= x1-2; x++ {
+		c.set(x, y0, '▔')
+		c.set(x, y1, '▁')
+	}
+	for y := y0 + 1; y < y1; y++ {
+		c.set(x0, y, '▕')
+		c.set(x1, y, '▏')
+	}
+	c.set(x0+1, y0, '╱')
+	c.set(x1-1, y0, '╲')
+	c.set(x0+1, y1, '╲')
+	c.set(x1-1, y1, '╱')
+}
+
+// diamond draws the outline of a diamond of k steps, see
+// draw.DiamondSteps, in the box x0, y0 to x1, y1 of its 4k-1 columns and
+// 2k+1 rows: slopes of two columns a row between points in the middles of
+// the sides of cells, where the lines of edges join them, see sideCells
+//
+//	   🯞
+//	 🯐🯑 🯒🯓
+//	🯝 lbl 🯟
+//	 🯒🯓 🯐🯑
+//	   🯜
+func (c *canvas) diamond(x0, y0, x1, y1 int) {
+	k := (y1 - y0) / 2
+	mid := x0 + 2*k - 1
+	c.set(mid, y0, '🯞')
+	c.set(mid, y1, '🯜')
+	c.set(x0, y0+k, '🯝')
+	c.set(x1, y0+k, '🯟')
+	for r := 1; r < k; r++ {
+		for _, cell := range []struct {
+			x, y int
+			r    rune
+		}{
+			{mid - 2*r, y0 + r, '🯐'}, {mid - 2*r + 1, y0 + r, '🯑'},
+			{mid + 2*r - 1, y0 + r, '🯒'}, {mid + 2*r, y0 + r, '🯓'},
+			{mid - 2*r, y1 - r, '🯒'}, {mid - 2*r + 1, y1 - r, '🯓'},
+			{mid + 2*r - 1, y1 - r, '🯐'}, {mid + 2*r, y1 - r, '🯑'},
+		} {
+			c.set(cell.x, cell.y, cell.r)
+		}
+	}
+}
+
+// stepDiamond draws the outline of a diamond of k steps, see
+// draw.StepDiamondSteps, in the box x0, y0 to x1, y1 of its 4k+2 columns
+// and 2k+2 rows, with characters that most fonts have, see
+// Options.NoLegacyGlyphs: two columns a row, along the sides of the cells
+//
+//	   ▁╱╲▁
+//	 ▁╱    ╲▁
+//	╱  lbl   ╲
+//	╲        ╱
+//	 ▔╲    ╱▔
+//	   ▔╲╱▔
+func (c *canvas) stepDiamond(x0, y0, x1, y1 int) {
+	k := (y1 - y0 - 1) / 2
+	mid := x0 + 2*k + 1 // the column right of the points
+	for r := range k {
+		c.set(mid-2-2*r, y0+r, '▁')
+		c.set(mid-1-2*r, y0+r, '╱')
+		c.set(mid+2*r, y0+r, '╲')
+		c.set(mid+1+2*r, y0+r, '▁')
+		c.set(mid-2-2*r, y1-r, '▔')
+		c.set(mid-1-2*r, y1-r, '╲')
+		c.set(mid+2*r, y1-r, '╱')
+		c.set(mid+1+2*r, y1-r, '▔')
+	}
+	c.set(x0, y0+k, '╱')
+	c.set(x1, y0+k, '╲')
+	c.set(x0, y0+k+1, '╲')
+	c.set(x1, y0+k+1, '╱')
+}
+
+// steepDiamond draws the small diamond of a node without a label in the
+// box of 4 columns and 4 rows from x0, y0, with characters that most fonts
+// have, see Options.NoLegacyGlyphs
+//
+//	 ╱╲
+//	╱  ╲
+//	╲  ╱
+//	 ╲╱
+func (c *canvas) steepDiamond(x0, y0 int) {
+	for i, row := range []string{" ╱╲ ", "╱  ╲", "╲  ╱", " ╲╱ "} {
+		for j, r := range []rune(row) {
+			if r != ' ' {
+				c.set(x0+j, y0+i, r)
+			}
+		}
+	}
+}
+
+// cornerDiamond draws the outline of a diamond of k steps, see
+// draw.CornerDiamondSteps, in the box x0, y0 to x1, y1 of its 4k columns
+// and 2k rows: slopes of two columns a row between points on the corners
+// of cells, which the lines of two edges come to, one on either side, see
+// sideCells
+//
+//	   🯐🯑🯒🯓
+//	 🯐🯑    🯒🯓
+//	🯐🯑  lbl  🯒🯓
+//	🯒🯓       🯐🯑
+//	 🯒🯓    🯐🯑
+//	   🯒🯓🯐🯑
+func (c *canvas) cornerDiamond(x0, y0, x1, y1 int) {
+	k := (y1 - y0 + 1) / 2
+	mid := x0 + 2*k // the column right of the top and bottom points
+	for r := range k {
+		for _, cell := range []struct {
+			x, y int
+			r    rune
+		}{
+			{mid - 2 - 2*r, y0 + r, '🯐'}, {mid - 1 - 2*r, y0 + r, '🯑'},
+			{mid + 2*r, y0 + r, '🯒'}, {mid + 1 + 2*r, y0 + r, '🯓'},
+			{mid - 2 - 2*r, y1 - r, '🯒'}, {mid - 1 - 2*r, y1 - r, '🯓'},
+			{mid + 2*r, y1 - r, '🯐'}, {mid + 1 + 2*r, y1 - r, '🯑'},
+		} {
+			c.set(cell.x, cell.y, cell.r)
+		}
+	}
+}
+
+// pointsFor reports whether the ends of the edges of node fit one at each
+// point of a diamond: no two on one side of it, the side toward the node
+// at the other end, across the ranks, or along a rank for edges in one
+func (c *canvas) pointsFor(node *layout.Node) bool {
+	center := c.l.Node(node).Center
+	var sides [4]int // top, bottom, left, right
+	add := func(other *layout.Node) {
+		d := c.l.Node(other).Center.Sub(center)
+		across, along := d.Y, d.X // across the ranks, and along them
+		if c.sideways() {
+			across, along = d.X, d.Y
+		}
+		side := 0
+		switch {
+		case absLength(across) > 0.01 && across > 0:
+			side = 1
+		case absLength(across) > 0.01:
+		case along > 0:
+			side = 3
+		default:
+			side = 2
+		}
+		if c.sideways() {
+			side = [4]int{2, 3, 0, 1}[side]
+		}
+		sides[side]++
+	}
+	for _, edge := range c.l.Graph.Edges {
+		if edge.Invisible {
+			continue
+		}
+		if edge.From == node {
+			add(edge.To)
+		}
+		if edge.To == node {
+			add(edge.From)
+		}
+	}
+	return max(sides[0], sides[1], sides[2], sides[3]) <= 1
+}
+
+// sideCells returns the first and last cells along the side of the box
+// of node where edges can end: between the corners of a box, between the
+// slanted corners of an octagon, and at the points of a diamond. along
+// is 0 for the top and bottom, and 1 for the left and right sides.
+func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
+	b := c.boxes[node]
+	lo, hi = b[along]+1, b[along+2]-1
+	switch c.l.Node(node).Shape {
+	case layout.Octagon:
+		if along == 0 {
+			lo, hi = lo+1, hi-1
+		}
+	case layout.Diamond:
+		if c.safe && c.l.Node(node).Label == "" {
+			// the steep sides, see steepDiamond
+			return b[along] + 1, b[along] + 2
+		}
+		if c.safe {
+			// the points, see stepDiamond, as ▁ and ▔ lie on the far side
+			// of their cells
+			k := (b[3] - b[1] - 1) / 2
+			if along == 0 {
+				return b[0] + 2*k, b[0] + 2*k + 1
+			}
+			return b[1] + k, b[1] + k + 1
+		}
+		if !c.pointed[node] {
+			// the cells beside the points, see cornerDiamond
+			k := (b[3] - b[1] + 1) / 2
+			if along == 0 {
+				return b[0] + 2*k - 1, b[0] + 2*k
+			}
+			return b[1] + k - 1, b[1] + k
+		}
+		// the points, see diamond
+		k := (b[3] - b[1]) / 2
+		if along == 0 {
+			return b[0] + 2*k - 1, b[0] + 2*k - 1
+		}
+		return b[1] + k, b[1] + k
+	}
+	return lo, hi
 }

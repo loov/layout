@@ -41,6 +41,8 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		dy := float64(node.Radius.Y)
 		switch node.Shape {
 		case Box, Square, Record, None:
+		case Diamond, Octagon:
+			dy = float64(node.halfHeightAt(x))
 		default: // ellipse
 			if rx := float64(node.Radius.X); rx > 0 {
 				dy *= math.Sqrt(math.Max(0, 1-(dx/rx)*(dx/rx)))

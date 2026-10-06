@@ -153,6 +153,10 @@ func (node *lnode) outlineAlong(start, p Vector) Vector {
 		switch node.Shape {
 		case Box, Square, Record:
 			return math.Abs(dx) <= rx && math.Abs(dy) <= ry
+		case Diamond, Octagon:
+			in := true
+			sides(node.Shape.polygon(), func(nx, ny, h float64) { in = in && nx*dx/rx+ny*dy/ry <= h })
+			return in
 		}
 		return (dx/rx)*(dx/rx)+(dy/ry)*(dy/ry) <= 1
 	}
@@ -184,6 +188,11 @@ func (node *lnode) Boundary(p Vector) Vector {
 	switch node.Shape {
 	case Box, Square, Record:
 		t = math.Min(rx/math.Abs(dx), ry/math.Abs(dy)) // ray-rect; Inf for zero component is fine
+	case Diamond, Octagon:
+		// the side the ray reaches first
+		most := 0.0
+		sides(node.Shape.polygon(), func(nx, ny, h float64) { most = max(most, (nx*dx/rx+ny*dy/ry)/h) })
+		t = 1 / most
 	default: // ellipse and circle
 		t = 1 / math.Hypot(dx/rx, dy/ry)
 	}
@@ -196,6 +205,15 @@ func (node *lnode) halfHeightAt(x Length) Length {
 	h := float64(node.Radius.Y)
 	switch node.Shape {
 	case Box, Square, Record:
+	case Diamond, Octagon:
+		// the lowest of the sides above at x
+		u, top := float64(x-node.Center.X)/float64(node.Radius.X), 1.0
+		sides(node.Shape.polygon(), func(nx, ny, h float64) {
+			if ny < 0 {
+				top = min(top, (h-nx*u)/-ny)
+			}
+		})
+		h *= max(0, top)
 	default: // ellipse and circle
 		if rx := float64(node.Radius.X); rx > 0 {
 			dx := float64(x-node.Center.X) / rx
@@ -212,6 +230,15 @@ func (node *lnode) sideAt(y, x Length) Vector {
 	w := float64(node.Radius.X)
 	switch node.Shape {
 	case Box, Square, Record:
+	case Diamond, Octagon:
+		// the nearest of the sides to the right at y
+		v, right := float64(y-node.Center.Y)/float64(node.Radius.Y), 1.0
+		sides(node.Shape.polygon(), func(nx, ny, h float64) {
+			if nx > 0 {
+				right = min(right, (h-ny*v)/nx)
+			}
+		})
+		w *= max(0, right)
 	default: // ellipse and circle
 		if ry := float64(node.Radius.Y); ry > 0 {
 			dy := float64(y-node.Center.Y) / ry

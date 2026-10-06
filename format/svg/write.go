@@ -441,6 +441,16 @@ func (svg *writer) writeShape(box layout.NodeBox, radius layout.Vector) string {
 	case layout.None:
 		svg.write("<g x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
 		return "g"
+	case layout.Diamond, layout.Octagon:
+		svg.write("<polygon points='")
+		for i, p := range box.Outline(box.Size.X/2 - radius.X) {
+			if i > 0 {
+				svg.write(" ")
+			}
+			svg.write("%v,%v", p.X, p.Y)
+		}
+		svg.write("'")
+		return "polygon"
 	default:
 		r := max(radius.X, radius.Y)
 		svg.write("<circle cx='%v' cy='%v' r='%v'", c.X, c.Y, r)

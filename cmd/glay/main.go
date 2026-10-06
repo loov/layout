@@ -2,7 +2,7 @@
 //
 // Usage:
 //
-//	glay [-s dot] [-t svg|dot|json|graphml|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-align balanced|left|right] [-colors 16|truecolor] [-bg color] [input]
+//	glay [-s dot] [-t svg|dot|json|graphml|txt|ans] [-o output] [-g name] [-q fast|quality] [-l hierarchical|force] [-align balanced|left|right] [-colors 16|truecolor] [-bg color] [-safe] [input]
 //
 // The input format is detected from the file extension when -s is not set;
 // input "-" or no input reads stdin (dot unless -s is set). Files with
@@ -41,6 +41,7 @@ var (
 	align     = flag.String("align", "balanced", "hierarchical node alignment along the ranks: balanced, left, right (top, bottom when sideways)")
 	colors    = flag.String("colors", "16", "ans colors: 16 follows the terminal theme, truecolor keeps them exact")
 	bg        = flag.String("bg", "", "ans background for the whole drawing, as a color name or #RRGGBB")
+	safe      = flag.Bool("safe", false, "txt and ans: draw diamonds without Symbols for Legacy Computing, which fewer fonts have")
 
 	verbose = flag.Bool("v", false, "verbose output")
 )
@@ -118,7 +119,7 @@ func main() {
 	}
 
 	// ans options are checked for every format, so that typos show
-	var textOpts text.Options
+	textOpts := text.Options{NoLegacyGlyphs: *safe}
 	switch *colors {
 	case "16":
 	case "truecolor", "24bit":
@@ -145,7 +146,7 @@ func main() {
 	case "json":
 		write = json.Write
 	case "txt", "text":
-		write = text.Write
+		write = func(w io.Writer, l *layout.Layout) error { return text.WriteOptions(w, l, textOpts) }
 	case "graphml":
 		write = func(w io.Writer, l *layout.Layout) error { return graphml.Write(w, l.Graph) }
 	case "ans", "ansi":
