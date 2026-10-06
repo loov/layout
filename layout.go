@@ -413,10 +413,30 @@ func (c *hierComponent) build() {
 		c.reverse[node.ID] = nodedef
 		node.Label = nodedef.ID
 	}
+	// parallel edges with the same ends share one hierarchical edge,
+	// which weighs as much as all of them, so that ordering keeps the
+	// others off the bundle; the longest wins. Edges to other ports of
+	// the nodes keep their own, which find their ports, see fieldPorts.
+	type ends struct {
+		from, to           *lnode
+		fromField, toField string
+		fromPort, toPort   Compass
+	}
+	seen := map[ends]bool{}
 	for _, edge := range c.graphdef.Edges {
 		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
-		c.graph.AddWeightedEdge(from, to, float32(edge.Weight))
-		// parallel edges share one hierarchical edge, the longest wins
+		k := ends{edge.From, edge.To, edge.FromField, edge.ToField, edge.FromPort, edge.ToPort}
+		if seen[k] {
+			c.graph.SetWeight(from, to, c.graph.Weight(from, to)+float32(edge.Weight))
+			c.graph.SetMinLen(from, to, max(int32(edge.MinLen), c.graph.MinLen(from, to)))
+			continue
+		}
+		seen[k] = true
+		if slices.Contains(from.Out, to) {
+			c.graph.AddEdge(from, to) // weighs as the first
+		} else {
+			c.graph.AddWeightedEdge(from, to, float32(edge.Weight))
+		}
 		c.graph.SetMinLen(from, to, max(int32(edge.MinLen), c.graph.MinLen(from, to)))
 	}
 
@@ -546,6 +566,31 @@ func (c *hierComponent) reserveEnds() {
 		flat := map[*lnode][2]int{} // before and after along the rank
 		for _, edge := range c.graphdef.Edges {
 			from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+			// in text, ends at ports, and of loops, need a cell each on
+			// their side too
+			for i, end := range []struct {
+				node *lnode
+				port Compass
+			}{{edge.From, edge.FromPort}, {edge.To, edge.ToPort}} {
+				if !c.graphdef.ForText {
+					break
+				}
+				port := end.port // in the rank frame already, see hierarchical
+				if edge.From == edge.To && port == CompassAuto {
+					port = East // see loopPath
+				}
+				group := c.graphdef.merged[edge][i]
+				switch port {
+				case North, NorthEast, NorthWest:
+					count(ends, end.node, false, group)
+				case South, SouthEast, SouthWest:
+					count(ends, end.node, true, group)
+				case West:
+					count(flat, end.node, false, group)
+				case East:
+					count(flat, end.node, true, group)
+				}
+			}
 			if from.Rank == to.Rank {
 				if c.graphdef.ForText && c.pack && edge.From != edge.To {
 					count(flat, edge.From, from.Pos < to.Pos, c.graphdef.merged[edge][0])
@@ -565,7 +610,11 @@ func (c *hierComponent) reserveEnds() {
 			if node.Shape == PointShape {
 				continue
 			}
-			cell := c.graphdef.cellWidth() / 2
+			// a line each across the frame, a column sideways
+			cell := c.graphdef.LineHeight / 2
+			if sideways(c.graphdef.RankDir) {
+				cell = c.graphdef.cellWidth() / 2
+			}
 			if grow := Length(max(e[0], e[1])+1)*cell - node.Radius.Y; grow > 0 {
 				node.Radius.Y += grow
 				node.pad.Y += grow
@@ -756,6 +805,46 @@ func (c *hierComponent) position() {
 		c.graph.FlatGap = float32(2 * c.graphdef.cellWidth())
 		if sideways(c.graphdef.RankDir) {
 			c.graph.FlatGap = float32(2 * c.graphdef.LineHeight)
+		}
+		// ends at ports on the sides along the rank turn beside the node:
+		// a row or column each, and one more beside the next node
+		ends := map[hier.ID][2]int{}
+		for _, edge := range c.graphdef.Edges {
+			if edge.From == edge.To {
+				continue // loops have room of their own, see loopShift
+			}
+			for _, end := range []struct {
+				node *lnode
+				port Compass
+			}{{edge.From, edge.FromPort}, {edge.To, edge.ToPort}} {
+				id := c.nodes[end.node]
+				e := ends[id]
+				switch end.port {
+				case West:
+					e[0]++
+				case East:
+					e[1]++
+				}
+				ends[id] = e
+			}
+		}
+		cell := float32(c.graphdef.cellWidth())
+		if sideways(c.graphdef.RankDir) {
+			cell = float32(c.graphdef.LineHeight)
+		}
+		for id, e := range ends {
+			room := [2]float32{}
+			for side, n := range e {
+				if n > 0 {
+					room[side] = float32(n+1) * cell
+				}
+			}
+			if room != [2]float32{} {
+				if c.graph.Room == nil {
+					c.graph.Room = map[hier.ID][2]float32{}
+				}
+				c.graph.Room[id] = room
+			}
 		}
 	}
 	hier.Position(c.graph, c.graphdef.Splines != SplinesOrtho, c.graphdef.MergeEdges, c.align)

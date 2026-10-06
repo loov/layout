@@ -44,6 +44,17 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		if len(path) < 2 {
 			continue
 		}
+		// the ends of a straight run share its bend, which they move
+		// along the same way, so moving one end drags the other's off its
+		// line: each gets one of its own, in the middle
+		if last := len(path) - 1; last <= 2 && (path[0][0] == path[last][0] || path[0][1] == path[last][1]) {
+			mid := [2]int{(path[0][0] + path[last][0]) / 2, (path[0][1] + path[last][1]) / 2}
+			if last == 2 {
+				mid = path[1]
+			}
+			path = [][2]int{path[0], mid, mid, path[last]}
+			paths[k] = path
+		}
 		last := len(path) - 1
 		for _, e := range []struct {
 			i, j, k int

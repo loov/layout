@@ -364,9 +364,6 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 		return m
 	}
 	for i, edge := range l.Graph.Edges {
-		if edge.From == edge.To {
-			continue
-		}
 		ms := meets(i, edge)
 		for _, m := range ms[min(1, len(ms)):] {
 			if a, b := root(ms[0]), root(m); a != b {
@@ -378,7 +375,7 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 	groups := map[meet]edgeID{}
 	for i, edge := range l.Graph.Edges {
 		ms := meets(i, edge)
-		if len(ms) == 0 || edge.From == edge.To {
+		if len(ms) == 0 {
 			continue
 		}
 		r := root(ms[0])

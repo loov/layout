@@ -25,7 +25,9 @@ type canvas struct {
 	nodes  map[*layout.Node]nodeID // node ids, from 1, see cell.node
 	loops  map[*layout.Node]int    // self-loops per node
 	ended  map[[2]int]bool         // cells where merged edges have ended
-	spread bool                    // edge ends on a side keep a cell apart where there is room
+	// cells where edges end at fields, by edge id, see reserve
+	reserved map[[2]int]edgeID
+	spread   bool // edge ends on a side keep a cell apart where there is room
 	// palette holds the colors cells refer to by index, see color;
 	// colors finds the index of a color
 	palette []uint32

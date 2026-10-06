@@ -31,6 +31,7 @@ func Decycle(graph *Graph) {
 	type rankedEdge struct {
 		src, dst ID
 		minlen   int32
+		weight   float32
 	}
 	var edges []rankedEdge
 
@@ -42,9 +43,9 @@ func Decycle(graph *Graph) {
 			case dst == node:
 				// drop self-loop
 			case state[dst.ID] == active:
-				edges = append(edges, rankedEdge{dst.ID, node.ID, graph.MinLen(node, dst)}) // back edge, reverse
+				edges = append(edges, rankedEdge{dst.ID, node.ID, graph.MinLen(node, dst), graph.Weight(node, dst)}) // back edge, reverse
 			default:
-				edges = append(edges, rankedEdge{node.ID, dst.ID, graph.MinLen(node, dst)})
+				edges = append(edges, rankedEdge{node.ID, dst.ID, graph.MinLen(node, dst), graph.Weight(node, dst)})
 				if state[dst.ID] == unseen {
 					visit(dst)
 				}
@@ -59,7 +60,6 @@ func Decycle(graph *Graph) {
 	}
 
 	// rebuild adjacency, weights and minimum lengths from the edge list
-	weights := graph.weights
 	graph.weights, graph.minlens = nil, nil
 	for _, node := range graph.Nodes {
 		node.In.Clear()
@@ -67,17 +67,15 @@ func Decycle(graph *Graph) {
 	}
 	for _, edge := range edges {
 		src, dst := graph.Nodes[edge.src], graph.Nodes[edge.dst]
-		minlen := edge.minlen
 		if slices.Contains(src.Out, dst) {
-			minlen = max(minlen, graph.MinLen(src, dst))
+			// edges that end up the same way merge, with their weights
+			graph.SetMinLen(src, dst, max(edge.minlen, graph.MinLen(src, dst)))
+			graph.SetWeight(src, dst, graph.Weight(src, dst)+edge.weight)
+			continue
 		}
 		graph.AddEdge(src, dst)
-		graph.SetMinLen(src, dst, minlen)
-		if w, ok := weights[[2]ID{src.ID, dst.ID}]; ok {
-			graph.SetWeight(src, dst, w)
-		} else if w, ok := weights[[2]ID{dst.ID, src.ID}]; ok {
-			graph.SetWeight(src, dst, w)
-		}
+		graph.SetMinLen(src, dst, edge.minlen)
+		graph.SetWeight(src, dst, edge.weight)
 	}
 	for _, node := range graph.Nodes {
 		node.In.Normalize()

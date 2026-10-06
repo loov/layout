@@ -65,6 +65,10 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		bottom bool
 	}
 	ends := map[side][]end{}
+	parallel := map[[2]*lnode]int{}
+	for _, edge := range graph.Edges {
+		parallel[unorderedNodes(edge)]++
+	}
 	// edges between ranks; those along a rank have their nodes centered
 	// on one line, whatever their sizes
 	routed := func(edge *ledge) bool {
@@ -85,6 +89,16 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		if dx := stepOut[edge.ToPort]; dx != 0 {
 			p := edge.Path[len(edge.Path)-1]
 			edge.Path = slices.Insert(edge.Path, len(edge.Path)-1, Vector{p.X + dx, p.Y})
+		}
+		// ends on the top or bottom facing away from where the edge goes
+		// step out and around the node, instead of running through it
+		if around := aroundNode(edge.From, edge.FromPort, edge.Path[0], edge.Path[1], edge.Path[len(edge.Path)-1], pad); around != nil {
+			edge.Path = slices.Insert(edge.Path, 1, around...)
+		}
+		last := len(edge.Path) - 1
+		if around := aroundNode(edge.To, edge.ToPort, edge.Path[last], edge.Path[last-1], edge.Path[0], pad); around != nil {
+			slices.Reverse(around)
+			edge.Path = slices.Insert(edge.Path, last, around...)
 		}
 	}
 
@@ -164,11 +178,16 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 		// ends whose route already runs straight across the side keep
 		// that x, so the edge needs no jog; the rest take the slots, and so
-		// do merged ends, which fork from their slot
+		// do merged ends, which fork from their slot. In text, edges
+		// between the same nodes take slots too, as their middle one runs
+		// straight but often between two cells.
 		want := make([]Length, len(list))
 		weight := make([]float64, len(list))
 		for i, e := range list {
 			want[i], weight[i] = slot(i), 1
+			if graph.ForText && parallel[unorderedNodes(e.edge)] > 1 {
+				continue
+			}
 			if absLength(e.towards-e.x) < 0.01 && e.towards >= lo && e.towards <= hi && len(followers[e.edge]) == 0 {
 				want[i], weight[i] = e.towards, 1e9
 			}
@@ -766,4 +785,33 @@ func offFrames(graph *lgraph, crossed func(x0, x1 Length) bool, top, bottom Leng
 		}
 	}
 	return top, bottom, lower, upper
+}
+
+// unorderedNodes returns the nodes of edge in an order that is the same
+// both ways
+func unorderedNodes(edge *ledge) [2]*lnode {
+	if edge.From.ID > edge.To.ID {
+		return [2]*lnode{edge.To, edge.From}
+	}
+	return [2]*lnode{edge.From, edge.To}
+}
+
+// aroundNode returns the points from the end at a port on the top or
+// bottom of node out past it and beside the node, toward next, when the
+// edge goes to far on the other side; nil when it goes the way it faces
+func aroundNode(node *lnode, port Compass, end, next, far Vector, pad Length) []Vector {
+	var y Length
+	switch {
+	case (port == North || port == NorthEast || port == NorthWest) && far.Y > node.Center.Y:
+		y = node.Top() - pad
+	case (port == South || port == SouthEast || port == SouthWest) && far.Y < node.Center.Y:
+		y = node.Bottom() + pad
+	default:
+		return nil
+	}
+	x := node.Right() + pad
+	if next.X < node.Center.X {
+		x = node.Left() - pad
+	}
+	return []Vector{{end.X, y}, {x, y}}
 }

@@ -108,8 +108,10 @@ func drawGraph(l *layout.Layout, spread bool) *canvas {
 		}
 	}
 	c.spreadSides(graph.Edges, paths)
+	c.reserve(graph.Edges, paths)
 	for i, edge := range graph.Edges {
 		if !edge.Invisible {
+			paths[i] = c.route(edge, paths[i])
 			c.drawEdge(edge, l.Edges[i].Path, paths[i])
 		}
 	}

@@ -1,7 +1,9 @@
 package text
 
 import (
+	"fmt"
 	"math/bits"
+	"math/rand/v2"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -17,9 +19,10 @@ import (
 var notJoined = map[string]string{}
 
 // TestEdgesJoined checks that every drawing joins the two nodes of every
-// edge with its line, after carving and straightening have reworked the
-// cells: the examples and the Graphviz files, laid out for text as their
-// .txt files in testdata are, with merged edges too.
+// edge with its line, and runs no two edges along the same cells, after
+// carving and straightening have reworked the cells: the examples and the
+// Graphviz files, laid out for text as their .txt files in testdata are,
+// with merged edges too.
 func TestEdgesJoined(t *testing.T) {
 	check := func(t *testing.T, graph *layout.Graph, opts layout.Options) {
 		opts.ForText = true
@@ -31,6 +34,9 @@ func TestEdgesJoined(t *testing.T) {
 		for _, edge := range lost(c, g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 		}
+		// a run that edges share can't tell them apart, nor which
+		// arrowhead is whose; merged edges are one edge
+		checkApart(t, c, g)
 	}
 	for name, build := range examples.Graphs {
 		t.Run(name, func(t *testing.T) { check(t, build(), examples.Options[name]) })
@@ -54,6 +60,67 @@ func TestEdgesJoined(t *testing.T) {
 				check(t, graphs[0], layout.Options{})
 			})
 		}
+	}
+}
+
+// checkApart fails t when edges in the grid share a run, which can't
+// tell them apart, nor which arrowhead is whose; merged edges are one
+// edge
+func checkApart(t *testing.T, c *canvas, g grid) {
+	t.Helper()
+	var shared []string
+	for r, row := range g {
+		for x, p := range row {
+			if p.heavy != 0 {
+				shared = append(shared, fmt.Sprintf("%d:%d", r+1, x+1))
+			}
+		}
+	}
+	if len(shared) > 0 {
+		t.Errorf("edges share cells at %s:\n%s", strings.Join(shared, " "), encode(g, c.palette, nil))
+	}
+}
+
+// TestEdgesApartRandom checks that random graphs, with ports, fields,
+// loops, labels and merged edges, in every direction, draw no two edges
+// along the same cells
+func TestEdgesApartRandom(t *testing.T) {
+	seeds := 300
+	if testing.Short() {
+		seeds = 30
+	}
+	for seed := range seeds {
+		rng := rand.New(rand.NewPCG(uint64(seed), 0))
+		graph := layout.NewDigraph()
+		graph.RankDir = []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft}[rng.IntN(4)]
+		graph.MergeEdges = rng.IntN(3) == 0
+		n := 3 + rng.IntN(8)
+		for i := range n {
+			node := graph.Node(fmt.Sprint("n", i))
+			if rng.IntN(4) == 0 {
+				node.Shape = layout.Record
+				node.Label = "<a> a|<b> b|<c> c"
+			}
+		}
+		ports := []layout.Compass{layout.CompassAuto, layout.North, layout.South, layout.East, layout.West}
+		for range n + rng.IntN(2*n) {
+			edge := graph.Edge(fmt.Sprint("n", rng.IntN(n)), fmt.Sprint("n", rng.IntN(n)))
+			if rng.IntN(5) == 0 {
+				edge.Label = "label"
+			}
+			if rng.IntN(5) == 0 && edge.From.Shape == layout.Record {
+				edge.FromField = "abc"[rng.IntN(3):][:1]
+			}
+			if rng.IntN(4) == 0 {
+				edge.FromPort, edge.ToPort = ports[rng.IntN(len(ports))], ports[rng.IntN(len(ports))]
+			}
+		}
+		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, g := carved(l)
+		t.Run(fmt.Sprint(seed), func(t *testing.T) { checkApart(t, c, g) })
 	}
 }
 

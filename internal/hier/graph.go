@@ -28,6 +28,10 @@ type Graph struct {
 	// along the rank between them, see Flat, for the room it takes
 	FlatGap   float32
 	flatPairs map[[2]ID]bool // the neighbors of FlatGap, see Apart
+	// Room is how much further a node keeps from its neighbors in its
+	// rank, before and after it, such as for the edges that leave it
+	// sideways
+	Room map[ID][2]float32
 	// EndGap is how far apart packed ends of edges on a side of a node
 	// are, from its anchor on, within its EndRoom; 0 when they aren't
 	// packed, see Position
@@ -41,8 +45,9 @@ type Graph struct {
 }
 
 // Apart returns how much further apart than their halves neighbors a and
-// b in a rank keep: FamilyGap between the children of different fans,
-// and FlatGap between nodes with an edge along the rank between them
+// b in a rank keep, a before b: FamilyGap between the children of
+// different fans, FlatGap between nodes with an edge along the rank
+// between them, and the Room of each
 func (graph *Graph) Apart(a, b *Node) float32 {
 	gap := float32(0)
 	fan := func(node *Node) bool { return !node.Virtual && len(node.In) == 1 && len(node.In[0].Out) > 1 }
@@ -61,7 +66,7 @@ func (graph *Graph) Apart(a, b *Node) float32 {
 			gap += graph.FlatGap
 		}
 	}
-	return gap
+	return gap + graph.Room[a.ID][1] + graph.Room[b.ID][0]
 }
 
 // ID is an unique identifier to a Node

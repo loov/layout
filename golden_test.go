@@ -271,21 +271,6 @@ func eachDrawing(t *testing.T, check func(t *testing.T, file string, lines []str
 	}
 }
 
-// TestEdgesApart checks the text drawings for runs that two edges share,
-// which text draws heavy: there the edges can't be told apart, nor which
-// arrowhead is whose. Merged edges are one edge, and draw light; a heavy
-// crossing, ╂, crosses.
-func TestEdgesApart(t *testing.T) {
-	const heavy = "╺╼╸╾━┍┮┑┭┯╻┎┏┒┰┲┓┱┳┕┶┙┵┷┝┾┥┽┿╽┟┢┧╁╆┪╅╈╹┖┗┚┸┺┛┹┻╿┞┡┦╀╄┩╃╇┃┠┣┨╊┫╉╋┉┋"
-	eachDrawing(t, func(t *testing.T, file string, lines []string) {
-		for i, line := range lines {
-			if strings.ContainsAny(line, heavy) {
-				t.Errorf("%s:%d: edges share a run: %s", file, i+1, strings.TrimRight(line, " "))
-			}
-		}
-	})
-}
-
 // TestArrowsBesideNodes checks the text drawings for arrowheads drawn on
 // the top or bottom border of a node, where an edge has no room to end
 // before the node, and for arrowheads at a corner of a box, which read as
