@@ -181,12 +181,24 @@ func (c *canvas) atDot(cells [][2]int, i, j, k int, node *layout.Node) {
 		}
 	}
 	at, next := cells[i], cells[k]
+	turn := cells[j]
 	switch bend := cells[j]; {
 	case at[1] == bend[1] && bend[0] == next[0] && next[1] != at[1]:
-		cells[j] = [2]int{at[0], next[1]} // across first, then along
+		turn = [2]int{at[0], next[1]} // across first, then along
 	case at[0] == bend[0] && bend[1] == next[1] && next[0] != at[0]:
-		cells[j] = [2]int{next[0], at[1]}
+		turn = [2]int{next[0], at[1]}
 	}
+	// not back along the run that reaches next, as an arc over a rank
+	// into a dot would
+	if l := k + k - j; l >= 0 && l < len(cells) {
+		before := cells[l]
+		for axis := range 2 {
+			if before[1-axis] == next[1-axis] && turn[1-axis] == next[1-axis] && (next[axis]-before[axis])*(turn[axis]-next[axis]) < 0 {
+				return
+			}
+		}
+	}
+	cells[j] = turn
 }
 
 // drawEdge draws an edge along its cells, with its end markers

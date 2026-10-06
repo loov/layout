@@ -203,17 +203,19 @@ func (c *canvas) drawNode(node *layout.Node) {
 	b := c.boxes[node]
 	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
 	if box.Shape == layout.PointShape {
-		if node.Invisible {
-			return
+		// an invisible point keeps its cell, where its edges end, as
+		// invisible boxes keep theirs
+		if !node.Invisible {
+			c.pen = pen{ink: c.color(rgb(node.LineColor))}
+			if node.FillColor != nil {
+				c.pen.ink = c.color(rgb(node.FillColor))
+			}
+			c.set(x0, y0, '●')
 		}
-		c.pen = pen{ink: c.color(rgb(node.LineColor))}
-		if node.FillColor != nil {
-			c.pen.ink = c.color(rgb(node.FillColor))
-		}
-		c.set(x0, y0, '●')
 		if p := c.at(x0, y0); p != nil {
 			p.solid, p.node = true, c.nodes[node]
 		}
+		c.hold(x0, y0) // carving would take a blank cell out
 		return
 	}
 	c.pen = pen{ink: c.color(rgb(node.LineColor)), font: c.color(rgb(node.FontColor))}

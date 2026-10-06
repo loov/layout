@@ -65,8 +65,10 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		bottom bool
 	}
 	ends := map[side][]end{}
+	// edges between ranks; those along a rank have their nodes centered
+	// on one line, whatever their sizes
 	routed := func(edge *ledge) bool {
-		return edge.From != edge.To && len(edge.Path) >= 2 && edge.Path[0].Y != edge.Path[len(edge.Path)-1].Y
+		return edge.From != edge.To && len(edge.Path) >= 2 && edge.From.Center.Y != edge.To.Center.Y
 	}
 
 	// ends on side ports step out sideways before turning, instead of
@@ -91,7 +93,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	// ends of other edges
 	arc := func(edge *ledge) bool {
 		p := edge.Path
-		return edge.From != edge.To && len(p) == 4 && p[0].Y == p[3].Y && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
+		return edge.From != edge.To && edge.From.Center.Y == edge.To.Center.Y && len(p) == 4 && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
 	}
 	var arcEnds []*ledge
 	for _, edge := range graph.Edges {

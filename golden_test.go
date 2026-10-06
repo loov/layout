@@ -240,12 +240,7 @@ func diffLines(want, got []byte) string {
 // knownBad lists the text drawings that fail a check, by the check and
 // the drawing's path in testdata, with what goes wrong; they are skipped
 // until the bug is fixed. Remove an entry with its fix.
-var knownBad = map[string]map[string]string{
-	"TestEdgesApart": {
-		"graphviz/Linux_kernel_diagram.txt":        "edges share runs",
-		"graphviz/Linux_kernel_diagram_merged.txt": "edges share runs",
-	},
-}
+var knownBad = map[string]map[string]string{}
 
 // eachDrawing runs check on every text drawing in testdata, as a subtest
 // named by its path in testdata, skipping the known bad ones of the test

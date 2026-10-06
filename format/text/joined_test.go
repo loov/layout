@@ -14,10 +14,7 @@ import (
 // notJoined lists the Graphviz files, with _merged for merged edges,
 // whose drawings leave edges unjoined, with which; they are skipped until
 // the bug is fixed. Remove an entry with its fix.
-var notJoined = map[string]string{
-	"Linux_kernel_diagram":        "14 edges, such as system -> system_",
-	"Linux_kernel_diagram_merged": "14 edges, such as system -> system_",
-}
+var notJoined = map[string]string{}
 
 // TestEdgesJoined checks that every drawing joins the two nodes of every
 // edge with its line, after carving and straightening have reworked the
