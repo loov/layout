@@ -141,8 +141,12 @@ func lookupArms(r rune) uint8 {
 // verticalSeam reports whether r is a blank or a straight vertical line,
 // which a seam can take out of a column
 func verticalSeam(r rune) bool {
+	// blanks first, which most cells are
+	if r == ' ' {
+		return true
+	}
 	switch r {
-	case ' ', '│', '┃', '┊', '┋', '┆':
+	case '│', '┃', '┊', '┋', '┆':
 		return true
 	}
 	return false
@@ -151,8 +155,12 @@ func verticalSeam(r rune) bool {
 // horizontalSeam reports whether r is a blank or a straight horizontal
 // line, which a seam can take out of a row
 func horizontalSeam(r rune) bool {
+	// blanks first, which most cells are
+	if r == ' ' {
+		return true
+	}
 	switch r {
-	case ' ', '─', '━', '┈', '┉', '┄':
+	case '─', '━', '┈', '┉', '┄':
 		return true
 	}
 	return false

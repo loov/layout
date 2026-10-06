@@ -138,6 +138,8 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 	turn, bend, stubs := opts.turn, opts.bend, opts.stubs
 	// the lines run across the ranks when they are columns, see carve
 	across := ax.columns()
+	// a plain line along the lines
+	along := glyph(lo|hi, 0)
 	// crossings that failed to jog, by line and cell, until a seam is cut
 	forbid := map[[2]int]bool{}
 	jogging := false // only seams that cross lines are left
@@ -196,7 +198,7 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 				if across && x > 0 && x+1 < len(line) {
 					before, after := line[x-1], line[x+1]
 					arrow := ax.marker(after.r)
-					if c.r == glyph(lo|hi, 0) && arms(before.r)&hi != 0 && (arms(after.r)&lo != 0 || arrow) && !(arrow && before.solid) &&
+					if c.r == along && arms(before.r)&hi != 0 && (arms(after.r)&lo != 0 || arrow) && !(arrow && before.solid) &&
 						// or, with stubs, that goes on straight, which keeps a
 						// cell of it
 						(arrow || arms(after.r) != lo|hi || stubs && after.r == c.r && after.bg == c.bg) {
@@ -269,8 +271,8 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 		for i := range n {
 			from[i] = fromBuf[i*w : (i+1)*w]
 			// the length of the run of equal need around every cell that
-			// has one
-			line := g[i]
+			// has one; those aren't plain blanks, so they are all before w
+			line := g[i][:w]
 			for x := 0; x < len(line); {
 				if line[x].need == 0 {
 					x++
@@ -313,32 +315,40 @@ func seams(g grid, cells []cell, opts seamOpts, sc *scratch) (grid, []cell) {
 			// pricing where the move would win without it. All are as
 			// long as joined, which spares the bounds checks.
 			before, reach, src, best, from := before[:len(joined)], reach[:len(joined)], src[:len(joined)], best[:len(joined)], from[i][:len(joined)]
+			// the sweeps keep the cell before in last, which spares
+			// reading back what they just stored
+			var last, lastSrc int
 			for x := range joined {
-				reach[x], src[x] = before[x], x
+				cur, curSrc := before[x], x
 				if x > 0 {
-					if r := before[x-1] + 1; r < reach[x] {
-						reach[x], src[x] = r, x-1
+					if r := before[x-1] + 1; r < cur {
+						cur, curSrc = r, x-1
 					}
-					r := reach[x-1] + 1
-					if joined[x-1] && r < reach[x] {
+					r := last + 1
+					if joined[x-1] && r < cur {
 						r += crossing(i, x-1, true)
 					}
-					if r < reach[x] {
-						reach[x], src[x] = r, src[x-1]
+					if r < cur {
+						cur, curSrc = r, lastSrc
 					}
 				}
+				reach[x], src[x] = cur, curSrc
+				last, lastSrc = cur, curSrc
 			}
 			for x := len(joined) - 2; x >= 0; x-- {
-				if r := before[x+1] + 1; r < reach[x] {
-					reach[x], src[x] = r, x+1
+				cur, curSrc := reach[x], src[x]
+				if r := before[x+1] + 1; r < cur {
+					cur, curSrc = r, x+1
 				}
-				r := reach[x+1] + 1
-				if joined[x+1] && r < reach[x] {
+				r := last + 1
+				if joined[x+1] && r < cur {
 					r += crossing(i, x+1, false)
 				}
-				if r < reach[x] {
-					reach[x], src[x] = r, src[x+1]
+				if r < cur {
+					cur, curSrc = r, lastSrc
 				}
+				reach[x], src[x] = cur, curSrc
+				last, lastSrc = cur, curSrc
 			}
 			for x := range joined {
 				best[x] += reach[x]
