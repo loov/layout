@@ -113,8 +113,9 @@ func seams(g grid, opts seamOpts) grid {
 	forbid := map[[2]int]bool{}
 	jogging := false // only seams that cross lines are left
 	// buffers reused by every pass, which is the whole grid each time
-	var bestBuf, fromBuf, reach, src []int
+	var fromBuf, prevBest, curBest, reach, src, ends, runs, path []int
 	var joined []bool
+	var from [][]int
 	var spare grid
 	for {
 		for i := range g {
@@ -126,33 +127,26 @@ func seams(g grid, opts seamOpts) grid {
 		}
 		m := len(g[0])
 		// the cells past the end of each line are blank
-		ends := make([]int, n)
+		ends = slices.Grow(ends[:0], n)[:n]
 		for i, line := range g {
-			for x, c := range line {
-				if c.r != ' ' || c.bg != 0 {
+			ends[i] = 0
+			for x := len(line) - 1; x >= 0; x-- {
+				if line[x].r != ' ' || line[x].bg != 0 {
 					ends[i] = x + 1
+					break
 				}
 			}
 		}
 		width := slices.Max(ends)
 		cost := func(i, x int) int {
 			line := g[i]
-			c := line[x]
-			if c.keep || !strings.ContainsRune(straight, c.r) {
+			c := &line[x]
+			if c.keep || c.r != ' ' && !strings.ContainsRune(straight, c.r) {
 				return blocked
 			}
-			if c.need > 0 {
-				// a run kept for a label stays long enough for it
-				run := 1
-				for k := x - 1; k >= 0 && line[k].need == c.need; k-- {
-					run++
-				}
-				for k := x + 1; k < len(line) && line[k].need == c.need; k++ {
-					run++
-				}
-				if run <= c.need {
-					return blocked
-				}
+			// a run kept for a label stays long enough for it, see runs
+			if c.need > 0 && runs[x] <= c.need {
+				return blocked
 			}
 			if x < ends[i] {
 				// with stubs, last, blanks keep one of a run before what
@@ -199,7 +193,8 @@ func seams(g grid, opts seamOpts) grid {
 				return blocked
 			}
 			best := blocked
-			for _, b := range bendsAt(g, i, x, toHi, opts.lines) {
+			bends, k := bendsAt(g, i, x, toHi, opts.lines)
+			for _, b := range bends[:k] {
 				if b.extends {
 					best = min(best, extend)
 				} else {
@@ -223,44 +218,71 @@ func seams(g grid, opts seamOpts) grid {
 			}
 		}
 		w = min(m, w+1)
-		if len(bestBuf) < n*m {
-			bestBuf, fromBuf = make([]int, n*m), make([]int, n*m)
+		// cuts leave plain blanks at the end of the lines, which every
+		// pass would copy again; keep one past the columns seams use
+		if w+1 < m {
+			for i := range g {
+				g[i] = g[i][:w+1]
+			}
+			m = w + 1
 		}
-		if len(reach) < w {
-			reach, src, joined = make([]int, w), make([]int, w), make([]bool, w)
-		}
-		best, from := make([][]int, n), make([][]int, n)
+		// only the line before is needed of best; from is kept whole to
+		// trace the seam back
+		fromBuf = slices.Grow(fromBuf[:0], n*w)[:n*w]
+		from = slices.Grow(from[:0], n)[:n]
+		prevBest, curBest = slices.Grow(prevBest[:0], w)[:w], slices.Grow(curBest[:0], w)[:w]
+		reach, src = slices.Grow(reach[:0], w)[:w], slices.Grow(src[:0], w)[:w]
+		joined = slices.Grow(joined[:0], w)[:w]
+		runs = slices.Grow(runs[:0], m)[:m]
 		for i := range n {
-			best[i], from[i] = bestBuf[i*w:(i+1)*w], fromBuf[i*w:(i+1)*w]
+			from[i] = fromBuf[i*w : (i+1)*w]
+			// the length of the run of equal need around every cell
+			line := g[i]
+			for x := 0; x < len(line); {
+				k := x + 1
+				if line[x].need > 0 {
+					for k < len(line) && line[k].need == line[x].need {
+						k++
+					}
+				}
+				for p := x; p < k; p++ {
+					runs[p] = k - x
+				}
+				x = k
+			}
+			prevBest, curBest = curBest, prevBest
+			best := curBest
 			for x := range w {
-				best[i][x] = cost(i, x)
+				best[x] = cost(i, x)
 			}
 			if i == 0 {
 				continue
 			}
-			for x := range w {
-				a, b := g[i-1][x], g[i][x]
-				sticky := func(c cell) bool { return c.keep || c.glue }
-				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
-					sticky(a) && (sticky(b) || b.r != ' ') || sticky(b) && a.r != ' '
-			}
+			before := prevBest
 			if !turn {
 				for x := range w {
-					best[i][x] += best[i-1][x]
+					best[x] += before[x]
 					from[i][x] = x
 				}
 				continue
 			}
+			for x := range w {
+				a, b := &g[i-1][x], &g[i][x]
+				joined[x] = arms(a.r)&next != 0 || arms(b.r)&prev != 0 ||
+					(a.keep || a.glue) && (b.keep || b.glue || b.r != ' ') || (b.keep || b.glue) && a.r != ' '
+			}
 			// the cheapest way to x from the line before, moving one cell
 			// at a time and past a joined cell only where it can jog
+			// crossings cost more than nothing, so one is only worth
+			// pricing where the move would win without it
 			for x := range w {
-				reach[x], src[x] = best[i-1][x], x
+				reach[x], src[x] = before[x], x
 				if x > 0 {
-					if r := best[i-1][x-1] + 1; r < reach[x] {
+					if r := before[x-1] + 1; r < reach[x] {
 						reach[x], src[x] = r, x-1
 					}
 					r := reach[x-1] + 1
-					if joined[x-1] {
+					if joined[x-1] && r < reach[x] {
 						r += crossing(i, x-1, true)
 					}
 					if r < reach[x] {
@@ -269,11 +291,11 @@ func seams(g grid, opts seamOpts) grid {
 				}
 			}
 			for x := w - 2; x >= 0; x-- {
-				if r := best[i-1][x+1] + 1; r < reach[x] {
+				if r := before[x+1] + 1; r < reach[x] {
 					reach[x], src[x] = r, x+1
 				}
 				r := reach[x+1] + 1
-				if joined[x+1] {
+				if joined[x+1] && r < reach[x] {
 					r += crossing(i, x+1, false)
 				}
 				if r < reach[x] {
@@ -281,17 +303,18 @@ func seams(g grid, opts seamOpts) grid {
 				}
 			}
 			for x := range w {
-				best[i][x] += reach[x]
+				best[x] += reach[x]
 				from[i][x] = src[x]
 			}
 		}
+		last := curBest
 		end := 0
 		for x := range w {
-			if best[n-1][x] < best[n-1][end] {
+			if last[x] < last[end] {
 				end = x
 			}
 		}
-		if best[n-1][end] >= n*trailing {
+		if last[end] >= n*trailing {
 			for i := range g {
 				g[i] = g[i][:m-1]
 			}
@@ -301,7 +324,7 @@ func seams(g grid, opts seamOpts) grid {
 			}
 			return g
 		}
-		path := make([]int, n)
+		path = slices.Grow(path[:0], n)[:n]
 		for i, x := n-1, end; i >= 0; i-- {
 			path[i] = x
 			x = from[i][x]
@@ -361,12 +384,12 @@ type bend struct {
 // grid can bend when a seam crosses it toward hi, when toHi is set, or
 // toward lo. Either the cell of the line before or the one of the line
 // after takes the turn, toward a blank cell beside it.
-func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) []bend {
+func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) (out [2]bend, k int) {
 	next, prev, lo, hi := ax.next, ax.prev, ax.lo, ax.hi
 	a, b := g[i-1], g[i]
 	plain := func(c cell) bool { return !c.keep && !c.glue && c.r != ' ' && corner(arms(c.r)) == c.r }
 	if x == 0 || x+1 >= len(a) || !plain(a[x]) || !plain(b[x]) || arms(a[x].r)&next == 0 || arms(b[x].r)&prev == 0 {
-		return nil
+		return out, 0
 	}
 	// the line ends up at pa on line i-1 and at pb on line i, d from pa
 	pa, pb, d, step := x, x-1, lo, -1
@@ -381,11 +404,11 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) []bend {
 		}
 		return ax.straightRun(g[i][x])
 	}
-	var out []bend
 	add := func(row, at, to, lines, join int, near, other int) {
 		extends := lines == lo|hi
 		if bits.OnesCount(uint(lines)) == 2 && (extends || straight(near) && straight(other)) {
-			out = append(out, bend{row, at, to, lines, join, extends})
+			out[k] = bend{row, at, to, lines, join, extends}
+			k++
 		}
 	}
 	if free(a[x+step]) {
@@ -394,7 +417,7 @@ func bendsAt(g grid, i, x int, toHi bool, ax seamAxis) []bend {
 	if free(b[x-step]) {
 		add(i, pb, pa, arms(b[x].r)&^prev|opposite(d), d|prev, i+1, i-1)
 	}
-	return out
+	return out, k
 }
 
 // bendLines bends the lines that the seam through path crosses between
@@ -415,17 +438,12 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 			if arms(a.r)&next == 0 && arms(b.r)&prev == 0 {
 				continue
 			}
-			bends := bendsAt(g, i, x, xb > xa, ax)
-			slices.SortStableFunc(bends, func(p, q bend) int {
-				if p.extends == q.extends {
-					return 0
-				} else if p.extends {
-					return -1
-				}
-				return 1
-			})
+			bends, k := bendsAt(g, i, x, xb > xa, ax)
+			if k == 2 && bends[1].extends && !bends[0].extends {
+				bends[0], bends[1] = bends[1], bends[0]
+			}
 			done := false
-			for _, bd := range bends {
+			for _, bd := range bends[:k] {
 				// the lines before and after keep joining the bend
 				out, back := next, prev
 				if bd.row == i {
