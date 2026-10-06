@@ -14,31 +14,47 @@ func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations) }
 // OrderRanksN tries to minimize crossing edges with the given number of
 // median sweeps; more sweeps can find better orders on large graphs.
 func OrderRanksN(graph *Graph, iterations int) {
-	OrderRanksDepthFirst(graph)
-	orderFlatEdges(graph)
-	orderClusters(graph)
-
-	best := saveOrder(graph)
-	bestCrossings, bestLength := graph.TotalCrossings(), graph.TotalEdgeLength()
-	stale := 0
-	for i := 0; i < iterations && stale < 4; i++ {
-		OrderRanksByMedian(graph, i%2 == 0)
-		OrderRanksSift(graph)
-		OrderRanksTranspose(graph)
+	// like Graphviz, sweep from more than one starting order: a sweep
+	// moves nodes one at a time, and can't move a whole column of them
+	// out of the way of the edges crossing it
+	starts := []func(){
+		func() { OrderRanksDepthFirst(graph) },
+		func() { orderRanksBreadthFirst(graph, true) },
+		func() { orderRanksBreadthFirst(graph, false) },
+	}
+	var best []Nodes
+	var bestCrossings, bestLength float32
+	improves := func(first bool) bool {
+		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
+		if first || crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
+			best, bestCrossings, bestLength = saveOrder(graph), crossings, length
+			return true
+		}
+		return false
+	}
+	for k, start := range starts {
+		start()
 		orderFlatEdges(graph)
 		orderClusters(graph)
+		improves(k == 0)
 
-		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
-		if crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
-			best, bestCrossings, bestLength = saveOrder(graph), crossings, length
-			stale = 0
-		} else {
-			stale++
+		stale := 0
+		for i := 0; i < iterations && stale < 4; i++ {
+			OrderRanksByMedian(graph, i%2 == 0)
+			OrderRanksSift(graph)
+			OrderRanksTranspose(graph)
+			orderFlatEdges(graph)
+			orderClusters(graph)
+
+			if improves(false) {
+				stale = 0
+			} else {
+				stale++
+			}
 		}
 	}
-	// the best order can be one that no transpose has seen, such as the
-	// depth first one, when every sweep from it ends up worse; it has its
-	// flat edges in order too, or it would win with them reversed
+	// the best order can be one that no transpose has seen, such as a
+	// starting one, when every sweep from it ends up worse
 	graph.ByRank = best
 	best = saveOrder(graph)
 	OrderRanksTranspose(graph)
@@ -350,4 +366,32 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 		}
 	}
 	return swaps
+}
+
+// orderRanksBreadthFirst orders the ranks by a breadth first walk in input
+// order, from the sources when down, otherwise from the sinks.
+func orderRanksBreadthFirst(graph *Graph, down bool) {
+	seen := NewNodeSet(graph.NodeCount())
+	ranking := make([]Nodes, len(graph.ByRank))
+	for _, root := range graph.Nodes {
+		if (down && root.InDegree() > 0) || (!down && root.OutDegree() > 0) || !seen.Include(root) {
+			continue
+		}
+		queue := Nodes{root}
+		for len(queue) > 0 {
+			node := queue[0]
+			queue = queue[1:]
+			ranking[node.Rank].Append(node)
+			next := node.Out
+			if !down {
+				next = node.In
+			}
+			for _, dst := range next {
+				if seen.Include(dst) {
+					queue = append(queue, dst)
+				}
+			}
+		}
+	}
+	graph.ByRank = ranking
 }
