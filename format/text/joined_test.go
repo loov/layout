@@ -86,12 +86,12 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 	steps := map[uint8][2]int{up: {-1, 0}, down: {1, 0}, left: {0, -1}, right: {0, 1}}
 	back := map[uint8]uint8{up: down, down: up, left: right, right: left}
 	// owns reports whether the edge id draws the arm of the cell
-	owns := func(p *cell, arm uint8, id int16) bool {
+	owns := func(p *cell, arm uint8, id edgeID) bool {
 		return p != nil && p.lines&arm != 0 && p.owner[bits.TrailingZeros(uint(arm))] == id
 	}
 	// touches reports whether the cell is beside the box of the node, or
 	// beside a marker that is
-	touches := func(r, x int, node int16) bool {
+	touches := func(r, x int, node nodeID) bool {
 		for _, s := range steps {
 			q := g.at(r+s[0], x+s[1])
 			if q == nil || !q.solid {
@@ -158,7 +158,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 }
 
 // ownsAny reports whether the edge id draws any arm of the cell
-func ownsAny(p *cell, id int16) bool {
+func ownsAny(p *cell, id edgeID) bool {
 	if p == nil {
 		return false
 	}

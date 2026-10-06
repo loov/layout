@@ -18,26 +18,26 @@ type canvas struct {
 	l      *layout.Layout
 	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
 	rows   grid
-	pen    pen                    // what is drawn with from now on
-	ids    int16                  // edge ids handed out
-	merged map[*layout.Edge]int16 // edge ids of merged edges
-	drawn  map[*layout.Edge]int16 // edge ids of the edges drawn
-	nodes  map[*layout.Node]int16 // node ids, from 1, see cell.node
-	loops  map[*layout.Node]int   // self-loops per node
-	ended  map[[2]int]bool        // cells where merged edges have ended
-	spread bool                   // edge ends on a side keep a cell apart where there is room
+	pen    pen                     // what is drawn with from now on
+	ids    edgeID                  // edge ids handed out
+	merged map[*layout.Edge]edgeID // edge ids of merged edges
+	drawn  map[*layout.Edge]edgeID // edge ids of the edges drawn
+	nodes  map[*layout.Node]nodeID // node ids, from 1, see cell.node
+	loops  map[*layout.Node]int    // self-loops per node
+	ended  map[[2]int]bool         // cells where merged edges have ended
+	spread bool                    // edge ends on a side keep a cell apart where there is room
 	// palette holds the colors cells refer to by index, see color;
 	// colors finds the index of a color
 	palette []uint32
-	colors  map[uint32]uint16
+	colors  map[uint32]colorID
 }
 
 // color returns the index of the color, see rgb, in the palette; 0 for
 // the default
-func (c *canvas) color(rgb uint32) uint16 {
+func (c *canvas) color(rgb uint32) colorID {
 	i, ok := c.colors[rgb]
 	if !ok {
-		i = uint16(len(c.palette))
+		i = colorID(len(c.palette))
 		c.palette = append(c.palette, rgb)
 		c.colors[rgb] = i
 	}
@@ -47,11 +47,11 @@ func (c *canvas) color(rgb uint32) uint16 {
 // pen is what the canvas draws with. Each drawing sets all of it, so
 // that nothing carries over from the drawing before.
 type pen struct {
-	ink    uint16 // color of lines and marks, see canvas.color
-	font   uint16 // color of text
-	dashed bool   // straight runs are dashed
-	edge   int16  // edge drawn, so that overlaps show
-	frame  bool   // the frame of a cluster, see cell.frame
+	ink    colorID // color of lines and marks
+	font   colorID // color of text
+	dashed bool    // straight runs are dashed
+	edge   edgeID  // edge drawn, so that overlaps show
+	frame  bool    // the frame of a cluster, see cell.frame
 }
 
 // newCanvas returns an empty canvas that fits the graph. One character
@@ -59,7 +59,7 @@ type pen struct {
 func newCanvas(l *layout.Layout) *canvas {
 	graph := l.Graph
 	c := &canvas{l: l, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{},
-		palette: []uint32{0}, colors: map[uint32]uint16{0: 0}}
+		palette: []uint32{0}, colors: map[uint32]colorID{0: 0}}
 	if c.cellW <= 0 {
 		c.cellW = 8
 	}
@@ -75,9 +75,9 @@ func newCanvas(l *layout.Layout) *canvas {
 		label, x, _ := c.edgeLabel(i)
 		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
-	c.drawn, c.nodes, c.loops = map[*layout.Edge]int16{}, map[*layout.Node]int16{}, map[*layout.Node]int{}
+	c.drawn, c.nodes, c.loops = map[*layout.Edge]edgeID{}, map[*layout.Node]nodeID{}, map[*layout.Node]int{}
 	for i, node := range graph.Nodes {
-		c.nodes[node] = int16(i + 1)
+		c.nodes[node] = nodeID(i + 1)
 	}
 	if graph.MergeEdges {
 		c.merged = mergedEdges(l)
@@ -133,7 +133,7 @@ func (c *canvas) row(v layout.Length) int { return int((v-c.origin.Y)/c.cellH + 
 func (c *canvas) set(x, y int, r rune) { c.put(x, y, r, c.pen.ink) }
 
 // put writes r in the color fg over whatever the cell held
-func (c *canvas) put(x, y int, r rune, fg uint16) {
+func (c *canvas) put(x, y int, r rune, fg colorID) {
 	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
 		p.r, p.fg, p.lines, p.heavy = r, fg, 0, 0
@@ -249,7 +249,7 @@ const covered = 0
 
 // fill sets the background of the cells inside the rectangle, unless
 // color is the default
-func (c *canvas) fill(x0, y0, x1, y1 int, color uint16) {
+func (c *canvas) fill(x0, y0, x1, y1 int, color colorID) {
 	if color == 0 {
 		return
 	}
@@ -310,20 +310,34 @@ func (c *canvas) walk(x0, y0, x1, y1 int) {
 // needs padding.
 type cell struct {
 	r      rune
-	owner  [4]int16 // edge that first drew each arm
-	fg, bg uint16
-	need   int16 // the length a run of these must keep, for a label on it
-	label  int16 // the cluster whose label starts here, from 1
-	node   int16 // node whose box covers it, from 1, see canvas.nodes
-	text   int16 // edge whose label it is part of, see canvas.drawn
-	lines  uint8 // direction mask, for joining edge runs
-	heavy  uint8 // arms that runs of different edges share
-	kind   uint8 // class of r, which seams keep up to date for their use
-	keep   bool  // inside a node or of text, which carving keeps
-	glue   bool  // beside a label, which carving keeps beside it
-	solid  bool  // covered by a node; edges do not draw there
-	frame  bool  // of the frame of a cluster
+	owner  [4]edgeID // edge that first drew each arm
+	fg, bg colorID
+	need   int16     // the length a run of these must keep, for a label on it
+	label  clusterID // the cluster whose label starts here
+	node   nodeID    // node whose box covers it
+	text   edgeID    // edge whose label it is part of
+	lines  uint8     // direction mask, for joining edge runs
+	heavy  uint8     // arms that runs of different edges share
+	kind   uint8     // class of r, which seams keep up to date for their use
+	keep   bool      // inside a node or of text, which carving keeps
+	glue   bool      // beside a label, which carving keeps beside it
+	solid  bool      // covered by a node; edges do not draw there
+	frame  bool      // of the frame of a cluster
 }
+
+// edgeID tells edges apart in cells, from 1, and the frames of clusters,
+// which take ids after the edges; edges that merge share a negative id,
+// see mergedEdges. Ids are int16 to keep cells small, see fits.
+type edgeID int16
+
+// nodeID is the id of a node in cells, from 1, see canvas.nodes
+type nodeID int16
+
+// clusterID is the id of a cluster in cells, from 1
+type clusterID int16
+
+// colorID indexes canvas.palette, 0 for the default color
+type colorID uint16
 
 // grid is the cells of a drawing, by row
 type grid [][]cell

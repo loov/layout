@@ -516,7 +516,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 				// a line along a box stays of the box
 				like := cut[bd.row][bd.at]
 				id := ownerOf(like)
-				owner := [4]int16{id, id, id, id}
+				owner := [4]edgeID{id, id, id, id}
 				cut[bd.row][bd.at] = cell{r: corner(bd.lines), fg: like.fg, bg: like.bg, lines: bd.lines, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.lines))}
 				cut[bd.row][bd.to] = cell{r: corner(bd.join), fg: like.fg, bg: like.bg, lines: bd.join, solid: like.solid, node: like.node, owner: owner, kind: class(corner(bd.join))}
 				if !bd.extends {
@@ -534,7 +534,7 @@ func bendLines(g, cut grid, path []int, ax seamAxis) (jogs int, failed [2]int, o
 }
 
 // ownerOf returns the edge that drew a line of c, 0 for none
-func ownerOf(c cell) int16 {
+func ownerOf(c cell) edgeID {
 	for arm := range 4 {
 		if c.lines&(1<<arm) != 0 && c.owner[arm] != 0 {
 			return c.owner[arm]

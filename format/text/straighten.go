@@ -161,11 +161,11 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 				dirs = up | down
 			}
 		}
-		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]int16{id, id, id, id}}
+		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]edgeID{id, id, id, id}}
 		for c := lo; c <= hi; c++ {
 			switch {
 			case c == x+dx:
-				moves = append(moves, move{y, c, cell{r: draw(dirs), fg: turn.fg, lines: dirs, owner: [4]int16{id, id, id, id}}})
+				moves = append(moves, move{y, c, cell{r: draw(dirs), fg: turn.fg, lines: dirs, owner: [4]edgeID{id, id, id, id}}})
 			case dx*side > 0:
 				moves = append(moves, move{y, c, cell{r: ' '}})
 			default:
@@ -177,7 +177,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 	if !turns(r, turn.lines) {
 		return moves, false
 	}
-	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]int16{id, id, id, id}}
+	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]edgeID{id, id, id, id}}
 	for y := r + step; ; y += step {
 		p := g.at(y, x)
 		switch {
@@ -368,7 +368,7 @@ func unjog(g grid) (changed bool) {
 			return false
 		}
 		// the edge of the line, by the arms it draws, not of lines it crosses
-		fg, id := at(old[0]).fg, int16(0)
+		fg, id := at(old[0]).fg, edgeID(0)
 		for p, a := range olds {
 			for arm := range 4 {
 				if a&(1<<arm) != 0 && at(p).lines&(1<<arm) != 0 && at(p).owner[arm] != 0 {
@@ -401,7 +401,7 @@ func unjog(g grid) (changed bool) {
 					}
 				}
 			default:
-				*q = cell{r: corner(dirs[i]), fg: fg, lines: dirs[i], owner: [4]int16{id, id, id, id}}
+				*q = cell{r: corner(dirs[i]), fg: fg, lines: dirs[i], owner: [4]edgeID{id, id, id, id}}
 			}
 		}
 		return true
