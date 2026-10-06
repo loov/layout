@@ -375,17 +375,20 @@ func (p *seamPass) joins(i, w int) []bool {
 	}
 	row := p.joinCache[i]
 	above, here := p.g[i-1], p.g[i]
-	if p.joinFull[i] || len(row) < w {
+	if p.joinFull[i] {
 		row = slices.Grow(row[:0], w)[:w]
 		joinCells(above, here, row, 0, w, p.opts.lines)
 		p.joinFull[i] = false
 	} else {
-		row = row[:w]
+		// the cells past the joins kept are new, see costs
+		kept := min(len(row), w)
+		row = slices.Grow(row[:kept], w-kept)[:w]
 		for _, x := range p.joinDirty[i] {
-			if x >= 0 && x < w {
+			if x >= 0 && x < kept {
 				joinCells(above, here, row, x, x+1, p.opts.lines)
 			}
 		}
+		joinCells(above, here, row, kept, w, p.opts.lines)
 	}
 	p.joinCache[i] = row
 	p.joinDirty[i] = p.joinDirty[i][:0]
@@ -426,7 +429,7 @@ func (p *seamPass) costs(i, w int) []costCode {
 	// past the end of the longest lines, costs depend on jogging
 	blocks := p.jogging && p.ends[i] == p.width
 	row := p.cache[i]
-	if p.full[i] || len(row) < w || blocks != p.blocks[i] {
+	if p.full[i] || blocks != p.blocks[i] {
 		row = slices.Grow(row[:0], w)[:w]
 		if p.needs[i] {
 			p.lineRuns(i, w)
@@ -434,15 +437,19 @@ func (p *seamPass) costs(i, w int) []costCode {
 		p.lineCosts(i, row, 0, w)
 		p.full[i], p.blocks[i] = false, blocks
 	} else {
-		row = row[:w]
-		if len(p.dirty[i]) > 0 && p.needs[i] {
+		// a cut takes a cell off every line, and a line can be one short
+		// of w where w stays; the cells past the costs kept are new
+		kept := min(len(row), w)
+		row = slices.Grow(row[:kept], w-kept)[:w]
+		if (len(p.dirty[i]) > 0 || kept < w) && p.needs[i] {
 			p.lineRuns(i, w)
 		}
 		for _, x := range p.dirty[i] {
-			if x >= 0 && x < len(row) {
+			if x >= 0 && x < kept {
 				p.lineCosts(i, row, x, x+1)
 			}
 		}
+		p.lineCosts(i, row, kept, w)
 	}
 	p.cache[i] = row
 	p.dirty[i] = p.dirty[i][:0]
