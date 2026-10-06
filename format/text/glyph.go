@@ -137,3 +137,84 @@ func lookupArms(r rune) int {
 	}
 	return 0
 }
+
+// verticalSeam reports whether r is a blank or a straight vertical line,
+// which a seam can take out of a column
+func verticalSeam(r rune) bool {
+	switch r {
+	case ' ', '│', '┃', '┊', '┋', '┆':
+		return true
+	}
+	return false
+}
+
+// horizontalSeam reports whether r is a blank or a straight horizontal
+// line, which a seam can take out of a row
+func horizontalSeam(r rune) bool {
+	switch r {
+	case ' ', '─', '━', '┈', '┉', '┄':
+		return true
+	}
+	return false
+}
+
+// verticalMarker reports whether r is a marker that continues a vertical
+// line it sits on
+func verticalMarker(r rune) bool {
+	switch r {
+	case '▲', '▼', '●', '○':
+		return true
+	}
+	return false
+}
+
+// horizontalMarker reports whether r is a marker that continues a
+// horizontal line it sits on
+func horizontalMarker(r rune) bool {
+	switch r {
+	case '◀', '▶', '●', '○':
+		return true
+	}
+	return false
+}
+
+// dashedHorizontal reports whether r is a dashed horizontal line, as the
+// frame of a cluster draws
+func dashedHorizontal(r rune) bool { return r == '┈' || r == '┉' }
+
+// boxRowSide reports whether r is part of the top or bottom side of a
+// box: a horizontal line, or where a line joins it
+func boxRowSide(r rune) bool {
+	switch r {
+	case '─', '━', '═', '┬', '┴', '╤', '╥':
+		return true
+	}
+	return false
+}
+
+// roundedCorner reports whether r is a rounded corner, which edges turn
+// with
+func roundedCorner(r rune) bool {
+	switch r {
+	case '╭', '╮', '╰', '╯':
+		return true
+	}
+	return false
+}
+
+// junction reports whether r is where three or four lines meet
+func junction(r rune) bool {
+	switch r {
+	case '├', '┤', '┬', '┴', '┼':
+		return true
+	}
+	return false
+}
+
+// verticalOrCrossing reports whether r is a vertical line, or one that a
+// horizontal line crosses
+func verticalOrCrossing(r rune) bool { return r == '│' || r == '╂' }
+
+// horizontalOrCrossing reports whether r is a horizontal line, or where it
+// crosses a vertical line
+func horizontalOrCrossing(r rune) bool { return r == '─' || r == '╂' }

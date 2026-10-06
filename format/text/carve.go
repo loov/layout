@@ -3,7 +3,6 @@ package text
 import (
 	"math/bits"
 	"slices"
-	"strings"
 )
 
 // carve tightens the drawing along seams: it removes a cell from every
@@ -61,10 +60,27 @@ type seamOpts struct {
 
 // seamAxis describes the lines of a grid that seams run across
 type seamAxis struct {
-	straight   string // the cells that a seam can take out of a line
-	markers    string // markers, which continue the line they sit on
-	next, prev int    // the arms that join a cell to the line after and before it
-	lo, hi     int    // the directions along a line, toward its start and end
+	next, prev int // the arms that join a cell to the line after and before it
+	lo, hi     int // the directions along a line, toward its start and end
+}
+
+// columns reports whether the lines are the columns of the drawing
+func (ax seamAxis) columns() bool { return ax.next&(left|right) != 0 }
+
+// straight reports whether a seam can take r out of a line
+func (ax seamAxis) straight(r rune) bool {
+	if ax.columns() {
+		return verticalSeam(r)
+	}
+	return horizontalSeam(r)
+}
+
+// marker reports whether r is a marker, which continues the line it sits on
+func (ax seamAxis) marker(r rune) bool {
+	if ax.columns() {
+		return verticalMarker(r)
+	}
+	return horizontalMarker(r)
 }
 
 // straightRun reports whether c is a plain straight run across the lines,
@@ -76,9 +92,9 @@ func (ax seamAxis) straightRun(c cell) bool {
 var (
 	// the lines are the columns of the drawing, transposed, so seams
 	// take out rows
-	columnLines = seamAxis{" │┃┊┋┆", "▲▼●○", right, left, up, down}
+	columnLines = seamAxis{right, left, up, down}
 	// the lines are the rows, so seams take out columns
-	rowLines = seamAxis{" ─━┈┉┄", "◀▶●○", down, up, left, right}
+	rowLines = seamAxis{down, up, left, right}
 )
 
 // seams removes seams from the lines of grid, one cell from every line,
@@ -104,11 +120,11 @@ func seams(g grid, opts seamOpts) grid {
 		jog      = 1 << 16 // crossing a straight line, which bends it
 		extend   = 4       // crossing a line where it turns
 	)
-	straight, markers := opts.lines.straight, opts.lines.markers
+	ax := opts.lines
 	next, prev, lo, hi := opts.lines.next, opts.lines.prev, opts.lines.lo, opts.lines.hi
 	turn, bend, stubs := opts.turn, opts.bend, opts.stubs
 	// the lines run across the ranks when they are columns, see carve
-	across := next&(left|right) != 0
+	across := ax.columns()
 	// crossings that failed to jog, by line and cell, until a seam is cut
 	forbid := map[[2]int]bool{}
 	jogging := false // only seams that cross lines are left
@@ -141,7 +157,7 @@ func seams(g grid, opts seamOpts) grid {
 		cost := func(i, x int) int {
 			line := g[i]
 			c := &line[x]
-			if c.keep || c.r != ' ' && !strings.ContainsRune(straight, c.r) {
+			if c.keep || !ax.straight(c.r) {
 				return blocked
 			}
 			// a run kept for a label stays long enough for it, see runs
@@ -163,7 +179,7 @@ func seams(g grid, opts seamOpts) grid {
 				// follows is blank or drawn by an edge, see leaves
 				if across && x > 0 && x+1 < len(line) {
 					before, after := line[x-1], line[x+1]
-					arrow := strings.ContainsRune(markers, after.r)
+					arrow := ax.marker(after.r)
 					if c.r == glyph(lo|hi, 0) && arms(before.r)&hi != 0 && (arms(after.r)&lo != 0 || arrow) && !(arrow && before.solid) &&
 						// or, with stubs, that goes on straight, which keeps a
 						// cell of it
@@ -175,7 +191,7 @@ func seams(g grid, opts seamOpts) grid {
 					}
 				}
 				// a marker on a run continues it like the line it sits on
-				if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && strings.ContainsRune(markers, b.r)) {
+				if b := line[max(x-1, 0)]; x < 1 || !(c.r == b.r && c.bg == b.bg || c.r != ' ' && ax.marker(b.r)) {
 					return blocked
 				}
 				return 0

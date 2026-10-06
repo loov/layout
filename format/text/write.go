@@ -8,7 +8,6 @@ package text
 
 import (
 	"io"
-	"strings"
 
 	"github.com/loov/layout"
 )
@@ -58,7 +57,7 @@ func better(a, b grid) bool {
 		width := 0
 		for _, row := range g {
 			for x, c := range row {
-				if !c.solid && strings.ContainsRune("╭╮╰╯", c.r) {
+				if !c.solid && roundedCorner(c.r) {
 					bends++
 				}
 				if c.r != ' ' || c.bg != 0 {

@@ -79,7 +79,7 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 		fits := func(x, y int) bool {
 			for j, r := range runes {
 				p := c.at(x+j, y)
-				if p == nil || x+j >= b[2] || !strings.ContainsRune("┈┉", p.r) && !(r == ' ' && p.lines&(up|down) != 0) {
+				if p == nil || x+j >= b[2] || !dashedHorizontal(p.r) && !(r == ' ' && p.lines&(up|down) != 0) {
 					return false
 				}
 			}

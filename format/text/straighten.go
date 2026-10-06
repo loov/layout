@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"math/bits"
 	"slices"
-	"strings"
 )
 
 // mergeRows merges the first two neighboring rows with runs along them
@@ -380,7 +379,7 @@ func unjog(g grid) (changed bool) {
 	for r := range g {
 		for c := range g[r] {
 			top := pos{r, c}
-			if q := at(top); g.is(top, "├┤┬┴┼") && !q.solid {
+			if q := at(top); junction(g.runeAt(top)) && !q.solid {
 				// a line leaving a junction along the row and a step after
 				// it: one, on the row of the junction, which stays
 				for _, dir := range []int{-1, 1} {
@@ -433,7 +432,7 @@ func unjog(g grid) (changed bool) {
 				}
 				continue
 			}
-			if !g.is(mid, "▼") {
+			if g.runeAt(mid) != '▼' {
 				continue
 			}
 			// a last step before an arrowhead into a box: the arrowhead
@@ -442,7 +441,7 @@ func unjog(g grid) (changed bool) {
 			box := true
 			for x := min(c, b); x <= max(c, b); x++ {
 				p := at(pos{mid.r + 1, x})
-				box = box && p != nil && p.solid && (x == b || strings.ContainsRune("─━═┬┴╤╥", p.r))
+				box = box && p != nil && p.solid && (x == b || boxRowSide(p.r))
 			}
 			if !box {
 				continue
@@ -466,7 +465,7 @@ func unjog(g grid) (changed bool) {
 				continue
 			}
 			first := r
-			for g.is(pos{first - 1, c}, "│╂") {
+			for verticalOrCrossing(g.runeAt(pos{first - 1, c})) {
 				first--
 			}
 			last := g.bottom(pos{r, b}) - 1
@@ -489,10 +488,12 @@ func unjog(g grid) (changed bool) {
 // pos is the row and column of a cell
 type pos struct{ r, c int }
 
-// is reports whether the cell at p is one of the characters in set
-func (g grid) is(p pos, set string) bool {
-	q := g.at(p.r, p.c)
-	return q != nil && strings.ContainsRune(set, q.r)
+// runeAt returns the character of the cell at p, 0 off the grid
+func (g grid) runeAt(p pos) rune {
+	if q := g.at(p.r, p.c); q != nil {
+		return q.r
+	}
+	return 0
 }
 
 // run returns where a line leaving p along the row in dir runs to, and
@@ -500,19 +501,23 @@ func (g grid) is(p pos, set string) bool {
 // something there, such as an arrowhead
 func (g grid) run(p pos, dir int) (to int, turns bool) {
 	c := p.c + dir
-	for g.is(pos{p.r, c}, "─╂") {
+	for horizontalOrCrossing(g.runeAt(pos{p.r, c})) {
 		c += dir
 	}
-	return c, g.is(pos{p.r, c}, map[int]string{-1: "╭", 1: "╮"}[dir])
+	corner := '╭'
+	if dir > 0 {
+		corner = '╮'
+	}
+	return c, g.runeAt(pos{p.r, c}) == corner
 }
 
 // step returns the direction of the step of a line that comes down to
 // p, where it runs along to and whether it goes on down there
 func (g grid) step(p pos) (dir, to int, turns bool) {
 	switch {
-	case g.is(p, "╰"):
+	case g.runeAt(p) == '╰':
 		dir = 1
-	case g.is(p, "╯"):
+	case g.runeAt(p) == '╯':
 		dir = -1
 	default:
 		return 0, 0, false
@@ -524,7 +529,7 @@ func (g grid) step(p pos) (dir, to int, turns bool) {
 // bottom returns the row where a line going down from p turns or ends
 func (g grid) bottom(p pos) int {
 	r := p.r + 1
-	for g.is(pos{r, p.c}, "│╂") {
+	for verticalOrCrossing(g.runeAt(pos{r, p.c})) {
 		r++
 	}
 	return r
