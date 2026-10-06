@@ -17,8 +17,6 @@ import (
 var notJoined = map[string]string{
 	"arrows":                      "12 edges, such as _box -> lbox",
 	"arrows_merged":               "12 edges, such as _box -> lbox",
-	"hashtable":                   "4 edges, such as node0 -> node1",
-	"hashtable_merged":            "node0 -> node5",
 	"jcctree":                     "8 edges, such as SPEC -> DEF2",
 	"jcctree_merged":              "6 edges, such as SPEC -> DEF2",
 	"ldbxtried":                   "n0 -> n448, n448 -> n449",

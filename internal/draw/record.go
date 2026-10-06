@@ -15,9 +15,10 @@ type Record struct {
 
 // ParseRecord parses a record label such as "a|{b|c}|<p> d": fields are
 // separated by |, braces flip the stacking direction, <port> prefixes are
-// dropped and \l \r \n line breaks become newlines.
-func ParseRecord(label string) *Record {
-	rec, _ := parseRecord(label, false)
+// dropped and \l \r \n line breaks become newlines. The fields stack top
+// to bottom when vertical is set, as they do in graphs laid out sideways.
+func ParseRecord(label string, vertical bool) *Record {
+	rec, _ := parseRecord(label, vertical)
 	return rec
 }
 
@@ -85,11 +86,11 @@ func cleanRecordText(s string) string {
 	return s
 }
 
-// LayoutRecord parses a record label and computes the field boxes for a
+// LayoutRecord parses a record label, see ParseRecord, and computes the field boxes for a
 // node of the given size. Fields get their natural size, with any extra
 // room shared equally. The text is measured as by TextSize.
-func LayoutRecord(label string, width, height, lineHeight, fontSize float64, lineWidth func(line string) float64) *Record {
-	rec := ParseRecord(label)
+func LayoutRecord(label string, vertical bool, width, height, lineHeight, fontSize float64, lineWidth func(line string) float64) *Record {
+	rec := ParseRecord(label, vertical)
 	measureRecord(rec, lineHeight, fontSize, lineWidth)
 	placeRecord(rec, 0, 0, width, height)
 	return rec
@@ -97,8 +98,8 @@ func LayoutRecord(label string, width, height, lineHeight, fontSize float64, lin
 
 // RecordSize returns the natural size of a record label, measuring the
 // text as by TextSize.
-func RecordSize(label string, lineHeight, fontSize float64, lineWidth func(line string) float64) (w, h float64) {
-	return measureRecord(ParseRecord(label), lineHeight, fontSize, lineWidth)
+func RecordSize(label string, vertical bool, lineHeight, fontSize float64, lineWidth func(line string) float64) (w, h float64) {
+	return measureRecord(ParseRecord(label, vertical), lineHeight, fontSize, lineWidth)
 }
 
 // measureRecord computes the natural size of each field, storing it in

@@ -47,7 +47,7 @@ func (graph *lgraph) assignDefaults() {
 			labelRadius.X += node.FontSize * 0.5
 			labelRadius.Y += node.FontSize * 0.25
 			if node.Shape == Record {
-				w, h := draw.RecordSize(node.DefaultLabel(), float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize))
+				w, h := draw.RecordSize(node.DefaultLabel(), sideways(graph.RankDir), float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize))
 				labelRadius = Vector{Length(w) / 2, Length(h) / 2}
 			}
 

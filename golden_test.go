@@ -253,8 +253,6 @@ var knownBad = map[string]map[string]string{
 		"graphviz/sdh_merged.txt":                  "edges share runs",
 	},
 	"TestArrowsBesideNodes": {
-		"graphviz/hashtable.txt":        "record nodes laid out left to right touch, arrows land on their borders",
-		"graphviz/hashtable_merged.txt": "record nodes laid out left to right touch, arrows land on their borders",
 		"graphviz/ldbxtried.txt":        "arrow at a corner",
 		"graphviz/ldbxtried_merged.txt": "arrow at a corner",
 		"graphviz/NaN.txt":              "arrow at a corner",

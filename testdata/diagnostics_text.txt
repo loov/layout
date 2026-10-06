@@ -80,8 +80,8 @@ go-package   nodes=0 through=0 near=0 crossings=49 shallow=0 overlaps=0 parallel
 go-package_merged nodes=0 through=0 near=0 crossings=61 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=16 corners=134 wavy=16 back=0 labels=0 far=0 length=26092 area=1100064 unbalance=3770
 grammar      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=48 wavy=0 back=0 labels=0 far=0 length=5828 area=834543 unbalance=411
 grammar_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=34 parallel=34 ends=34 shafts=0 jagged=0 bends=0 corners=56 wavy=0 back=0 labels=0 far=0 length=5990 area=792154 unbalance=239
-hashtable    nodes=0 through=0 near=5 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=17 wavy=2 back=0 labels=0 far=0 length=1578 area=296128 unbalance=24
-hashtable_merged nodes=0 through=0 near=5 crossings=0 shallow=0 overlaps=10 parallel=10 ends=10 shafts=0 jagged=0 bends=0 corners=17 wavy=2 back=0 labels=0 far=0 length=1642 area=296128 unbalance=24
+hashtable    nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=0 labels=0 far=0 length=659 area=122272 unbalance=80
+hashtable_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=10 parallel=10 ends=10 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=763 area=131442 unbalance=104
 hello        nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=7885 unbalance=0
 hello_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=7885 unbalance=0
 honda-tokoro nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=60 wavy=4 back=0 labels=0 far=0 length=6531 area=408492 unbalance=260
@@ -132,8 +132,8 @@ psg          nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=
 psg_merged   nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=6 corners=38 wavy=6 back=0 labels=0 far=0 length=27899 area=6661580 unbalance=682
 record2      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=23654 unbalance=0
 record2_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=64 area=23654 unbalance=0
-records      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=10 wavy=1 back=0 labels=0 far=0 length=800 area=86222 unbalance=120
-records_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=1 corners=10 wavy=1 back=0 labels=0 far=0 length=800 area=78384 unbalance=132
+records      nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=852 area=79451 unbalance=220
+records_merged nodes=0 through=0 near=0 crossings=3 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=868 area=79451 unbalance=220
 rowe         nodes=0 through=0 near=0 crossings=41 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=17 corners=164 wavy=17 back=14 labels=0 far=0 length=40014 area=2322612 unbalance=3126
 rowe_merged  nodes=0 through=0 near=0 crossings=47 shallow=0 overlaps=35 parallel=35 ends=35 shafts=0 jagged=0 bends=19 corners=168 wavy=19 back=14 labels=0 far=0 length=39275 area=2244672 unbalance=2916
 russian      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=799 area=183494 unbalance=230
@@ -158,8 +158,8 @@ trapeziumlr  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 trapeziumlr_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=650 parallel=650 ends=650 shafts=0 jagged=0 bends=0 corners=104 wavy=0 back=0 labels=0 far=0 length=19552 area=350381 unbalance=0
 tree         nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=12 wavy=0 back=0 labels=0 far=0 length=973 area=160000 unbalance=142
 tree_merged  nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=4 parallel=4 ends=4 shafts=0 jagged=0 bends=0 corners=16 wavy=0 back=0 labels=0 far=0 length=1229 area=162560 unbalance=0
-triedds      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=3 corners=34 wavy=3 back=2 labels=0 far=0 length=4462 area=450275 unbalance=408
-triedds_merged nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=3 corners=36 wavy=3 back=2 labels=0 far=0 length=4578 area=450275 unbalance=404
+triedds      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=36 wavy=4 back=2 labels=0 far=0 length=4801 area=646445 unbalance=920
+triedds_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=4 corners=38 wavy=4 back=2 labels=0 far=0 length=4917 area=646445 unbalance=880
 try          nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=10 wavy=1 back=1 labels=0 far=0 length=1829 area=236544 unbalance=176
 try_merged   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=1 corners=12 wavy=1 back=1 labels=0 far=0 length=1845 area=236544 unbalance=176
 unix         nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=86 wavy=5 back=0 labels=0 far=0 length=11533 area=1279264 unbalance=1537

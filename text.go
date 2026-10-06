@@ -48,7 +48,7 @@ func (graph *lgraph) prepareText() {
 		}
 		switch node.Shape {
 		case Record:
-			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel()))
+			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel(), sideways(graph.RankDir)))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
 			graph.reserveRecord(node, cellW)
 		default:
@@ -120,7 +120,7 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 			walk(field, share)
 		}
 	}
-	walk(draw.LayoutRecord(node.DefaultLabel(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y),
+	walk(draw.LayoutRecord(node.DefaultLabel(), sideways(graph.RankDir), 2*float64(node.Radius.X), 2*float64(node.Radius.Y),
 		float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize)), 1)
 	node.Radius.X += grow / 2
 }

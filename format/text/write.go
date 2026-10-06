@@ -7,6 +7,7 @@
 package text
 
 import (
+	"cmp"
 	"errors"
 	"io"
 	"math"
@@ -60,13 +61,17 @@ func carved(l *layout.Layout) (*canvas, grid) {
 	return c, g
 }
 
-// better reports whether the carved grid a has fewer bends of edges than
-// b, or as many in less area
+// better reports whether the carved grid a has fewer runs that edges
+// share than b, or as many and fewer bends of edges, or as many in less
+// area
 func better(a, b grid) bool {
-	measure := func(g grid) (bends, area int) {
+	measure := func(g grid) (shared, bends, area int) {
 		width := 0
 		for _, row := range g {
 			for x, c := range row {
+				if c.heavy != 0 {
+					shared++
+				}
 				if !c.solid && roundedCorner(c.r) {
 					bends++
 				}
@@ -75,11 +80,11 @@ func better(a, b grid) bool {
 				}
 			}
 		}
-		return bends, width * len(g)
+		return shared, bends, width * len(g)
 	}
-	ba, aa := measure(a)
-	bb, ab := measure(b)
-	return ba < bb || ba == bb && aa < ab
+	sa, ba, aa := measure(a)
+	sb, bb, ab := measure(b)
+	return cmp.Or(cmp.Compare(sa, sb), cmp.Compare(ba, bb), cmp.Compare(aa, ab)) < 0
 }
 
 // drawGraph draws the graph on a canvas, before carving; with spread,

@@ -3,7 +3,7 @@ package draw
 import "testing"
 
 func TestParseRecord(t *testing.T) {
-	rec := ParseRecord("<f0> left|<f1> mid\\nline|{top|bottom}")
+	rec := ParseRecord("<f0> left|<f1> mid\\nline|{top|bottom}", false)
 	if len(rec.Fields) != 3 || rec.Vertical {
 		t.Fatalf("expected 3 horizontal fields, got %+v", rec)
 	}
@@ -19,7 +19,7 @@ func TestParseRecord(t *testing.T) {
 // TestParseRecordEscapedBackslash checks that an escaped backslash stays
 // a backslash rather than starting a line break with the next letter.
 func TestParseRecordEscapedBackslash(t *testing.T) {
-	rec := ParseRecord(`C:\\new|x`)
+	rec := ParseRecord(`C:\\new|x`, false)
 	if len(rec.Fields) != 2 || rec.Fields[0].Text != `C:\new` {
 		t.Errorf("got %+v, want C:\\new first", rec.Fields[0])
 	}

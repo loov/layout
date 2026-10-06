@@ -236,6 +236,19 @@ func (context *parserContext) parse(src *ast.Graph) {
 			node.Label = strings.TrimPrefix(node.Label, literalMark)
 		}
 	}
+	// a port that names a field of a record, such as "n", is that field
+	// and not a compass point; the edge attaches to the node as a whole
+	field := func(node *layout.Node, port layout.Compass) bool {
+		return node.Shape == layout.Record && strings.Contains(node.Label, "<"+string(port)+">")
+	}
+	for _, edge := range context.Graph.Edges {
+		if field(edge.From, edge.FromPort) {
+			edge.FromPort = layout.CompassAuto
+		}
+		if field(edge.To, edge.ToPort) {
+			edge.ToPort = layout.CompassAuto
+		}
+	}
 	applyGraphAttrs(context.Graph, context.allAttrs)
 	context.pin()
 }
