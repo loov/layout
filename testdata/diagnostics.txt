@@ -71,7 +71,7 @@ nhg          nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=
 ninja        nodes=0 through=16 near=63 crossings=272 shallow=107 overlaps=13 parallel=48 ends=56 shafts=34 jagged=0 bends=5 corners=137 wavy=4 back=0 labels=0 far=0 length=26683 area=2597605 unbalance=636
 oldarrows    nodes=0 through=0 near=0 crossings=138 shallow=48 overlaps=0 parallel=0 ends=52 shafts=14 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=13067 area=606960 unbalance=0
 ortho        nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=20 wavy=2 back=1 labels=0 far=0 length=1375 area=93120 unbalance=215
-pgram        nodes=0 through=1 near=3 crossings=812 shallow=479 overlaps=1 parallel=5 ends=61 shafts=53 jagged=0 bends=0 corners=37 wavy=0 back=0 labels=0 far=0 length=35182 area=536308 unbalance=0
+pgram        nodes=0 through=1 near=3 crossings=660 shallow=375 overlaps=1 parallel=11 ends=61 shafts=53 jagged=0 bends=0 corners=37 wavy=0 back=0 labels=0 far=0 length=35057 area=536308 unbalance=0
 pm2way       nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=561 area=148241 unbalance=113
 pmpipe       nodes=0 through=0 near=4 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=1571 area=154246 unbalance=464
 polypoly     nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=742 area=1469372 unbalance=0

@@ -115,7 +115,7 @@ oldarrows_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 paral
 ortho        nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2528 area=270336 unbalance=396
 ortho_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=2 corners=22 wavy=2 back=1 labels=0 far=0 length=2561 area=270336 unbalance=387
 pgram        nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=325 parallel=325 ends=650 shafts=0 jagged=0 bends=0 corners=100 wavy=0 back=0 labels=0 far=0 length=26356 area=704950 unbalance=32
-pgram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=975 parallel=975 ends=1212 shafts=4 jagged=0 bends=0 corners=104 wavy=0 back=0 labels=0 far=0 length=29013 area=559082 unbalance=64
+pgram_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=975 parallel=975 ends=1300 shafts=0 jagged=0 bends=0 corners=104 wavy=0 back=0 labels=0 far=0 length=28629 area=559082 unbalance=64
 pm2way       nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=14 wavy=0 back=0 labels=0 far=0 length=1461 area=294773 unbalance=178
 pm2way_merged nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=18 wavy=0 back=0 labels=0 far=0 length=1642 area=303245 unbalance=198
 pmpipe       nodes=0 through=0 near=0 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=38 wavy=2 back=0 labels=0 far=0 length=4643 area=453031 unbalance=600

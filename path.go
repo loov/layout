@@ -53,9 +53,15 @@ func drawPoint(v Vector) draw.Point { return draw.Point{X: float64(v.X), Y: floa
 
 // offsetPath shifts the path sideways by dx and re-clips the ends to the nodes
 func offsetPath(path []Vector, dx Length, from, to *lnode) []Vector {
+	// a straight edge between neighbors along a rank runs across x, so
+	// it moves across that, in y
+	along := len(path) == 2 && from.Center.Y == to.Center.Y
 	out := make([]Vector, len(path))
 	for i, p := range path {
 		out[i] = Vector{X: p.X + dx, Y: p.Y}
+		if along {
+			out[i] = Vector{X: p.X, Y: p.Y + dx}
+		}
 	}
 	if len(out) >= 2 {
 		out[0] = from.Boundary(out[1])
