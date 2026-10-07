@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"slices"
 	"strings"
@@ -576,43 +577,7 @@ func (p *compactPass) need(a, b rigid) int {
 // constraints returns the constraints on how far the variables move
 func (p *compactPass) constraints(span []int) (cons []constraint) {
 	objs, varOf, grid := p.objs, p.varOf, p.grid
-	// every two objects that share a row, or come within lineSpace of
-	// it, keep their order and the cells they need, or as many as they
-	// have when fewer: what overlaps already gets no closer. The rows
-	// around count too, as the pass across can stretch the runs that
-	// join objects into rows they don't share now: such runs keep apart
-	// as the objects at their ends do.
-	// O(n²) over objects sharing rows; a sweep line with only the
-	// nearest neighbors would do with fewer constraints on big graphs.
-	order := make([]int, len(objs))
-	for i := range order {
-		order[i] = i
-	}
-	slices.SortFunc(order, func(a, b int) int { return objs[a].c0 - objs[b].c0 })
-	for x, i := range order {
-		for _, j := range order[x+1:] {
-			a, b := objs[i], objs[j]
-			if b.c0 > a.c1+grid.lineSpace {
-				break
-			}
-			va, vb := varOf[a.item], varOf[b.item]
-			if a.hidden || b.hidden || va == vb {
-				continue
-			}
-			if (a.marker || b.marker) && b.c0 > a.c1 {
-				continue // a marker keeps only its own cell
-			}
-			if a.lo+a.hi > b.lo+b.hi || a.lo+a.hi == b.lo+b.hi && i > j {
-				a, b, va, vb = b, a, vb, va
-			}
-			dist := b.lo - a.hi
-			need := p.need(a, b)
-			if !a.marker && !b.marker && (a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index]) {
-				need += grid.lineSpace // room to draw them apart, see crowded
-			}
-			cons = append(cons, constraint{va, vb, min(need, dist) - dist, false})
-		}
-	}
+	cons = p.separations()
 	// a run along the axis doesn't turn around; one that ends at a node
 	// keeps a cell for each arrowhead or other marker at its ends, and
 	// from a node with an outline a cell more past its border: a bend
@@ -671,6 +636,199 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 		cons = append(cons, constraint{varOf[a.item], varOf[b.item], min(span[i], dist) - dist, false})
 	}
 	return cons
+}
+
+// separations returns the constraints that keep objects apart. Every two
+// objects that share a row, or come within lineSpace of it, keep their
+// order and the cells they need, or as many as they have when fewer:
+// what overlaps already gets no closer. The rows around count too, as the
+// pass across can stretch the runs that join objects into rows they
+// don't share now: such runs keep apart as the objects at their ends do.
+//
+// Most of those pairs follow from others, and network simplex spends its
+// time on how many constraints it gets. In a row, the objects between a
+// and c keep each the next apart, and with it a from c by the gaps
+// between them and their widths: when that is as much as a and c need,
+// their own constraint is left out, which keeps the same solutions. So
+// every object looks back along each of its rows only until the objects
+// between keep anything further back apart from it.
+func (p *compactPass) separations() []constraint {
+	objs, varOf, grid := p.objs, p.varOf, p.grid
+	// the most cells two objects need, see need
+	most := max(grid.space, grid.lineSpace) + grid.lineSpace
+	// objects in the order their pairs are oriented: by middle, then index
+	byRank := make([]int, len(objs))
+	for i := range byRank {
+		byRank[i] = i
+	}
+	slices.SortFunc(byRank, func(a, b int) int {
+		return cmp.Or(objs[a].lo+objs[a].hi-objs[b].lo-objs[b].hi, a-b)
+	})
+	// gap returns the cells that the objects i and j, i first, keep
+	// between them: as many as they have when they move together
+	gap := func(i, j int) int {
+		a, b := objs[i], objs[j]
+		dist := b.lo - a.hi
+		if varOf[a.item] == varOf[b.item] {
+			return dist
+		}
+		need := p.need(a, b)
+		if !a.marker && !b.marker && (a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index]) {
+			need += grid.lineSpace // room to draw them apart, see crowded
+		}
+		return min(need, dist)
+	}
+
+	// Any two objects in one of the rows near pair, as each covers its
+	// rows and lineSpace more below them. A marker keeps only its own
+	// cell, so it pairs only with what is in its row, in along.
+	var others, markerRows []int // where the rows start
+	for _, o := range objs {
+		switch {
+		case o.hidden:
+		case o.marker:
+			markerRows = append(markerRows, o.c0)
+		default:
+			others = append(others, o.c0, o.c1+grid.lineSpace+1)
+		}
+	}
+	slices.Sort(others)
+	others = slices.Compact(others)
+	slices.Sort(markerRows)
+	markerRows = slices.Compact(markerRows)
+	near := p.rowsOf(byRank, others, func(o rigid) (int, int, bool) {
+		return o.c0, o.c1 + grid.lineSpace, !o.hidden && !o.marker
+	}, gap)
+	along := p.rowsOf(byRank, markerRows, func(o rigid) (int, int, bool) {
+		return o.c0, o.c1, !o.hidden
+	}, gap)
+
+	// pairs go in order of the first row of one object and then of the
+	// other, as network simplex breaks ties by the order it gets them in
+	pos := make([]int, len(objs))
+	for i := range pos {
+		pos[i] = i
+	}
+	slices.SortFunc(pos, func(a, b int) int { return objs[a].c0 - objs[b].c0 })
+	for x, i := range slices.Clone(pos) {
+		pos[i] = x
+	}
+	type pair struct {
+		key uint64
+		c   constraint
+	}
+	var pairs []pair
+	seen := make([]int, len(objs)) // the object a candidate was found for, +1
+	implied := make([]bool, len(objs))
+	var found []int
+	for c, o := range objs {
+		if o.hidden {
+			continue
+		}
+		found = found[:0]
+		walk := func(rs *rowSet, markersOnly bool) {
+			for r := rs.first[c]; r <= rs.last[c]; r++ {
+				row, q, qmax := rs.row(r)
+				pc := rs.at[rs.atStart[c]+r-rs.first[c]]
+				for i := pc - 1; i >= 0; i-- {
+					// what is further back is kept apart by what is between
+					if i < pc-1 && q[pc]-qmax[i]-(o.hi-o.lo) >= most {
+						break
+					}
+					a := row[i]
+					if markersOnly && !o.marker && !objs[a].marker || varOf[objs[a].item] == varOf[o.item] {
+						continue
+					}
+					if seen[a] != c+1 {
+						seen[a], implied[a] = c+1, false
+						found = append(found, a)
+					}
+					if i < pc-1 && !implied[a] && q[pc]-q[i]-(o.hi-o.lo) >= gap(a, c) {
+						implied[a] = true
+					}
+				}
+			}
+		}
+		walk(near, false)
+		walk(along, true)
+		for _, a := range found {
+			if !implied[a] {
+				x, y := pos[a], pos[c]
+				pairs = append(pairs, pair{uint64(min(x, y))<<32 | uint64(max(x, y)), constraint{varOf[objs[a].item], varOf[o.item], gap(a, c) - (o.lo - objs[a].hi), false}})
+			}
+		}
+	}
+	slices.SortFunc(pairs, func(a, b pair) int { return cmp.Compare(a.key, b.key) })
+	cons := make([]constraint, len(pairs))
+	for i, pr := range pairs {
+		cons[i] = pr.c
+	}
+	return cons
+}
+
+// rowSet is the objects in a set of rows, each row in the order of
+// byRank, with the gaps that keep them apart
+type rowSet struct {
+	start []int // where every row starts in objs, q and qmax
+	objs  []int
+	// q[k] is the cells from the start of the first object of its row to
+	// the end of the k-th, as the gaps between them keep them; qmax[k]
+	// the most of q from the start of the row to k
+	q, qmax     []int
+	first, last []int // the rows of every object, last < first if none
+	atStart     []int // where the rows of every object start in at
+	at          []int // where an object is in each of its rows
+}
+
+func (rs *rowSet) row(r int) (objs, q, qmax []int) {
+	a, b := rs.start[r], rs.start[r+1]
+	return rs.objs[a:b], rs.q[a:b], rs.qmax[a:b]
+}
+
+// rowsOf returns the objects in the rows that start at starts, which end
+// where the next starts; span returns the rows an object covers, which
+// start and end with rows of starts, and whether it is in any
+func (p *compactPass) rowsOf(byRank, starts []int, span func(rigid) (lo, hi int, ok bool), gap func(i, j int) int) *rowSet {
+	n := len(p.objs)
+	rs := &rowSet{start: make([]int, len(starts)+1), first: make([]int, n), last: make([]int, n), atStart: make([]int, n)}
+	total := 0
+	for i, o := range p.objs {
+		rs.first[i], rs.last[i] = 0, -1
+		if lo, hi, ok := span(o); ok {
+			rs.first[i], _ = slices.BinarySearch(starts, lo)
+			rs.last[i], _ = slices.BinarySearch(starts, hi+1)
+			rs.last[i]--
+		}
+		rs.atStart[i] = total
+		for r := rs.first[i]; r <= rs.last[i]; r++ {
+			rs.start[r+1]++
+			total++
+		}
+	}
+	for r := range starts {
+		rs.start[r+1] += rs.start[r]
+	}
+	rs.objs, rs.q, rs.qmax, rs.at = make([]int, total), make([]int, total), make([]int, total), make([]int, total)
+	fill := slices.Clone(rs.start[:len(starts)])
+	for _, i := range byRank {
+		for r := rs.first[i]; r <= rs.last[i]; r++ {
+			rs.at[rs.atStart[i]+r-rs.first[i]] = fill[r] - rs.start[r]
+			rs.objs[fill[r]] = i
+			fill[r]++
+		}
+	}
+	for r := range starts {
+		row, q, qmax := rs.row(r)
+		for k, i := range row {
+			q[k] = p.objs[i].hi - p.objs[i].lo
+			qmax[k] = q[k]
+			if k > 0 {
+				q[k] += q[k-1] + gap(row[k-1], i)
+				qmax[k] = max(qmax[k-1], q[k])
+			}
+		}
+	}
+	return rs
 }
 
 // apply moves everything by d cells, and reports whether anything moved
