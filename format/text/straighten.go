@@ -318,8 +318,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 	at := func(p pos) *cell { return g.at(p.r, p.c) }
 	// reroute moves a line from the old cells to the new ones, both with
 	// the arm in into the first, ending in head when it is set, if it can
-	// fewer has reroute take only a new line that crosses fewer lines
-	fewer := false
+	// and the new line has fewer crossings, or as many and fewer corners
 	// the cells of the old line, with their arms, and of the new are
 	// marked with the try they are of, so that every reroute marks them
 	// anew without clearing; olds lists the cells of the old line
@@ -348,6 +347,17 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 		return 0
 	}
 	var olds []pos
+	// the corners of the old line, from oldDirs, which leave the last cell
+	// the way the new line does, unlike the arms of the old
+	var oldCorners int
+	corners := func(dirs []uint8) (n int) {
+		for _, d := range dirs {
+			if d != up|down && d != left|right {
+				n++
+			}
+		}
+		return n
+	}
 	// whether a label is beside each of olds, and whether it is a crossing
 	var labeled, crossed []bool
 	// the old line, the new one and the arms of the old in reroute, which
@@ -361,6 +371,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 			oldTry = mk.try
 			olds = olds[:0]
 			armsPath, armsDirs = route(armsPath, armsDirs, in, down, old...)
+			oldCorners = corners(oldDirs)
 			for i, p := range old {
 				if m := markAt(p); m != nil {
 					if m.old != oldTry {
@@ -427,7 +438,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 				}
 			}
 		}
-		if added > removed || fewer && added == removed {
+		if cmp.Compare(added, removed) > 0 || added == removed && corners(dirs) >= oldCorners {
 			return false
 		}
 		// the edge of the line, by the arms it draws, not of lines it crosses
@@ -551,7 +562,6 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 	}
 	// a step slides along its line to where the line crosses fewer
 	// lines, as two lines can cross twice to swap back
-	fewer = true
 	for r := range g {
 		for c := range g[r] {
 			top := pos{r, c}
