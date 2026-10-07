@@ -1,6 +1,9 @@
 package hier
 
-import "math"
+import (
+	"container/heap"
+	"math"
+)
 
 // RankNetworkSimplex assigns ranks minimizing the total weighted edge length
 // Σ weight(e)·(rank(dst) − rank(src)) subject to every edge spanning at least
@@ -564,54 +567,91 @@ func (s *simplex) initRank() {
 	}
 }
 
-// feasibleTree grows a spanning forest of tight edges, shifting ranks of the
-// partial tree to make the closest non-tree edge tight when it gets stuck.
+// feasibleTree grows a spanning forest of tight edges like Prim's
+// algorithm, shifting the ranks of the partial tree to make the closest
+// edge leaving it tight when none is. Shifting the tree changes the slack
+// of every edge leaving it by the same amount, down for the edges leaving
+// from their tail and up for those leaving from their head, so two heaps
+// keyed by the slack without the shift find the closest edge.
 func (s *simplex) feasibleTree() {
 	inTree := make([]bool, s.n)
-	m := int32(s.edgeCount())
+	var members []int32
+	// out holds the edges leaving the tree from their tail, in those
+	// leaving from their head
+	var out, in edgeHeap
 	for root := range s.n {
 		if inTree[root] {
 			continue
 		}
-		inTree[root] = true
-		for {
-			// grow along tight edges
-			changed := true
-			for changed {
-				changed = false
-				for i := range m {
-					if s.tree[i] || inTree[s.tail[i]] == inTree[s.head[i]] || s.slack(i) != 0 {
-						continue
-					}
-					s.tree[i] = true
-					inTree[s.tail[i]], inTree[s.head[i]] = true, true
-					changed = true
-				}
-			}
-			// find the incident non-tree edge with minimal slack
-			best, bestSlack := int32(-1), int32(math.MaxInt32)
-			for i := range m {
-				if s.tree[i] || inTree[s.tail[i]] == inTree[s.head[i]] {
+		// the members of the tree sit shift ranks below their s.rank,
+		// which is applied once the tree is complete
+		shift := int32(0)
+		members = members[:0]
+		add := func(v int32) {
+			inTree[v] = true
+			members = append(members, v)
+			s.rank[v] -= shift
+			for _, i := range s.adjacent(v) {
+				t, h := s.tail[i], s.head[i]
+				if inTree[t] && inTree[h] {
 					continue
 				}
-				if sl := s.slack(i); sl < bestSlack {
-					best, bestSlack = i, sl
+				e := edgeKey{s.rank[h] - s.rank[t] - s.minlen[i], i}
+				if t == v {
+					heap.Push(&out, e)
+				} else {
+					heap.Push(&in, e)
 				}
 			}
-			if best < 0 {
-				break // component complete
+		}
+		add(root)
+		for {
+			for out.Len() > 0 && inTree[s.head[out[0].edge]] {
+				heap.Pop(&out)
 			}
-			// shift the tree side so the edge becomes tight; inTree also marks
-			// finished components, so walk this tree explicitly
-			delta := bestSlack
-			if inTree[s.head[best]] {
-				delta = -bestSlack
+			for in.Len() > 0 && inTree[s.tail[in[0].edge]] {
+				heap.Pop(&in)
 			}
-			for _, v := range s.treeNodes(root) {
-				s.rank[v] += delta
+			if out.Len() == 0 && in.Len() == 0 {
+				break
 			}
+			var next int32
+			if in.Len() == 0 || (out.Len() > 0 && edgeKey.less(edgeKey{out[0].key - shift, out[0].edge}, edgeKey{in[0].key + shift, in[0].edge})) {
+				e := heap.Pop(&out).(edgeKey)
+				shift += e.key - shift
+				s.tree[e.edge] = true
+				next = s.head[e.edge]
+			} else {
+				e := heap.Pop(&in).(edgeKey)
+				shift -= e.key + shift
+				s.tree[e.edge] = true
+				next = s.tail[e.edge]
+			}
+			add(next)
+		}
+		for _, v := range members {
+			s.rank[v] += shift
 		}
 	}
+}
+
+// edgeKey orders edges by a key, then by index
+type edgeKey struct{ key, edge int32 }
+
+func (a edgeKey) less(b edgeKey) bool { return a.key < b.key || (a.key == b.key && a.edge < b.edge) }
+
+// edgeHeap is a min-heap of edgeKeys, see container/heap
+type edgeHeap []edgeKey
+
+func (h edgeHeap) Len() int           { return len(h) }
+func (h edgeHeap) Less(i, j int) bool { return h[i].less(h[j]) }
+func (h edgeHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }
+func (h *edgeHeap) Push(x any)        { *h = append(*h, x.(edgeKey)) }
+func (h *edgeHeap) Pop() any {
+	old := *h
+	x := old[len(old)-1]
+	*h = old[:len(old)-1]
+	return x
 }
 
 // treeNodes returns the vertices connected to root by tree edges
