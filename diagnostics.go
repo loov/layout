@@ -82,12 +82,26 @@ func Diagnose(l *Layout) Diagnostics {
 	var diag Diagnostics
 	const eps = 1e-3
 
+	// what isn't drawn can't cross, overlap or crowd anything
+	var nodes []*lnode
+	for _, node := range graph.Nodes {
+		if !node.Invisible {
+			nodes = append(nodes, node)
+		}
+	}
+	var edges []*ledge
+	for _, edge := range graph.Edges {
+		if !edge.Invisible {
+			edges = append(edges, edge)
+		}
+	}
+
 	type segment struct {
 		a, b Vector
 		edge *ledge
 	}
 	var segments []segment
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		path := edge.Path
 		if graph.Splines == SplinesRounded {
 			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
@@ -104,8 +118,8 @@ func Diagnose(l *Layout) Diagnostics {
 		return tl1.X < br2.X-eps && tl2.X < br1.X-eps && tl1.Y < br2.Y-eps && tl2.Y < br1.Y-eps
 	}
 
-	for i, a := range graph.Nodes {
-		for _, b := range graph.Nodes[i+1:] {
+	for i, a := range nodes {
+		for _, b := range nodes[i+1:] {
 			tl1, br1 := boxes(a)
 			tl2, br2 := boxes(b)
 			if overlap(tl1, br1, tl2, br2) {
@@ -122,7 +136,7 @@ func Diagnose(l *Layout) Diagnostics {
 	through := map[edgeNode]bool{}
 	near := map[edgeNode]bool{}
 	for _, s := range segments {
-		for _, node := range graph.Nodes {
+		for _, node := range nodes {
 			if node == s.edge.From || node == s.edge.To {
 				continue
 			}
@@ -217,7 +231,7 @@ func Diagnose(l *Layout) Diagnostics {
 
 	// a shaft that enters its own node before the tip draws the arrowhead
 	// over the node; test the segment before the tip, trimmed at the tip
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		if edge.From == edge.To {
 			continue
 		}
@@ -249,7 +263,7 @@ func Diagnose(l *Layout) Diagnostics {
 		p    Vector
 	}
 	var ends []endpoint
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		if len(edge.Path) > 0 {
 			ends = append(ends, endpoint{edge, edge.Path[0]}, endpoint{edge, edge.Path[len(edge.Path)-1]})
 		}
@@ -273,7 +287,7 @@ func Diagnose(l *Layout) Diagnostics {
 	case BottomToTop:
 		flow = Vector{0, -1}
 	}
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		for i := 0; i+1 < len(edge.Path); i++ {
 			d := edge.Path[i+1].Sub(edge.Path[i])
 			diag.EdgeLength += Length(math.Hypot(float64(d.X), float64(d.Y)))
@@ -326,9 +340,9 @@ func Diagnose(l *Layout) Diagnostics {
 	if graph.RankDir == LeftToRight || graph.RankDir == RightToLeft {
 		across, along = along, across
 	}
-	for _, node := range graph.Nodes {
+	for _, node := range nodes {
 		var before, after []*lnode
-		for _, edge := range graph.Edges {
+		for _, edge := range edges {
 			other := edge.To
 			if edge.To == node {
 				other = edge.From
@@ -360,7 +374,7 @@ func Diagnose(l *Layout) Diagnostics {
 	}
 
 	// distance from a label box to its own path
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		if edge.Label == "" || len(edge.Path) < 2 {
 			continue
 		}
@@ -383,7 +397,7 @@ func Diagnose(l *Layout) Diagnostics {
 	type box struct{ tl, br Vector }
 	var labels []box
 	var labelEdges []*ledge
-	for _, edge := range graph.Edges {
+	for _, edge := range edges {
 		if edge.Label == "" {
 			continue
 		}
@@ -392,7 +406,7 @@ func Diagnose(l *Layout) Diagnostics {
 	}
 	for i, l := range labels {
 		var hits []string
-		for _, node := range graph.Nodes {
+		for _, node := range nodes {
 			tl, br := boxes(node)
 			if overlap(l.tl, l.br, tl, br) {
 				hits = append(hits, "node "+node.String())
