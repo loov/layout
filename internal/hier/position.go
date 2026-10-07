@@ -105,11 +105,11 @@ func StraightenChains(graph *Graph) {
 				want := (in.Center.X+in.Anchor+out.Center.X+out.Anchor)/2 - node.Anchor
 				if i > 0 {
 					left := layer[i-1]
-					want = max(want, left.Center.X+left.Radius.X+node.Radius.X)
+					want = max(want, left.Center.X+left.Radius.X+node.Radius.X+graph.Apart(left, node))
 				}
 				if i+1 < len(layer) {
 					right := layer[i+1]
-					want = min(want, right.Center.X-right.Radius.X-node.Radius.X)
+					want = min(want, right.Center.X-right.Radius.X-node.Radius.X-graph.Apart(node, right))
 				}
 				if d := want - node.Center.X; d > 0.5 || d < -0.5 {
 					node.Center.X = want

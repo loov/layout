@@ -276,7 +276,7 @@ func AlignClusterBorders(graph *Graph) {
 		for _, layer := range graph.ByRank {
 			for i := 1; i < len(layer); i++ {
 				a, b := layer[i-1], layer[i]
-				gaps[class[a.ID]] = append(gaps[class[a.ID]], gap{class[b.ID], a.Radius.X + b.Radius.X})
+				gaps[class[a.ID]] = append(gaps[class[a.ID]], gap{class[b.ID], a.Radius.X + b.Radius.X + graph.Apart(a, b)})
 			}
 		}
 

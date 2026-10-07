@@ -8,9 +8,10 @@ import (
 )
 
 // TestAlignClusterBorders checks on random clustered graphs that every
-// cluster's borders line up, that nodes in a rank don't overlap and that
-// clusters are no wider than their outermost borders before aligning, or
-// their least width, plus the room their nested clusters take.
+// cluster's borders line up, that nodes in a rank keep Apart apart (and so
+// don't overlap) and that clusters are no wider than their outermost
+// borders before aligning, or their least width, plus the room their
+// nested clusters take.
 func TestAlignClusterBorders(t *testing.T) {
 	rng := rand.New(rand.NewSource(1))
 	for i := range 200 {
@@ -38,10 +39,15 @@ func TestAlignClusterBorders(t *testing.T) {
 		graph.Clusters = clusters
 		AddClusterBorders(graph)
 		OrderRanks(graph)
+		graph.Room = map[ID][2]float32{}
 		for _, node := range graph.Nodes {
 			node.Radius = Vector{X: 20, Y: 5}
 			if node.BorderLeft || node.BorderRight {
 				node.Radius.X = 4
+			}
+			// room beside some nodes, as for edges leaving them sideways
+			if !node.Virtual && node.ID%3 == 0 {
+				graph.Room[node.ID] = [2]float32{12, 12}
 			}
 		}
 		// Position, recording how wide each cluster is before aligning
@@ -70,8 +76,8 @@ func TestAlignClusterBorders(t *testing.T) {
 		for _, layer := range graph.ByRank {
 			for k := 1; k < len(layer); k++ {
 				a, b := layer[k-1], layer[k]
-				if a.Center.X+a.Radius.X > b.Center.X-b.Radius.X+1e-3 {
-					t.Errorf("graph %d: overlap %v(%.1f) %v(%.1f)", i, a, a.Center.X, b, b.Center.X)
+				if a.Center.X+a.Radius.X+graph.Apart(a, b) > b.Center.X-b.Radius.X+1e-3 {
+					t.Errorf("graph %d: %v(%.1f) %v(%.1f) closer than their room", i, a, a.Center.X, b, b.Center.X)
 				}
 			}
 		}
