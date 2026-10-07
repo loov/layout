@@ -362,8 +362,7 @@ func positionSimplex(graph *Graph, fans bool) {
 		for i := 1; i < len(layer); i++ {
 			a, b := layer[i-1], layer[i]
 			// anchors line up, a node reaches Radius.X past its center
-			gap := a.Radius.X - a.Anchor + b.Radius.X + b.Anchor + graph.Apart(a, b)
-			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(math.Ceil(float64(gap))))
+			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(graph.sep(a, b)))
 		}
 	}
 	// a virtual node with an anchor carries a label beside its edge, which
@@ -463,15 +462,7 @@ func positionSimplex(graph *Graph, fans bool) {
 			if children < 2 {
 				continue
 			}
-			left, right := lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor
-			if i > 0 {
-				a := layer[i-1]
-				left = x[a.ID] + float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor+graph.Apart(a, node))))
-			}
-			if i+1 < len(layer) {
-				b := layer[i+1]
-				right = x[b.ID] - float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor+graph.Apart(node, b))))
-			}
+			left, right := graph.bounds(x, layer, i, lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor)
 			if left <= right {
 				x[node.ID] = min(max((first+last)/2, left), right)
 			}
@@ -491,19 +482,33 @@ func positionSimplex(graph *Graph, fans bool) {
 			if end == nil {
 				continue
 			}
-			want := x[end.ID]
-			if i > 0 {
-				a := layer[i-1]
-				want = max(want, x[a.ID]+float32(math.Ceil(float64(a.Radius.X-a.Anchor+node.Radius.X+node.Anchor))))
-			}
-			if i+1 < len(layer) {
-				b := layer[i+1]
-				want = min(want, x[b.ID]-float32(math.Ceil(float64(node.Radius.X-node.Anchor+b.Radius.X+b.Anchor))))
-			}
-			x[node.ID] = want
+			left, right := graph.bounds(x, layer, i, float32(math.Inf(-1)), float32(math.Inf(1)))
+			x[node.ID] = min(max(x[end.ID], left), right)
 		}
 	}
 	for _, node := range graph.Nodes {
 		node.Center.X = x[node.ID] - node.Anchor
 	}
+}
+
+// sep is how far apart the anchors of a and b, neighbors in a rank with a
+// before b, keep at least: a node reaches Radius.X past its center, and
+// Apart more, rounded up to the whole units positionSimplex works in
+func (graph *Graph) sep(a, b *Node) float32 {
+	return float32(math.Ceil(float64(a.Radius.X - a.Anchor + b.Radius.X + b.Anchor + graph.Apart(a, b))))
+}
+
+// bounds narrows left and right to where the anchor of layer[i] can go,
+// with x the anchors of the nodes, keeping sep from its neighbors
+func (graph *Graph) bounds(x []float32, layer Nodes, i int, left, right float32) (float32, float32) {
+	node := layer[i]
+	if i > 0 {
+		a := layer[i-1]
+		left = x[a.ID] + graph.sep(a, node)
+	}
+	if i+1 < len(layer) {
+		b := layer[i+1]
+		right = x[b.ID] - graph.sep(node, b)
+	}
+	return left, right
 }
