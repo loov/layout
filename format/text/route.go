@@ -217,6 +217,8 @@ func (c *canvas) free(p [2]int, dir uint8, id edgeID, end bool) bool {
 // route, or nil when there is no way
 func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 	const turn = 4 // a turn costs as much as this many steps
+	// and crossing the cell of another edge's marker as this many
+	const marker = 8
 	if len(c.rows) == 0 {
 		return nil
 	}
@@ -271,6 +273,9 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 			if nd != d {
 				next += turn
 			}
+			if c.marked(to, id) {
+				next += marker
+			}
 			if isGoal {
 				next += g.cost
 			}
@@ -324,9 +329,11 @@ func (q *costQueue) Pop() any {
 // reserve keeps the cells where edges end at fields, which they can't
 // move off, and the two cells out from them, for them, see edgeID, so
 // that the edges drawn before them keep off. Edges that end at one such
-// cell draw as one, merged.
+// cell draw as one, merged. It marks the cells of other markers too, see
+// markCell.
 func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 	c.reserved = map[[2]int]edgeID{}
+	c.markers = map[[2]int]edgeID{}
 	by := map[[2]int]*layout.Edge{}
 	id := c.ids
 	for i, edge := range edges {
@@ -336,10 +343,13 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 		id++ // see drawEdge
 		path, last := paths[i], len(paths[i])-1
 		ends := []bool{c.hasField(edge.From, edge.FromField), c.hasField(edge.To, edge.ToField)}
+		head := edge.ArrowHead
+		if head == layout.ArrowDefault && edge.Directed {
+			head = layout.ArrowNormal
+		}
+		markers := []bool{edge.ArrowTail != layout.ArrowDefault && edge.ArrowTail != layout.ArrowNone,
+			head != layout.ArrowDefault && head != layout.ArrowNone}
 		for k, end := range [][2]int{path[0], path[last]} {
-			if !ends[k] {
-				continue
-			}
 			next, node := path[1], edge.From
 			if k == 1 {
 				next, node = path[last-1], edge.To
@@ -347,6 +357,10 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 			own, merged := c.merged[edge]
 			if !merged {
 				own = id
+			}
+			if !ends[k] {
+				c.markCell(end, next, node, own, markers[k])
+				continue
 			}
 			if other, ok := c.reserved[end]; ok && other != own {
 				c.merged[by[end]], c.merged[edge] = other, other
@@ -365,4 +379,31 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 			}
 		}
 	}
+}
+
+// markCell keeps the cell out from an end with a marker, where the marker
+// goes when the line reaches it straight, see marker, for the edge with
+// id: a run of another edge across it puts the marker on the border.
+// Unlike reserved cells, others can still cross it when there is no
+// other way, at a cost, see search.
+func (c *canvas) markCell(end, next [2]int, node *layout.Node, id edgeID, marker bool) {
+	out := c.side(end, next, node)
+	if !marker || out == 0 {
+		return
+	}
+	// only when the line runs straight through it
+	if d := (next[0]-end[0])*dx(out) + (next[1]-end[1])*dy(out); d < 2 || next[0] != end[0] && next[1] != end[1] {
+		return
+	}
+	cell := [2]int{end[0] + dx(out), end[1] + dy(out)}
+	if _, ok := c.markers[cell]; !ok {
+		c.markers[cell] = id
+	}
+}
+
+// marked reports whether p is the marker cell of an edge other than id,
+// see markCell
+func (c *canvas) marked(p [2]int, id edgeID) bool {
+	owner, ok := c.markers[p]
+	return ok && owner != id
 }

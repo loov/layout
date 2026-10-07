@@ -276,7 +276,7 @@ func eachDrawing(t *testing.T, check func(t *testing.T, file string, lines []str
 // before the node, and for arrowheads at a corner of a box, which read as
 // reaching for the corner.
 func TestArrowsBesideNodes(t *testing.T) {
-	border := regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨]*[▼▲][─═┬┴╥╨]*[╮┐╗╯┘╝]`)
+	border := regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨▼▲]*[▼▲][─═┬┴╥╨▼▲]*[╮┐╗╯┘╝]`)
 	sideways := regexp.MustCompile(`▶[╭┌╔╰└╚]|[╮┐╗╯┘╝]◀`)
 	const (
 		top    = "╭┌╔╮┐╗"

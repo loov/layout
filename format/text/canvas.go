@@ -28,6 +28,8 @@ type canvas struct {
 	ended  map[[2]int]bool         // cells where merged edges have ended
 	// cells where edges end at fields, by edge id, see reserve
 	reserved map[[2]int]edgeID
+	// cells out from edge ends where their markers go, see markCell
+	markers map[[2]int]edgeID
 	// diamonds drawn with a point for each end, see nodeBox
 	pointed map[*layout.Node]bool
 	// no characters of Symbols for Legacy Computing, see Options
