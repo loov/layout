@@ -145,6 +145,14 @@ func crowded(l *Layout, cell Vector) []bool {
 	return out
 }
 
+// headMarked and tailMarked report whether text draws an arrowhead or
+// another marker at the head or the tail of edge
+func headMarked(edge *Edge) bool {
+	return (edge.ArrowHead != "" || edge.Directed) && edge.ArrowHead != ArrowNone
+}
+
+func tailMarked(edge *Edge) bool { return edge.ArrowTail != "" && edge.ArrowTail != ArrowNone }
+
 // rigid is something rigid along the axis of a pass: it moves with item,
 // and covers the cells lo to hi along the axis and c0 to c1 across it
 type rigid struct {
@@ -224,6 +232,20 @@ func compactAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span 
 	d := leastSolution(n, cons, lower)
 	d = shortenRuns(n, cons, lower, reach, d)
 	return p.apply(d)
+}
+
+// border returns the cell of the side of node that a run to the cell
+// toward leaves from, or at when toward is not beside the node: the ends
+// of paths can sit a cell inside the border, where text draws them
+func (p *compactPass) border(node *Node, toward, at int) int {
+	box := p.objs[p.l.nodeIndex[node]]
+	switch {
+	case toward > box.hi:
+		return box.hi
+	case toward < box.lo:
+		return box.lo
+	}
+	return at
 }
 
 // col and row return the cell of a coordinate, as format/text rounds to
@@ -326,6 +348,34 @@ func (p *compactPass) addEdges() {
 					merged[at] = items[i]
 				}
 			}
+		}
+		// an arrowhead at a box takes the cell before its border: a line
+		// that ran through that cell would leave text no room for it but
+		// on the border. A run across the axis covers it already.
+		for _, end := range [2]struct {
+			at, next int
+			node     *Node
+			marked   bool
+		}{{0, 1, edge.From, tailMarked(edge)}, {len(items) - 1, len(items) - 2, edge.To, headMarked(edge)}} {
+			if !end.marked || len(items) < 2 || p.l.Nodes[p.l.nodeIndex[end.node]].Shape == None {
+				continue
+			}
+			at, next := path.Path[end.at], path.Path[end.next]
+			c, r := p.col(next.X), p.row(at.Y)
+			if p.row(next.Y) != r || c == p.col(at.X) {
+				continue
+			}
+			c = p.border(end.node, c, p.col(at.X))
+			if c == p.col(at.X) {
+				continue
+			}
+			if p.col(next.X) > c {
+				c++
+			} else {
+				c--
+			}
+			// not a group next to the runs of the edge, see need
+			p.objs = append(p.objs, rigid{item: items[end.at], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: -2, hidden: edge.Invisible})
 		}
 		p.pointItem[e] = items
 
@@ -506,7 +556,9 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 	}
 	// a run along the axis doesn't turn around; one that ends at a node
 	// keeps a cell for each arrowhead or other marker at its ends, and
-	// one for the line between them
+	// from a node with an outline a cell more past its border: a bend
+	// next to the border, or the line between two boxes, which text
+	// would otherwise draw as a bare arrowhead between borders
 	for e, items := range p.pointItem {
 		path, edge := p.l.Edges[e].Path, p.l.Graph.Edges[e]
 		for i := 1; i < len(items); i++ {
@@ -514,24 +566,27 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 			if va == vb {
 				continue
 			}
-			a, b := p.col(path[i-1].X), p.col(path[i].X)
+			ca, cb := p.col(path[i-1].X), p.col(path[i].X)
+			a, b := ca, cb
+			// (a node without outline takes its marker in its blank frame)
+			keep := 0
+			end := func(node *Node, marked bool, at *int, toward int) {
+				if marked {
+					keep += grid.lineSpace
+				}
+				if p.l.Nodes[p.l.nodeIndex[node]].Shape != None {
+					keep += grid.lineSpace
+					*at = p.border(node, toward, *at)
+				}
+			}
+			if i == len(items)-1 {
+				end(edge.To, headMarked(edge), &b, ca)
+			}
+			if i == 1 {
+				end(edge.From, tailMarked(edge), &a, cb)
+			}
 			if a > b {
 				a, b, va, vb = b, a, vb, va
-			}
-			// (a node without outline takes its marker in its blank frame)
-			keep, boxed := 0, false
-			mark := func(node *Node) {
-				keep += grid.lineSpace
-				boxed = boxed || p.l.Nodes[p.l.nodeIndex[node]].Shape != None
-			}
-			if i == len(items)-1 && (edge.ArrowHead != "" || edge.Directed) && edge.ArrowHead != ArrowNone {
-				mark(edge.To)
-			}
-			if i == 1 && edge.ArrowTail != "" && edge.ArrowTail != ArrowNone {
-				mark(edge.From)
-			}
-			if boxed {
-				keep += grid.lineSpace
 			}
 			cons = append(cons, constraint{va, vb, min(keep, b-a) - (b - a), true})
 		}
