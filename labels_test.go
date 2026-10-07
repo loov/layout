@@ -177,8 +177,8 @@ func TestEndLabels(t *testing.T) {
 		"text": func(g *layout.Graph) (*layout.Layout, error) {
 			return layout.Hierarchical(g, layout.Options{ForText: true})
 		},
-		"text compacted": func(g *layout.Graph) (*layout.Layout, error) {
-			return layout.Hierarchical(g, layout.Options{ForText: true, Compact: true})
+		"text uncompacted": func(g *layout.Graph) (*layout.Layout, error) {
+			return layout.Hierarchical(g, layout.Options{ForText: true, NoCompact: true})
 		},
 		"force": func(g *layout.Graph) (*layout.Layout, error) { return layout.Force(g, layout.ForceOptions{}) },
 	}

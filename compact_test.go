@@ -23,11 +23,12 @@ func TestCompact(t *testing.T) {
 				graph.MergeEdges = merge
 				opts := opts
 				opts.ForText = text
+				opts.NoCompact = true
 				l, err := layout.Hierarchical(graph, opts)
 				if err != nil {
 					t.Fatal(err)
 				}
-				opts.Compact = true
+				opts.NoCompact = false
 				c, err := layout.Hierarchical(graph, opts)
 				if err != nil {
 					t.Fatal(err)

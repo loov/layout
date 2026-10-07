@@ -70,7 +70,7 @@ graphviz/neural-network nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=
 graphviz/nhg nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=1 bends=0 corners=5 wavy=1 back=1 labels=0 far=0 length=565 area=65820 unbalance=0
 graphviz/ninja nodes=0 through=11 near=33 crossings=52 shallow=18 overlaps=11 parallel=50 ends=184 shafts=13 jagged=3 bends=4 corners=118 wavy=10 back=0 labels=0 far=0 length=23675 area=2597605 unbalance=360
 graphviz/oldarrows nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=56 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=12435 area=606960 unbalance=0
-graphviz/ortho nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=18 wavy=2 back=1 labels=0 far=0 length=1374 area=93120 unbalance=150
+graphviz/ortho nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=14 wavy=2 back=1 labels=0 far=0 length=772 area=46944 unbalance=176
 graphviz/pgram nodes=0 through=0 near=48 crossings=10 shallow=7 overlaps=30 parallel=89 ends=48 shafts=4 jagged=1 bends=0 corners=44 wavy=0 back=0 labels=0 far=0 length=23158 area=861120 unbalance=32
 graphviz/pm2way nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=567 area=148241 unbalance=120
 graphviz/pmpipe nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=2 ends=0 shafts=0 jagged=0 bends=0 corners=1 wavy=0 back=0 labels=0 far=0 length=1843 area=154154 unbalance=636

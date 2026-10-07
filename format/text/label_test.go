@@ -338,7 +338,7 @@ func TestLabelsDrawn(t *testing.T) {
 	check := func(t *testing.T, build func() *layout.Graph, opts layout.Options) {
 		for _, compact := range []bool{false, true} {
 			opts := opts
-			opts.ForText, opts.Compact = true, compact
+			opts.ForText, opts.NoCompact = true, !compact
 			l, err := layout.Hierarchical(build(), opts)
 			if err != nil {
 				t.Fatal(err)

@@ -31,7 +31,7 @@ func Hierarchical(graph *Graph, opts Options) (*Layout, error) {
 	hierarchical(work, opts)
 	work.placeEndLabels()
 	l := work.result()
-	if opts.Compact && work.Splines == SplinesOrtho && !work.Pinned {
+	if !opts.NoCompact && work.Splines == SplinesOrtho && !work.Pinned {
 		grid := pointGrid(l.Graph)
 		if work.ForText {
 			grid = textGrid(l.Graph)
@@ -55,15 +55,16 @@ type Options struct {
 	// between ranks for the horizontal runs and arrowheads, and nodes
 	// sized in character cells. Layout.Graph has the changed settings.
 	ForText bool
-	// Compact takes the room out of the layout after routing: nodes, the
-	// runs of edges, labels and clusters are pushed together along x and
-	// then y, while edges stretch and shrink to follow, and the nodes of
-	// a rank stay in line. Edges keep their crossings and nodes their
-	// order. Only for ortho splines, which ForText uses: sloped segments
-	// would have to stay rigid and compact little; others ignore it.
-	// For ForText it moves objects by whole character cells, and
-	// format/text carves less after it.
-	Compact bool
+	// NoCompact leaves the room in the layout. Otherwise, with ortho
+	// splines, which ForText uses, the layout is compacted after routing:
+	// nodes, the runs of edges, labels and clusters are pushed together
+	// along x and then y, while edges stretch and shrink to follow, and
+	// the nodes of a rank stay in line. Edges keep their crossings and
+	// nodes their order. Other splines are not compacted: sloped segments
+	// would have to stay rigid and compact little. For ForText it moves
+	// objects by whole character cells, and format/text carves less
+	// after it.
+	NoCompact bool
 }
 
 // Align picks how nodes are spread along their ranks. In left-to-right

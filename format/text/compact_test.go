@@ -13,7 +13,7 @@ import (
 )
 
 // TestCompactedJoined checks that compacted layouts, see
-// layout.Options.Compact, still draw every edge joined and apart, drawn
+// layout.Options.NoCompact, still draw every edge joined and apart, drawn
 // as they are and carved, as TestEdgesJoined does for the layouts
 // themselves: compaction relies on how text draws.
 func TestCompactedJoined(t *testing.T) {
@@ -47,7 +47,7 @@ func TestCompactedRandom(t *testing.T) {
 // checkCompacted returns the carved drawing.
 func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) string {
 	t.Helper()
-	opts.ForText, opts.Compact = true, true
+	opts.ForText = true
 	l, err := layout.Hierarchical(graph, opts)
 	if err != nil {
 		t.Fatal(err)

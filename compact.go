@@ -12,7 +12,7 @@ import (
 // Compaction takes the room out of a routed layout on its own geometry,
 // the way format/text carves seams out of its character grid: what can
 // move is pushed together along one axis and then the other, while edges
-// stretch and shrink to follow their ends, see Options.Compact.
+// stretch and shrink to follow their ends, see Options.NoCompact.
 //
 // It is one-dimensional compaction as in VLSI layout. Along x, node boxes,
 // the vertical runs of edges, labels and the sides of clusters are rigid
