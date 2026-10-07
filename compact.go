@@ -365,6 +365,17 @@ func (p *compactPass) addEdges() {
 			p.union(items[end.at], node)
 			run, box := &p.objs[groups[pointGroup[end.at]]], p.objs[node]
 			run.corner = run.c0 != run.c1 && (run.lo == box.lo || run.lo == box.hi)
+			// a run along the side of its node, as from a field to a
+			// port past it, text draws out of the side instead, straight
+			// for two cells before it can turn: keep them
+			if run.c0 != run.c1 && run.c0 >= box.c0 && run.c1 <= box.c1 {
+				switch run.lo {
+				case box.lo:
+					run.lo -= 2 * p.grid.lineSpace
+				case box.hi:
+					run.hi += 2 * p.grid.lineSpace
+				}
+			}
 		}
 		// merged edges run together from their shared end to where they
 		// turn apart, and stay together where their points meet

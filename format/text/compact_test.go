@@ -38,12 +38,6 @@ func TestCompactedJoined(t *testing.T) {
 func TestCompactedRandom(t *testing.T) {
 	for seed := range 300 {
 		t.Run(fmt.Sprint(seed), func(t *testing.T) {
-			if seed == 241 {
-				// the layout leads the edge from field b up along the side
-				// of its record, text draws it out of the side instead,
-				// into the cell that compaction left beside n2
-				t.Skip("known bad: arrowhead out of a border")
-			}
 			checkCompacted(t, randomGraph(uint64(seed)), layout.Options{})
 		})
 	}
