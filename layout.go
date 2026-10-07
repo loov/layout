@@ -1002,7 +1002,7 @@ func (c *hierComponent) realByRank() [][]*lnode {
 // virtual nodes, by the hierarchical nodes they join; labels go beside the
 // middle virtual node
 func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
-	edgePaths := map[[2]hier.ID][]Vector{}
+	edgePaths := make(map[[2]hier.ID][]Vector, len(c.graphdef.Edges))
 	for _, source := range c.graph.Nodes {
 		if source.Virtual {
 			continue
@@ -1121,7 +1121,7 @@ func (c *hierComponent) flatPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]
 func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]*lnode) {
 	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
 	pairKey := func(edge *ledge) [2]hier.ID { return unorderedPair(c.nodes[edge.From], c.nodes[edge.To]) }
-	pairCount := map[[2]hier.ID]int{}
+	pairCount := make(map[[2]hier.ID]int, len(c.graphdef.Edges))
 	for _, edge := range c.graphdef.Edges {
 		pairCount[pairKey(edge)]++
 	}

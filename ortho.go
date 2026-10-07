@@ -111,7 +111,7 @@ type nodeSide struct {
 // in the order of where they head, so that stubs neither coincide nor
 // cross, and returns the edges along a rank that arc over it
 func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
-	ends := map[nodeSide][]slotEnd{}
+	ends := make(map[nodeSide][]slotEnd, 2*len(graph.Nodes))
 	// an edge along a rank arcs over it, see the flat edges in layout.go,
 	// with both ends on the tops of its nodes, which it shares with the
 	// ends of other edges
@@ -147,7 +147,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 			ends[k] = append(ends[k], slotEnd{edge, false, edge.Path[len(edge.Path)-2].X, edge.Path[len(edge.Path)-1].X})
 		}
 	}
-	parallel := map[[2]*lnode]int{}
+	parallel := make(map[[2]*lnode]int, len(graph.Edges))
 	for _, edge := range graph.Edges {
 		parallel[unorderedNodes(edge)]++
 	}
@@ -305,11 +305,14 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 		return -1
 	}
 	// the jogs, and where they enter and leave, in blocks; at most one
-	// for every segment, so that the pointers into them stay put
+	// for every segment that isn't vertical, so that the pointers into
+	// them stay put
 	segments := 0
 	for _, edge := range graph.Edges {
-		if routed(edge) {
-			segments += max(len(edge.Path)-1, 0)
+		for i := 1; routed(edge) && i < len(edge.Path); i++ {
+			if edge.Path[i-1].X != edge.Path[i].X {
+				segments++
+			}
 		}
 	}
 	block := make([]jog, 0, segments)
@@ -608,7 +611,11 @@ func placeTracks(graph *lgraph, rows [][2]Length, arc Length, k int, jogs []*jog
 // insertJogs inserts the jog points per edge, later segments first so
 // that earlier indices stay valid
 func insertJogs(channels [][]*jog) {
-	byEdge := map[*ledge][]*jog{}
+	n := 0
+	for _, jogs := range channels {
+		n += len(jogs)
+	}
+	byEdge := make(map[*ledge][]*jog, n)
 	for _, jogs := range channels {
 		for _, j := range jogs {
 			byEdge[j.edge] = append(byEdge[j.edge], j)
