@@ -87,17 +87,23 @@ func compact(l *Layout, grid compactGrid) {
 	// A pass along one axis can clear the way for the other. Passes add
 	// no crossings nor overlaps, see TestCompact; checking that with
 	// Diagnose after every pass would double the time.
+	// A pass lines up the runs of a jog that lies within a cell; the run
+	// between them goes, so that the next pass doesn't keep its row.
+	simplify := func() {
+		for i := range l.Edges {
+			l.Edges[i].Path = simplifyPath(l.Edges[i].Path)
+		}
+	}
 	for range 4 {
 		moved := compactAxis(l, cell, grid, sideways, false, spanX, crowd)
+		simplify()
 		transposeLayout(l)
 		moved = compactAxis(l, Vector{X: cell.Y, Y: cell.X}, grid, !sideways, true, spanY, crowd) || moved
 		transposeLayout(l)
+		simplify()
 		if !moved {
 			break
 		}
-	}
-	for i := range l.Edges {
-		l.Edges[i].Path = simplifyPath(l.Edges[i].Path)
 	}
 	onOutlines(l)
 }

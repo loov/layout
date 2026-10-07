@@ -48,17 +48,17 @@ odiamond
 none  nonenone
 ●────────●─────────▶●
   normal normalnormal
-╭──────────▶●──────────▶●
+╭────────▶●──────────▶●
 │     lnormal lnormallnormal
-├──────────▶●──────────▶●
+├────────▶●──────────▶●
 │      rnormal rnormalrnormal
-├──────────▶●──────────▶●
+├────────▶●──────────▶●
 ●     olnormal olnormalolnormal
-├──────────▶●──────────▶●
+├────────▶●──────────▶●
 │    ornormal ornormalornormal
-├──────────▶●──────────▶●
+├────────▶●──────────▶●
 │   onormal onormalonormal
-╰──────────▶●──────────▶●
+╰────────▶●──────────▶●
    tee     teetee
 ╭───────▶●─────────▶●
 │   ltee   lteeltee
@@ -72,16 +72,16 @@ none  nonenone
 │ rvee     rveervee
 ╰───────▶●─────────▶●
 curve curvecurve
-╭──────▶●────────▶●
+╭────▶●────────▶●
 │   lcurve lcurvelcurve
-●──────▶●────────▶●
+●────▶●────────▶●
 │rcurve
 │        rcurvercurve
-╰──────▶●────────▶●
+╰────▶●────────▶●
 icurve icurveicurve
-╭───────▶●─────────▶●
+╭───────▶●───────▶●
 │   licurve licurvelicurve
-●───────▶●─────────▶●
+●───────▶●───────▶●
 │ricurve
 │         ricurvericurve
-╰───────▶●─────────▶●
+╰───────▶●───────▶●
