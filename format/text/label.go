@@ -418,8 +418,10 @@ func hug(g grid) {
 		}
 		return own, other
 	}
-	// the box of every label
+	// the box of every label, and the labels in reading order, which
+	// is the order they move in, as one can take the cell another wants
 	boxes := map[edgeID][4]int{} // top, left, bottom, right
+	var ids []edgeID
 	for r, row := range g {
 		for x, c := range row {
 			if c.text == 0 {
@@ -428,6 +430,7 @@ func hug(g grid) {
 			b, ok := boxes[c.text]
 			if !ok {
 				b = [4]int{r, x, r, x}
+				ids = append(ids, c.text)
 			}
 			boxes[c.text] = [4]int{min(b[0], r), min(b[1], x), max(b[2], r), max(b[3], x)}
 		}
@@ -455,7 +458,8 @@ func hug(g grid) {
 		}
 		return cells
 	}
-	for id, b := range boxes {
+	for _, id := range ids {
+		b := boxes[id]
 		var ring [][2]int
 		for _, dir := range []uint8{up, down, left, right} {
 			ring = append(ring, side(b, dir, 1)...)

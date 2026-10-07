@@ -236,3 +236,51 @@ func TestStyledText(t *testing.T) {
 		}
 	}
 }
+
+// TestHugOrder checks that when two labels can both move into the same
+// cell, the one first in reading order does, whatever map order is.
+func TestHugOrder(t *testing.T) {
+	// b, label of edge 2, sits above the cell its edge runs a cell below;
+	// a, label of edge 1, sits left of it, its edge running down a cell
+	// further right; each has the other's line beside it
+	//
+	//	..b|.
+	//	.a.|.
+	//	.--|.
+	g := make(grid, 3)
+	for r := range g {
+		g[r] = make([]cell, 5)
+		for x := range g[r] {
+			g[r][x] = cell{r: ' '}
+		}
+	}
+	vertical := cell{r: '│', lines: up | down, owner: [4]edgeID{1, 1}}
+	horizontal := cell{r: '─', lines: left | right, owner: [4]edgeID{0, 0, 2, 2}}
+	for r := range g {
+		g[r][3] = vertical
+	}
+	g[2][1], g[2][2] = horizontal, horizontal
+	g[0][2] = cell{r: 'b', text: 2, keep: true}
+	g[1][1] = cell{r: 'a', text: 1, keep: true}
+
+	// map order picked a in about one run of eight
+	for range 50 {
+		h := make(grid, len(g))
+		for r := range g {
+			h[r] = slices.Clone(g[r])
+		}
+		hug(h)
+		if h[1][2].r != 'b' || h[1][1].r != 'a' {
+			t.Fatalf("got\n%c\n%c\n%c, want b moved down, a kept", runes(h[0]), runes(h[1]), runes(h[2]))
+		}
+	}
+}
+
+// runes returns the characters of a row of cells
+func runes(row []cell) []rune {
+	var rs []rune
+	for _, c := range row {
+		rs = append(rs, c.r)
+	}
+	return rs
+}
