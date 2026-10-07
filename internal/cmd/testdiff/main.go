@@ -48,7 +48,7 @@ type Change struct {
 	NewSize *[2]float64 `json:"newSize"`
 	// OldStats and NewStats are the diagnostics of the layout drawn, see
 	// layout.Diagnostics, by key, with the edges of text counted as drawn,
-	// see textStats; nil when missing
+	// see draw.TextStats; nil when missing
 	OldStats map[string]float64 `json:"oldStats"`
 	NewStats map[string]float64 `json:"newStats"`
 }
@@ -293,7 +293,7 @@ func compare(path, old, new string, oldStats, newStats map[string]map[string]map
 		OldStats: lookup(oldStats), NewStats: lookup(newStats),
 	}
 	if kind != "svg" {
-		// text is counted as drawn, see textStats
+		// text is counted as drawn, see draw.TextStats
 		change.OldStats = withText(change.OldStats, old)
 		change.NewStats = withText(change.NewStats, new)
 	}
@@ -346,7 +346,7 @@ func withText(stats map[string]float64, content string) map[string]float64 {
 	for k, v := range stats {
 		out[k] = v
 	}
-	for k, v := range textStats(content) {
+	for k, v := range draw.TextStats(content) {
 		out[k] = v
 	}
 	return out

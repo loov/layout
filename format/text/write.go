@@ -43,7 +43,13 @@ func write(w io.Writer, l *layout.Layout, opts Options, color bool) error {
 	if !fits(l.Graph) {
 		return errTooLarge
 	}
-	c, g := carved(l, opts.NoLegacyGlyphs)
+	var c *canvas
+	var g grid
+	if opts.NoCarve {
+		c, g = uncarved(l, opts.NoLegacyGlyphs, opts.Tidy)
+	} else {
+		c, g = carved(l, opts.NoLegacyGlyphs)
+	}
 	g = crop(g)
 	colors := &opts
 	if !color {
@@ -93,6 +99,47 @@ func carved(l *layout.Layout, safe bool) (*canvas, grid) {
 	}
 	c.frameLabels(g)
 	return c, g
+}
+
+// uncarved draws the graph as it is laid out, with edge ends spread or
+// not as carved picks them, and tidies it when tidy is set
+func uncarved(l *layout.Layout, safe, tidied bool) (*canvas, grid) {
+	var c *canvas
+	var g grid
+	for _, spread := range []bool{true, false} {
+		d := drawGraph(l, spread, safe)
+		if c == nil || better(d.rows, g) {
+			c, g = d, d.rows
+		}
+	}
+	if tidied {
+		g = tidy(g, c.sideways(), c.owners)
+	}
+	c.frameLabels(g)
+	// no margin above, as carving leaves none
+	for len(g) > 1 && !slices.ContainsFunc(g[0], func(c cell) bool { return c.r != ' ' || c.bg != 0 }) {
+		g = g[1:]
+	}
+	return c, g
+}
+
+// tidy runs the passes that follow the seams in carve on g, without
+// the seams: lines straighten, rows of runs merge, labels hug their
+// lines; owners holds the edge of each label id
+func tidy(g grid, sideways bool, owners []edgeID) grid {
+	var marks rerouteMarks
+	for !sideways && unjog(g, &marks) {
+	}
+	for merged := !sideways; merged; {
+		g, merged = mergeRows(g)
+	}
+	for !sideways && straighten(g) {
+	}
+	for merged := !sideways; merged; {
+		g, merged = mergeRows(g)
+	}
+	hug(g, owners)
+	return g
 }
 
 // better reports whether the carved grid a has fewer runs that edges

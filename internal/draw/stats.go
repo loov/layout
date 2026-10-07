@@ -1,23 +1,25 @@
-package main
+package draw
 
 import (
+	"regexp"
 	"strings"
-
-	"github.com/loov/layout/internal/draw"
 )
 
-// textStats counts the edges of a text drawing as drawn, after carving:
+// escape matches the escape codes of colored text
+var escape = regexp.MustCompile("\x1b\\[[0-9;]*[A-Za-z]")
+
+// TextStats counts the edges of a text drawing as drawn, after carving:
 // the bends of the edges, their length in cells and their crossings. The
 // cells of boxes, closed rectangles of lines, are not edges; node boxes
 // are not edges inside either, cluster frames, which are dashed, only on
 // their frame.
-func textStats(content string) map[string]float64 {
+func TextStats(content string) map[string]float64 {
 	var grid [][]rune
 	for _, line := range strings.Split(escape.ReplaceAllString(content, ""), "\n") {
 		var row []rune
 		for _, r := range line {
 			row = append(row, r)
-			if draw.IsWide(r) {
+			if IsWide(r) {
 				row = append(row, 0) // the second column of a wide rune
 			}
 		}

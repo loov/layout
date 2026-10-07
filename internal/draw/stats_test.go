@@ -1,9 +1,9 @@
-package main
+package draw
 
 import "testing"
 
 func TestTextStats(t *testing.T) {
-	got := textStats(`
+	got := TextStats(`
           ╭───╮
           │ R │
           ╰┬┬┬╯

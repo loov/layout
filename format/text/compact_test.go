@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -14,7 +15,7 @@ import (
 
 // TestCompactedJoined checks that compacted layouts, see
 // layout.Options.NoCompact, still draw every edge joined and apart, drawn
-// as they are and carved, as TestEdgesJoined does for the layouts
+// as they are, tidied and carved, as TestEdgesJoined does for the layouts
 // themselves: compaction relies on how text draws.
 func TestCompactedJoined(t *testing.T) {
 	for name, build := range examples.Graphs {
@@ -57,7 +58,7 @@ func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) stri
 	for _, drawing := range []struct {
 		c *canvas
 		g grid
-	}{{d, d.rows}, {c, g}} {
+	}{{d, d.rows}, {d, tidy(cloneGrid(d.rows), d.sideways(), d.owners)}, {c, g}} {
 		for _, edge := range lost(drawing.c, drawing.g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(drawing.g, drawing.c.palette, nil))
 		}
@@ -122,4 +123,13 @@ func checkAttached(t *testing.T, drawing string) {
 			}
 		}
 	}
+}
+
+// cloneGrid returns a copy of g to tidy, see tidy
+func cloneGrid(g grid) grid {
+	out := make(grid, len(g))
+	for i, row := range g {
+		out[i] = slices.Clone(row)
+	}
+	return out
 }
