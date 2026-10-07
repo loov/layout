@@ -107,8 +107,8 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 		}
 	}
 	if box.Shape == layout.Diamond && c.safe {
-		// of steps, see stepDiamond, or steep without a label
-		cols, rows := 4, 4
+		// of steps, see stepDiamond, or small without a label
+		cols, rows := 4, 2
 		if k := draw.StepDiamondSteps(label); label != "" {
 			cols, rows = 4*k+2, 2*k+2
 		}
@@ -117,8 +117,9 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 	}
 	if box.Shape == layout.Diamond {
 		// pointed when every point has at most one end, see diamond,
-		// else with its points on the corners of cells, see cornerDiamond
-		c.pointed[node] = c.pointsFor(node)
+		// else, and without a label, with its points on the corners of
+		// cells, see cornerDiamond
+		c.pointed[node] = label != "" && c.pointsFor(node)
 		if c.pointed[node] {
 			k := draw.DiamondSteps(label)
 			x0, y0 = (x0+x1)/2-(2*k-1), (y0+y1)/2-k
@@ -286,7 +287,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 		top := y0 + (y1-y0)/2 - (len(lines)-1)/2
 		switch {
 		case c.safe && box.Label == "":
-			c.steepDiamond(x0, y0)
+			c.smallDiamond(x0, y0)
 		case c.safe:
 			c.stepDiamond(x0, y0, x1, y1)
 			top = y0 + (y1-y0-1)/2 - (len(lines)-1)/2
@@ -463,16 +464,15 @@ func (c *canvas) stepDiamond(x0, y0, x1, y1 int) {
 	c.set(x1, y0+k+1, '╱')
 }
 
-// steepDiamond draws the small diamond of a node without a label in the
-// box of 4 columns and 4 rows from x0, y0, with characters that most fonts
-// have, see Options.NoLegacyGlyphs
+// smallDiamond draws the small diamond of a node without a label in the
+// box of 4 columns and 2 rows from x0, y0, with characters that most fonts
+// have, see Options.NoLegacyGlyphs: in the cells of the one cornerDiamond
+// draws, with its points where that one has them
 //
 //	 ╱╲
-//	╱  ╲
-//	╲  ╱
 //	 ╲╱
-func (c *canvas) steepDiamond(x0, y0 int) {
-	for i, row := range []string{" ╱╲ ", "╱  ╲", "╲  ╱", " ╲╱ "} {
+func (c *canvas) smallDiamond(x0, y0 int) {
+	for i, row := range []string{" ╱╲ ", " ╲╱ "} {
 		for j, r := range []rune(row) {
 			if r != ' ' {
 				c.set(x0+j, y0+i, r)
@@ -565,11 +565,7 @@ func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 			lo, hi = lo+1, hi-1
 		}
 	case layout.Diamond:
-		if c.safe && c.l.Node(node).Label == "" {
-			// the steep sides, see steepDiamond
-			return b[along] + 1, b[along] + 2
-		}
-		if c.safe {
+		if c.safe && c.l.Node(node).Label != "" {
 			// the points, see stepDiamond, as ▁ and ▔ lie on the far side
 			// of their cells
 			k := (b[3] - b[1] - 1) / 2
@@ -579,7 +575,8 @@ func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 			return b[1] + k, b[1] + k + 1
 		}
 		if !c.pointed[node] {
-			// the cells beside the points, see cornerDiamond
+			// the cells beside the points, see cornerDiamond, and
+			// smallDiamond
 			k := (b[3] - b[1] + 1) / 2
 			if along == 0 {
 				return b[0] + 2*k - 1, b[0] + 2*k

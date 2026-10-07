@@ -72,7 +72,7 @@ func RecordRows(rec *Record) int {
 // the middles of the top and bottom rows and of the sides of row k. Row r
 // of the top half is 4r-3 columns wide inside, mirrored below, and the
 // lines of the label go on the middle rows, each a column in from the
-// sides. Without a label it is the smallest, of 3 columns and rows.
+// sides. Without a label text draws the one of CornerDiamondSteps.
 func DiamondSteps(label string) int {
 	if label == "" {
 		return 1
@@ -119,7 +119,8 @@ func CornerDiamondSteps(label string) int {
 // see format/text: 2k+2 rows of 4k+2 columns, with steps of ▁╱ and ╲▔,
 // where row r of the top half is 4r columns wide inside, mirrored below,
 // and the lines of the label go on the middle rows, each a column in from
-// the sides. Without a label it is the steep one of 4 columns and rows.
+// the sides. Without a label it is the small one of 4 columns and 2 rows,
+// as the one CornerDiamondSteps sizes.
 func StepDiamondSteps(label string) int {
 	if label == "" {
 		return 1
@@ -139,13 +140,14 @@ func StepDiamondSteps(label string) int {
 }
 
 // DiamondSize returns the columns and rows that any diamond that text
-// draws around a label fits in, see DiamondSteps, CornerDiamondSteps and
-// StepDiamondSteps, so that a layout leaves room for whichever is drawn
+// draws around a label fits in, see DiamondSteps and CornerDiamondSteps,
+// so that a layout leaves room for whichever is drawn. The one of
+// StepDiamondSteps fits in the cells of CornerDiamondSteps: a step less,
+// with as much room inside on the rows of the label.
 func DiamondSize(label string) (cols, rows int) {
-	k, c, s := DiamondSteps(label), CornerDiamondSteps(label), StepDiamondSteps(label)
-	cols, rows = max(4*k-1, 4*c, 4*s+2), max(2*k+1, 2*c, 2*s+2)
+	k, c := DiamondSteps(label), CornerDiamondSteps(label)
 	if label == "" {
-		cols, rows = 4, 4 // the steep one in place of the steps
+		return 4 * c, 2 * c // no pointed one without a label
 	}
-	return cols, rows
+	return max(4*k-1, 4*c), max(2*k+1, 2*c)
 }

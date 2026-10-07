@@ -49,11 +49,18 @@ func TestCornerDiamondSteps(t *testing.T) {
 }
 
 func TestDiamondSize(t *testing.T) {
-	if cols, rows := DiamondSize(""); cols != 4 || rows != 4 {
-		t.Errorf("DiamondSize(\"\") = %d, %d, want 4, 4", cols, rows)
+	if cols, rows := DiamondSize(""); cols != 4 || rows != 2 {
+		t.Errorf("DiamondSize(\"\") = %d, %d, want 4, 2", cols, rows)
 	}
 	if cols, rows := DiamondSize("lbl"); cols != 12 || rows != 6 {
 		t.Errorf("DiamondSize(\"lbl\") = %d, %d, want 12, 6", cols, rows)
+	}
+	// the diamond of steps fits too
+	for _, label := range []string{"a", "ab", "lbl", "a longer label", "one\ntwo", "one\ntwo\nthree", "x\nlonger line\ny\nz"} {
+		cols, rows := DiamondSize(label)
+		if k := StepDiamondSteps(label); 4*k+2 > cols || 2*k+2 > rows {
+			t.Errorf("StepDiamondSteps(%q) = %d: %d×%d past %d×%d", label, k, 4*k+2, 2*k+2, cols, rows)
+		}
 	}
 }
 

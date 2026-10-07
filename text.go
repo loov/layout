@@ -60,6 +60,9 @@ func (graph *lgraph) prepareText() {
 			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel(), sideways(graph.RankDir)))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
 			graph.reserveRecord(node, cellW)
+		case Diamond:
+			// the cells text draws it in, see draw.DiamondSize, which hold
+			// its label
 		default:
 			// the label's rows and a border row above and below
 			w, h := draw.LabelBox(draw.PlainLabel(node.DefaultLabel()))
