@@ -150,13 +150,13 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 		exact := make([]float64, len(ends))
 		fixed := make([]bool, len(ends))
 		for n, e := range ends {
-			want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed
+			want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed || c.boxBeside(e.path[e.i], e.path[e.j], key.along)
 		}
 		packEnds(want, exact, fixed)
 		// an end that turns toward a place along the side goes straight
 		// there instead, past no other end
 		for n, e := range ends {
-			if e.fixed || e.toward < lo || e.toward > hi {
+			if fixed[n] || e.toward < lo || e.toward > hi || c.boxAcross(e.path[e.i], e.path[e.j], key.along, e.toward) {
 				continue
 			}
 			past := slices.ContainsFunc(want, func(w int) bool {
@@ -197,6 +197,30 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			}
 		}
 	}
+}
+
+// boxBeside reports whether a box lies right beside the run from the end
+// at to the bend, along the axis along: moving the end, which moves the
+// run, would run it into the box, and text would draw the edge around
+// it. Compaction leaves runs beside boxes.
+func (c *canvas) boxBeside(at, bend [2]int, along int) bool {
+	return c.boxAcross(at, bend, along, at[along]-1) || c.boxAcross(at, bend, along, at[along]+1)
+}
+
+// boxAcross reports whether the run from the end at to the bend, moved
+// to to along the axis along, runs across a box
+func (c *canvas) boxAcross(at, bend [2]int, along, to int) bool {
+	across := 1 - along
+	step := sign(bend[across] - at[across])
+	p := at
+	p[along] = to
+	for p[across] != bend[across] {
+		p[across] += step
+		if q := c.at(p[0], p[1]); q != nil && q.solid && q.node != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // unbalance returns how far the ends at cells are off the middle of the
