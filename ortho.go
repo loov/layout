@@ -163,6 +163,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	// merged ends take one slot a group, that of its middle end
 	followers := map[*ledge][]slotEnd{}
 	groups := map[int][]slotEnd{}
+	var ids []int // the groups in the order of their first end
 	list = slices.DeleteFunc(list, func(e slotEnd) bool {
 		side := 1
 		if e.start {
@@ -170,11 +171,15 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		}
 		g := graph.merged[e.edge][side]
 		if g != 0 {
+			if groups[g] == nil {
+				ids = append(ids, g)
+			}
 			groups[g] = append(groups[g], e)
 		}
 		return g != 0
 	})
-	for _, group := range groups {
+	for _, g := range ids {
+		group := groups[g]
 		mid := group[len(group)/2]
 		followers[mid.edge] = slices.Delete(group, len(group)/2, len(group)/2+1)
 		list = append(list, mid)
