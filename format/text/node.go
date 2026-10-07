@@ -96,6 +96,9 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 	x1, y1 := c.col(box.Right()-inset), c.row(box.Bottom()-inset)
 	label := draw.PlainLabel(box.Label)
 	w, h := draw.LabelBox(label)
+	if box.Shape == layout.None {
+		w, h = draw.PlainBox(label) // no outline to keep the text off
+	}
 	// the box must hold the label and have distinct edges
 	if box.Shape != layout.Record {
 		x1 = max(x1, x0+w)
@@ -250,7 +253,10 @@ func (c *canvas) drawNode(node *layout.Node) {
 	for y := y0; y <= y1; y++ {
 		for x := x0; x <= x1; x++ {
 			c.set(x, y, ' ')
-			if p := c.at(x, y); p != nil {
+			// the blank frame of a node without outline is where its
+			// edges end, drawn up to its text
+			frame := x == x0 || x == x1 || y == y0 || y == y1
+			if p := c.at(x, y); p != nil && !(frame && box.Shape == layout.None && !node.Invisible) {
 				p.solid, p.node = true, c.nodes[node]
 			}
 			if x > x0 && x < x1 && y > y0 && y < y1 {

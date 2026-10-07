@@ -8,7 +8,8 @@ import (
 
 // marker draws an edge end marker pointing in dir at the end of the edge
 // in cell end. It sits in the gap before the node when the run there is
-// straight, else on the node border. It returns the cell it draws in,
+// straight, else on the node border, or in the blank frame of a node
+// without outline. It returns the cell it draws in,
 // and whether style has a marker; styles without a marker of their own
 // draw a normal arrowhead.
 func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) ([2]int, bool) {
@@ -24,7 +25,10 @@ func (c *canvas) marker(style layout.Arrow, dir uint8, end [2]int) ([2]int, bool
 	case layout.ArrowODot:
 		r = '○'
 	}
-	if before := c.at(end[0]-dx(dir), end[1]-dy(dir)); before != nil && before.lines == dir|opposite(dir) {
+	// a node without outline has a blank frame where the end can go, see
+	// drawNode
+	if at := c.at(end[0], end[1]); at != nil && !at.solid {
+	} else if before := c.at(end[0]-dx(dir), end[1]-dy(dir)); before != nil && before.lines == dir|opposite(dir) {
 		end = [2]int{end[0] - dx(dir), end[1] - dy(dir)}
 	}
 	c.set(end[0], end[1], r)

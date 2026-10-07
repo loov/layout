@@ -44,6 +44,14 @@ func (graph *lgraph) prepareText() {
 			continue
 		}
 		tableRecord(graph, node)
+		if node.Shape == None && node.Radius.X <= 0 && node.Radius.Y <= 0 && !node.FixedSize {
+			// text draws the label alone, in a frame of blank cells where
+			// edges end, see draw.PlainBox; no more room than that
+			w, h := draw.PlainBox(draw.PlainLabel(node.DefaultLabel()))
+			node.Radius = Vector{Length(w) * cellW / 2, graph.LineHeight * Length(h) / 2}
+			node.FixedSize = true
+			continue
+		}
 		if node.Radius.X <= 0 {
 			node.Radius.X = graph.LineHeight // the layout's default
 		}
