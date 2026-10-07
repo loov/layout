@@ -31,13 +31,16 @@ import (
 type compactGrid struct {
 	cell             Vector
 	space, lineSpace int
+	// frames: nodes without outline are drawn in a frame of blank cells,
+	// which two of them can share, see compactPass.plain
+	frames bool
 }
 
 // textGrid returns the grid of a layout made for format/text: its
 // cells, with a blank cell between objects, as carving leaves, and lines
 // in neighboring cells.
 func textGrid(graph *Graph) compactGrid {
-	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1}
+	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, frames: true}
 }
 
 // pointGrid returns the grid for other layouts: finer than the strokes,
@@ -544,6 +547,12 @@ func (p *compactPass) variables() int {
 	return len(vars)
 }
 
+// plain reports whether o is a node without outline, which text draws
+// in a frame of blank cells where edges end, see draw.PlainBox
+func (p *compactPass) plain(o rigid) bool {
+	return o.kind == nodeKind && p.l.Nodes[o.index].Shape == None
+}
+
 // need returns the cells from the end of a to the start of b: space, but
 // lines may run side by side, and beside nodes and their own labels, as
 // carving leaves them. Two runs of an edge that meet only at the run
@@ -552,14 +561,9 @@ func (p *compactPass) need(a, b rigid) int {
 	if a.kind > b.kind {
 		a, b = b, a
 	}
-	plain := func(o rigid) bool { return o.kind == nodeKind && p.l.Nodes[o.index].Shape == None }
 	switch {
 	case a.marker || b.marker:
 		// a marker only keeps its own cell
-		return p.grid.lineSpace
-	case plain(a) && plain(b):
-		// the blank frames of nodes without outline keep their texts
-		// apart already
 		return p.grid.lineSpace
 	case a.kind == runKind && b.kind == runKind:
 		if a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1) && (a.c1 == b.c0 || b.c1 == a.c0) && !a.corner && !b.corner {
@@ -671,6 +675,13 @@ func (p *compactPass) separations() []constraint {
 		dist := b.lo - a.hi
 		if varOf[a.item] == varOf[b.item] {
 			return dist
+		}
+		if grid.frames && p.plain(a) && p.plain(b) {
+			// the blank frames of nodes without outline keep their texts
+			// apart already, and may share a cell: the boxes touch, as
+			// sharp as their sides lie, but don't overlap
+			over := p.l.Nodes[a.index].Right() - p.l.Nodes[b.index].Left()
+			return dist + min(int(math.Ceil(float64(over/p.cell.X)-1e-6)), 0)
 		}
 		need := p.need(a, b)
 		if !a.marker && !b.marker && (a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index]) {
@@ -855,9 +866,14 @@ func (p *compactPass) apply(d []int) bool {
 	for i := range l.Nodes {
 		box := &l.Nodes[i]
 		at := box.Center.X + shift(i)
-		if box.Shape == PointShape && !boxAt[[2]Length{Length(p.varOf[i]), box.Center.X}] {
+		switch {
+		case box.Shape == PointShape && !boxAt[[2]Length{Length(p.varOf[i]), box.Center.X}]:
 			box.Center.X = Length(p.objs[i].lo+d[p.varOf[i]]) * cell.X
-		} else {
+		case p.grid.frames && box.Shape == None:
+			// the sides of the blank frame on cells, so that two frames
+			// can share one without overlapping
+			box.Center.X = Length(p.objs[i].lo+d[p.varOf[i]])*cell.X + box.Center.X - box.Left()
+		default:
 			box.Center.X = at // its sides round to the cells they did
 		}
 		snap[i] = box.Center.X - at
