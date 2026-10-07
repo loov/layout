@@ -22,6 +22,7 @@ type canvas struct {
 	ids    edgeID                  // edge ids handed out
 	merged map[*layout.Edge]edgeID // edge ids of merged edges
 	drawn  map[*layout.Edge]edgeID // edge ids of the edges drawn
+	owners []edgeID                // edge id of each label id, from 1, see cell.text
 	nodes  map[*layout.Node]nodeID // node ids, from 1, see cell.node
 	loops  map[*layout.Node]int    // self-loops per node
 	ended  map[[2]int]bool         // cells where merged edges have ended
@@ -82,6 +83,7 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
 	c.drawn, c.nodes, c.loops = map[*layout.Edge]edgeID{}, map[*layout.Node]nodeID{}, map[*layout.Node]int{}
+	c.owners = []edgeID{0}
 	for i, node := range graph.Nodes {
 		c.nodes[node] = nodeID(i + 1)
 	}
@@ -355,7 +357,7 @@ type cell struct {
 	need   int16     // the length a run of these must keep, for a label on it
 	label  clusterID // the cluster whose label starts here
 	node   nodeID    // node whose box covers it
-	text   edgeID    // edge whose label it is part of
+	text   edgeID    // label it is part of, see canvas.owners
 	lines  uint8     // direction mask, for joining edge runs
 	heavy  uint8     // arms that runs of different edges share
 	kind   uint8     // class of r, which seams keep up to date for their use

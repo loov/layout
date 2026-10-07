@@ -36,13 +36,17 @@ func (c *canvas) edgeLabel(i int) (label string, x, y int) {
 // edgeText writes the lines of a label of edge, w cells wide, at x, y
 func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 	c.pen = pen{font: c.color(rgb(edge.FontColor))}
+	// each label its own id, so that hug moves it alone: merged edges,
+	// and an edge's head and tail labels, share the edge's id
+	c.owners = append(c.owners, c.drawn[edge])
+	label := edgeID(len(c.owners) - 1)
 	for k, line := range lines {
 		// within the block of the lines, as there is no box
 		at := x + int(line.Align.Offset(float64(w), float64(draw.Columns(line.Text))))
 		c.text(at, y+k, line.Text)
 		for col := at; col < at+draw.Columns(line.Text); col++ {
 			if p := c.at(col, y+k); p != nil {
-				p.text = c.drawn[edge]
+				p.text = label
 			}
 		}
 	}
@@ -400,8 +404,9 @@ func (c *canvas) blank(x, y, w, h int) bool {
 
 // hug moves a label that another edge's line runs right beside a cell
 // over onto its own edge's line, where carving leaves that a blank cell
-// away from it: next to the other line, it should touch its own
-func hug(g grid) {
+// away from it: next to the other line, it should touch its own; owners
+// holds the edge of each label id
+func hug(g grid, owners []edgeID) {
 	// the lines of edge id, and of other edges, in the cells
 	lines := func(cells [][2]int, id edgeID) (own, other bool) {
 		for _, p := range cells {
@@ -459,19 +464,19 @@ func hug(g grid) {
 		return cells
 	}
 	for _, id := range ids {
-		b := boxes[id]
+		b, edge := boxes[id], owners[id]
 		var ring [][2]int
 		for _, dir := range []uint8{up, down, left, right} {
 			ring = append(ring, side(b, dir, 1)...)
 		}
-		if _, other := lines(ring, id); !other {
+		if _, other := lines(ring, edge); !other {
 			continue
 		}
 		for _, dir := range []uint8{left, right, up, down} {
-			if near, _ := lines(side(b, dir, 1), id); near {
+			if near, _ := lines(side(b, dir, 1), edge); near {
 				continue
 			}
-			if own, _ := lines(side(b, dir, 2), id); !own {
+			if own, _ := lines(side(b, dir, 2), edge); !own {
 				continue
 			}
 			if slices.ContainsFunc(side(b, dir, 1), func(p [2]int) bool { c := g.at(p[0], p[1]); return c == nil || !free(*c) && !c.glue || c.solid }) {

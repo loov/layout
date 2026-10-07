@@ -269,7 +269,7 @@ func TestHugOrder(t *testing.T) {
 		for r := range g {
 			h[r] = slices.Clone(g[r])
 		}
-		hug(h)
+		hug(h, []edgeID{0, 1, 2})
 		if h[1][2].r != 'b' || h[1][1].r != 'a' {
 			t.Fatalf("got\n%c\n%c\n%c, want b moved down, a kept", runes(h[0]), runes(h[1]), runes(h[2]))
 		}
@@ -283,4 +283,24 @@ func runes(row []cell) []rune {
 		rs = append(rs, c.r)
 	}
 	return rs
+}
+
+// TestHugLabelsApart checks that hug moves each label of an edge on its
+// own. With one box around a label and a tail label of the same edge, the
+// box took in the line between them, and moving it tore that line off
+// its node.
+func TestHugLabelsApart(t *testing.T) {
+	graph := layout.NewDigraph()
+	long := graph.Edge("n3", "n4")
+	long.Label, long.TailLabel = "a long one", "ab"
+	other := graph.Edge("n3", "n2")
+	other.Label, other.HeadLabel = "head", "yes"
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, g := carved(l, false)
+	for _, edge := range lost(c, g, l) {
+		t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
+	}
 }

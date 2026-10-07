@@ -62,7 +62,7 @@ func carved(l *layout.Layout, safe bool) (*canvas, grid) {
 	var sc scratch
 	for _, spread := range []bool{true, false} {
 		d := drawGraph(l, spread, safe)
-		carved := carve(d.rows, d.sideways(), &sc)
+		carved := carve(d.rows, d.sideways(), d.owners, &sc)
 		if c == nil || better(carved, g) {
 			c, g = d, carved
 		}
@@ -131,10 +131,10 @@ func drawGraph(l *layout.Layout, spread, safe bool) *canvas {
 
 // fits reports whether the ids of the graph fit the int16 fields of cell:
 // edges and clusters share ids, edges merge in at most two groups each,
-// and a cluster label keeps its length; and whether its colors fit the
+// an edge has at most three labels, and a cluster label keeps its length; and whether its colors fit the
 // palette, at most three an element
 func fits(graph *layout.Graph) bool {
-	if len(graph.Nodes) >= math.MaxInt16 || 2*len(graph.Edges)+len(graph.Clusters) >= math.MaxInt16 ||
+	if len(graph.Nodes) >= math.MaxInt16 || 2*len(graph.Edges)+len(graph.Clusters) >= math.MaxInt16 || 3*len(graph.Edges) >= math.MaxInt16 ||
 		3*(len(graph.Nodes)+len(graph.Edges)+len(graph.Clusters)) >= math.MaxUint16 {
 		return false
 	}

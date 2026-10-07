@@ -14,11 +14,11 @@ import (
 // columns when they are sideways, so that the nodes of a rank stay in
 // line. Seams along the ranks turn, but not between cells that are
 // joined, so that what is drawn stays connected. Nodes and text stay
-// whole.
+// whole. owners holds the edge of each label id, see canvas.owners.
 //
 // The grids carving makes reuse the cells in sc of those it is done with;
 // the one it returns stays out of sc.
-func carve(g grid, sideways bool, sc *scratch) grid {
+func carve(g grid, sideways bool, owners []edgeID, sc *scratch) grid {
 	// the first grid, the canvas's, isn't carving's to reuse
 	var cells []cell
 	// seams keep the blanks past the end of lines, trailing rows of them
@@ -56,7 +56,7 @@ func carve(g grid, sideways bool, sc *scratch) grid {
 		g, merged = mergeRows(g)
 	}
 	g, _ = rows(g, cells, true)
-	hug(g)
+	hug(g, owners)
 	return g
 }
 
