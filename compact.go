@@ -267,6 +267,10 @@ func compactAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span 
 func (p *compactPass) border(node *Node, toward, at int) int {
 	box := p.objs[p.l.nodeIndex[node]]
 	switch {
+	case p.l.Nodes[p.l.nodeIndex[node]].Shape == PointShape:
+		// a point is one cell, see addNodes, but the ends of its edges
+		// stay where the layout put them, on the border of its box
+		return at
 	case toward > box.hi:
 		return box.hi
 	case toward < box.lo:
