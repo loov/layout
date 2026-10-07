@@ -286,6 +286,7 @@ const (
 	seamBlocked  = 1 << 40
 	seamJog      = 1 << 16 // crossing a straight line, which bends it
 	seamExtend   = 4       // crossing a line where it turns
+	seamNone     = 1 << 62 // no way there; dearer than any seam
 )
 
 // seamPass is what the costs of the seams of one pass of seams depend on.
@@ -600,61 +601,64 @@ func joinCells(above, here []cell, joined []bool, from, to int, ax seamAxis) {
 }
 
 // sweep sets best to the costs of the cells of line i, in codes, and the
-// cheapest way to each from the line before, whose costs are in before, moving one cell at a time and
-// past a joined cell only where it can jog, and sets from to where each
-// comes from; reach and src are room for the sweeps. Crossings cost
-// more than nothing, so one is only worth pricing where the move would
-// win without it.
+// cheapest way to each from the line before, whose costs are in before,
+// and sets from to where each comes from; reach and src are room for the
+// sweeps. A seam moves one cell at a time, and past a joined cell only
+// where it can jog; it doesn't move off or onto a joined cell, as it
+// would cut that cell from the one beside it on the other line, so the
+// sweeps carry the cheapest way that is allowed, from a cell that isn't
+// joined.
 func (p *seamPass) sweep(i int, before, best []int, codes []costCode, from, reach, src []int, joined []bool) {
 	// all as long as joined, which spares the bounds checks
 	n := len(joined)
 	before, best, codes, from, reach, src = before[:n], best[:n], codes[:n], from[:n], reach[:n], src[:n]
-	// the sweeps keep the cell before in last, which spares reading back
-	// what they just stored
-	var last, lastSrc int
+	// a seam that costs as much as a blocked cell is never cut, see
+	// seams, with fewer lines than seamBlocked/seamTrailing; the ways
+	// that do are dropped, which spares pricing their crossings, which
+	// looks at the grid
+	carry, carrySrc := seamNone, -1
 	for x := range joined {
-		cur, curSrc := before[x], x
-		if x > 0 {
-			if r := before[x-1] + 1; r < cur {
-				cur, curSrc = r, x-1
+		if x > 0 && carry < seamBlocked {
+			carry++
+			if joined[x-1] {
+				carry += p.crossing(i, x-1, true)
 			}
-			r := last + 1
-			if joined[x-1] && r < cur {
-				r += p.crossing(i, x-1, true)
-			}
-			if r < cur {
-				cur, curSrc = r, lastSrc
-			}
+		} else {
+			carry = seamNone
 		}
-		reach[x], src[x] = cur, curSrc
-		last, lastSrc = cur, curSrc
+		if joined[x] {
+			reach[x], src[x] = before[x], x
+			continue
+		}
+		// straight on, or from the nearer cell, on a tie
+		if before[x] <= carry {
+			carry, carrySrc = before[x], x
+		}
+		reach[x], src[x] = carry, carrySrc
 	}
-	for x := n - 2; x >= 0; x-- {
-		cur, curSrc := reach[x], src[x]
-		if r := before[x+1] + 1; r < cur {
-			cur, curSrc = r, x+1
+	carry = seamNone
+	for x := n - 1; x >= 0; x-- {
+		if x+1 < n && carry < seamBlocked {
+			carry++
+			if joined[x+1] {
+				carry += p.crossing(i, x+1, false)
+			}
+		} else {
+			carry = seamNone
 		}
-		r := last + 1
-		if joined[x+1] && r < cur {
-			r += p.crossing(i, x+1, false)
+		if joined[x] {
+			continue
 		}
-		if r < cur {
-			cur, curSrc = r, lastSrc
+		if before[x] <= carry {
+			carry, carrySrc = before[x], x
 		}
-		reach[x], src[x] = cur, curSrc
-		last, lastSrc = cur, curSrc
+		if carry < reach[x] {
+			reach[x], src[x] = carry, carrySrc
+		}
 	}
-	// a seam that moves from s on the line before to x cuts the cell at s
-	// from the one below it and the cell at x from the one above it; where
-	// those are joined, as cells of one node or kept ones are, it goes
-	// straight on instead, which takes both
 	for x := range joined {
-		s, r := src[x], reach[x]
-		if s != x && (joined[x] || joined[s]) {
-			s, r = x, before[x]
-		}
-		best[x] = costOf[codes[x]] + r
-		from[x] = s
+		best[x] = costOf[codes[x]] + reach[x]
+		from[x] = src[x]
 	}
 }
 
