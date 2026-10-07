@@ -29,7 +29,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		jogs = orderJogs(splitOpposite(jogs), pad)
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
 	}
-	insertJogs(channels)
+	insertJogs(graph, channels)
 
 	// whatever is still diagonal (ports, offsets) gets a jog at mid height
 	for _, edge := range graph.Edges {
@@ -45,6 +45,21 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			}
 		}
 	}
+}
+
+// orthoScratch holds the buffers of routing from one route of a graph
+// to the next, which straightening's trials repeat
+type orthoScratch struct {
+	ends     map[nodeSide][]slotEnd
+	parallel map[[2]*lnode]int
+	channels [][]*jog
+	block    []jog
+	xs       []Length
+	byEdge   map[*ledge][]*jog
+	// the ends of a side in slot order, see slotSide
+	list        []slotEnd
+	want, slots []Length
+	weight      []float64
 }
 
 // jog is a horizontal segment of an edge in a channel between ranks
@@ -111,7 +126,15 @@ type nodeSide struct {
 // in the order of where they head, so that stubs neither coincide nor
 // cross, and returns the edges along a rank that arc over it
 func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
-	ends := make(map[nodeSide][]slotEnd, 2*len(graph.Nodes))
+	// the lists by side are kept from the last route, emptied
+	ends := graph.ortho.ends
+	if ends == nil {
+		ends = make(map[nodeSide][]slotEnd, 2*len(graph.Nodes))
+		graph.ortho.ends = ends
+	}
+	for k, list := range ends {
+		ends[k] = list[:0]
+	}
 	// an edge along a rank arcs over it, see the flat edges in layout.go,
 	// with both ends on the tops of its nodes, which it shares with the
 	// ends of other edges
@@ -147,12 +170,19 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 			ends[k] = append(ends[k], slotEnd{edge, false, edge.Path[len(edge.Path)-2].X, edge.Path[len(edge.Path)-1].X})
 		}
 	}
-	parallel := make(map[[2]*lnode]int, len(graph.Edges))
-	for _, edge := range graph.Edges {
-		parallel[unorderedNodes(edge)]++
+	// the edges don't change between routes
+	parallel := graph.ortho.parallel
+	if parallel == nil {
+		parallel = make(map[[2]*lnode]int, len(graph.Edges))
+		for _, edge := range graph.Edges {
+			parallel[unorderedNodes(edge)]++
+		}
+		graph.ortho.parallel = parallel
 	}
 	for k, list := range ends {
-		slotSide(graph, k, list, parallel, pad, pack)
+		if len(list) > 0 {
+			slotSide(graph, k, list, parallel, pad, pack)
+		}
 	}
 	return arcEnds
 }
@@ -254,8 +284,11 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	for i := range order {
 		order[at[i]] = i
 	}
-	list, want, weight = permute(list, order), permute(want, order), permute(weight, order)
-	xs := separate(want, weight, spacing, lo, hi)
+	o := &graph.ortho
+	o.list, o.want, o.weight = permute(o.list, list, order), permute(o.want, want, order), permute(o.weight, weight, order)
+	list, want, weight = o.list, o.want, o.weight
+	o.slots = separate(o.slots, want, weight, spacing, lo, hi)
+	xs := o.slots
 	for i, e := range list {
 		if weight[i] > 1 && absLength(xs[i]-want[i]) < spacing/1e3 {
 			xs[i] = want[i] // undo rounding, the run must stay exactly vertical
@@ -294,7 +327,11 @@ func (node *lnode) outlineAt(x Length, bottom bool) Vector {
 // channelJogs returns the jogs of the routed edges in each channel, the
 // one below rows[k] at k
 func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
-	channels := make([][]*jog, len(rows))
+	channels := slices.Grow(graph.ortho.channels[:0], len(rows))[:len(rows)]
+	for k := range channels {
+		channels[k] = channels[k][:0]
+	}
+	graph.ortho.channels = channels
 	// channel below the row that contains y
 	channelAt := func(y Length) int {
 		for k := 0; k+1 < len(rows); k++ {
@@ -315,8 +352,9 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 			}
 		}
 	}
-	block := make([]jog, 0, segments)
-	xs := make([]Length, 0, 2*segments)
+	block := slices.Grow(graph.ortho.block[:0], segments)
+	xs := slices.Grow(graph.ortho.xs[:0], 2*segments)
+	graph.ortho.block, graph.ortho.xs = block, xs
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
@@ -610,12 +648,16 @@ func placeTracks(graph *lgraph, rows [][2]Length, arc Length, k int, jogs []*jog
 
 // insertJogs inserts the jog points per edge, later segments first so
 // that earlier indices stay valid
-func insertJogs(channels [][]*jog) {
-	n := 0
-	for _, jogs := range channels {
-		n += len(jogs)
+func insertJogs(graph *lgraph, channels [][]*jog) {
+	// the lists by edge are kept from the last route, emptied
+	byEdge := graph.ortho.byEdge
+	if byEdge == nil {
+		byEdge = make(map[*ledge][]*jog, len(graph.Edges))
+		graph.ortho.byEdge = byEdge
 	}
-	byEdge := make(map[*ledge][]*jog, n)
+	for edge, js := range byEdge {
+		byEdge[edge] = js[:0]
+	}
 	for _, jogs := range channels {
 		for _, j := range jogs {
 			byEdge[j.edge] = append(byEdge[j.edge], j)
@@ -647,43 +689,45 @@ func jogCycle[J comparable](jogs []J, above func(a, b J) bool) []J {
 		open
 		done
 	)
-	state := map[J]int{}
-	var stack, cycle []J
-	var visit func(j J) bool
-	visit = func(j J) bool {
-		state[j] = open
+	// by index in jogs, which holds each jog once
+	state := make([]uint8, len(jogs))
+	stack, cycle := make([]J, 0, len(jogs)), []J(nil)
+	var visit func(i int) bool
+	visit = func(i int) bool {
+		j := jogs[i]
+		state[i] = open
 		stack = append(stack, j)
-		for _, o := range jogs {
+		for k, o := range jogs {
 			if !above(j, o) {
 				continue
 			}
-			switch state[o] {
+			switch state[k] {
 			case open:
 				cycle = stack[slices.Index(stack, o):]
 				return true
 			case unseen:
-				if visit(o) {
+				if visit(k) {
 					return true
 				}
 			}
 		}
 		stack = stack[:len(stack)-1]
-		state[j] = done
+		state[i] = done
 		return false
 	}
-	for _, j := range jogs {
-		if state[j] == unseen && visit(j) {
+	for i := range jogs {
+		if state[i] == unseen && visit(i) {
 			return cycle
 		}
 	}
 	return nil
 }
 
-// permute returns the items in the order of the indices
-func permute[T any](items []T, order []int) []T {
-	out := make([]T, len(order))
-	for i, j := range order {
-		out[i] = items[j]
+// permute returns the items in the order of the indices, in out
+func permute[T any](out, items []T, order []int) []T {
+	out = out[:0]
+	for _, j := range order {
+		out = append(out, items[j])
 	}
 	return out
 }
@@ -691,13 +735,16 @@ func permute[T any](items []T, order []int) []T {
 // separate moves the ordered positions want as little as possible, by
 // weighted squared distance, so that neighbors are at least gap apart and
 // all lie within [lo, hi]. Shifting position i by i*gap turns the gaps
-// into an order constraint, solved by pooling adjacent violators.
-func separate(want []Length, weight []float64, gap, lo, hi Length) []Length {
+// into an order constraint, solved by pooling adjacent violators. The
+// positions go in xs.
+func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length {
 	type block struct {
 		sum, weight float64
 		n           int
 	}
-	blocks := make([]block, 0, len(want))
+	// most sides have few ends
+	var buf [16]block
+	blocks := buf[:0]
 	for i, x := range want {
 		blocks = append(blocks, block{(float64(x) - float64(i)*float64(gap)) * weight[i], weight[i], 1})
 		for len(blocks) > 1 {
@@ -708,7 +755,7 @@ func separate(want []Length, weight []float64, gap, lo, hi Length) []Length {
 			blocks = append(blocks[:len(blocks)-2], block{a.sum + b.sum, a.weight + b.weight, a.n + b.n})
 		}
 	}
-	xs := make([]Length, 0, len(want))
+	xs = xs[:0]
 	for _, b := range blocks {
 		y := min(max(b.sum/b.weight, float64(lo)), float64(hi-Length(len(want)-1)*gap))
 		for range b.n {

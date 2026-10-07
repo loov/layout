@@ -336,6 +336,11 @@ type hierComponent struct {
 	labelNode map[*hier.Node][]*ledge // the labels the middle virtual node of an edge carries
 	flatBelow map[*lnode]Length       // room below a node for the labels of edges along its rank
 	align     hier.Align
+
+	// buffers that route fills again on every call, see route
+	byRank    [][]*lnode
+	edgePaths map[[2]hier.ID][]Vector
+	pathBlock []Vector
 }
 
 // hierarchicalComponent lays out one connected graph top to bottom,
@@ -989,7 +994,11 @@ func (c *hierComponent) placeClusters() {
 
 // realByRank returns the real nodes per rank, obstacles for edge routing
 func (c *hierComponent) realByRank() [][]*lnode {
-	byRank := make([][]*lnode, len(c.graph.ByRank))
+	byRank := slices.Grow(c.byRank[:0], len(c.graph.ByRank))[:len(c.graph.ByRank)]
+	for r := range byRank {
+		byRank[r] = byRank[r][:0]
+	}
+	c.byRank = byRank
 	for _, node := range c.graph.Nodes {
 		if !node.Virtual {
 			byRank[node.Rank] = append(byRank[node.Rank], c.reverse[node.ID])
@@ -1002,7 +1011,15 @@ func (c *hierComponent) realByRank() [][]*lnode {
 // virtual nodes, by the hierarchical nodes they join; labels go beside the
 // middle virtual node
 func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
-	edgePaths := make(map[[2]hier.ID][]Vector, len(c.graphdef.Edges))
+	// assignPaths copies the paths out, so they live in a block that
+	// the next route reuses
+	edgePaths := c.edgePaths
+	if edgePaths == nil {
+		edgePaths = make(map[[2]hier.ID][]Vector, len(c.graphdef.Edges))
+		c.edgePaths = edgePaths
+	}
+	clear(edgePaths)
+	block := c.pathBlock[:0]
 	for _, source := range c.graph.Nodes {
 		if source.Virtual {
 			continue
@@ -1016,7 +1033,11 @@ func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
 			for target := out; target.Virtual && len(target.Out) > 0; target = target.Out[0] {
 				n++
 			}
-			path := make([]Vector, 0, n)
+			if cap(block)-len(block) < n {
+				block = make([]Vector, 0, max(2*cap(block), n, 64))
+			}
+			path := block[len(block) : len(block) : len(block)+n]
+			block = block[:len(block)+n]
 			path = append(path, sourcedef.BottomCenter().Add(Vector{X: c.packed(sourcedef)}))
 			if below := sourcedef.Center.Y + c.flatBelow[sourcedef]; c.graphdef.Splines != SplinesOrtho && below > path[0].Y {
 				// past the label beside the node first, see reserveFlatLabels
@@ -1067,6 +1088,7 @@ func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
 			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
 		}
 	}
+	c.pathBlock = block
 	return edgePaths
 }
 
@@ -1182,8 +1204,10 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank []
 			path = offsetPath(path, offset, edge.From, edge.To, along)
 		}
 
-		// pinned ports override the automatic attachment points
-		path = slices.Clone(path)
+		// pinned ports override the automatic attachment points; into the
+		// edge's own path, which straightening's trials route again and
+		// the jogs grew last time
+		path = append(edge.Path[:0], path...)
 		if edge.FromPort != CompassAuto {
 			path[0] = edge.From.CompassPoint(edge.FromPort)
 		}

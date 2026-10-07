@@ -28,6 +28,8 @@ type lgraph struct {
 	// start and the end, see mergeEdges; the components of a graph
 	// share it
 	merged map[*ledge][2]int
+	// ortho is routing's buffers, see orthoScratch
+	ortho orthoScratch
 }
 
 // lnode is the working copy of a Node.

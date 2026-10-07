@@ -17,7 +17,7 @@ func TestSeparate(t *testing.T) {
 		{[]Length{-5, 0, 5}, []float64{1, 1, 1}, []Length{-10, 0, 10}},
 		{[]Length{90, 100}, []float64{1, 1}, []Length{85, 95}}, // clamped to hi
 	} {
-		got := separate(tc.want, tc.weight, 10, -100, 95)
+		got := separate(nil, tc.want, tc.weight, 10, -100, 95)
 		if !slices.Equal(got, tc.out) {
 			t.Errorf("separate(%v, %v) = %v, want %v", tc.want, tc.weight, got, tc.out)
 		}

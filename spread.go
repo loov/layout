@@ -193,7 +193,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 			want[i], weight[i] = e.want, 1
 		}
 		reach := node.Radius.X - gap/2
-		xs := separate(want, weight, gap, node.Center.X-reach, node.Center.X+reach)
+		xs := separate(nil, want, weight, gap, node.Center.X-reach, node.Center.X+reach)
 		for i, e := range ends {
 			p := Vector{xs[i], node.Center.Y + node.halfHeightAt(xs[i])}
 			if !k.bottom {
