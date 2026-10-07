@@ -119,3 +119,27 @@ func TestTextCircleDefault(t *testing.T) {
 		}
 	}
 }
+
+// TestTextStraightensSideways checks that text straightening counts the
+// overlap that makes an edge straight already in rows sideways, not in
+// columns: a sits two rows into b, only their frames, which no straight
+// run fits between, so straightening has to line b up with a.
+func TestTextStraightensSideways(t *testing.T) {
+	for _, dir := range []layout.RankDir{layout.LeftToRight, layout.RightToLeft} {
+		t.Run(string(dir), func(t *testing.T) {
+			g := layout.NewDigraph()
+			g.RankDir = dir
+			const a, b, c = "a\nxxxxxx\nxxxxxx", "b", "cxxxxx"
+			e := g.Edge(a, b)
+			g.Edge(b, c)
+			g.Edge(a, c)
+			l, err := layout.Hierarchical(g, layout.Options{ForText: true})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if path := l.Edge(e).Path; len(path) != 2 {
+				t.Errorf("a -> b bends: %v", path)
+			}
+		})
+	}
+}

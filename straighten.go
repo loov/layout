@@ -181,7 +181,8 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	}
 	// ends slide along a node in text, so an edge between nodes that
 	// overlap across the rank, one end alone on its side, is straight
-	// already
+	// already; cell is along the ranks, a column, or a row sideways
+	cell := float32(graphdef.cell().X)
 	straight := func(node, other *hier.Node) bool {
 		if node.Virtual || other.Virtual {
 			return false
@@ -190,7 +191,6 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 		if !slices.Contains(node.Out, other) {
 			alone = len(node.In) == 1 || len(other.Out) == 1
 		}
-		cell := float32(graphdef.cellWidth())
 		lo, hi := max(node.Center.X-node.Radius.X, other.Center.X-other.Radius.X), min(node.Center.X+node.Radius.X, other.Center.X+other.Radius.X)
 		return alone && hi-lo > 2*cell
 	}
@@ -214,8 +214,6 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 		return hi - lo
 	}
 	wide := width()
-	// a cell along the ranks: a column, or a row sideways
-	cell := float32(graphdef.cell().X)
 	bends := countBends()
 	crossings, overlaps := measure()
 	// the node of the last move kept; the nodes after it were tried
