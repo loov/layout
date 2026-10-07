@@ -225,6 +225,19 @@ func dropBackEdges(n int, edges []rankEdge) []rankEdge {
 	return kept
 }
 
+// NetworkSimplex minimizes Σ weight[i]·(x[head[i]] − x[tail[i]]) subject
+// to x[head[i]] − x[tail[i]] ≥ minlen[i] for every i, starting from x,
+// which must satisfy the constraints; unlike ranking, they may form
+// cycles. The result is written to x, shifted so that every connected
+// part starts at 0.
+func NetworkSimplex(x []int32, tail, head []int32, weight []float32, minlen []int32) {
+	s := &simplex{n: int32(len(x)), rank: x}
+	for i := range tail {
+		s.addEdge(tail[i], head[i], weight[i], minlen[i])
+	}
+	s.run()
+}
+
 // simplex holds the network simplex state as flat arrays (structure of
 // arrays, int32 indexes, CSR adjacency) so that the pivot loops stream
 // through memory instead of chasing pointers.
@@ -291,7 +304,9 @@ func (s *simplex) run() {
 		}
 	}
 
-	s.initRank()
+	if s.rank == nil {
+		s.initRank()
+	}
 	s.feasibleTree()
 
 	s.low = make([]int32, s.n)
