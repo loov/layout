@@ -352,10 +352,11 @@ func hierarchicalComponent(graphdef *lgraph, opts Options) {
 	c.sizeNodes()
 	c.reserveClusterLabels()
 	c.position()
-	c.finish()
 	if graphdef.ForText && graphdef.Splines == SplinesOrtho && c.align == hier.Balanced {
-		straightenNodes(c.graph, graphdef, c.finish)
+		c.route()
+		straightenNodes(c.graph, graphdef, c.route)
 	}
+	c.finish()
 }
 
 // newHierComponent returns the state for laying out graphdef, with the
@@ -913,6 +914,14 @@ func (c *hierComponent) position() {
 // finish places the nodes, clusters, edges and labels where the
 // positions in the hierarchical graph put them
 func (c *hierComponent) finish() {
+	c.route()
+	c.placeFlatLabels()
+	nudgeLabels(c.graphdef.Edges, c.graphdef.Nodes, c.graphdef.Clusters, c.graphdef.EdgePadding, 2*c.graphdef.RowPadding, nil)
+}
+
+// route places the nodes, clusters and edges; the edges don't route
+// around the labels that finish places after them
+func (c *hierComponent) route() {
 	c.placeNodes()
 	c.placeClusters()
 	byRank := c.realByRank()
@@ -921,8 +930,6 @@ func (c *hierComponent) finish() {
 	c.assignPaths(paths, byRank)
 	c.crossLabelBands()
 	c.shapePaths()
-	c.placeFlatLabels()
-	nudgeLabels(c.graphdef.Edges, c.graphdef.Nodes, c.graphdef.Clusters, c.graphdef.EdgePadding, 2*c.graphdef.RowPadding, nil)
 }
 
 // placeNodes assigns final positions, off the center of nodes widened for

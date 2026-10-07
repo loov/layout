@@ -10,9 +10,10 @@ import (
 
 // straightenNodes moves a node along its rank in line with a node it has
 // an edge to, and pushes the ones beside it as far as they have to go,
-// where the edges that finish draws then bend less and cross no more;
-// positioning can't tell which edges end up straight
-func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
+// where the edges that route draws then bend less and cross no more;
+// positioning can't tell which edges end up straight. The measure
+// doesn't look at labels, so the caller places them after.
+func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	// merged edges share a run, see Graph.MergeEdges
 	merged := func(a, b *ledge) bool {
 		ma, mb := graphdef.merged[a], graphdef.merged[b]
@@ -235,7 +236,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 					}
 					continue
 				}
-				finish()
+				route()
 				if b, c, o := measure(); b < bends && c <= crossings && o <= overlaps {
 					bends, crossings, overlaps, improved = b, c, o, true
 					break
@@ -249,5 +250,4 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 			break
 		}
 	}
-	finish()
 }
