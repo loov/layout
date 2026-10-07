@@ -31,16 +31,16 @@ import (
 type compactGrid struct {
 	cell             Vector
 	space, lineSpace int
-	// frames: nodes without outline are drawn in a frame of blank cells,
-	// which two of them can share, see compactPass.plain
-	frames bool
+	// text: objects take the cells format/text draws them in, which
+	// can be fewer than the layout keeps for them
+	text bool
 }
 
 // textGrid returns the grid of a layout made for format/text: its
 // cells, with a blank cell between objects, as carving leaves, and lines
 // in neighboring cells.
 func textGrid(graph *Graph) compactGrid {
-	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, frames: true}
+	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, text: true}
 }
 
 // pointGrid returns the grid for other layouts: finer than the strokes,
@@ -311,7 +311,13 @@ func (p *compactPass) addNodes(tie bool) {
 	rank := map[Length]int{}
 	for i, box := range p.l.Nodes {
 		p.newItem()
-		o := rigid{item: i, lo: p.col(box.Left()), hi: p.col(box.Right()), c0: p.row(box.Top()), c1: p.row(box.Bottom()), kind: nodeKind, index: i}
+		// text draws extra outlines in the cells of the first, see
+		// format/text's nodeBox
+		inset := Length(0)
+		if p.grid.text {
+			inset = outlines(&lnode{Node: *p.l.Graph.Nodes[i]})
+		}
+		o := rigid{item: i, lo: p.col(box.Left() + inset), hi: p.col(box.Right() - inset), c0: p.row(box.Top() + inset), c1: p.row(box.Bottom() - inset), kind: nodeKind, index: i}
 		if box.Shape == PointShape {
 			// text draws a point in one cell, however much room the layout
 			// keeps around it
@@ -676,7 +682,7 @@ func (p *compactPass) separations() []constraint {
 		if varOf[a.item] == varOf[b.item] {
 			return dist
 		}
-		if grid.frames && p.plain(a) && p.plain(b) {
+		if grid.text && p.plain(a) && p.plain(b) {
 			// the blank frames of nodes without outline keep their texts
 			// apart already, and may share a cell: the boxes touch, as
 			// sharp as their sides lie, but don't overlap
@@ -869,7 +875,7 @@ func (p *compactPass) apply(d []int) bool {
 		switch {
 		case box.Shape == PointShape && !boxAt[[2]Length{Length(p.varOf[i]), box.Center.X}]:
 			box.Center.X = Length(p.objs[i].lo+d[p.varOf[i]]) * cell.X
-		case p.grid.frames && box.Shape == None:
+		case p.grid.text && box.Shape == None:
 			// the sides of the blank frame on cells, so that two frames
 			// can share one without overlapping
 			box.Center.X = Length(p.objs[i].lo+d[p.varOf[i]])*cell.X + box.Center.X - box.Left()
