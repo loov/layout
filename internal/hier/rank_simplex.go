@@ -835,3 +835,35 @@ func (s *simplex) normalize() {
 		}
 	}
 }
+
+// balance breaks the ties the costs leave, as dot does for x coordinates:
+// the two sides of a tree edge with cut value 0 can move apart at no cost
+// until the tightest edge back across the cut is tight. gain says how
+// much better moving side by delta looks; the smaller side moves halfway
+// or all the way, whichever gains more, and stays when neither gains.
+// The tree stays as it is: later cuts are where the last pivot left them.
+func (s *simplex) balance(gain func(side []int32, delta int32) float32) {
+	for i, c := range s.cut {
+		if !s.tree[i] || c != 0 {
+			continue
+		}
+		side, sideIsTail := s.smallerSide(int32(i))
+		enter := s.enteringEdge(side, sideIsTail)
+		if enter < 0 {
+			continue
+		}
+		slack := s.slack(enter)
+		if sideIsTail {
+			slack = -slack
+		}
+		best, bestGain := int32(0), float32(1e-3)
+		for _, delta := range [...]int32{slack / 2, slack} {
+			if g := gain(side, delta); delta != 0 && g > bestGain {
+				best, bestGain = delta, g
+			}
+		}
+		for _, v := range side {
+			s.rank[v] += best
+		}
+	}
+}

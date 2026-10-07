@@ -52,7 +52,7 @@ func TestAlignClusterBorders(t *testing.T) {
 		}
 		// Position, recording how wide each cluster is before aligning
 		PositionInitial(graph)
-		positionSimplex(graph, false)
+		positionSimplex(graph, true, false)
 		StraightenChains(graph)
 		flushLeft(graph)
 		need := make([]float32, len(graph.Clusters))
@@ -97,5 +97,3 @@ func TestAlignClusterBorders(t *testing.T) {
 		}
 	}
 }
-
-func abs(v float32) float32 { return max(v, -v) }

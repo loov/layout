@@ -39,7 +39,7 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 			node.Center.X = xs[node.ID]
 		}
 	default:
-		positionSimplex(graph, fans)
+		positionSimplex(graph, straighten, fans)
 	}
 	if straighten {
 		StraightenChains(graph)
@@ -309,12 +309,16 @@ func flushLeft(graph *Graph) {
 }
 
 // widthWeight is what the width of the layout costs against the length of
-// edges along the ranks, and settleWeight what it costs a node to be away
-// from where balanced Brandes-Köpf puts it, see positionSimplex
+// edges along the ranks; chainWeight what a chain out of line costs, and
+// bendWeight what an orthogonal edge off upright costs, against how far
+// forks and joins are off center when positionSimplex breaks ties
 const (
-	widthWeight  = 1
-	settleWeight = 1.0 / 64
+	widthWeight = 1
+	chainWeight = 2
+	bendWeight  = 32
 )
+
+func abs(x float32) float32 { return max(x, -x) }
 
 // positionSimplex sets x by network simplex on an auxiliary graph, as
 // Gansner et al. section 4.2 do: every edge gets a vertex below both of its
@@ -326,36 +330,20 @@ const (
 // open across every rank.
 //
 // Many layouts can cost the same, such as with a node anywhere between
-// its two children; a slight pull towards where balanced Brandes-Köpf
-// puts each node picks the one that centers nodes among their neighbors.
-func positionSimplex(graph *Graph, fans bool) {
+// its two children; of those, simplex.balance moves towards the one that
+// centers nodes among their neighbors, see straighten in Position.
+func positionSimplex(graph *Graph, straighten, fans bool) {
 	n := graph.NodeCount()
 	edges := 0
 	for _, node := range graph.Nodes {
 		edges += len(node.Out)
 	}
 	// two more vertices bound the ranks on the left and the right, and
-	// the edge between them costs the width of the drawing; the left one
-	// is also where the pulls are measured from; edges along a rank, see
-	// Flat, get a vertex each after the pulls
-	s := &simplex{n: int32(n + edges + 2 + n + len(graph.Flat))}
+	// the edge between them costs the width of the drawing; edges along a
+	// rank, see Flat, get a vertex each after them
+	s := &simplex{n: int32(n + edges + 2 + len(graph.Flat))}
 	lft, rgt := int32(n+edges), int32(n+edges+1)
 	s.addEdge(lft, rgt, widthWeight, 0)
-	settle := balancedKoepf(graph)
-	low := float32(math.Inf(1)) // the left side, where nodes reach to
-	for _, node := range graph.Nodes {
-		low = min(low, settle[node.ID]-node.Radius.X)
-	}
-	for _, node := range graph.Nodes {
-		if node.Virtual {
-			continue
-		}
-		at := settle[node.ID] - low + node.Anchor
-		pull := int32(n+edges+2) + int32(node.ID)
-		// costs how far the node is from at past the left side
-		s.addEdge(pull, int32(node.ID), settleWeight, int32(math.Round(float64(at))))
-		s.addEdge(pull, lft, settleWeight, 0)
-	}
 	for _, layer := range graph.ByRank {
 		if len(layer) > 0 {
 			first, last := layer[0], layer[len(layer)-1]
@@ -415,7 +403,7 @@ func positionSimplex(graph *Graph, fans bool) {
 	}
 	// an edge along a rank costs how far apart its ends are too, which
 	// keeps a node with only such edges beside the ones it has them to
-	v = int32(n + edges + 2 + n)
+	v = int32(n + edges + 2)
 	for _, flat := range graph.Flat {
 		w := graph.Weight(flat[0], flat[1])
 		s.addEdge(v, int32(flat[0].ID), w, 0)
@@ -423,6 +411,79 @@ func positionSimplex(graph *Graph, fans bool) {
 		v++
 	}
 	s.run()
+	// a move that breaks a tie scores by how far forks and joins end up
+	// off the median of their neighbors, as Diagnose measures unbalance,
+	// and by how straight edges run: chains in line when edges are drawn
+	// through their bends, edges upright when routed orthogonally
+	var at []int32
+	cost := func(node *Node) float32 {
+		x := s.rank[node.ID]
+		total := float32(0)
+		for _, nbrs := range [2]Nodes{node.In, node.Out} {
+			if node.Virtual || len(nbrs) < 2 {
+				continue
+			}
+			at = at[:0]
+			for _, nb := range nbrs {
+				at = append(at, s.rank[nb.ID])
+			}
+			slices.Sort(at)
+			total += abs(float32(x) - float32(at[(len(at)-1)/2]+at[len(at)/2])/2)
+		}
+		if straighten {
+			if node.Virtual && len(node.In) == 1 && len(node.Out) == 1 {
+				total += chainWeight * abs(float32(2*x-s.rank[node.In[0].ID]-s.rank[node.Out[0].ID]))
+			}
+		} else {
+			for _, out := range node.Out {
+				if s.rank[out.ID] != x {
+					total += bendWeight
+				}
+			}
+		}
+		return total
+	}
+	// the nodes a move of side changes the cost of
+	seen := make([]int32, n)
+	epoch := int32(0)
+	var touched Nodes
+	touch := func(node *Node) {
+		if seen[node.ID] != epoch {
+			seen[node.ID] = epoch
+			touched = append(touched, node)
+		}
+	}
+	s.balance(func(side []int32, delta int32) float32 {
+		epoch++
+		touched = touched[:0]
+		for _, v := range side {
+			if v >= int32(n) {
+				continue
+			}
+			node := graph.Nodes[v]
+			touch(node)
+			for _, nb := range node.In {
+				touch(nb)
+			}
+			for _, nb := range node.Out {
+				touch(nb)
+			}
+		}
+		gain := float32(0)
+		for _, node := range touched {
+			gain += cost(node)
+		}
+		for _, v := range side {
+			s.rank[v] += delta
+		}
+		for _, node := range touched {
+			gain -= cost(node)
+		}
+		for _, v := range side {
+			s.rank[v] -= delta
+		}
+		return gain
+	})
 
 	// fans: a node with several children goes over the middle of them,
 	// from the bottom up, as far as its neighbors in the rank let it; the
