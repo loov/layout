@@ -72,6 +72,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 // crossings and edge length, in input order, which is the order of their
 // ids; it keeps clusters together and flat edges left to right
 func orderTies(graph *Graph) {
+	neighbors := flatNeighbors(graph)
 	flat := map[[2]ID]bool{}
 	for _, edge := range graph.Flat {
 		flat[[2]ID{edge[0].ID, edge[1].ID}] = true
@@ -93,6 +94,9 @@ func orderTies(graph *Graph) {
 					continue
 				}
 				if graph.edgeLength(left, i)+graph.edgeLength(right, i+1) != graph.edgeLength(left, i+1)+graph.edgeLength(right, i) {
+					continue
+				}
+				if flatShorter(neighbors, left, right) != 0 {
 					continue
 				}
 				layer[i], layer[i+1] = right, left
@@ -253,6 +257,37 @@ func crossingsByPos(u, v *Node) (uv, vu float32) {
 	return float32(a), float32(b)
 }
 
+// flatNeighbors returns the other ends of the flat edges of every node.
+func flatNeighbors(graph *Graph) map[*Node]Nodes {
+	flat := map[*Node]Nodes{}
+	for _, edge := range graph.Flat {
+		flat[edge[0]] = append(flat[edge[0]], edge[1])
+		flat[edge[1]] = append(flat[edge[1]], edge[0])
+	}
+	return flat
+}
+
+// flatShorter returns how many fewer nodes the flat edges of neighbors left
+// and right pass over when they swap places; a flat edge costs a crossing
+// for every node it passes over, see TotalCrossings.
+func flatShorter(flat map[*Node]Nodes, left, right *Node) (shorter float32) {
+	for _, x := range flat[left] {
+		if x.Pos > right.Pos {
+			shorter++
+		} else if x.Pos < left.Pos {
+			shorter--
+		}
+	}
+	for _, x := range flat[right] {
+		if x.Pos < left.Pos {
+			shorter++
+		} else if x.Pos > right.Pos {
+			shorter--
+		}
+	}
+	return shorter
+}
+
 // orderFlatEdges ensures the source of every flat edge is left of its target
 // by sorting the ranks with misordered flat edges topologically: the
 // leftmost node whose flat sources are all placed goes next, which leaves
@@ -311,6 +346,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 	graph.assignPos()
 	// the cached positions leave out weights and ports
 	weighted := len(graph.weights) > 0 || len(graph.Ports) > 0
+	flat := flatNeighbors(graph)
 	// a layer only needs another look when it or a neighbor changed
 	dirty := make([]bool, len(graph.ByRank))
 	for i := range dirty {
@@ -345,6 +381,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 				} else {
 					before, after = crossingsByPos(left, right)
 				}
+				after -= flatShorter(flat, left, right)
 				if before == after {
 					before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
 					after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)

@@ -66,12 +66,18 @@ func (layer Nodes) assignPos() {
 	}
 }
 
-// TotalCrossings counts weighted edge crossings between all adjacent ranks
+// TotalCrossings counts weighted edge crossings between all adjacent ranks,
+// and the nodes flat edges pass over
 func (graph *Graph) TotalCrossings() float32 {
 	graph.assignPos()
 	total := float32(0)
 	for r := 1; r < len(graph.ByRank); r++ {
 		total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
+	}
+	// a flat edge crosses every node it passes over; unweighted, so with
+	// heavy edges elsewhere it hardly counts
+	for _, edge := range graph.Flat {
+		total += float32(max(edge[0].Pos, edge[1].Pos) - min(edge[0].Pos, edge[1].Pos) - 1)
 	}
 	return total
 }
