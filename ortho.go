@@ -71,11 +71,8 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	for _, edge := range graph.Edges {
 		parallel[unorderedNodes(edge)]++
 	}
-	// edges between ranks; those along a rank have their nodes centered
-	// on one line, whatever their sizes
-	routed := func(edge *ledge) bool {
-		return edge.From != edge.To && len(edge.Path) >= 2 && edge.From.Center.Y != edge.To.Center.Y
-	}
+	// edges between ranks
+	routed := func(edge *ledge) bool { return !edge.flat && len(edge.Path) >= 2 }
 
 	// ends on side ports step out sideways before turning, instead of
 	// running along the node outline
@@ -109,7 +106,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	// ends of other edges
 	arc := func(edge *ledge) bool {
 		p := edge.Path
-		return edge.From != edge.To && edge.From.Center.Y == edge.To.Center.Y && len(p) == 4 && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
+		return edge.From != edge.To && edge.flat && len(p) == 4 && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
 	}
 	var arcEnds []*ledge
 	for _, edge := range graph.Edges {
@@ -295,7 +292,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	arcs := make([]Length, len(rows))
 	over := make([][]*ledge, len(rows)) // the arcs in each channel
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || edge.From.Center.Y != edge.To.Center.Y || len(edge.Path) != 4 {
+		if edge.From == edge.To || !edge.flat || len(edge.Path) != 4 {
 			continue
 		}
 		// the channel above the rank of the edge, wherever the arc reaches

@@ -73,7 +73,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				end{edge, angle(edge.From, edge.Path[len(edge.Path)-1]), false, true})
 			continue
 		}
-		if edge.From.Center.Y != edge.To.Center.Y {
+		if !edge.flat {
 			continue // on a side, see spreadSides
 		}
 		// edges between neighbors that run side by side keep their lanes
@@ -174,7 +174,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 		sides[k] = append(sides[k], end{edge, start, want})
 	}
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || len(edge.Path) < 2 || edge.From.Center.Y == edge.To.Center.Y {
+		if edge.flat || len(edge.Path) < 2 {
 			continue
 		}
 		if edge.freeStart() {

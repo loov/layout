@@ -51,11 +51,10 @@ func appendFlatPath(out, path []Vector, radius, maxDeviation Length) []Vector {
 // drawPoint converts v for the draw package
 func drawPoint(v Vector) draw.Point { return draw.Point{X: float64(v.X), Y: float64(v.Y)} }
 
-// offsetPath shifts the path sideways by dx and re-clips the ends to the nodes
-func offsetPath(path []Vector, dx Length, from, to *lnode) []Vector {
-	// a straight edge between neighbors along a rank runs across x, so
-	// it moves across that, in y
-	along := len(path) == 2 && from.Center.Y == to.Center.Y
+// offsetPath shifts the path sideways by dx and re-clips the ends to the
+// nodes; a straight edge between neighbors along a rank, along, runs
+// across x, so it moves across that, in y
+func offsetPath(path []Vector, dx Length, from, to *lnode, along bool) []Vector {
 	out := make([]Vector, len(path))
 	for i, p := range path {
 		out[i] = Vector{X: p.X + dx, Y: p.Y}

@@ -510,6 +510,10 @@ func (c *hierComponent) rank() {
 		hier.DoubleRanks(c.graph)
 	}
 
+	for _, edge := range c.graphdef.Edges {
+		edge.flat = c.graph.Nodes[c.nodes[edge.From]].Rank == c.graph.Nodes[c.nodes[edge.To]].Rank
+	}
+
 	// create virtual nodes
 	hier.AddVirtuals(c.graph)
 }
@@ -1161,12 +1165,14 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank []
 		if n := pairCount[key]; n > 1 {
 			k := pairIndex[key]
 			pairIndex[key]++
+			// a straight edge between neighbors along a rank
+			along := len(path) == 2 && edge.flat
 			spacing := 2 * c.graphdef.EdgePadding
-			if flat := len(path) == 2 && edge.From.Center.Y == edge.To.Center.Y; flat {
+			if along {
 				spacing = c.laneSpacing()
 			}
 			offset := (Length(k) - Length(n-1)/2) * spacing
-			path = offsetPath(path, offset, edge.From, edge.To)
+			path = offsetPath(path, offset, edge.From, edge.To, along)
 		}
 
 		// pinned ports override the automatic attachment points
@@ -1183,7 +1189,7 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank []
 		if edge.ToField != "" {
 			path[len(path)-1] = c.graphdef.fieldEnd(edge.To, edge.ToField, path[len(path)-2])
 		}
-		if c.graphdef.Splines != SplinesOrtho && edge.From.Center.Y != edge.To.Center.Y {
+		if c.graphdef.Splines != SplinesOrtho && !edge.flat {
 			// around nodes once the ends are final, ports and fields
 			// included; orthogonal edges run on virtual node columns and
 			// rank channels, which are free of nodes by construction

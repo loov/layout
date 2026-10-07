@@ -54,6 +54,9 @@ type ledge struct {
 	LabelRadius Vector // half size of the label
 	// the labels at the ends, when HeadLabel and TailLabel are set
 	head, tail endLabel
+	// flat is set for an edge whose ends are on one rank, loops too, see
+	// hierComponent.rank
+	flat bool
 }
 
 // endLabel is a label at an end of an edge: its center and half size
