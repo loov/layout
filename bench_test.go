@@ -2,13 +2,18 @@ package layout_test
 
 import (
 	"fmt"
+	"maps"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
+	"github.com/loov/layout/internal/examples"
 )
 
 // randomGraph builds a sparse random digraph with n nodes in about 30
@@ -61,4 +66,47 @@ func TestPerf(t *testing.T) {
 		t.Fatal(err)
 	}
 	fmt.Println("nodes", n, "edges", len(graph.Edges), "took", time.Since(start))
+}
+
+// BenchmarkText lays out all the fixtures, and random graphs, for text.
+func BenchmarkText(b *testing.B) {
+	var graphs []func() *layout.Graph
+	var options []layout.Options
+	for _, name := range slices.Sorted(maps.Keys(examples.Graphs)) {
+		graphs = append(graphs, examples.Graphs[name])
+		options = append(options, examples.Options[name])
+	}
+	files, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
+	if err != nil {
+		b.Fatal(err)
+	}
+	for _, file := range files {
+		parsed, err := dot.ParseFile(file)
+		if err != nil {
+			b.Fatal(err)
+		}
+		graphs = append(graphs, func() *layout.Graph { return parsed[0] })
+		options = append(options, layout.Options{})
+	}
+	b.Run("fixtures", func(b *testing.B) {
+		for b.Loop() {
+			for i, build := range graphs {
+				opts := options[i]
+				opts.ForText = true
+				if _, err := layout.Hierarchical(build(), opts); err != nil {
+					b.Fatal(err)
+				}
+			}
+		}
+	})
+	for _, n := range []int{100, 500} {
+		b.Run(fmt.Sprint("nodes=", n), func(b *testing.B) {
+			graph := randomGraph(n, 1)
+			for b.Loop() {
+				if _, err := layout.Hierarchical(graph, layout.Options{ForText: true}); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
 }
