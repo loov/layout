@@ -30,7 +30,15 @@ func Hierarchical(graph *Graph, opts Options) (*Layout, error) {
 	work.ForText = opts.ForText
 	hierarchical(work, opts)
 	work.placeEndLabels()
-	return work.result(), nil
+	l := work.result()
+	if opts.Compact && work.Splines == SplinesOrtho && !work.Pinned {
+		grid := pointGrid(l.Graph)
+		if work.ForText {
+			grid = textGrid(l.Graph)
+		}
+		compact(l, grid)
+	}
+	return l, nil
 }
 
 // Options tunes the hierarchical layout. The zero value gives the defaults.
@@ -47,6 +55,15 @@ type Options struct {
 	// between ranks for the horizontal runs and arrowheads, and nodes
 	// sized in character cells. Layout.Graph has the changed settings.
 	ForText bool
+	// Compact takes the room out of the layout after routing: nodes, the
+	// runs of edges, labels and clusters are pushed together along x and
+	// then y, while edges stretch and shrink to follow, and the nodes of
+	// a rank stay in line. Edges keep their crossings and nodes their
+	// order. Only for ortho splines, which ForText uses: sloped segments
+	// would have to stay rigid and compact little; others ignore it.
+	// For ForText it moves objects by whole character cells, and
+	// format/text carves less after it.
+	Compact bool
 }
 
 // Align picks how nodes are spread along their ranks. In left-to-right
