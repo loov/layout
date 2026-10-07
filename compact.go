@@ -192,6 +192,7 @@ type rigid struct {
 	// of an invisible edge: it moves along, but nothing keeps clear of it
 	hidden bool
 	corner bool // a run at the end of an edge in the column of a corner
+	marker bool // the cell of an arrowhead before a box, see addEdges
 }
 
 type rigidKind uint8
@@ -396,17 +397,18 @@ func (p *compactPass) addEdges() {
 			if p.row(next.Y) != r || c == p.col(at.X) {
 				continue
 			}
-			c = p.border(end.node, c, p.col(at.X))
-			if c == p.col(at.X) {
+			// the cell past the side the run leaves from, also when the
+			// end is on that side already
+			switch box := p.objs[p.l.nodeIndex[end.node]]; {
+			case c > box.hi:
+				c = box.hi + 1
+			case c < box.lo:
+				c = box.lo - 1
+			default:
 				continue
 			}
-			if p.col(next.X) > c {
-				c++
-			} else {
-				c--
-			}
 			// not a group next to the runs of the edge, see need
-			p.objs = append(p.objs, rigid{item: items[end.at], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: -2, hidden: edge.Invisible})
+			p.objs = append(p.objs, rigid{item: items[end.at], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: -2, hidden: edge.Invisible, marker: true})
 		}
 		p.pointItem[e] = items
 
@@ -540,6 +542,9 @@ func (p *compactPass) need(a, b rigid) int {
 	}
 	plain := func(o rigid) bool { return o.kind == nodeKind && p.l.Nodes[o.index].Shape == None }
 	switch {
+	case a.marker || b.marker:
+		// a marker only keeps its own cell
+		return p.grid.lineSpace
 	case plain(a) && plain(b):
 		// the blank frames of nodes without outline keep their texts
 		// apart already
@@ -583,12 +588,15 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 			if a.hidden || b.hidden || va == vb {
 				continue
 			}
+			if (a.marker || b.marker) && b.c0 > a.c1 {
+				continue // a marker keeps only its own cell
+			}
 			if a.lo+a.hi > b.lo+b.hi || a.lo+a.hi == b.lo+b.hi && i > j {
 				a, b, va, vb = b, a, vb, va
 			}
 			dist := b.lo - a.hi
 			need := p.need(a, b)
-			if a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index] {
+			if !a.marker && !b.marker && (a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index]) {
 				need += grid.lineSpace // room to draw them apart, see crowded
 			}
 			cons = append(cons, constraint{va, vb, min(need, dist) - dist, false})
