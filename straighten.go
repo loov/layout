@@ -210,9 +210,15 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	// a cell along the ranks: a column, or a row sideways
 	cell := float32(graphdef.cell().X)
 	bends, crossings, overlaps := measure()
-	for range 4 {
+	// the node of the last move kept; the nodes after it were tried
+	// where they are now, so after a pass they would only fail again
+	last := len(graph.Nodes)
+	for pass := range 4 {
 		improved := false
-		for _, node := range graph.Nodes {
+		for idx, node := range graph.Nodes {
+			if pass > 0 && !improved && idx > last {
+				break
+			}
 			if node.Virtual || fork(node) {
 				continue
 			}
@@ -251,6 +257,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 				route()
 				if b, c, o := measure(); b < bends && c <= crossings && o <= overlaps {
 					bends, crossings, overlaps, improved = b, c, o, true
+					last = idx
 					break
 				}
 				for i, x := range before {
