@@ -1,7 +1,6 @@
 package layout
 
 import (
-	"cmp"
 	"math"
 	"slices"
 
@@ -30,7 +29,20 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	var horizontal, vertical []segment
 	var xs, wants []float32
 	var adjacent, kept []*hier.Node
-	byStart := func(a, b segment) int { return cmp.Or(cmp.Compare(a.at, b.at), cmp.Compare(a.lo, b.lo)) }
+	// plain comparisons, as there are no NaNs, sort faster than cmp.Compare
+	byStart := func(a, b segment) int {
+		switch {
+		case a.at < b.at:
+			return -1
+		case a.at > b.at:
+			return 1
+		case a.lo < b.lo:
+			return -1
+		case a.lo > b.lo:
+			return 1
+		}
+		return 0
+	}
 	measure := func() (bends, crossings, overlaps int) {
 		horizontal, vertical = horizontal[:0], vertical[:0]
 		for _, edge := range graphdef.Edges {
