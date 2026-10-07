@@ -685,11 +685,19 @@ func (p *compactPass) apply(d []int) bool {
 	// a point goes in the middle of its cell, as text draws it, and the
 	// ends of its edges follow; snap is how far past its whole cells. A
 	// box moves by whole cells, so that both its sides round as before.
+	// A point in line with a box that it moves with, as in a rank, stays
+	// in line with it.
 	snap := make([]Length, len(l.Nodes))
+	boxAt := map[[2]Length]bool{} // the var and center of every box
+	for i, box := range l.Nodes {
+		if box.Shape != PointShape {
+			boxAt[[2]Length{Length(p.varOf[i]), box.Center.X}] = true
+		}
+	}
 	for i := range l.Nodes {
 		box := &l.Nodes[i]
 		at := box.Center.X + shift(i)
-		if box.Shape == PointShape {
+		if box.Shape == PointShape && !boxAt[[2]Length{Length(p.varOf[i]), box.Center.X}] {
 			box.Center.X = Length(p.objs[i].lo+d[p.varOf[i]]) * cell.X
 		} else {
 			box.Center.X = at // its sides round to the cells they did
