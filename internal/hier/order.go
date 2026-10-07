@@ -2,6 +2,7 @@ package hier
 
 import (
 	"cmp"
+	"math"
 	"slices"
 )
 
@@ -72,39 +73,20 @@ func OrderRanksN(graph *Graph, iterations int) {
 // crossings and edge length, in input order, which is the order of their
 // ids; it keeps clusters together and flat edges left to right
 func orderTies(graph *Graph) {
-	neighbors := flatNeighbors(graph)
-	flat := map[[2]ID]bool{}
-	for _, edge := range graph.Flat {
-		flat[[2]ID{edge[0].ID, edge[1].ID}] = true
-		flat[[2]ID{edge[1].ID, edge[0].ID}] = true
-	}
-	graph.assignPos()
+	flat := flatNeighbors(graph)
 	// every swap puts a pair in order, so this ends
-	for changed := true; changed; {
-		changed = false
-		for _, layer := range graph.ByRank {
-			for i := 0; i+1 < len(layer); i++ {
-				left, right := layer[i], layer[i+1]
-				if right.ID > left.ID || left.Cluster != right.Cluster ||
-					left.BorderLeft || left.BorderRight || right.BorderLeft || right.BorderRight ||
-					flat[[2]ID{left.ID, right.ID}] {
-					continue
-				}
-				if before, after := graph.crossingsBothWays(left, right); before != after {
-					continue
-				}
-				if graph.edgeLength(left, i)+graph.edgeLength(right, i+1) != graph.edgeLength(left, i+1)+graph.edgeLength(right, i) {
-					continue
-				}
-				if flatShorter(neighbors, left, right) != 0 {
-					continue
-				}
-				layer[i], layer[i+1] = right, left
-				left.Pos, right.Pos = i+1, i
-				changed = true
-			}
+	graph.swapNeighbors(math.MaxInt, func(i int, left, right *Node) bool {
+		if right.ID > left.ID || left.Cluster != right.Cluster ||
+			left.BorderLeft || left.BorderRight || right.BorderLeft || right.BorderRight ||
+			slices.Contains(flat[left], right) {
+			return false
 		}
-	}
+		if before, after := graph.crossingsBothWays(left, right); before != after {
+			return false
+		}
+		return graph.edgeLength(left, i)+graph.edgeLength(right, i+1) == graph.edgeLength(left, i+1)+graph.edgeLength(right, i) &&
+			flatShorter(flat, left, right) == 0
+	})
 }
 
 // saveOrder returns a copy of the current rank ordering
@@ -343,16 +325,37 @@ func orderFlatEdges(graph *Graph) {
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or
 // shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
-	graph.assignPos()
 	// the cached positions leave out weights and ports
 	weighted := len(graph.weights) > 0 || len(graph.Ports) > 0
 	flat := flatNeighbors(graph)
+	return graph.swapNeighbors(20, func(i int, left, right *Node) bool {
+		var before, after float32
+		if weighted {
+			before, after = graph.crossingsBothWays(left, right)
+		} else {
+			before, after = crossingsByPos(left, right)
+		}
+		after -= flatShorter(flat, left, right)
+		if before == after {
+			before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
+			after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)
+		}
+		return before > after
+	})
+}
+
+// swapNeighbors sweeps the ranks, swapping neighbors left and right at i
+// and i+1 where swap says so, until a sweep swaps none, at most rounds
+// times. swap sees the positions of the neighbors of left and right
+// cached for crossingsByPos.
+func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node) bool) (swaps int) {
+	graph.assignPos()
 	// a layer only needs another look when it or a neighbor changed
 	dirty := make([]bool, len(graph.ByRank))
 	for i := range dirty {
 		dirty[i] = true
 	}
-	for range 20 {
+	for range rounds {
 		improved := false
 		changed := make([]bool, len(graph.ByRank))
 		for r, nodes := range graph.ByRank {
@@ -361,32 +364,19 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 			}
 			// neighbor positions don't change while this layer is processed;
 			// cache them as flat arrays so the pair loop below streams
-			if !weighted {
-				for _, node := range nodes {
-					node.inPos = node.inPos[:0]
-					for _, src := range node.In {
-						node.inPos = append(node.inPos, int32(src.Pos))
-					}
-					node.outPos = node.outPos[:0]
-					for _, dst := range node.Out {
-						node.outPos = append(node.outPos, int32(dst.Pos))
-					}
+			for _, node := range nodes {
+				node.inPos = node.inPos[:0]
+				for _, src := range node.In {
+					node.inPos = append(node.inPos, int32(src.Pos))
+				}
+				node.outPos = node.outPos[:0]
+				for _, dst := range node.Out {
+					node.outPos = append(node.outPos, int32(dst.Pos))
 				}
 			}
 			for i := 0; i+1 < len(nodes); i++ {
 				left, right := nodes[i], nodes[i+1]
-				var before, after float32
-				if weighted {
-					before, after = graph.crossingsBothWays(left, right)
-				} else {
-					before, after = crossingsByPos(left, right)
-				}
-				after -= flatShorter(flat, left, right)
-				if before == after {
-					before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
-					after = graph.edgeLength(left, i+1) + graph.edgeLength(right, i)
-				}
-				if before > after {
+				if swap(i, left, right) {
 					nodes[i], nodes[i+1] = right, left
 					left.Pos, right.Pos = i+1, i
 					swaps++
