@@ -2,6 +2,7 @@ package hier
 
 import (
 	"cmp"
+	"maps"
 	"math"
 	"slices"
 )
@@ -134,6 +135,12 @@ func OrderRanksDepthFirst(graph *Graph) {
 // using incoming edges, otherwise bottom-to-top using outgoing edges.
 func OrderRanksByMedian(graph *Graph, down bool) {
 	assignGridX(graph)
+	// flat edges stay in order as the sweep goes, so that the next rank
+	// follows the order they need
+	var flat *flatOrder
+	if len(graph.Flat) > 0 {
+		flat = newFlatOrder(graph)
+	}
 
 	order := make([]int, len(graph.ByRank))
 	for i := range order {
@@ -159,6 +166,10 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 			}
 			return cmp.Compare(borderSide(a), borderSide(b))
 		})
+		if flat != nil {
+			layer.assignPos()
+			flat.fix(layer)
+		}
 		for i, node := range layer {
 			node.GridX = float32(i)
 		}
@@ -245,56 +256,79 @@ func flatShorter(flat map[*Node]Nodes, left, right *Node) (shorter float32) {
 	return shorter
 }
 
-// orderFlatEdges ensures the source of every flat edge is left of its target
-// by sorting the ranks with misordered flat edges topologically: the
-// leftmost node whose flat sources are all placed goes next, which leaves
-// the other nodes in their order.
+// orderFlatEdges ensures the source of every flat edge is left of its
+// target, see flatOrder.
 func orderFlatEdges(graph *Graph) {
+	if len(graph.Flat) == 0 {
+		return
+	}
 	graph.assignPos()
-	preds := map[*Node]int{}
-	succs := map[*Node]Nodes{}
-	misordered := map[int]bool{}
+	flat := newFlatOrder(graph)
+	for rank := range graph.ByRank {
+		flat.fix(graph.ByRank[rank])
+	}
+}
+
+// flatOrder holds the flat edges of a graph by node, for putting the
+// source of every flat edge left of its target
+type flatOrder struct {
+	preds map[*Node]int
+	succs map[*Node]Nodes
+}
+
+func newFlatOrder(graph *Graph) *flatOrder {
+	flat := &flatOrder{preds: map[*Node]int{}, succs: map[*Node]Nodes{}}
 	for _, edge := range graph.Flat {
-		src, dst := edge[0], edge[1]
-		if src.Pos > dst.Pos {
-			misordered[src.Rank] = true
-		}
-		preds[dst]++
-		succs[src] = append(succs[src], dst)
+		flat.preds[edge[1]]++
+		flat.succs[edge[0]] = append(flat.succs[edge[0]], edge[1])
 	}
-	for rank := range misordered {
-		layer := graph.ByRank[rank]
-		placed := make([]bool, len(layer))
-		sorted := make(Nodes, 0, len(layer))
-		// quadratic in the rank size; a ready queue by position if wide
-		// ranks with flat edges get slow
-		for len(sorted) < len(layer) {
-			// on a cycle of flat edges no node is ready; take the leftmost
-			pick, fallback := -1, -1
-			for i, node := range layer {
-				if placed[i] {
-					continue
-				}
-				if fallback < 0 {
-					fallback = i
-				}
-				if preds[node] == 0 {
-					pick = i
-					break
-				}
+	return flat
+}
+
+// fix sorts a layer with misordered flat edges topologically, which needs
+// Pos up to date in it: the leftmost node whose flat sources are all
+// placed goes next, which leaves the other nodes in their order.
+func (flat *flatOrder) fix(layer Nodes) {
+	misordered := false
+	for _, src := range layer {
+		for _, dst := range flat.succs[src] {
+			misordered = misordered || src.Pos > dst.Pos
+		}
+	}
+	if !misordered {
+		return
+	}
+	preds := maps.Clone(flat.preds)
+	placed := make([]bool, len(layer))
+	sorted := make(Nodes, 0, len(layer))
+	// quadratic in the rank size; a ready queue by position if wide
+	// ranks with flat edges get slow
+	for len(sorted) < len(layer) {
+		// on a cycle of flat edges no node is ready; take the leftmost
+		pick, fallback := -1, -1
+		for i, node := range layer {
+			if placed[i] {
+				continue
 			}
-			if pick < 0 {
-				pick = fallback
+			if fallback < 0 {
+				fallback = i
 			}
-			placed[pick] = true
-			sorted = append(sorted, layer[pick])
-			for _, dst := range succs[layer[pick]] {
-				preds[dst]--
+			if preds[node] == 0 {
+				pick = i
+				break
 			}
 		}
-		copy(layer, sorted)
-		layer.assignPos()
+		if pick < 0 {
+			pick = fallback
+		}
+		placed[pick] = true
+		sorted = append(sorted, layer[pick])
+		for _, dst := range flat.succs[layer[pick]] {
+			preds[dst]--
+		}
 	}
+	copy(layer, sorted)
+	layer.assignPos()
 }
 
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or
