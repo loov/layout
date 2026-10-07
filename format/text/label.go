@@ -241,9 +241,15 @@ func (c *canvas) frameLabels(g grid) {
 // edge from another side where the lines of other edges are further from
 // it, so that it reads as its edge's
 func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int) {
-	bx, by, _ := c.nearEdge(x, y, w, h, path, [2]int{})
+	bx, by, against := c.nearEdge(x, y, w, h, path, [2]int{})
 	best := c.apart(bx, by, w, h, id)
 	for _, side := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+		if against && best >= 2 {
+			// against its edge with two blank cells to any other, which
+			// is clearly its own; moving it gains nothing and can keep
+			// carving from narrowing the drawing
+			break
+		}
 		if sx, sy, ok := c.nearEdge(x, y, w, h, path, side); ok {
 			if d := c.apart(sx, sy, w, h, id); d > best {
 				bx, by, best = sx, sy, d
