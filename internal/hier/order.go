@@ -214,31 +214,6 @@ func medianGridX(xs []float32, fallback float32) float32 {
 	}
 }
 
-// crossingsByPos counts unweighted crossings of u left of v and v left of u
-// from the cached neighbor position arrays
-func crossingsByPos(u, v *Node) (uv, vu float32) {
-	var a, b int32
-	for _, w := range u.inPos {
-		for _, z := range v.inPos {
-			if z < w {
-				a++
-			} else if z > w {
-				b++
-			}
-		}
-	}
-	for _, w := range u.outPos {
-		for _, z := range v.outPos {
-			if z < w {
-				a++
-			} else if z > w {
-				b++
-			}
-		}
-	}
-	return float32(a), float32(b)
-}
-
 // flatNeighbors returns the other ends of the flat edges of every node.
 func flatNeighbors(graph *Graph) map[*Node]Nodes {
 	flat := map[*Node]Nodes{}
@@ -325,16 +300,9 @@ func orderFlatEdges(graph *Graph) {
 // OrderRanksTranspose swaps adjacent nodes while it reduces crossings, or
 // shortens edges without adding crossings.
 func OrderRanksTranspose(graph *Graph) (swaps int) {
-	// the cached positions leave out weights and ports
-	weighted := len(graph.weights) > 0 || len(graph.Ports) > 0
 	flat := flatNeighbors(graph)
 	return graph.swapNeighbors(20, func(i int, left, right *Node) bool {
-		var before, after float32
-		if weighted {
-			before, after = graph.crossingsBothWays(left, right)
-		} else {
-			before, after = crossingsByPos(left, right)
-		}
+		before, after := graph.crossingsBothWays(left, right)
 		after -= flatShorter(flat, left, right)
 		if before == after {
 			before = graph.edgeLength(left, i) + graph.edgeLength(right, i+1)
@@ -347,7 +315,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 // swapNeighbors sweeps the ranks, swapping neighbors left and right at i
 // and i+1 where swap says so, until a sweep swaps none, at most rounds
 // times. swap sees the positions of the neighbors of left and right
-// cached for crossingsByPos.
+// cached, see cachePos.
 func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node) bool) (swaps int) {
 	graph.assignPos()
 	// a layer only needs another look when it or a neighbor changed
@@ -362,18 +330,8 @@ func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node
 			if !dirty[r] {
 				continue
 			}
-			// neighbor positions don't change while this layer is processed;
-			// cache them as flat arrays so the pair loop below streams
-			for _, node := range nodes {
-				node.inPos = node.inPos[:0]
-				for _, src := range node.In {
-					node.inPos = append(node.inPos, int32(src.Pos))
-				}
-				node.outPos = node.outPos[:0]
-				for _, dst := range node.Out {
-					node.outPos = append(node.outPos, int32(dst.Pos))
-				}
-			}
+			// neighbor positions don't change while this layer is processed
+			nodes.cachePos()
 			for i := 0; i+1 < len(nodes); i++ {
 				left, right := nodes[i], nodes[i+1]
 				if swap(i, left, right) {

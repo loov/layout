@@ -15,6 +15,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 		if n < 3 || n > maxSiftLayer {
 			continue
 		}
+		layer.cachePos()
 		c := make([]float32, n*n)
 		for i := range n {
 			for k := i + 1; k < n; k++ {

@@ -9,24 +9,11 @@ import (
 // Each crossing counts the product of the two edge weights.
 
 // crossingsBothWays returns the crossings of u and v with u left of v, and
-// with v left of u, visiting each neighbor pair once
+// with v left of u, visiting each neighbor pair once. Without weights and
+// ports it counts from the neighbor positions cached by cachePos.
 func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 	if len(graph.weights) == 0 && len(graph.Ports) == 0 {
-		// unweighted fast path
-		count := func(uadj, vadj Nodes) {
-			for _, w := range uadj {
-				for _, z := range vadj {
-					if z.Pos < w.Pos {
-						uv++
-					} else if z.Pos > w.Pos {
-						vu++
-					}
-				}
-			}
-		}
-		count(u.In, v.In)
-		count(u.Out, v.Out)
-		return uv, vu
+		return crossingsByPos(u, v)
 	}
 	// where the edges end on the neighbors, see Ports
 	in := func(w, u *Node) float32 { return float32(w.Pos) + graph.Ports[[2]ID{w.ID, u.ID}][0] }
@@ -50,6 +37,47 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 		}
 	}
 	return uv, vu
+}
+
+// crossingsByPos counts unweighted crossings of u left of v and v left of u
+// from the cached neighbor position arrays
+func crossingsByPos(u, v *Node) (uv, vu float32) {
+	var a, b int32
+	for _, w := range u.inPos {
+		for _, z := range v.inPos {
+			if z < w {
+				a++
+			} else if z > w {
+				b++
+			}
+		}
+	}
+	for _, w := range u.outPos {
+		for _, z := range v.outPos {
+			if z < w {
+				a++
+			} else if z > w {
+				b++
+			}
+		}
+	}
+	return float32(a), float32(b)
+}
+
+// cachePos caches the positions of the neighbors of the nodes for
+// crossingsByPos, so that its pair loops stream; they hold while the
+// neighbor ranks keep their order
+func (nodes Nodes) cachePos() {
+	for _, node := range nodes {
+		node.inPos = node.inPos[:0]
+		for _, src := range node.In {
+			node.inPos = append(node.inPos, int32(src.Pos))
+		}
+		node.outPos = node.outPos[:0]
+		for _, dst := range node.Out {
+			node.outPos = append(node.outPos, int32(dst.Pos))
+		}
+	}
 }
 
 // assignPos records each node's index within its rank
@@ -83,37 +111,69 @@ func (graph *Graph) TotalCrossings() float32 {
 }
 
 // bilayerCrossings counts weighted crossings between two adjacent layers in
-// O(E log V) with an accumulator tree over the lower layer positions.
+// O(E log V) with an accumulator tree over where the edges reach the
+// lower layer: in the order they leave upper, the crossings are the pairs
+// that reach lower the other way round. Edges end where Ports puts them
+// on their nodes.
 func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 	if len(lower) == 0 {
 		return 0
 	}
-	if len(graph.Ports) > 0 {
-		return graph.portCrossings(upper)
-	}
-	// edges sorted by (upper pos, lower pos)
+	// the leaf of the tree an edge reaches, in the order the edges leave
 	type edge struct {
-		pos    int
+		at     int
 		weight float32
 	}
 	var edges []edge
-	for _, u := range upper {
-		start := len(edges)
-		for _, v := range u.Out {
-			edges = append(edges, edge{v.Pos, graph.Weight(u, v)})
+	leaves := len(lower)
+	if len(graph.Ports) == 0 {
+		// the leaves are the positions in lower
+		for _, u := range upper {
+			start := len(edges)
+			for _, v := range u.Out {
+				edges = append(edges, edge{v.Pos, graph.Weight(u, v)})
+			}
+			slices.SortFunc(edges[start:], func(a, b edge) int { return a.at - b.at })
 		}
-		slices.SortFunc(edges[start:], func(a, b edge) int { return a.pos - b.pos })
+	} else {
+		// ends of different nodes can meet, so sort them all, and the
+		// leaves are the places edges reach, in order
+		type end struct{ from, to, weight float32 }
+		var ends []end
+		for _, u := range upper {
+			for _, v := range u.Out {
+				p := graph.Ports[[2]ID{u.ID, v.ID}]
+				ends = append(ends, end{float32(u.Pos) + p[0], float32(v.Pos) + p[1], graph.Weight(u, v)})
+			}
+		}
+		slices.SortFunc(ends, func(a, b end) int {
+			if a.from != b.from {
+				return cmp.Compare(a.from, b.from)
+			}
+			return cmp.Compare(a.to, b.to)
+		})
+		tos := make([]float32, len(ends))
+		for i, e := range ends {
+			tos[i] = e.to
+		}
+		slices.Sort(tos)
+		tos = slices.Compact(tos)
+		for _, e := range ends {
+			at, _ := slices.BinarySearch(tos, e.to)
+			edges = append(edges, edge{at, e.weight})
+		}
+		leaves = len(tos)
 	}
 
-	// tree leaves are lower positions; inner nodes hold summed weights
+	// inner nodes of the tree hold summed weights
 	first := 1
-	for first < len(lower) {
+	for first < leaves {
 		first *= 2
 	}
 	tree := make([]float32, 2*first)
 	total := float32(0)
 	for _, e := range edges {
-		i := first + e.pos
+		i := first + e.at
 		tree[i] += e.weight
 		for i > 1 {
 			if i%2 == 0 {
@@ -159,56 +219,6 @@ func (graph *Graph) edgeLength(node *Node, pos int) float32 {
 			d = -d
 		}
 		total += graph.Weight(node, dst) * d
-	}
-	return total
-}
-
-// portCrossings counts weighted crossings between the layer upper and the
-// one below it as bilayerCrossings does, with the edges ending where
-// Ports puts them on their nodes: in the order they leave upper, the
-// crossings are the pairs that reach the lower layer the other way round
-func (graph *Graph) portCrossings(upper Nodes) float32 {
-	type edge struct {
-		from, to float32
-		weight   float32
-	}
-	var edges []edge
-	for _, u := range upper {
-		for _, v := range u.Out {
-			p := graph.Ports[[2]ID{u.ID, v.ID}]
-			edges = append(edges, edge{float32(u.Pos) + p[0], float32(v.Pos) + p[1], graph.Weight(u, v)})
-		}
-	}
-	slices.SortFunc(edges, func(a, b edge) int {
-		if a.from != b.from {
-			return cmp.Compare(a.from, b.from)
-		}
-		return cmp.Compare(a.to, b.to)
-	})
-	// the leaves of the tree are the places edges reach, in order
-	tos := make([]float32, len(edges))
-	for i, e := range edges {
-		tos[i] = e.to
-	}
-	slices.Sort(tos)
-	tos = slices.Compact(tos)
-	first := 1
-	for first < len(tos) {
-		first *= 2
-	}
-	tree := make([]float32, 2*first)
-	total := float32(0)
-	for _, e := range edges {
-		at, _ := slices.BinarySearch(tos, e.to)
-		i := first + at
-		tree[i] += e.weight
-		for i > 1 {
-			if i%2 == 0 {
-				total += e.weight * tree[i+1] // edges already seen to the right
-			}
-			i /= 2
-			tree[i] += e.weight
-		}
 	}
 	return total
 }
