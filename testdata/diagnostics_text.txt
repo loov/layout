@@ -134,8 +134,8 @@ record2      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 record2_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=103 area=23654 unbalance=0
 records      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 labels=0 far=0 length=828 area=79451 unbalance=220
 records_merged nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=1 parallel=1 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 labels=0 far=0 length=828 area=79451 unbalance=220
-rowe         nodes=0 through=0 near=0 crossings=38 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=16 corners=162 wavy=16 back=14 labels=0 far=0 length=42183 area=2422728 unbalance=3748
-rowe_merged  nodes=0 through=0 near=0 crossings=44 shallow=0 overlaps=35 parallel=35 ends=35 shafts=0 jagged=0 bends=17 corners=170 wavy=17 back=14 labels=0 far=0 length=41435 area=2359800 unbalance=4066
+rowe         nodes=0 through=0 near=0 crossings=33 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=18 corners=170 wavy=18 back=13 labels=0 far=0 length=33656 area=1910304 unbalance=2399
+rowe_merged  nodes=0 through=0 near=0 crossings=50 shallow=0 overlaps=64 parallel=64 ends=64 shafts=0 jagged=0 bends=18 corners=172 wavy=18 back=13 labels=0 far=0 length=33539 area=1753488 unbalance=3206
 russian      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=799 area=183494 unbalance=230
 russian_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=0 labels=0 far=0 length=828 area=183494 unbalance=144
 sdh          nodes=0 through=0 near=2 crossings=103 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=11 bends=41 corners=240 wavy=41 back=1 labels=0 far=0 length=50768 area=3049728 unbalance=5272

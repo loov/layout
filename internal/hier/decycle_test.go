@@ -53,6 +53,16 @@ func TestDecycleMinimal(t *testing.T) {
 	}
 }
 
+func TestDecycleFewestReversed(t *testing.T) {
+	// 0->4, 4->2, 4->3, 3->2, 1->3, 2->0: searching from 4, which has the
+	// most edges out, reverses 4->2 and 4->3; from 0 only 2->0
+	graph := NewGraphFromEdgeList([][]int{0: {4}, 1: {3}, 2: {0}, 3: {2}, 4: {2, 3}})
+	Decycle(graph)
+	if got := graph.ConvertToEdgeList(); len(got[2]) != 0 || len(got[0]) != 2 || len(got[4]) != 2 {
+		t.Errorf("expected only 2->0 reversed, got %v", got)
+	}
+}
+
 func BenchmarkDecycle(b *testing.B) {
 	for _, size := range BenchmarkGraphSizes {
 		b.Run(size.Name, func(b *testing.B) {

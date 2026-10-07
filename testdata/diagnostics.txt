@@ -81,7 +81,7 @@ psfonttest   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=
 psg          nodes=0 through=0 near=2 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=2 bends=1 corners=19 wavy=0 back=0 labels=0 far=0 length=2514 area=291064 unbalance=350
 record2      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=42 area=11768 unbalance=0
 records      nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=438 area=49952 unbalance=201
-rowe         nodes=0 through=0 near=11 crossings=38 shallow=4 overlaps=0 parallel=3 ends=10 shafts=0 jagged=1 bends=2 corners=47 wavy=2 back=14 labels=0 far=0 length=18870 area=700608 unbalance=2134
+rowe         nodes=0 through=0 near=11 crossings=24 shallow=3 overlaps=0 parallel=5 ends=7 shafts=0 jagged=7 bends=5 corners=58 wavy=2 back=13 labels=0 far=0 length=13191 area=504000 unbalance=1296
 russian      nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=346 area=110596 unbalance=186
 sdh          nodes=0 through=0 near=5 crossings=108 shallow=8 overlaps=2 parallel=8 ends=45 shafts=0 jagged=17 bends=5 corners=118 wavy=2 back=1 labels=0 far=0 length=21293 area=884228 unbalance=2834
 shells       nodes=0 through=0 near=4 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=2 jagged=0 bends=0 corners=14 wavy=0 back=0 labels=0 far=0 length=3671 area=341211 unbalance=363
