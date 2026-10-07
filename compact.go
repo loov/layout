@@ -235,6 +235,7 @@ type compactPass struct {
 	varOf  []int // the variable of every item, see variables
 	// the item of every point of every edge path, see addEdges
 	pointItem [][]int
+	lastGroup []int // the last run of every edge
 	labels    []labelRef
 	sides     [][2]int // the objects of the sides of every cluster
 }
@@ -345,6 +346,7 @@ func (p *compactPass) addNodes(tie bool) {
 // the axis is elastic between its ends.
 func (p *compactPass) addEdges() {
 	p.pointItem = make([][]int, len(p.l.Edges))
+	p.lastGroup = make([]int, len(p.l.Edges))
 	merged := map[[4]int]int{}
 	for e, path := range p.l.Edges {
 		if len(path.Path) == 0 {
@@ -438,6 +440,7 @@ func (p *compactPass) addEdges() {
 			p.objs = append(p.objs, rigid{item: items[end.at], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: -2, hidden: edge.Invisible, marker: true})
 		}
 		p.pointItem[e] = items
+		p.lastGroup[e] = group
 
 		for which, label := range []struct {
 			text         string
@@ -559,6 +562,44 @@ func (p *compactPass) variables() int {
 	return len(vars)
 }
 
+// own reports whether one of a and b is a node and the other, in rows
+// past it, the run into the other end of an edge that leaves the node on
+// the side toward the run: the edge turns once, off that side, and is
+// kept off the node there, see constraints, so the run may pass the
+// corner of the node in the next row
+func (p *compactPass) own(a, b rigid) bool {
+	if a.kind == runKind {
+		a, b = b, a
+	}
+	if a.kind != nodeKind || b.kind != runKind {
+		return false
+	}
+	edge, path := p.l.Graph.Edges[b.index], p.l.Edges[b.index].Path
+	side := a.c1
+	if b.c1 < a.c0 {
+		side = a.c0
+	}
+	node := p.l.Graph.Nodes[a.index]
+	if p.lastGroup[b.index] != 1 {
+		return false
+	}
+	// on the side, not on a corner, and with the cells the other end
+	// keeps for its marker and its border, see constraints, across: else
+	// text may have drawn the end on the border, and has no room left
+	on := func(pt Vector, far *Node, marked bool) bool {
+		keep := 0
+		if marked {
+			keep += p.grid.lineSpace
+		}
+		if p.l.Nodes[p.l.nodeIndex[far]].Shape != None {
+			keep += p.grid.lineSpace
+		}
+		return p.row(pt.Y) == side && a.lo < p.col(pt.X) && p.col(pt.X) < a.hi && b.c1-b.c0 >= keep
+	}
+	return edge.From == node && b.group == 1 && on(path[0], edge.To, headMarked(edge)) ||
+		edge.To == node && b.group == 0 && on(path[len(path)-1], edge.From, tailMarked(edge))
+}
+
 // plain reports whether o is a node without outline, which text draws
 // in a frame of blank cells where edges end, see draw.PlainBox
 func (p *compactPass) plain(o rigid) bool {
@@ -669,6 +710,9 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 // every object looks back along each of its rows only until the objects
 // between keep anything further back apart from it.
 func (p *compactPass) separations() []constraint {
+	// a gap that keeps nothing apart, low enough that no sum of gaps
+	// through it implies a pair is kept apart
+	const free = -1 << 40
 	objs, varOf, grid := p.objs, p.varOf, p.grid
 	// the most cells two objects need, see need
 	most := max(grid.space, grid.lineSpace) + grid.lineSpace
@@ -681,12 +725,17 @@ func (p *compactPass) separations() []constraint {
 		return cmp.Or(objs[a].lo+objs[a].hi-objs[b].lo-objs[b].hi, a-b)
 	})
 	// gap returns the cells that the objects i and j, i first, keep
-	// between them: as many as they have when they move together
+	// between them: as many as they have when they move together, and
+	// free for a node and the run of an edge past its corner, see own,
+	// which nothing implied through them may count on either
 	gap := func(i, j int) int {
 		a, b := objs[i], objs[j]
 		dist := b.lo - a.hi
 		if varOf[a.item] == varOf[b.item] {
 			return dist
+		}
+		if (a.c0 > b.c1 || b.c0 > a.c1) && p.own(a, b) {
+			return free
 		}
 		if grid.text && p.plain(a) && p.plain(b) {
 			// the blank frames of nodes without outline keep their texts
@@ -775,7 +824,7 @@ func (p *compactPass) separations() []constraint {
 		walk(near, false)
 		walk(along, true)
 		for _, a := range found {
-			if !implied[a] {
+			if !implied[a] && gap(a, c) != free {
 				x, y := pos[a], pos[c]
 				pairs = append(pairs, pair{uint64(min(x, y))<<32 | uint64(max(x, y)), constraint{varOf[objs[a].item], varOf[o.item], gap(a, c) - (o.lo - objs[a].hi), false}})
 			}
