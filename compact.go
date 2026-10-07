@@ -435,6 +435,15 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 		i, j, ci, cj = j, i, cj, ci
 	}
 	switch anchor := run(i); {
+	case items[i] != items[j] && o.lo <= cj && o.hi >= ci && which != 0:
+		// a head or tail label along a run keeps its distance from the
+		// end it labels, or it could slide to the other
+		k := max(i, j)
+		if which == 2 {
+			k = min(i, j)
+		}
+		ref.anchor = items[k]
+		p.union(o.item, items[k])
 	case items[i] != items[j] && o.lo <= cj && o.hi >= ci:
 		ref.side, ref.anchor, ref.end = 2, items[i], items[j]
 		ref.dist, ref.endDist = (o.lo+o.hi)/2-ci, cj-(o.lo+o.hi)/2
