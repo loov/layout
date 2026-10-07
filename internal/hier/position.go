@@ -365,16 +365,14 @@ func positionSimplex(graph *Graph, fans bool) {
 			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(graph.sep(a, b)))
 		}
 	}
-	// a virtual node with an anchor carries a label beside its edge, which
-	// keeps straighter than a long edge leaving a node, the label beside
-	// it rather than between its bends
-	label := func(node *Node) bool { return node.Virtual && node.Anchor != 0 }
+	// an edge to a label carrier keeps straighter than a long edge
+	// leaving a node, the label beside it rather than between its bends
 	weight := func(src, dst *Node) float32 {
 		omega := float32(1)
 		switch {
 		case src.Virtual && dst.Virtual:
 			omega = 8
-		case label(src) || label(dst):
+		case src.Carrier || dst.Carrier:
 			omega = 4
 		case src.Virtual || dst.Virtual:
 			omega = 2
@@ -434,7 +432,7 @@ func positionSimplex(graph *Graph, fans bool) {
 	}
 	child := func(c *Node) *Node {
 		for c.Virtual && len(c.Out) == 1 {
-			if real[c.Rank] || label(c) {
+			if real[c.Rank] || c.Carrier {
 				return nil
 			}
 			c = c.Out[0]
@@ -475,7 +473,7 @@ func positionSimplex(graph *Graph, fans bool) {
 			continue
 		}
 		for i, node := range layer {
-			if !node.Virtual || label(node) || len(node.Out) != 1 {
+			if !node.Virtual || node.Carrier || len(node.Out) != 1 {
 				continue
 			}
 			end := child(node.Out[0])

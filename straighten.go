@@ -109,7 +109,6 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 	for r, layer := range graph.ByRank {
 		real[r] = slices.ContainsFunc(layer, func(node *hier.Node) bool { return !node.Virtual })
 	}
-	label := func(node *hier.Node) bool { return node.Virtual && node.Anchor != 0 }
 	neighbors := func(node *hier.Node, before bool) []*hier.Node {
 		out := adjacent[:0]
 		next := node.Out
@@ -117,7 +116,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 			next = node.In
 		}
 		for _, n := range next {
-			for n.Virtual && !label(n) && !real[n.Rank] {
+			for n.Virtual && !n.Carrier && !real[n.Rank] {
 				ends := n.Out
 				if before {
 					ends = n.In
@@ -127,7 +126,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 				}
 				n = ends[0]
 			}
-			if !n.Virtual || label(n) && !graphdef.MergeEdges {
+			if !n.Virtual || n.Carrier && !graphdef.MergeEdges {
 				out = append(out, n)
 			}
 		}

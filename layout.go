@@ -749,6 +749,7 @@ func (c *hierComponent) sizeNodes() {
 				// the edge passes on one side, the labels stack on the
 				// other, see labelSide
 				node.Anchor = -labelSide(c.graphdef.RankDir) * (node.Radius.X - float32(c.graphdef.EdgePadding))
+				node.Carrier = true
 			}
 			continue
 		}

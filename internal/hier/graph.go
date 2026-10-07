@@ -80,6 +80,9 @@ type Node struct {
 	Virtual bool
 	// BorderLeft/BorderRight mark the virtual border nodes of a cluster
 	BorderLeft, BorderRight bool
+	// Carrier marks a virtual node that carries the labels of its edge
+	// beside it, see Anchor
+	Carrier bool
 
 	// Cluster the node belongs to, if any
 	Cluster *Cluster
