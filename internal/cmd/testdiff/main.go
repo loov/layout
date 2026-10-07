@@ -6,6 +6,7 @@
 //	go run ./internal/cmd/testdiff          # the working tree against HEAD
 //	go run ./internal/cmd/testdiff <commit> # a commit against its parent
 //	go run ./internal/cmd/testdiff <old> <new> # two commits, such as main HEAD
+//	go run ./internal/cmd/testdiff <dir> <dir> # the drawings of two directories, by name
 //	go run ./internal/cmd/testdiff -all     # every drawing, changed or not
 //	go run ./internal/cmd/testdiff -title "option 1" # titled, to tell pages apart
 //
@@ -57,7 +58,7 @@ func main() {
 	all := flag.Bool("all", false, "show every drawing, also the ones that did not change")
 	name := flag.String("title", "", "title of the page, in place of what it compares")
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [-title title] [commit | old new]")
+		fmt.Fprintln(os.Stderr, "usage: testdiff [-n] [-all] [-title title] [commit | old new | olddir newdir]")
 		flag.PrintDefaults()
 	}
 	flag.Parse()
@@ -66,12 +67,19 @@ func main() {
 		os.Exit(2)
 	}
 
-	base, target, title, err := revisions(flag.Args())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "testdiff:", err)
-		os.Exit(1)
+	var changes []Change
+	var title string
+	var err error
+	if args := flag.Args(); len(args) == 2 && isDir(args[0]) && isDir(args[1]) {
+		title = args[0] + " → " + args[1]
+		changes, err = collectDirs(args[0], args[1], *all)
+	} else {
+		var base, target string
+		base, target, title, err = revisions(args)
+		if err == nil {
+			changes, err = collect(base, target, *all)
+		}
 	}
-	changes, err := collect(base, target, *all)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "testdiff:", err)
 		os.Exit(1)
@@ -199,33 +207,95 @@ func collect(base, target string, all bool) ([]Change, error) {
 
 	var changes []Change
 	for _, path := range paths {
-		kind := strings.TrimPrefix(filepath.Ext(path), ".")
-		if kind != "svg" && kind != "txt" && kind != "ans" || strings.HasPrefix(filepath.Base(path), "diagnostics") {
-			continue // diagnostics are no drawing
-		}
-		old, new := show(base, path), read(path)
-		if all && (old != "" || new != "") || old != new {
-			// drawings are named as the graph, text colored or not
-			name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-			name = strings.TrimSuffix(name, ".truecolor")
-			stats := "txt"
-			if kind == "svg" {
-				stats = "svg"
-			}
-			change := Change{
-				Path: path, Kind: kind, Old: old, New: new,
-				OldSize: size(kind, old), NewSize: size(kind, new),
-				OldStats: oldStats[stats][name], NewStats: newStats[stats][name],
-			}
-			if kind != "svg" {
-				// text is counted as drawn, see textStats
-				change.OldStats = withText(change.OldStats, old)
-				change.NewStats = withText(change.NewStats, new)
-			}
+		if change, ok := compare(path, show(base, path), read(path), oldStats, newStats, all); ok {
 			changes = append(changes, change)
 		}
 	}
 	return changes, nil
+}
+
+// collectDirs returns the drawings that differ between the directories
+// oldDir and newDir, matched by name; with all, also the ones that don't.
+// The diagnostics come from each directory, or the one above it, as
+// testdata/graphviz has them in testdata.
+func collectDirs(oldDir, newDir string, all bool) ([]Change, error) {
+	var paths []string
+	for _, dir := range []string{oldDir, newDir} {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				paths = append(paths, entry.Name())
+			}
+		}
+	}
+	slices.Sort(paths)
+	paths = slices.Compact(paths)
+
+	read := func(dir, name string) string {
+		data, _ := os.ReadFile(filepath.Join(dir, name))
+		return string(data)
+	}
+	stats := func(dir string) map[string]map[string]map[string]float64 {
+		find := func(name string) string {
+			if content := read(dir, name); content != "" {
+				return content
+			}
+			return read(filepath.Dir(filepath.Clean(dir)), name)
+		}
+		return map[string]map[string]map[string]float64{
+			"svg": diagnostics(find("diagnostics.txt")),
+			"txt": diagnostics(find("diagnostics_text.txt")),
+		}
+	}
+	oldStats, newStats := stats(oldDir), stats(newDir)
+
+	var changes []Change
+	for _, path := range paths {
+		if change, ok := compare(path, read(oldDir, path), read(newDir, path), oldStats, newStats, all); ok {
+			changes = append(changes, change)
+		}
+	}
+	return changes, nil
+}
+
+// compare returns the change of the drawing at path from old to new, with
+// the diagnostics of its graph by kind and name; ok is false when path is
+// no drawing, or it did not change and all is not set
+func compare(path, old, new string, oldStats, newStats map[string]map[string]map[string]float64, all bool) (change Change, ok bool) {
+	kind := strings.TrimPrefix(filepath.Ext(path), ".")
+	if kind != "svg" && kind != "txt" && kind != "ans" || strings.HasPrefix(filepath.Base(path), "diagnostics") {
+		return Change{}, false // diagnostics are no drawing
+	}
+	if !(all && (old != "" || new != "") || old != new) {
+		return Change{}, false
+	}
+	// drawings are named as the graph, text colored or not
+	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
+	name = strings.TrimSuffix(name, ".truecolor")
+	stats := "txt"
+	if kind == "svg" {
+		stats = "svg"
+	}
+	change = Change{
+		Path: path, Kind: kind, Old: old, New: new,
+		OldSize: size(kind, old), NewSize: size(kind, new),
+		OldStats: oldStats[stats][name], NewStats: newStats[stats][name],
+	}
+	if kind != "svg" {
+		// text is counted as drawn, see textStats
+		change.OldStats = withText(change.OldStats, old)
+		change.NewStats = withText(change.NewStats, new)
+	}
+	return change, true
+}
+
+// isDir reports whether path is a directory
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 var (
