@@ -251,15 +251,18 @@ func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
 
 	// horizontal compaction: longest path over the block graph
 	// (blocks = roots, edges between horizontally adjacent blocks). Blocks
-	// line up the nodes' anchors, so a node reaches Radius.X past its
-	// center, which is Anchor before the anchor; mirrored when compacting
-	// right
+	// line up the nodes' anchors, which keep sep apart, as in
+	// positionSimplex; mirrored when compacting right
 	side := float32(1)
 	if !left {
 		side = -1
 	}
-	before := func(node *Node) float32 { return node.Radius.X + side*node.Anchor }
-	after := func(node *Node) float32 { return node.Radius.X - side*node.Anchor }
+	sep := func(prev, node *Node) float32 {
+		if left {
+			return graph.sep(prev, node)
+		}
+		return graph.sep(node, prev)
+	}
 	x := make([]float32, n)
 	placed := make([]bool, n)
 	var place func(v *Node)
@@ -273,7 +276,7 @@ func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
 				prev := layerOf[w.ID][p-1]
 				u := root[prev.ID]
 				place(u)
-				x[v.ID] = max(x[v.ID], x[u.ID]+after(prev)+before(w))
+				x[v.ID] = max(x[v.ID], x[u.ID]+sep(prev, w))
 			}
 			if align[w.ID] == v {
 				break
