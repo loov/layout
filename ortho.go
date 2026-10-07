@@ -482,11 +482,11 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			tracks = max(tracks, track[i]+1)
 		}
 		top, bottom := rows[k][1], rows[k+1][0]-arcs[k]
-		// tracks are a pad apart, or a cell apart in text turned sideways,
-		// where the channel runs across the columns of cells
+		// tracks are a pad apart, or a cell apart in text, a line or a
+		// column sideways, where the channel runs across the columns
 		step := pad
-		if graph.ForText && sideways(graph.RankDir) {
-			step = graph.cellWidth()
+		if graph.ForText {
+			step = graph.cell().Y
 		}
 		// above arcs, the arrows are below them, so tracks go right above,
 		// high in the channel; and next to the top or bottom of a cluster,

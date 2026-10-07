@@ -75,10 +75,8 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		}
 		// runs along the frame of a cluster, within half a cell of it, which
 		// text draws on it
-		near := Vector{X: graphdef.cellWidth() / 2, Y: graphdef.LineHeight / 2}
-		if sideways(graphdef.RankDir) {
-			near.X, near.Y = near.Y, near.X
-		}
+		cell := graphdef.cell()
+		near := Vector{X: cell.X / 2, Y: cell.Y / 2}
 		for _, cluster := range graphdef.Clusters {
 			tl, br := cluster.TopLeft, cluster.BottomRight
 			for _, h := range horizontal {
@@ -191,10 +189,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 	}
 	wide := width()
 	// a cell along the ranks: a column, or a row sideways
-	cell := float32(graphdef.cellWidth())
-	if sideways(graphdef.RankDir) {
-		cell = float32(graphdef.LineHeight)
-	}
+	cell := float32(graphdef.cell().X)
 	bends, crossings, overlaps := measure()
 	for range 4 {
 		improved := false

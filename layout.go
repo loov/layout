@@ -411,6 +411,22 @@ func (c *hierComponent) labelSpan(cluster *lcluster) Length {
 	return 2 * (c.graphdef.textRadius(cluster.Label, "", c.graphdef.FontSize).X + c.graphdef.EdgePadding)
 }
 
+// labelRow returns the height of the row a cluster's label takes under its
+// top; sideways the label runs along the ranks instead, see labelSpan. In
+// text a cluster without a label has a row as tall too, as text draws the
+// top on the line above the first node, which leaves no row for the
+// arrowheads of edges coming in otherwise
+func (c *hierComponent) labelRow(cluster *lcluster) Length {
+	label := cluster.Label
+	switch {
+	case sideways(c.graphdef.RankDir), label == "" && !c.graphdef.ForText:
+		return 0
+	case label == "":
+		label = " "
+	}
+	return 2 * c.graphdef.textRadius(label, "", c.graphdef.FontSize).Y
+}
+
 // outlines returns the room the extra outlines of a node take
 func outlines(node *lnode) Length { return Length(max(node.Peripheries-1, 0)) * peripheryGap }
 
@@ -629,11 +645,7 @@ func (c *hierComponent) reserveEnds() {
 				continue
 			}
 			// a line each across the frame, a column sideways
-			cell := c.graphdef.LineHeight / 2
-			if sideways(c.graphdef.RankDir) {
-				cell = c.graphdef.cellWidth() / 2
-			}
-			if grow := Length(max(e[0], e[1])+1)*cell - node.Radius.Y; grow > 0 {
+			if grow := Length(max(e[0], e[1])+1)*c.graphdef.cell().Y/2 - node.Radius.Y; grow > 0 {
 				node.Radius.Y += grow
 				node.pad.Y += grow
 			}
@@ -691,13 +703,10 @@ func (c *hierComponent) reserveEnds() {
 // laneSpacing is how far apart edges along a rank between the same nodes
 // run, side by side across the rank
 func (c *hierComponent) laneSpacing() Length {
-	switch {
-	case !c.graphdef.ForText:
+	if !c.graphdef.ForText {
 		return 2 * c.graphdef.EdgePadding
-	case sideways(c.graphdef.RankDir):
-		return c.graphdef.cellWidth() // a column apart
 	}
-	return c.graphdef.LineHeight // a line apart
+	return c.graphdef.cell().Y // a line apart, a column sideways
 }
 
 // reserveFlatLabels makes room for the label of an edge between neighbors
@@ -826,19 +835,12 @@ func (c *hierComponent) reserveClusterLabels() {
 		cluster := c.clusters[clusterdef]
 		pad := float32(c.graphdef.RowPadding / 2)
 		top, bottom := pad, pad
-		switch {
-		case clusterdef.Label == "" && c.graphdef.ForText && !sideways(c.graphdef.RankDir):
-			// a line under the top, where text draws the arrowheads of
-			// edges coming in, as tall as a label's, see placeClusters
-			top += float32(2 * c.graphdef.textRadius(" ", "", c.graphdef.FontSize).Y)
-		case clusterdef.Label == "":
-		case sideways(c.graphdef.RankDir):
+		top += float32(c.labelRow(clusterdef))
+		if clusterdef.Label != "" && sideways(c.graphdef.RankDir) {
 			// the label runs along the ranks; make room for the box to
 			// reach as far on both sides
 			short := float32(max(0, c.labelSpan(clusterdef)-span(clusterdef, cluster))) / 2
 			top, bottom = top+short, bottom+short
-		default:
-			top += float32(2 * c.graphdef.textRadius(clusterdef.Label, "", c.graphdef.FontSize).Y)
 		}
 		last := len(cluster.Left) - 1
 		grow([]*hier.Node{cluster.Left[0], cluster.Right[0]}, cluster.MinRank, top)
@@ -856,18 +858,12 @@ func (c *hierComponent) position() {
 	if c.graphdef.ForText && c.graphdef.MergeEdges {
 		// a cell between the fans of different nodes, as merged edges
 		// center a node's children on it
-		c.graph.FamilyGap = float32(c.graphdef.cellWidth())
-		if sideways(c.graphdef.RankDir) {
-			c.graph.FamilyGap = float32(c.graphdef.LineHeight)
-		}
+		c.graph.FamilyGap = float32(c.graphdef.cell().X)
 	}
 	if c.graphdef.ForText {
 		// a row or column for the run of an edge along a rank, and one for
 		// its arrowhead, beyond the padding of the nodes
-		c.graph.FlatGap = float32(2 * c.graphdef.cellWidth())
-		if sideways(c.graphdef.RankDir) {
-			c.graph.FlatGap = float32(2 * c.graphdef.LineHeight)
-		}
+		c.graph.FlatGap = float32(2 * c.graphdef.cell().X)
 		// ends at ports on the sides along the rank turn beside the node:
 		// a row or column each, and one more beside the next node
 		ends := map[hier.ID][2]int{}
@@ -890,10 +886,7 @@ func (c *hierComponent) position() {
 				ends[id] = e
 			}
 		}
-		cell := float32(c.graphdef.cellWidth())
-		if sideways(c.graphdef.RankDir) {
-			cell = float32(c.graphdef.LineHeight)
-		}
+		cell := float32(c.graphdef.cell().X)
 		for id, e := range ends {
 			room := [2]float32{}
 			for side, n := range e {
@@ -966,19 +959,11 @@ func (c *hierComponent) placeClusters() {
 		// enclose nested boxes
 		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
 		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
-		switch {
-		case clusterdef.Label == "" && c.graphdef.ForText && !sideways(c.graphdef.RankDir):
-			// text has no row for an arrowhead into the first node
-			// otherwise, as it draws the top on the line above it; the
-			// rows line up as under a label
-			top -= 2 * c.graphdef.textRadius(" ", "", c.graphdef.FontSize).Y
-		case clusterdef.Label == "":
-		case sideways(c.graphdef.RankDir):
+		top -= c.labelRow(clusterdef)
+		if clusterdef.Label != "" && sideways(c.graphdef.RankDir) {
 			if short := c.labelSpan(clusterdef) - (bottom - top); short > 0 {
 				top, bottom = top-short/2, bottom+short/2
 			}
-		default:
-			top -= 2 * c.graphdef.textRadius(clusterdef.Label, "", c.graphdef.FontSize).Y
 		}
 		clusterdef.TopLeft = Vector{left, top}
 		clusterdef.BottomRight = Vector{right, bottom}

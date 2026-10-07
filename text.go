@@ -137,3 +137,13 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 // cellWidth returns the width of a character cell of format/text, which
 // draws a cell FontSize*0.55 wide
 func (graph *lgraph) cellWidth() Length { return graph.FontSize * 0.55 }
+
+// cell returns a character cell of format/text in the frame where ranks
+// run down: X along the ranks, a column or a line sideways, and Y across
+// them, a line or a column sideways
+func (graph *lgraph) cell() Vector {
+	if sideways(graph.RankDir) {
+		return Vector{X: graph.LineHeight, Y: graph.cellWidth()}
+	}
+	return Vector{X: graph.cellWidth(), Y: graph.LineHeight}
+}
