@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"cmp"
 	"math"
 	"slices"
 
@@ -20,13 +21,15 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 	// the helpers below fill buffers kept across the tries, as each try
 	// runs them over every node and edge, and their results are used up
 	// before they run again
+	// a run of an edge at a coordinate across it, from lo to hi along it
 	type segment struct {
-		a, b Vector
-		edge *ledge
+		at, lo, hi Length
+		edge       *ledge
 	}
 	var horizontal, vertical []segment
 	var xs, wants []float32
 	var adjacent, kept []*hier.Node
+	byStart := func(a, b segment) int { return cmp.Or(cmp.Compare(a.at, b.at), cmp.Compare(a.lo, b.lo)) }
 	measure := func() (bends, crossings, overlaps int) {
 		horizontal, vertical = horizontal[:0], vertical[:0]
 		for _, edge := range graphdef.Edges {
@@ -34,9 +37,9 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 				a, b := edge.Path[i-1], edge.Path[i]
 				switch {
 				case a.Y == b.Y && a.X != b.X:
-					horizontal = append(horizontal, segment{a, b, edge})
+					horizontal = append(horizontal, segment{a.Y, min(a.X, b.X), max(a.X, b.X), edge})
 				case a.X == b.X && a.Y != b.Y:
-					vertical = append(vertical, segment{a, b, edge})
+					vertical = append(vertical, segment{a.X, min(a.Y, b.Y), max(a.Y, b.Y), edge})
 				}
 				if i+1 < len(edge.Path) {
 					c := edge.Path[i+1]
@@ -46,11 +49,21 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 				}
 			}
 		}
+		// sorted, a run meets only the runs that start within its span
+		slices.SortFunc(horizontal, byStart)
+		slices.SortFunc(vertical, byStart)
 		for _, h := range horizontal {
-			for _, v := range vertical {
-				if h.edge != v.edge &&
-					min(h.a.X, h.b.X) < v.a.X && v.a.X < max(h.a.X, h.b.X) &&
-					min(v.a.Y, v.b.Y) < h.a.Y && h.a.Y < max(v.a.Y, v.b.Y) {
+			i, _ := slices.BinarySearchFunc(vertical, h.lo, func(v segment, x Length) int {
+				if v.at <= x {
+					return -1
+				}
+				return 1
+			})
+			for _, v := range vertical[i:] {
+				if v.at >= h.hi {
+					break
+				}
+				if h.edge != v.edge && v.lo < h.at && h.at < v.hi {
 					crossings++
 				}
 			}
@@ -59,15 +72,11 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		for _, runs := range [][]segment{horizontal, vertical} {
 			for i, r := range runs {
 				for _, q := range runs[i+1:] {
-					if r.edge == q.edge {
-						continue
-					}
-					same := r.a.Y == q.a.Y && min(max(r.a.X, r.b.X), max(q.a.X, q.b.X)) > max(min(r.a.X, r.b.X), min(q.a.X, q.b.X))
-					if r.a.X == r.b.X {
-						same = r.a.X == q.a.X && min(max(r.a.Y, r.b.Y), max(q.a.Y, q.b.Y)) > max(min(r.a.Y, r.b.Y), min(q.a.Y, q.b.Y))
+					if q.at != r.at || q.lo >= r.hi {
+						break
 					}
 					// merged looks up maps, so it goes last
-					if same && !merged(r.edge, q.edge) {
+					if r.edge != q.edge && !merged(r.edge, q.edge) {
 						overlaps++
 					}
 				}
@@ -80,14 +89,12 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, finish func()) {
 		for _, cluster := range graphdef.Clusters {
 			tl, br := cluster.TopLeft, cluster.BottomRight
 			for _, h := range horizontal {
-				lo, hi := min(h.a.X, h.b.X), max(h.a.X, h.b.X)
-				if (absLength(h.a.Y-tl.Y) <= near.Y || absLength(h.a.Y-br.Y) <= near.Y) && min(hi, br.X)-max(lo, tl.X) > near.X {
+				if (absLength(h.at-tl.Y) <= near.Y || absLength(h.at-br.Y) <= near.Y) && min(h.hi, br.X)-max(h.lo, tl.X) > near.X {
 					overlaps++
 				}
 			}
 			for _, v := range vertical {
-				lo, hi := min(v.a.Y, v.b.Y), max(v.a.Y, v.b.Y)
-				if (absLength(v.a.X-tl.X) <= near.X || absLength(v.a.X-br.X) <= near.X) && min(hi, br.Y)-max(lo, tl.Y) > near.Y {
+				if (absLength(v.at-tl.X) <= near.X || absLength(v.at-br.X) <= near.X) && min(v.hi, br.Y)-max(v.lo, tl.Y) > near.Y {
 					overlaps++
 				}
 			}
