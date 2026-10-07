@@ -12,7 +12,8 @@ import (
 
 // TestCompact checks that compacting the examples and the Graphviz files,
 // laid out for text and with ortho splines, with edges merged and not,
-// takes no more room and adds no crossings nor overlaps.
+// takes no more room and adds no crossings nor overlaps, and leaves the
+// ends of edges on their nodes' outlines.
 func TestCompact(t *testing.T) {
 	check := func(t *testing.T, build func() *layout.Graph, opts layout.Options) {
 		for _, text := range []bool{true, false} {
@@ -44,6 +45,7 @@ func TestCompact(t *testing.T) {
 					{"crossings", before.EdgeCrossings, after.EdgeCrossings},
 					{"edge overlaps", before.EdgeOverlaps, after.EdgeOverlaps},
 					{"label overlaps", before.LabelOverlaps, after.LabelOverlaps},
+					{"ends inside their nodes", before.Shafts, after.Shafts},
 				} {
 					if k.after > k.before {
 						t.Errorf("text %v, merged %v: %s grew from %d to %d", text, merge, k.name, k.before, k.after)

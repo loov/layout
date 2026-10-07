@@ -95,6 +95,33 @@ func compact(l *Layout, grid compactGrid) {
 	for i := range l.Edges {
 		l.Edges[i].Path = simplifyPath(l.Edges[i].Path)
 	}
+	onOutlines(l)
+}
+
+// onOutlines puts the ends of edges back on the outlines of ellipses
+// and polygons: an end moves with the run it is on, which can slide it
+// along such an outline, and into the node
+func onOutlines(l *Layout) {
+	for i, edge := range l.Graph.Edges {
+		path := l.Edges[i].Path
+		if len(path) < 2 || edge.From == edge.To {
+			continue
+		}
+		for _, end := range [2]struct {
+			at, next int
+			node     *Node
+		}{{0, 1, edge.From}, {len(path) - 1, len(path) - 2, edge.To}} {
+			box := l.Nodes[l.nodeIndex[end.node]]
+			switch box.Shape {
+			case Box, Square, Record, None, PointShape:
+				continue
+			}
+			// as Diagnose tells an end inside its node, see Shafts
+			if node := box.node(); segmentHitsNode(path[end.at], path[end.at], node, -0.5) {
+				path[end.at] = node.outlineAlong(path[end.at], path[end.next])
+			}
+		}
+	}
 }
 
 // crowded returns the edges that end where another edge ends, or run
