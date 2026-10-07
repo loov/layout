@@ -482,114 +482,122 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 		}
 		return true
 	}
-	for r := range g {
-		for c := range g[r] {
-			top := pos{r, c}
-			if q := at(top); junction(g.runeAt(top)) && !q.solid {
-				// a line leaving a junction along the row and a step after
-				// it: one, on the row of the junction, which stays
-				for _, dir := range []int{-1, 1} {
-					side, back := uint8(right), uint8(left)
-					if dir < 0 {
-						side, back = left, right
-					}
-					first := pos{r, c + dir}
-					b, ok := g.run(top, dir)
-					if arms(q.r)&side == 0 || !ok || at(first).solid {
-						continue
-					}
-					mid := pos{g.bottom(pos{r, b}), b}
-					_, c2, turns := g.step(mid)
-					if !turns || (c2-c)*dir <= 0 {
-						continue
-					}
-					end := pos{mid.r, c2}
-					oldPath, oldDirs = route(oldPath, oldDirs, back, down, first, pos{r, b}, mid, end)
-					newPath, newDirs = route(newPath, newDirs, back, down, first, pos{r, c2}, end)
-					if reroute(back, oldPath, false, newPath, newDirs, nil) {
-						changed = true
-					}
+	// jog makes a step at r, c and the one after it one, see unjog
+	jog := func(r, c int) (moved bool) {
+		top := pos{r, c}
+		if q := at(top); junction(g.runeAt(top)) && !q.solid {
+			// a line leaving a junction along the row and a step after
+			// it: one, on the row of the junction, which stays
+			for _, dir := range []int{-1, 1} {
+				side, back := uint8(right), uint8(left)
+				if dir < 0 {
+					side, back = left, right
 				}
-				continue
-			}
-			_, b, ok := g.step(top)
-			if !ok {
-				continue
-			}
-			mid := pos{g.bottom(pos{r, b}), b}
-			if dir, c2, turns := g.step(mid); dir != 0 {
-				// two steps: one, on the lower row or else the upper;
-				// a second that runs into something ends before it
-				end, out := pos{mid.r, c2}, uint8(down)
-				if !turns {
-					end, out = pos{mid.r, c2 - dir}, map[int]uint8{-1: left, 1: right}[dir]
-				}
-				oldPath, oldDirs = route(oldPath, oldDirs, up, out, top, pos{r, b}, mid, end)
-				vias := []pos{{mid.r, c}, {r, c2}}
-				if !turns {
-					vias = vias[:1] // the run goes on along the lower row
-				}
-				for i, via := range vias {
-					newPath, newDirs = route(newPath, newDirs, up, out, top, via, end)
-					if reroute(up, oldPath, i > 0, newPath, newDirs, nil) {
-						changed = true
-						break
-					}
-				}
-				continue
-			}
-			if g.runeAt(mid) != '▼' || at(mid).style&pinned != 0 {
-				continue
-			}
-			// a last step before an arrowhead into a box: the arrowhead
-			// goes along when the box goes on under the line, with no
-			// corner between
-			box := true
-			for x := min(c, b); x <= max(c, b); x++ {
-				p := at(pos{mid.r + 1, x})
-				box = box && p != nil && p.solid && (x == b || boxRowSide(p.r))
-			}
-			if !box {
-				continue
-			}
-			head := *at(mid)
-			oldPath, oldDirs = route(oldPath, oldDirs, up, down, top, pos{r, b}, mid)
-			newPath, newDirs = route(newPath, newDirs, up, down, top, pos{mid.r, c})
-			if reroute(up, oldPath, false, newPath, newDirs, &head) {
-				changed = true
-			}
-		}
-	}
-	// a step slides along its line to where the line crosses fewer
-	// lines, as two lines can cross twice to swap back
-	for r := range g {
-		for c := range g[r] {
-			top := pos{r, c}
-			_, b, ok := g.step(top)
-			if !ok {
-				continue
-			}
-			first := r
-			for verticalOrCrossing(g.runeAt(pos{first - 1, c})) {
-				first--
-			}
-			last := g.bottom(pos{r, b}) - 1
-			oldPath, oldDirs = route(oldPath, oldDirs, up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
-			// a line that crosses none can't cross fewer
-			if !slices.ContainsFunc(oldPath, func(p pos) bool { q := at(p); return q != nil && q.r == '╂' }) {
-				continue
-			}
-			again := false
-			for row := first; row <= last; row++ {
-				if row == r {
+				first := pos{r, c + dir}
+				b, ok := g.run(top, dir)
+				if arms(q.r)&side == 0 || !ok || at(first).solid {
 					continue
 				}
-				newPath, newDirs = route(newPath, newDirs, up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
-				if reroute(up, oldPath, again, newPath, newDirs, nil) {
-					changed = true
+				mid := pos{g.bottom(pos{r, b}), b}
+				_, c2, turns := g.step(mid)
+				if !turns || (c2-c)*dir <= 0 {
+					continue
+				}
+				end := pos{mid.r, c2}
+				oldPath, oldDirs = route(oldPath, oldDirs, back, down, first, pos{r, b}, mid, end)
+				newPath, newDirs = route(newPath, newDirs, back, down, first, pos{r, c2}, end)
+				if reroute(back, oldPath, false, newPath, newDirs, nil) {
+					moved = true
+				}
+			}
+			return moved
+		}
+		_, b, ok := g.step(top)
+		if !ok {
+			return false
+		}
+		mid := pos{g.bottom(pos{r, b}), b}
+		if dir, c2, turns := g.step(mid); dir != 0 {
+			// two steps: one, on the lower row or else the upper;
+			// a second that runs into something ends before it
+			end, out := pos{mid.r, c2}, uint8(down)
+			if !turns {
+				end, out = pos{mid.r, c2 - dir}, map[int]uint8{-1: left, 1: right}[dir]
+			}
+			oldPath, oldDirs = route(oldPath, oldDirs, up, out, top, pos{r, b}, mid, end)
+			vias := []pos{{mid.r, c}, {r, c2}}
+			if !turns {
+				vias = vias[:1] // the run goes on along the lower row
+			}
+			for i, via := range vias {
+				newPath, newDirs = route(newPath, newDirs, up, out, top, via, end)
+				if reroute(up, oldPath, i > 0, newPath, newDirs, nil) {
+					moved = true
 					break
 				}
-				again = true
+			}
+			return moved
+		}
+		if g.runeAt(mid) != '▼' || at(mid).style&pinned != 0 {
+			return false
+		}
+		// a last step before an arrowhead into a box: the arrowhead
+		// goes along when the box goes on under the line, with no
+		// corner between
+		box := true
+		for x := min(c, b); x <= max(c, b); x++ {
+			p := at(pos{mid.r + 1, x})
+			box = box && p != nil && p.solid && (x == b || boxRowSide(p.r))
+		}
+		if !box {
+			return false
+		}
+		head := *at(mid)
+		oldPath, oldDirs = route(oldPath, oldDirs, up, down, top, pos{r, b}, mid)
+		newPath, newDirs = route(newPath, newDirs, up, down, top, pos{mid.r, c})
+		if reroute(up, oldPath, false, newPath, newDirs, &head) {
+			moved = true
+		}
+		return moved
+	}
+	// slide moves a step along its line to where the line crosses fewer
+	// lines, as two lines can cross twice to swap back
+	slide := func(r, c int) (moved bool) {
+		top := pos{r, c}
+		_, b, ok := g.step(top)
+		if !ok {
+			return false
+		}
+		first := r
+		for verticalOrCrossing(g.runeAt(pos{first - 1, c})) {
+			first--
+		}
+		last := g.bottom(pos{r, b}) - 1
+		oldPath, oldDirs = route(oldPath, oldDirs, up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
+		// a line that crosses none can't cross fewer
+		if !slices.ContainsFunc(oldPath, func(p pos) bool { q := at(p); return q != nil && q.r == '╂' }) {
+			return false
+		}
+		again := false
+		for row := first; row <= last; row++ {
+			if row == r {
+				continue
+			}
+			newPath, newDirs = route(newPath, newDirs, up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+			if reroute(up, oldPath, again, newPath, newDirs, nil) {
+				moved = true
+				break
+			}
+			again = true
+		}
+		return moved
+	}
+	// one sweep tries both on every cell, so that a step that can't be
+	// joined to the next slides in the same sweep
+	for r := range g {
+		for c := range g[r] {
+			if jog(r, c) || slide(r, c) {
+				changed = true
 			}
 		}
 	}
