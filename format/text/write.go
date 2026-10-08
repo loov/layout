@@ -2,8 +2,8 @@
 // for terminals, optionally colored with ANSI escape codes. Edges are
 // rasterized onto a character grid as horizontal and vertical runs, so
 // ortho splines look best; diagonal segments become staircases. Lay the
-// graph out with layout.Options.ForText for output with room for the
-// runs; the extra room is carved away again when writing.
+// graph out with layout.Options.ForText, which places everything on the
+// character cells that text draws in.
 package text
 
 import (
@@ -43,13 +43,7 @@ func write(w io.Writer, l *layout.Layout, opts Options, color bool) error {
 	if !fits(l.Graph) {
 		return errTooLarge
 	}
-	var c *canvas
-	var g grid
-	if opts.NoCarve {
-		c, g = uncarved(l, opts.NoLegacyGlyphs, opts.Tidy)
-	} else {
-		c, g = carved(l, opts.NoLegacyGlyphs)
-	}
+	c, g := drawn(l, opts.NoLegacyGlyphs)
 	g = crop(g)
 	colors := &opts
 	if !color {
@@ -81,29 +75,11 @@ func crop(g grid) grid {
 	return g
 }
 
-// carved draws the graph on a canvas and carves it into the grid that
-// write encodes; safe leaves out Symbols for Legacy Computing
-func carved(l *layout.Layout, safe bool) (*canvas, grid) {
-	// edge ends spread apart look balanced, but can keep carving from
-	// lining an edge up straight: they stay apart unless that bends
-	// edges more, or as much on a larger drawing
-	var c *canvas
-	var g grid
-	var sc scratch
-	for _, spread := range []bool{true, false} {
-		d := drawGraph(l, spread, safe)
-		carved := carve(d.rows, d.sideways(), d.owners, &sc)
-		if c == nil || better(carved, g) {
-			c, g = d, carved
-		}
-	}
-	c.frameLabels(g)
-	return c, g
-}
-
-// uncarved draws the graph as it is laid out, with edge ends spread or
-// not as carved picks them, and tidies it when tidy is set
-func uncarved(l *layout.Layout, safe, tidied bool) (*canvas, grid) {
+// drawn draws the graph as it is laid out and tidies it: edge ends spread
+// apart look balanced, but can keep tidying from lining an edge up
+// straight, so they stay apart unless that bends edges more, or as much
+// on a larger drawing; safe leaves out Symbols for Legacy Computing
+func drawn(l *layout.Layout, safe bool) (*canvas, grid) {
 	var c *canvas
 	var g grid
 	for _, spread := range []bool{true, false} {
@@ -112,20 +88,18 @@ func uncarved(l *layout.Layout, safe, tidied bool) (*canvas, grid) {
 			c, g = d, d.rows
 		}
 	}
-	if tidied {
-		g = tidy(g, c.sideways(), c.owners)
-	}
+	g = tidy(g, c.sideways(), c.owners)
 	c.frameLabels(g)
-	// no margin above, as carving leaves none
+	// no margin above
 	for len(g) > 1 && !slices.ContainsFunc(g[0], func(c cell) bool { return c.r != ' ' || c.bg != 0 }) {
 		g = g[1:]
 	}
 	return c, g
 }
 
-// tidy runs the passes that follow the seams in carve on g, without
-// the seams: lines straighten, rows of runs merge, labels hug their
-// lines; owners holds the edge of each label id
+// tidy takes the room out of g that the layout leaves for the runs of
+// edges: lines straighten, rows of runs merge, labels hug their lines;
+// owners holds the edge of each label id
 func tidy(g grid, sideways bool, owners []edgeID) grid {
 	var marks rerouteMarks
 	for !sideways && unjog(g, &marks) {
@@ -142,7 +116,7 @@ func tidy(g grid, sideways bool, owners []edgeID) grid {
 	return g
 }
 
-// better reports whether the carved grid a has fewer runs that edges
+// better reports whether the grid a has fewer runs that edges
 // share than b, or as many and fewer bends of edges, or as many in less
 // area
 func better(a, b grid) bool {
@@ -168,7 +142,7 @@ func better(a, b grid) bool {
 	return cmp.Or(cmp.Compare(sa, sb), cmp.Compare(ba, bb), cmp.Compare(aa, ab)) < 0
 }
 
-// drawGraph draws the graph on a canvas, before carving; with spread,
+// drawGraph draws the graph on a canvas, before tidying; with spread,
 // edge ends on a side keep a cell apart where there is room
 func drawGraph(l *layout.Layout, spread, safe bool) *canvas {
 	graph := l.Graph

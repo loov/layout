@@ -53,7 +53,8 @@ type Options struct {
 	Align Align
 	// ForText lays the graph out for format/text: ortho splines, rows
 	// between ranks for the horizontal runs and arrowheads, and nodes
-	// sized in character cells. Layout.Graph has the changed settings.
+	// sized in character cells, compacted as Compact does unless the
+	// layout is pinned. Layout.Graph has the changed settings.
 	ForText bool
 	// NoCompact leaves the room in the layout. Otherwise, with ortho
 	// splines, which ForText uses, the layout is compacted after routing:
@@ -62,8 +63,8 @@ type Options struct {
 	// the nodes of a rank stay in line. Edges keep their crossings and
 	// nodes their order. Other splines are not compacted: sloped segments
 	// would have to stay rigid and compact little. For ForText it moves
-	// objects by whole character cells, and format/text carves less
-	// after it.
+	// objects by whole character cells; format/text draws a layout as it
+	// is, so one left uncompacted keeps all its room.
 	NoCompact bool
 }
 

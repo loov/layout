@@ -459,62 +459,6 @@ func TestCorners(t *testing.T) {
 	}
 }
 
-// TestCarveKeepsRanks checks that carving keeps the nodes of a rank in
-// line, as ranks can be set by hand, see layout.Graph.SameRank: nodes
-// whose boxes start on the same row, or column sideways, still do.
-func TestCarveKeepsRanks(t *testing.T) {
-	files, err := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
-	if err != nil || len(files) == 0 {
-		t.Fatal("no graphs", err)
-	}
-	for _, file := range files {
-		for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {
-			graphs, err := dot.ParseFile(file)
-			if err != nil {
-				t.Fatal(err)
-			}
-			graph := graphs[0]
-			graph.RankDir = dir
-			l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
-			if err != nil {
-				t.Fatal(err)
-			}
-			c := drawGraph(l, true, false)
-			// mark the top left corner of every node to find it after carving
-			axis := 1 // the rows of the ranks
-			if c.sideways() {
-				axis = 0
-			}
-			for i, node := range graph.Nodes {
-				b := c.boxes[node]
-				if p := c.at(b[0], b[1]); p != nil {
-					p.r = rune(0xE000 + i)
-				}
-			}
-			at := map[int]int{} // node to its rank line after carving
-			for y, row := range carve(c.rows, c.sideways(), c.owners, &scratch{}) {
-				for x, p := range row {
-					if i := int(p.r - 0xE000); i >= 0 && i < len(graph.Nodes) {
-						at[i] = [2]int{x, y}[axis]
-					}
-				}
-			}
-			lines := map[int]int{} // rank line before carving to after
-			for i, node := range graph.Nodes {
-				before := c.boxes[node][axis]
-				after, ok := at[i]
-				if !ok {
-					continue // off the canvas, pinned
-				}
-				if prev, ok := lines[before]; ok && prev != after {
-					t.Errorf("%s %v: nodes starting at %d end up at %d and %d", filepath.Base(file), dir, before, prev, after)
-				}
-				lines[before] = after
-			}
-		}
-	}
-}
-
 // TestWriteDeterministic checks that drawing a layout gives the same text
 // every time, whatever order maps are iterated in.
 func TestWriteDeterministic(t *testing.T) {

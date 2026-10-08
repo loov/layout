@@ -2,88 +2,40 @@ package text
 
 import (
 	"fmt"
-	"path/filepath"
-	"regexp"
-	"slices"
 	"strings"
 	"testing"
 
 	"github.com/loov/layout"
-	"github.com/loov/layout/format/dot"
-	"github.com/loov/layout/internal/examples"
 )
 
-// TestCompactedJoined checks that compacted layouts, see
-// layout.Options.NoCompact, still draw every edge joined and apart, drawn
-// as they are, tidied and carved, as TestEdgesJoined does for the layouts
-// themselves: compaction relies on how text draws.
-func TestCompactedJoined(t *testing.T) {
-	for name, build := range examples.Graphs {
-		t.Run(name, func(t *testing.T) { checkArrowsOffBorders(t, checkCompacted(t, build(), examples.Options[name])) })
-	}
-	files, _ := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
-	for _, file := range files {
-		for suffix, merge := range map[string]bool{"": false, "_merged": true} {
-			t.Run(strings.TrimSuffix(filepath.Base(file), ".gv")+suffix, func(t *testing.T) {
-				graphs, err := dot.ParseFile(file)
-				if err != nil {
-					t.Fatal(err)
-				}
-				graphs[0].MergeEdges = merge
-				checkArrowsOffBorders(t, checkCompacted(t, graphs[0], layout.Options{}))
-			})
-		}
-	}
-}
-
-// TestCompactedRandom checks the same on random graphs, see randomGraph
+// TestCompactedRandom checks that compacted layouts of random graphs, see
+// randomGraph, still draw every edge joined and apart, drawn as they are
+// and tidied: compaction relies on how text draws.
 func TestCompactedRandom(t *testing.T) {
 	for seed := range 300 {
 		t.Run(fmt.Sprint(seed), func(t *testing.T) {
-			checkCompacted(t, randomGraph(uint64(seed)), layout.Options{})
+			checkCompacted(t, randomGraph(uint64(seed)))
 		})
 	}
 }
 
-// checkCompacted returns the carved drawing.
-func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) string {
+func checkCompacted(t *testing.T, graph *layout.Graph) {
 	t.Helper()
-	opts.ForText = true
-	l, err := layout.Hierarchical(graph, opts)
+	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
 	if err != nil {
 		t.Fatal(err)
 	}
 	d := drawGraph(l, true, false)
-	c, g := carved(l, false)
+	c, g := drawn(l, false)
 	for _, drawing := range []struct {
 		c *canvas
 		g grid
-	}{{d, d.rows}, {d, tidy(cloneGrid(d.rows), d.sideways(), d.owners)}, {c, g}} {
+	}{{d, d.rows}, {c, g}} {
 		for _, edge := range lost(drawing.c, drawing.g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(drawing.g, drawing.c.palette, nil))
 		}
 		checkApart(t, drawing.c, drawing.g)
-	}
-	// carving can draw an arrowhead out of a border on its own, see
-	// checkAttached
-	checkAttached(t, encode(d.rows, d.palette, nil))
-	return encode(g, c.palette, nil)
-}
-
-// arrowOnBorder matches an arrowhead drawn on the top or bottom border of a
-// box, as TestArrowsBesideNodes in the layout package checks the goldens
-var arrowOnBorder = regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨▼▲]*[▼▲][─═┬┴╥╨▼▲]*[╮┐╗╯┘╝]`)
-
-// checkArrowsOffBorders checks that no arrowhead of drawing sits on a
-// border, where compaction leaves no row for it if text reroutes another
-// run through its cell. Random graphs draw some there without compaction
-// too, so only the examples and fixtures are checked.
-func checkArrowsOffBorders(t *testing.T, drawing string) {
-	t.Helper()
-	for i, line := range strings.Split(drawing, "\n") {
-		if m := arrowOnBorder.FindString(line); m != "" {
-			t.Errorf("%d: arrow on a border: %s\n%s", i+1, m, drawing)
-		}
+		checkAttached(t, encode(drawing.g, drawing.c.palette, nil))
 	}
 }
 
@@ -123,13 +75,4 @@ func checkAttached(t *testing.T, drawing string) {
 			}
 		}
 	}
-}
-
-// cloneGrid returns a copy of g to tidy, see tidy
-func cloneGrid(g grid) grid {
-	out := make(grid, len(g))
-	for i, row := range g {
-		out[i] = slices.Clone(row)
-	}
-	return out
 }

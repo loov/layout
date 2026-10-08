@@ -244,7 +244,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 		if p := c.at(x0, y0); p != nil {
 			p.solid, p.node = true, c.nodes[node]
 		}
-		c.hold(x0, y0) // carving would take a blank cell out
+		c.hold(x0, y0) // no line through the blank frame
 		return
 	}
 	c.pen = pen{ink: c.color(rgb(node.LineColor)), font: c.color(rgb(node.FontColor))}

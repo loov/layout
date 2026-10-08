@@ -292,7 +292,7 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 // unjog straightens lines down the grid: two steps aside in a row become
 // one, on the row of the first or of the second, and a last step right
 // before an arrowhead takes the arrowhead along, onto the same box; a
-// turn of the layout and a jog of carving can add up so. A line leaving a
+// turn of the layout and a jog of compaction can add up so. A line leaving a
 // junction along its row, where lines merge, is a first step too, which
 // becomes one on the row of the junction, as the junction stays. A step also
 // slides along its line to where the line crosses fewer lines. Steps are lines
@@ -702,4 +702,9 @@ func route(path []pos, dirs []uint8, in, out uint8, points ...pos) ([]pos, []uin
 		}
 	}
 	return path, dirs
+}
+
+// free reports whether c is an empty cell that a line can be drawn in
+func free(c cell) bool {
+	return c.r == ' ' && c.bg == 0 && !c.keep && !c.glue && c.need == 0 && c.label == 0
 }

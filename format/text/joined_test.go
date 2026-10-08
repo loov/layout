@@ -21,7 +21,7 @@ var notJoined = map[string]string{}
 
 // TestEdgesJoined checks that every drawing joins the two nodes of every
 // edge with its line, and runs no two edges along the same cells, after
-// carving and straightening have reworked the cells: the examples and the
+// tidying has reworked the cells: the examples and the
 // Graphviz files, laid out for text as their .txt files in testdata are,
 // with merged edges too.
 func TestEdgesJoined(t *testing.T) {
@@ -31,7 +31,7 @@ func TestEdgesJoined(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, g := carved(l, false)
+		c, g := drawn(l, false)
 		for _, edge := range lost(c, g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 		}
@@ -94,7 +94,7 @@ func TestEdgesApartRandom(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		c, g := carved(l, false)
+		c, g := drawn(l, false)
 		t.Run(fmt.Sprint(seed), func(t *testing.T) {
 			checkApart(t, c, g)
 			for _, edge := range lost(c, g, l) {
@@ -269,7 +269,7 @@ func TestNoLegacyGlyphs(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				c, g := carved(l, true)
+				c, g := drawn(l, true)
 				for _, edge := range lost(c, g, l) {
 					t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 				}

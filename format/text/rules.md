@@ -6,7 +6,7 @@ tests. The rest are judged by eye, with the diagnostics in
 
 ## Edges
 
-- **Every edge joins its two nodes**, after carving and straightening have
+- **Every edge joins its two nodes**, after compaction and tidying have
   reworked the cells *(test: `TestEdgesJoined`)*.
 - **Edges don't share a run.** Two edges along the same cells can't be told
   apart, nor whose arrowhead is whose. Text draws such runs heavy, so a shared
@@ -59,7 +59,7 @@ tests. The rest are judged by eye, with the diagnostics in
 - **An edge visibly attaches.** Where an edge without a marker leaves a side,
   the border shows it as `├` or `┤`.
 - **Ends are about a cell apart**, with no blank column between neighbors that
-  carving could not remove.
+  compaction could remove.
 - **Edges fan out of a dot on separate sides** rather than sharing a run.
 - **Ends sit balanced and symmetrical** on their side of a node: one end in
   the middle, several spread evenly about the middle (`╰┬─┬╯` rather than
@@ -131,7 +131,7 @@ tests. The rest are judged by eye, with the diagnostics in
 
 ## Nodes, clusters and space
 
-- **The nodes of a rank stay in line.** Carving never moves one node of a rank
+- **The nodes of a rank stay in line.** Compaction never moves one node of a rank
   out of line with the others. Unless user specifically relaxed the rule.
 - **Room to tell things apart.** Edges keep a cell off cluster frames, the fans
   of different nodes are a cell apart, and neighboring cluster frames never
@@ -140,7 +140,7 @@ tests. The rest are judged by eye, with the diagnostics in
   and doesn't dip in and out of a cluster.
 - **Boxes fit their content**: as tall and wide as their labels and edge ends
   need, with no spare row or column.
-- **Compact.** Don't widen the drawing to straighten an edge, and carve away
+- **Compact.** Don't widen the drawing to straighten an edge, and take out
   the rows and columns that nothing needs. Nodes of a rank sit a gap apart,
   not further, and ranks are no further apart than the labels between them
   need.

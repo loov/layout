@@ -8,7 +8,7 @@ import (
 // escape matches the escape codes of colored text
 var escape = regexp.MustCompile("\x1b\\[[0-9;]*[A-Za-z]")
 
-// TextStats counts the edges of a text drawing as drawn, after carving:
+// TextStats counts the edges of a text drawing as drawn:
 // the bends of the edges, their length in cells and their crossings. The
 // cells of boxes, closed rectangles of lines, are not edges; node boxes
 // are not edges inside either, cluster frames, which are dashed, only on

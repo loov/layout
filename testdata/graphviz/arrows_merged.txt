@@ -1,90 +1,146 @@
        box   boxbox
 ●─────────▶●───────────▶●
+│
 │     lbox   lboxlbox
 ├─────────▶●───────────▶●
+│
 │    rbox    rboxrbox
 ├─────────▶●───────────▶●
+│
 │   olbox    olboxolbox
 ├─────────▶●───────────▶●
+│
 │  orbox     orboxorbox
 ├─────────▶●───────────▶●
+│
 │ obox       oboxobox
 ╰─────────▶●───────────▶●
+
    crow      crowcrow
 ╭─────────▶●───────────▶●
+│
 │   lcrow    lcrowlcrow
 ●─────────▶●───────────▶●
+│
 │ rcrow      rcrowrcrow
 ╰─────────▶●───────────▶●
+
       diamond   diamonddiamond
 ●────────────▶●───────────────────▶●
+│
 │               ldiamondldiamond
 ├────────────▶●───────────────────▶●
-│     ldiamond  rdiamondrdiamond
+│     ldiamond
+│
+│               rdiamondrdiamond
 ├────────────▶●───────────────────▶●
-│    rdiamond   oldiamondoldiamond
+│    rdiamond
+│               oldiamondoldiamond
 ├────────────▶●───────────────────▶●
-│   oldiamond   ordiamondordiamond
+│   oldiamond
+│               ordiamondordiamond
 ├────────────▶●───────────────────▶●
 │  ordiamond
+│
 │ odiamond      odiamondodiamond
 ╰────────────▶●───────────────────▶●
+
+
 dot    dotdot
 ●───────●●─────────▶●
+│
 │odot
 │      odotodot
 ╰───────○●─────────▶●
+
+
 inv      invinv
 ●─────────▶●───────────▶●
+│
+│
 │     linv linvlinv
 ├─────────▶●───────────▶●
+│
+│
 │    rinv rinvrinv
 ├─────────▶●───────────▶●
+│
+│
 │   olinv olinvolinv
 ├─────────▶●───────────▶●
+│
+│
 │  orinv orinvorinv
 ├─────────▶●───────────▶●
-│oinv   oinvoinv
+│
+│oinv
+│       oinvoinv
 ╰─────────▶●───────────▶●
+
+
 none  nonenone
 ●────────●─────────▶●
+
        normal   normalnormal
 ●────────────▶●─────────────────▶●
+│
 │               lnormallnormal
 ├────────────▶●─────────────────▶●
-│     lnormal   rnormalrnormal
+│     lnormal
+│               rnormalrnormal
 ├────────────▶●─────────────────▶●
-│    rnormal    olnormalolnormal
+│    rnormal
+│               olnormalolnormal
 ├────────────▶●─────────────────▶●
 │   olnormal
+│
 │  ornormal     ornormalornormal
 ├────────────▶●─────────────────▶●
+│
 │ onormal       onormalonormal
 ╰────────────▶●─────────────────▶●
+
    tee     teetee
 ╭───────▶●─────────▶●
+│
 │   ltee   lteeltee
 ●───────▶●─────────▶●
+│
 │ rtee     rteertee
 ╰───────▶●─────────▶●
+
+
  vee   veevee
 ╭───────→●─────────▶●
+│
+│
 │   lvee lveelvee
 ●───────▶●─────────▶●
+│
 │rvee
 │      rveervee
 ╰───────▶●─────────▶●
+
+
 curve curvecurve
 ╭────▶●────────▶●
+│
+│
 │   lcurve lcurvelcurve
 ●────▶●────────▶●
+│
 │rcurve
 │        rcurvercurve
 ╰────▶●────────▶●
+
+
 icurve icurveicurve
 ╭───────▶●───────▶●
+│
+│
 │   licurve licurvelicurve
 ●───────▶●───────▶●
+│
 │ricurve
 │         ricurvericurve
 ╰───────▶●───────▶●

@@ -72,51 +72,24 @@ func corner(lines uint8) rune {
 
 // arms returns the directions that the line character r joins toward;
 // marks and dots join every way
-func arms(r rune) uint8 { return class(r) & (up | down | left | right) }
-
-// the classes of characters that carving checks for every cell, in the
-// bits of class above the arms
-const (
-	seamV = 1 << (4 + iota) // see verticalSeam
-	seamH                   // see horizontalSeam
-	markV                   // see verticalMarker
-	markH                   // see horizontalMarker
-)
-
-// class returns the arms of r with the bits of the classes it is of
-func class(r rune) uint8 {
-	if i := uint32(r - classFirst); i < uint32(len(classTable)) {
-		return classTable[i]
-	}
-	if r == ' ' {
-		return seamV | seamH
+func arms(r rune) uint8 {
+	if i := uint32(r - armsFirst); i < uint32(len(armsTable)) {
+		return armsTable[i]
 	}
 	return 0
 }
 
-// classTable holds class from the arrows to the end of the shapes, past
-// the box drawing characters, where every character with arms or of a
-// class is, other than the blank; a table keeps class small enough to
-// inline, as carving asks for every cell
-const classFirst = '\u2190'
+// armsTable holds arms from the arrows to the end of the shapes, past
+// the box drawing characters, where every character with arms is; a
+// table keeps arms small enough to inline, as tidying asks for many cells
+const armsFirst = '\u2190'
 
-var classTable = func() (table [0x2600 - classFirst]uint8) {
+var armsTable = func() (table [0x2600 - armsFirst]uint8) {
 	for i := range table {
-		table[i] = lookupClass(classFirst + rune(i))
+		table[i] = lookupArms(armsFirst + rune(i))
 	}
 	return table
 }()
-
-// lookupClass returns class for any character, see class
-func lookupClass(r rune) uint8 {
-	c := lookupArms(r)
-	for bit, is := range map[uint8]func(rune) bool{seamV: verticalSeam, seamH: horizontalSeam, markV: verticalMarker, markH: horizontalMarker} {
-		if is(r) {
-			c |= bit
-		}
-	}
-	return c
-}
 
 // lookupArms returns arms for any character, see arms
 func lookupArms(r rune) uint8 {
@@ -163,54 +136,6 @@ func lookupArms(r rune) uint8 {
 		return up | down | left | right
 	}
 	return 0
-}
-
-// verticalSeam reports whether r is a blank or a straight vertical line,
-// which a seam can take out of a column
-func verticalSeam(r rune) bool {
-	// blanks first, which most cells are
-	if r == ' ' {
-		return true
-	}
-	switch r {
-	case '│', '┃', '┊', '┋', '┆':
-		return true
-	}
-	return false
-}
-
-// horizontalSeam reports whether r is a blank or a straight horizontal
-// line, which a seam can take out of a row
-func horizontalSeam(r rune) bool {
-	// blanks first, which most cells are
-	if r == ' ' {
-		return true
-	}
-	switch r {
-	case '─', '━', '┈', '┉', '┄':
-		return true
-	}
-	return false
-}
-
-// verticalMarker reports whether r is a marker that continues a vertical
-// line it sits on
-func verticalMarker(r rune) bool {
-	switch r {
-	case '▲', '▼', '●', '○':
-		return true
-	}
-	return false
-}
-
-// horizontalMarker reports whether r is a marker that continues a
-// horizontal line it sits on
-func horizontalMarker(r rune) bool {
-	switch r {
-	case '◀', '▶', '●', '○':
-		return true
-	}
-	return false
 }
 
 // dashedHorizontal reports whether r is a dashed horizontal line, as the

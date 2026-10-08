@@ -33,13 +33,6 @@ type Options struct {
 	// and ▔ in their place: larger, and with their points on the corners
 	// of cells.
 	NoLegacyGlyphs bool
-	// NoCarve draws the layout as it is, without carving away the room
-	// that Options.ForText leaves, see Write; for layouts compacted with
-	// layout.Options.Compact.
-	NoCarve bool
-	// Tidy, with NoCarve, still straightens lines, merges rows of runs
-	// and moves labels onto their lines, as carving does after its seams.
-	Tidy bool
 }
 
 // Palette selects the colors that WriteColor writes.

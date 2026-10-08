@@ -9,10 +9,10 @@ import (
 	"github.com/loov/layout/internal/draw"
 )
 
-// Compaction takes the room out of a routed layout on its own geometry,
-// the way format/text carves seams out of its character grid: what can
-// move is pushed together along one axis and then the other, while edges
-// stretch and shrink to follow their ends, see Options.NoCompact.
+// Compaction takes the room out of a routed layout on its own geometry:
+// what can move is pushed together along one axis and then the other,
+// while edges stretch and shrink to follow their ends, see
+// Options.NoCompact.
 //
 // It is one-dimensional compaction as in VLSI layout. Along x, node boxes,
 // the vertical runs of edges, labels and the sides of clusters are rigid
@@ -37,7 +37,7 @@ type compactGrid struct {
 }
 
 // textGrid returns the grid of a layout made for format/text: its
-// cells, with a blank cell between objects, as carving leaves, and lines
+// cells, with a blank cell between objects, and lines
 // in neighboring cells.
 func textGrid(graph *Graph) compactGrid {
 	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, text: true}
@@ -929,8 +929,8 @@ func (p *compactPass) plain(o rigid) bool {
 }
 
 // need returns the cells from the end of a to the start of b: space, but
-// lines may run side by side, and beside nodes and their own labels, as
-// carving leaves them. Two runs of an edge that meet only at the run
+// lines may run side by side, and beside nodes and their own labels.
+// Two runs of an edge that meet only at the run
 // between them may line up, which straightens the edge.
 func (p *compactPass) need(a, b rigid) int {
 	if a.kind > b.kind {

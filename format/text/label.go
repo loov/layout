@@ -50,8 +50,8 @@ func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 			}
 		}
 	}
-	// the blanks around the label keep it beside its edge when carving,
-	// see seams
+	// the blanks around the label keep lines from running into it, see
+	// free
 	for row := y - 1; row <= y+len(lines); row++ {
 		for col := x - 1; col <= x+w; col++ {
 			if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {
@@ -201,9 +201,9 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 		if cluster.Label == "" || cluster.Invisible {
 			continue
 		}
-		// the label goes on the frame after carving, see frameLabels, at
+		// the label goes on the frame after tidying, see frameLabels, at
 		// the first place along the top, else along the bottom, where the
-		// lines that cross the frame fall on spaces of it; carving keeps
+		// lines that cross the frame fall on spaces of it; tidying keeps
 		// those cells
 		b := c.clusterBox(i)
 		text := " " + clusterLabel(cluster) + " "
@@ -238,7 +238,7 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 }
 
 // frameLabels writes the cluster labels at the cells marked for them on the
-// carved grid, see drawLabels
+// tidied grid, see drawLabels
 func (c *canvas) frameLabels(g grid) {
 	for _, row := range g {
 		for x := range row {
@@ -268,7 +268,7 @@ func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int)
 		if against && best >= 2 {
 			// against its edge with two blank cells to any other, which
 			// is clearly its own; moving it gains nothing and can keep
-			// carving from narrowing the drawing
+			// tidying from narrowing the drawing
 			break
 		}
 		if sx, sy, ok := c.nearEdge(x, y, w, h, path, side); ok {
@@ -436,7 +436,7 @@ func (c *canvas) blank(x, y, w, h int) bool {
 }
 
 // hug moves a label that another edge's line runs right beside a cell
-// over onto its own edge's line, where carving leaves that a blank cell
+// over onto its own edge's line, where tidying leaves that a blank cell
 // away from it: next to the other line, it should touch its own. A label
 // that no line of its own edge comes within two cells of, as straighten
 // slides lines without their labels, moves across blanks to the nearest

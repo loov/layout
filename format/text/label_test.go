@@ -95,7 +95,7 @@ func TestClusterLabel(t *testing.T) {
 	}
 }
 
-// TestBlanksInLabels checks that carving keeps the blank columns and rows
+// TestBlanksInLabels checks that tidying keeps the blank columns and rows
 // inside labels and boxes.
 func TestBlanksInLabels(t *testing.T) {
 	graph := layout.NewDigraph()
@@ -302,7 +302,7 @@ func TestHugLabelsApart(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, g := carved(l, false)
+	c, g := drawn(l, false)
 	for _, edge := range lost(c, g, l) {
 		t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 	}
@@ -343,7 +343,7 @@ func TestLabelsDrawn(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			c, g := carved(l, false)
+			c, g := drawn(l, false)
 			drawing := encode(g, c.palette, nil)
 			for _, text := range missingLabels(l, drawing) {
 				t.Errorf("compact %v: %q is not drawn:\n%s", compact, text, drawing)
