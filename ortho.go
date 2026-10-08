@@ -26,7 +26,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			continue
 		}
 		jogs, shared := shareJogs(graph, jogs)
-		jogs = orderJogs(splitOpposite(jogs), pad)
+		jogs = orderJogs(splitOpposite(jogs), pad, &graph.ortho.over)
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
 	}
 	insertJogs(graph, channels)
@@ -60,6 +60,8 @@ type orthoScratch struct {
 	list        []slotEnd
 	want, slots []Length
 	weight      []float64
+	// whether a jog goes above another, see orderJogs
+	over []bool
 }
 
 // jog is a horizontal segment of an edge in a channel between ranks
@@ -487,7 +489,7 @@ func splitOpposite(jogs []*jog) []*jog {
 // top to bottom: jogs heading right by entry x descending, then jogs
 // heading left by entry x ascending, so continuations don't cut through
 // the jogs below them
-func orderJogs(jogs []*jog, pad Length) []*jog {
+func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
 	slices.SortStableFunc(jogs, func(a, b *jog) int {
 		ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 		if ra != rb {
@@ -517,6 +519,20 @@ func orderJogs(jogs []*jog, pad Length) []*jog {
 	above := func(a, b *jog) bool {
 		return b == a.next || !a.split && b.next == nil && near(a.ins, b.outs)
 	}
+	// above between every two jogs, by index, as the loops below ask it
+	// again and again, in buf
+	var over []bool
+	overAll := func() {
+		n := len(jogs)
+		over = slices.Grow((*buf)[:0], n*n)[:n*n]
+		*buf = over
+		for i, a := range jogs {
+			for k, b := range jogs {
+				over[i*n+k] = i != k && above(a, b)
+			}
+		}
+	}
+	overAll()
 	// jogs that must go above each other around a cycle, as longer
 	// chains and swaps over spans that differ can, have no order: the
 	// widest of a cycle splits into two steps, on two tracks, at a
@@ -524,7 +540,8 @@ func orderJogs(jogs []*jog, pad Length) []*jog {
 	// as the jog did and the second leaves as it did, so nothing needs
 	// to go above the first, which breaks the cycle
 	for range len(jogs) {
-		cycle := jogCycle(jogs, func(a, b *jog) bool { return a != b && above(a, b) })
+		n := len(jogs)
+		cycle := jogCycle(jogs, func(i, k int) bool { return over[i*n+k] })
 		var widest *jog
 		for _, j := range cycle {
 			if !j.split && j.next == nil && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
@@ -555,18 +572,39 @@ func orderJogs(jogs []*jog, pad Length) []*jog {
 		widest.x0, widest.x1 = span(widest.ins)
 		widest.next, widest.outs = second, []Length{mid}
 		jogs = append(jogs, second)
+		overAll()
 	}
-	ordered := make([]*jog, 0, len(jogs))
-	for len(jogs) > 0 {
+	// the first jog that no jog left goes above, by how many do
+	n := len(jogs)
+	below := make([]int, n)
+	for i := range n {
+		for k := range n {
+			if over[i*n+k] {
+				below[k]++
+			}
+		}
+	}
+	left := make([]int, n)
+	for i := range left {
+		left[i] = i
+	}
+	ordered := make([]*jog, 0, n)
+	for len(left) > 0 {
 		pick := 0 // on a cycle
-		for i, j := range jogs {
-			if !slices.ContainsFunc(jogs, func(o *jog) bool { return o != j && above(o, j) }) {
+		for i, k := range left {
+			if below[k] == 0 {
 				pick = i
 				break
 			}
 		}
-		ordered = append(ordered, jogs[pick])
-		jogs = slices.Delete(jogs, pick, pick+1)
+		p := left[pick]
+		ordered = append(ordered, jogs[p])
+		left = slices.Delete(left, pick, pick+1)
+		for _, k := range left {
+			if over[p*n+k] {
+				below[k]--
+			}
+		}
 	}
 	return ordered
 }
@@ -682,8 +720,8 @@ func insertJogs(graph *lgraph, channels [][]*jog) {
 }
 
 // jogCycle returns the jogs around a cycle of jogs that must go above
-// each other, or none
-func jogCycle[J comparable](jogs []J, above func(a, b J) bool) []J {
+// each other, as above tells by their indices, or none
+func jogCycle[J comparable](jogs []J, above func(i, k int) bool) []J {
 	const (
 		unseen = iota
 		open
@@ -698,7 +736,7 @@ func jogCycle[J comparable](jogs []J, above func(a, b J) bool) []J {
 		state[i] = open
 		stack = append(stack, j)
 		for k, o := range jogs {
-			if !above(j, o) {
+			if !above(i, k) {
 				continue
 			}
 			switch state[k] {
