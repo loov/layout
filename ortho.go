@@ -516,19 +516,49 @@ func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
 		}
 		return false
 	}
-	above := func(a, b *jog) bool {
-		return b == a.next || !a.split && b.next == nil && near(a.ins, b.outs)
-	}
-	// above between every two jogs, by index, as the loops below ask it
-	// again and again, in buf
+	// whether jogs[i] goes above jogs[k], at i*n+k, as the loops below
+	// ask it again and again, in buf: above the second step of its own,
+	// and, unless it is a second step, above the jogs that end where it
+	// enters, unless they have a second step. The exits are sorted, so
+	// that a jog looks only at those around where it enters
 	var over []bool
+	type exit struct {
+		x Length
+		k int
+	}
+	var exits []exit
 	overAll := func() {
 		n := len(jogs)
 		over = slices.Grow((*buf)[:0], n*n)[:n*n]
 		*buf = over
+		clear(over)
+		exits = exits[:0]
+		for k, b := range jogs {
+			if b.next == nil {
+				for _, y := range b.outs {
+					exits = append(exits, exit{y, k})
+				}
+			}
+		}
+		slices.SortFunc(exits, func(a, b exit) int { return cmp.Compare(a.x, b.x) })
 		for i, a := range jogs {
-			for k, b := range jogs {
-				over[i*n+k] = i != k && above(a, b)
+			if k := slices.Index(jogs, a.next); a.next != nil && k >= 0 && k != i {
+				over[i*n+k] = true
+			}
+			if a.split {
+				continue
+			}
+			for _, x := range a.ins {
+				// a pad either way holds all within half a pad
+				lo, _ := slices.BinarySearchFunc(exits, x-pad, func(e exit, x Length) int { return cmp.Compare(e.x, x) })
+				for _, e := range exits[lo:] {
+					if e.x > x+pad {
+						break
+					}
+					if e.k != i && absLength(x-e.x) < pad/2 {
+						over[i*n+e.k] = true
+					}
+				}
 			}
 		}
 	}
