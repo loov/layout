@@ -26,7 +26,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 			continue
 		}
 		jogs, shared := shareJogs(graph, jogs)
-		jogs = orderJogs(splitOpposite(jogs), pad, &graph.ortho.over)
+		jogs = orderJogs(splitOpposite(jogs), shared, pad, &graph.ortho.over)
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
 	}
 	insertJogs(graph, channels)
@@ -489,7 +489,7 @@ func splitOpposite(jogs []*jog) []*jog {
 // top to bottom: jogs heading right by entry x descending, then jogs
 // heading left by entry x ascending, so continuations don't cut through
 // the jogs below them
-func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
+func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*jog {
 	slices.SortStableFunc(jogs, func(a, b *jog) int {
 		ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 		if ra != rb {
@@ -618,7 +618,7 @@ func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
 	for i := range left {
 		left[i] = i
 	}
-	ordered := make([]*jog, 0, n)
+	order := make([]int, 0, n)
 	for len(left) > 0 {
 		pick := 0 // on a cycle
 		for i, k := range left {
@@ -628,7 +628,7 @@ func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
 			}
 		}
 		p := left[pick]
-		ordered = append(ordered, jogs[p])
+		order = append(order, p)
 		left = slices.Delete(left, pick, pick+1)
 		for _, k := range left {
 			if over[p*n+k] {
@@ -636,7 +636,29 @@ func orderJogs(jogs []*jog, pad Length, buf *[]bool) []*jog {
 			}
 		}
 	}
-	return ordered
+	// a jog above another crosses the other's track with its line
+	// down where it leaves inside the other's span, and the other's
+	// line in where it enters inside its own; the order goes to where
+	// the jogs cross least
+	inside := func(xs []Length, j *jog) (n int) {
+		for _, x := range xs {
+			if x > j.x0+pad/2 && x < j.x1-pad/2 {
+				n++
+			}
+		}
+		return n
+	}
+	// merged jogs keep their place, as they join their lines there
+	pos := make([]int, n)
+	for i, p := range order {
+		pos[p] = i
+	}
+	merged := func(i int) bool { return len(shared[jogs[i]]) > 0 }
+	order = siftOrder(order, func(i, k int) int { return inside(jogs[i].outs, jogs[k]) + inside(jogs[k].ins, jogs[i]) },
+		func(i, k int) bool {
+			return i != k && (over[i*n+k] || (merged(i) || merged(k)) && pos[i] < pos[k])
+		})
+	return permute(make([]*jog, 0, n), jogs, order)
 }
 
 // placeTracks puts the ordered jogs of channel k on tracks, arc being how
@@ -747,6 +769,50 @@ func insertJogs(graph *lgraph, channels [][]*jog) {
 			edge.Path = slices.Insert(edge.Path, j.index+1, steps...)
 		}
 	}
+}
+
+// siftOrder moves each item of order to where cost, summed over every
+// item above another, is least, keeping an item above another where
+// fixed says it must go, until no move lowers the cost. O(n²) a round
+func siftOrder[J any](order []J, cost func(above, below J) int, fixed func(above, below J) bool) []J {
+	for range len(order) {
+		moved := false
+		for i := 0; i < len(order); i++ {
+			j := order[i]
+			rest := slices.Delete(slices.Clone(order), i, i+1)
+			// total cost with j at p, and whether p keeps the fixed pairs
+			at := make([]int, len(rest)+1)
+			for _, o := range rest {
+				at[0] += cost(j, o)
+			}
+			lo, hi := 0, len(rest)
+			for p, o := range rest {
+				at[p+1] = at[p] - cost(j, o) + cost(o, j)
+				if fixed(o, j) {
+					lo = p + 1
+				}
+				if fixed(j, o) && hi == len(rest) {
+					hi = p
+				}
+			}
+			best := i
+			if i < lo || i > hi {
+				continue // on a cycle, see jogCycle
+			}
+			for p := lo; p <= hi; p++ {
+				if at[p] < at[best] {
+					best = p
+				}
+			}
+			if best != i {
+				order, moved = slices.Insert(rest, best, j), true
+			}
+		}
+		if !moved {
+			break
+		}
+	}
+	return order
 }
 
 // jogCycle returns the jogs around a cycle of jogs that must go above

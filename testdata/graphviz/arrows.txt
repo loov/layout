@@ -6,9 +6,9 @@
 ├───────────▶●───────────▶●
 ●      olbox   olboxolbox
 ├───────────▶●───────────▶●
-│    orbox     orboxorbox
+│  orbox       orboxorbox
 ├───────────▶●───────────▶●
-│   obox       oboxobox
+│ obox         oboxobox
 ╰───────────▶●───────────▶●
    crow        crowcrow
 ╭───────────▶●───────────▶●
@@ -26,12 +26,13 @@
 ├──────────────▶●───────────────────▶●
 │                 ordiamondordiamond
 ├──────────────▶●───────────────────▶●
-│    ordiamond    odiamondodiamond
+│  ordiamond
+│ odiamond        odiamondodiamond
 ╰──────────────▶●───────────────────▶●
-odiamond
-   dot     dotdot
+ dot   dotdot
 ╭───────●●─────────▶●
-●   odot   odotodot
+●
+│ odot odotodot
 ╰───────○●─────────▶●
    inv     invinv
 ╭───────────▶●───────────▶●
@@ -39,37 +40,38 @@ odiamond
 ├───────────▶●───────────▶●
 │      rinv rinvrinv
 ├───────────▶●───────────▶●
-●    olinv olinvolinv
+●   olinv olinvolinv
 ├───────────▶●───────────▶●
-│    orinv orinvorinv
+│  orinv orinvorinv
 ├───────────▶●───────────▶●
-│   oinv  oinvoinv
+│oinv     oinvoinv
 ╰───────────▶●───────────▶●
 none  nonenone
 ●────────●─────────▶●
-  normal normalnormal
-╭────────▶●──────────▶●
-│     lnormal lnormallnormal
-├────────▶●──────────▶●
-│      rnormal rnormalrnormal
-├────────▶●──────────▶●
-●     olnormal olnormalolnormal
-├────────▶●──────────▶●
-│    ornormal ornormalornormal
-├────────▶●──────────▶●
-│   onormal onormalonormal
-╰────────▶●──────────▶●
+     normal      normalnormal
+╭─────────────▶●─────────────────▶●
+│     lnormal    lnormallnormal
+├─────────────▶●─────────────────▶●
+│      rnormal   rnormalrnormal
+├─────────────▶●─────────────────▶●
+●     olnormal   olnormalolnormal
+├─────────────▶●─────────────────▶●
+│  ornormal      ornormalornormal
+├─────────────▶●─────────────────▶●
+│ onormal        onormalonormal
+╰─────────────▶●─────────────────▶●
    tee     teetee
 ╭───────▶●─────────▶●
 │   ltee   lteeltee
 ●───────▶●─────────▶●
 │ rtee     rteertee
 ╰───────▶●─────────▶●
-   vee     veevee
+ vee   veevee
 ╭───────→●─────────▶●
-│   lvee   lveelvee
+│   lvee lveelvee
 ●───────▶●─────────▶●
-│ rvee     rveervee
+│rvee
+│      rveervee
 ╰───────▶●─────────▶●
 curve curvecurve
 ╭────▶●────────▶●

@@ -1,75 +1,78 @@
-     box      boxbox
-╭──────────▶●───────────▶●
-│     lbox    lboxlbox
-├──────────▶●───────────▶●
-│      rbox   rboxrbox
-●──────────▶●───────────▶●
-│    olbox    olboxolbox
-├──────────▶●───────────▶●
-│    orbox    orboxorbox
-├──────────▶●───────────▶●
-│   obox      oboxobox
-╰──────────▶●───────────▶●
-   crow       crowcrow
-╭──────────▶●───────────▶●
-│   lcrow     lcrowlcrow
-●──────────▶●───────────▶●
-│ rcrow       rcrowrcrow
-╰──────────▶●───────────▶●
-     diamond     diamonddiamond
-╭─────────────▶●───────────────────▶●
-│     ldiamond   ldiamondldiamond
-├─────────────▶●───────────────────▶●
-│     rdiamond   rdiamondrdiamond
-●─────────────▶●───────────────────▶●
-│    oldiamond   oldiamondoldiamond
-├─────────────▶●───────────────────▶●
-│                ordiamondordiamond
-├─────────────▶●───────────────────▶●
-│    ordiamond   odiamondodiamond
-╰─────────────▶●───────────────────▶●
-odiamond
-   dot     dotdot
+       box   boxbox
+●─────────▶●───────────▶●
+│     lbox   lboxlbox
+├─────────▶●───────────▶●
+│    rbox    rboxrbox
+├─────────▶●───────────▶●
+│   olbox    olboxolbox
+├─────────▶●───────────▶●
+│  orbox     orboxorbox
+├─────────▶●───────────▶●
+│ obox       oboxobox
+╰─────────▶●───────────▶●
+   crow      crowcrow
+╭─────────▶●───────────▶●
+│   lcrow    lcrowlcrow
+●─────────▶●───────────▶●
+│ rcrow      rcrowrcrow
+╰─────────▶●───────────▶●
+      diamond   diamonddiamond
+●────────────▶●───────────────────▶●
+│               ldiamondldiamond
+├────────────▶●───────────────────▶●
+│     ldiamond  rdiamondrdiamond
+├────────────▶●───────────────────▶●
+│    rdiamond   oldiamondoldiamond
+├────────────▶●───────────────────▶●
+│   oldiamond   ordiamondordiamond
+├────────────▶●───────────────────▶●
+│  ordiamond
+│ odiamond      odiamondodiamond
+╰────────────▶●───────────────────▶●
+dot    dotdot
 ●───────●●─────────▶●
-│ odot     odotodot
+│odot
+│      odotodot
 ╰───────○●─────────▶●
-   inv    invinv
-╭──────────▶●───────────▶●
+inv      invinv
+●─────────▶●───────────▶●
 │     linv linvlinv
-├──────────▶●───────────▶●
-│      rinv rinvrinv
-●──────────▶●───────────▶●
-│    olinv olinvolinv
-├──────────▶●───────────▶●
-│    orinv orinvorinv
-├──────────▶●───────────▶●
-│   oinv oinvoinv
-╰──────────▶●───────────▶●
+├─────────▶●───────────▶●
+│    rinv rinvrinv
+├─────────▶●───────────▶●
+│   olinv olinvolinv
+├─────────▶●───────────▶●
+│  orinv orinvorinv
+├─────────▶●───────────▶●
+│oinv   oinvoinv
+╰─────────▶●───────────▶●
 none  nonenone
 ●────────●─────────▶●
-  normal normalnormal
-╭──────────▶●───────▶●
-│     lnormal lnormallnormal
-├──────────▶●───────▶●
-│      rnormal rnormalrnormal
-●──────────▶●───────▶●
-│    olnormal olnormalolnormal
-├──────────▶●───────▶●
-│    ornormal ornormalornormal
-├──────────▶●───────▶●
-│   onormal onormalonormal
-╰──────────▶●───────▶●
+       normal   normalnormal
+●────────────▶●─────────────────▶●
+│               lnormallnormal
+├────────────▶●─────────────────▶●
+│     lnormal   rnormalrnormal
+├────────────▶●─────────────────▶●
+│    rnormal    olnormalolnormal
+├────────────▶●─────────────────▶●
+│   olnormal
+│  ornormal     ornormalornormal
+├────────────▶●─────────────────▶●
+│ onormal       onormalonormal
+╰────────────▶●─────────────────▶●
    tee     teetee
 ╭───────▶●─────────▶●
 │   ltee   lteeltee
 ●───────▶●─────────▶●
 │ rtee     rteertee
 ╰───────▶●─────────▶●
-   vee     veevee
+ vee   veevee
 ╭───────→●─────────▶●
-│   lvee   lveelvee
+│   lvee lveelvee
 ●───────▶●─────────▶●
-│ rvee     rveervee
+│rvee
+│      rveervee
 ╰───────▶●─────────▶●
 curve curvecurve
 ╭────▶●────────▶●
