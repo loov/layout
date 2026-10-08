@@ -43,7 +43,20 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 		}
 		return 0
 	}
-	measure := func() (bends, crossings, overlaps int) {
+	// a move must take out bends, which are quick to count, before the
+	// crossings and overlaps, which aren't, are looked at
+	countBends := func() (bends int) {
+		for _, edge := range graphdef.Edges {
+			for i := 2; i < len(edge.Path); i++ {
+				a, b, c := edge.Path[i-2], edge.Path[i-1], edge.Path[i]
+				if (a.X == b.X) != (b.X == c.X) {
+					bends++
+				}
+			}
+		}
+		return bends
+	}
+	measure := func() (crossings, overlaps int) {
 		horizontal, vertical = horizontal[:0], vertical[:0]
 		for _, edge := range graphdef.Edges {
 			for i := 1; i < len(edge.Path); i++ {
@@ -53,12 +66,6 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 					horizontal = append(horizontal, segment{a.Y, min(a.X, b.X), max(a.X, b.X), edge})
 				case a.X == b.X && a.Y != b.Y:
 					vertical = append(vertical, segment{a.X, min(a.Y, b.Y), max(a.Y, b.Y), edge})
-				}
-				if i+1 < len(edge.Path) {
-					c := edge.Path[i+1]
-					if (a.X == b.X) != (b.X == c.X) {
-						bends++
-					}
 				}
 			}
 		}
@@ -112,7 +119,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 				}
 			}
 		}
-		return bends, crossings, overlaps
+		return crossings, overlaps
 	}
 	gap := func(a, b *hier.Node) float32 { return a.Radius.X + b.Radius.X + graph.Apart(a, b) }
 	at := func() []float32 {
@@ -209,7 +216,8 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	wide := width()
 	// a cell along the ranks: a column, or a row sideways
 	cell := float32(graphdef.cell().X)
-	bends, crossings, overlaps := measure()
+	bends := countBends()
+	crossings, overlaps := measure()
 	// the node of the last move kept; the nodes after it were tried
 	// where they are now, so after a pass they would only fail again
 	last := len(graph.Nodes)
@@ -255,10 +263,12 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 					continue
 				}
 				route()
-				if b, c, o := measure(); b < bends && c <= crossings && o <= overlaps {
-					bends, crossings, overlaps, improved = b, c, o, true
-					last = idx
-					break
+				if b := countBends(); b < bends {
+					if c, o := measure(); c <= crossings && o <= overlaps {
+						bends, crossings, overlaps, improved = b, c, o, true
+						last = idx
+						break
+					}
 				}
 				for i, x := range before {
 					graph.Nodes[i].Center.X = x
