@@ -212,6 +212,25 @@ func (c *canvas) free(p [2]int, dir uint8, id edgeID, end bool) bool {
 	return q.lines&dir == 0 || q.owner[bits.TrailingZeros8(dir)] == id
 }
 
+// crosses reports whether a line of an edge with id that enters the
+// cell at p toward dir crosses the line of another edge there
+func (c *canvas) crosses(p [2]int, dir uint8, id edgeID) bool {
+	q := c.at(p[0], p[1])
+	if q == nil || q.solid {
+		return false
+	}
+	across := uint8(left | right)
+	if dir == left || dir == right {
+		across = up | down
+	}
+	for _, d := range []uint8{across & -across, across &^ (across & -across)} {
+		if q.lines&d != 0 && q.owner[bits.TrailingZeros8(d)] != id {
+			return true
+		}
+	}
+	return false
+}
+
 // search returns the cheapest cells from one of starts to one of goals,
 // as corners, for an edge with id to run along without sharing a run, see
 // route, or nil when there is no way
@@ -219,6 +238,8 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 	const turn = 4 // a turn costs as much as this many steps
 	// and crossing the cell of another edge's marker as this many
 	const marker = 8
+	// and crossing the line of another edge as this many
+	const crossing = 8
 	if len(c.rows) == 0 {
 		return nil
 	}
@@ -275,6 +296,9 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 			}
 			if c.marked(to, id) {
 				next += marker
+			}
+			if c.crosses(to, dir, id) {
+				next += crossing
 			}
 			if isGoal {
 				next += g.cost
