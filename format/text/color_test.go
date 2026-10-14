@@ -52,10 +52,10 @@ func TestBackground(t *testing.T) {
 	}
 	for _, tc := range []struct {
 		opts Options
-		want string // every line starts with this
+		want string // the background every line starts on
 	}{
-		{Options{Background: layout.RGB{R: 0xFF, G: 0xFF, B: 0xFF}}, "\x1b[39;107m"},
-		{Options{Background: layout.RGB{}, Palette: TrueColor}, "\x1b[39;48;2;0;0;0m"},
+		{Options{Background: layout.RGB{R: 0xFF, G: 0xFF, B: 0xFF}}, ";107m"},
+		{Options{Background: layout.RGB{}, Palette: TrueColor}, ";48;2;0;0;0m"},
 	} {
 		var buf bytes.Buffer
 		if err := WriteColor(&buf, l, tc.opts); err != nil {
@@ -63,8 +63,10 @@ func TestBackground(t *testing.T) {
 		}
 		lines := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
 		for _, line := range lines {
-			if !strings.HasPrefix(line, tc.want) {
-				t.Errorf("%+v: line %q does not start with %q", tc.opts, line, tc.want)
+			// the first code sets the foreground of the first cell too
+			first, _, _ := strings.Cut(line, "m")
+			if !strings.HasPrefix(line, "\x1b[") || !strings.HasSuffix(first+"m", tc.want) {
+				t.Errorf("%+v: line %q does not start on %q", tc.opts, line, tc.want)
 				break
 			}
 		}

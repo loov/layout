@@ -11,6 +11,7 @@ import (
 	"errors"
 	"io"
 	"math"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/loov/layout"
@@ -43,12 +44,35 @@ func write(w io.Writer, l *layout.Layout, opts Options, color bool) error {
 		return errTooLarge
 	}
 	c, g := carved(l, opts.NoLegacyGlyphs)
+	g = crop(g)
 	colors := &opts
 	if !color {
 		colors = nil
 	}
 	_, err := io.WriteString(w, encode(g, c.palette, colors))
 	return err
+}
+
+// crop returns g without the blank rows above and below the drawing and
+// the blank columns left of it; encode leaves out the ones right of it
+func crop(g grid) grid {
+	blank := func(c cell) bool { return c.r == ' ' && c.bg == 0 && c.style&(underline|strike) == 0 }
+	left := math.MaxInt
+	top, bottom := len(g), 0
+	for y, row := range g {
+		if x := slices.IndexFunc(row, func(c cell) bool { return !blank(c) }); x >= 0 {
+			left = min(left, x)
+			top, bottom = min(top, y), y+1
+		}
+	}
+	if top >= bottom {
+		return g[:0]
+	}
+	g = g[top:bottom]
+	for y := range g {
+		g[y] = g[y][left:]
+	}
+	return g
 }
 
 // carved draws the graph on a canvas and carves it into the grid that

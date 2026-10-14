@@ -607,3 +607,24 @@ func TestUnjogJunction(t *testing.T) {
 		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }
+
+// TestCrop checks that crop takes off the blank rows above and below and
+// the blank columns left of every row, keeping a blank with a background
+func TestCrop(t *testing.T) {
+	rows := []string{"      ", "   ab ", "  c   ", "      "}
+	g := make(grid, len(rows))
+	for y, row := range rows {
+		for _, r := range row {
+			g[y] = append(g[y], cell{r: r})
+		}
+	}
+	g[2][1].bg = 1 // a colored blank is part of the drawing
+	got := crop(g)
+	var lines []string
+	for _, row := range got {
+		lines = append(lines, string(runes(row)))
+	}
+	if want := []string{"  ab ", " c   "}; !slices.Equal(lines, want) {
+		t.Errorf("got %q, want %q", lines, want)
+	}
+}
