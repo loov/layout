@@ -41,7 +41,7 @@ type Edge struct {
 
 	// Pos and LabelPos are the path and label center an edge keeps in a
 	// pinned graph, see Node.Pos.
-	Pos      []Vector
+	Pos      Path
 	LabelPos *Vector
 }
 

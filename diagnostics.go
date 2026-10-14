@@ -143,7 +143,7 @@ func newDiagnosis(graph *lgraph) *diagnosis {
 }
 
 // drawn returns the path of edge as drawn, rounded corners flattened
-func (d *diagnosis) drawn(edge *ledge) []Vector {
+func (d *diagnosis) drawn(edge *ledge) Path {
 	if d.graph.Splines == SplinesRounded {
 		return flattenPath(edge.Path, 2*d.graph.RowPadding, d.graph.EdgePadding)
 	}
@@ -340,9 +340,8 @@ func (d *diagnosis) paths() {
 		flow = Vector{0, -1}
 	}
 	for _, edge := range d.edges {
-		for i := 0; i+1 < len(edge.Path); i++ {
-			v := edge.Path[i+1].Sub(edge.Path[i])
-			d.diag.EdgeLength += v.Len()
+		for a, b := range edge.Path.Segments() {
+			d.diag.EdgeLength += b.Sub(a).Len()
 		}
 		if edge.From == edge.To {
 			continue

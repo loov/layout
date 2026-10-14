@@ -205,9 +205,9 @@ func (r rect) corners() []Vector {
 }
 
 // hitByPath reports whether any segment of path intersects r
-func (r rect) hitByPath(path []Vector) bool {
-	for i := 0; i+1 < len(path); i++ {
-		if r.hitBy(path[i], path[i+1]) {
+func (r rect) hitByPath(path Path) bool {
+	for a, b := range path.Segments() {
+		if r.hitBy(a, b) {
 			return true
 		}
 	}
@@ -216,10 +216,10 @@ func (r rect) hitByPath(path []Vector) bool {
 
 // pathDistance returns the distance between r and the nearest segment of
 // path, infinite for a path without segments.
-func (r rect) pathDistance(path []Vector) float64 {
+func (r rect) pathDistance(path Path) float64 {
 	best := math.Inf(1)
-	for i := 0; i+1 < len(path); i++ {
-		best = math.Min(best, r.distance(path[i], path[i+1]))
+	for a, b := range path.Segments() {
+		best = math.Min(best, r.distance(a, b))
 	}
 	return best
 }

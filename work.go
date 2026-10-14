@@ -50,7 +50,7 @@ type ledge struct {
 	def *Edge
 
 	From, To    *lnode
-	Path        []Vector
+	Path        Path
 	LabelPos    Vector // center of the label, when Label is set
 	LabelRadius Vector // half size of the label
 	// the labels at the ends, when HeadLabel and TailLabel are set

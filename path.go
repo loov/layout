@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"iter"
 	"math"
 	"slices"
 
@@ -9,12 +10,12 @@ import (
 
 // flattenPath approximates the rounded corners drawn by the writers
 // (quadratic curves of the given radius) with two extra points per corner.
-func flattenPath(path []Vector, radius, maxDeviation Length) []Vector {
+func flattenPath(path Path, radius, maxDeviation Length) Path {
 	return appendFlatPath(nil, path, radius, maxDeviation)
 }
 
 // flatLen returns the length of the path flattenPath returns
-func flatLen(path []Vector) int {
+func flatLen(path Path) int {
 	if len(path) < 3 {
 		return len(path)
 	}
@@ -23,15 +24,12 @@ func flatLen(path []Vector) int {
 
 // appendFlatPath appends the flattened path to out, see flattenPath; a
 // path without corners is returned as it is
-func appendFlatPath(out, path []Vector, radius, maxDeviation Length) []Vector {
+func appendFlatPath(out, path Path, radius, maxDeviation Length) Path {
 	if len(path) < 3 {
 		return path
 	}
-	length := func(a, b Vector) Length {
-		return b.Sub(a).Len()
-	}
 	towards := func(a, b Vector, d Length) Vector {
-		l := length(a, b)
+		l := b.Sub(a).Len()
 		if l == 0 {
 			return a
 		}
@@ -54,8 +52,8 @@ func drawPoint(v Vector) draw.Point { return draw.Point{X: float64(v.X), Y: floa
 // offsetPath shifts the path sideways by dx and re-clips the ends to the
 // nodes; a straight edge between neighbors along a rank, along, runs
 // across x, so it moves across that, in y
-func offsetPath(path []Vector, dx Length, from, to *lnode, along bool) []Vector {
-	out := make([]Vector, len(path))
+func offsetPath(path Path, dx Length, from, to *lnode, along bool) Path {
+	out := make(Path, len(path))
 	for i, p := range path {
 		out[i] = Vector{X: p.X + dx, Y: p.Y}
 		if along {
@@ -74,20 +72,41 @@ func offsetPath(path []Vector, dx Length, from, to *lnode, along bool) []Vector 
 	return out
 }
 
-// reversePath returns the path in reverse order
-func reversePath(path []Vector) []Vector {
-	rs := make([]Vector, 0, len(path))
+// reversed returns the path in reverse order
+func (path Path) reversed() Path {
+	rs := make(Path, 0, len(path))
 	for _, p := range slices.Backward(path) {
 		rs = append(rs, p)
 	}
 	return rs
 }
 
-// nearestOnPath returns the point of the polyline closest to p
-func nearestOnPath(path []Vector, p Vector) (Vector, bool) {
+// Path is a polyline, from its first point to its last.
+type Path []Vector
+
+// Segments yields the ends of every segment of path, in order.
+func (path Path) Segments() iter.Seq2[Vector, Vector] {
+	return func(yield func(a, b Vector) bool) {
+		for i := 0; i+1 < len(path); i++ {
+			if !yield(path[i], path[i+1]) {
+				return
+			}
+		}
+	}
+}
+
+// Length returns the length of path along its segments.
+func (path Path) Length() (length Length) {
+	for a, b := range path.Segments() {
+		length += b.Sub(a).Len()
+	}
+	return length
+}
+
+// nearest returns the point of path closest to p
+func (path Path) nearest(p Vector) (Vector, bool) {
 	best, bestDist := Vector{}, math.Inf(1)
-	for i := 0; i+1 < len(path); i++ {
-		a, b := path[i], path[i+1]
+	for a, b := range path.Segments() {
 		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
 		t := 0.0
 		if l := dx*dx + dy*dy; l > 0 {

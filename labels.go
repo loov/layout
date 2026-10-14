@@ -11,13 +11,13 @@ import (
 // them. Labels of the edges in keep stay where they are, and the others
 // avoid them.
 func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radius Length, keep map[*ledge]bool) {
-	paths := make([][]Vector, len(edges), len(edges)+len(clusters))
+	paths := make([]Path, len(edges), len(edges)+len(clusters))
 	// all the flattened paths in one block
 	n := 0
 	for _, edge := range edges {
 		n += flatLen(edge.Path)
 	}
-	points := make([]Vector, 0, n)
+	points := make(Path, 0, n)
 	for i, edge := range edges {
 		start := len(points)
 		flat := appendFlatPath(points, edge.Path, radius, pad)
@@ -79,7 +79,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		own := paths[slices.Index(edges, edge)]
 		// snap to the drawn path first: the label was placed against a
 		// waypoint, but rounding and multi-edge offsets move the line
-		if p, ok := nearestOnPath(own, edge.LabelPos); ok {
+		if p, ok := own.nearest(edge.LabelPos); ok {
 			d := edge.LabelPos.Sub(p)
 			if !d.IsZero() {
 				u := d.Unit()
@@ -108,9 +108,8 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		}
 		var spots []spot
 		if !clear(edge, edge.LabelPos) {
-			base, _ := nearestOnPath(own, edge.LabelPos)
-			for i := 0; i+1 < len(own) && !found; i++ {
-				a, b := own[i], own[i+1]
+			base, _ := own.nearest(edge.LabelPos)
+			for a, b := range own.Segments() {
 				dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
 				l := math.Hypot(dx, dy)
 				if l == 0 {
@@ -222,11 +221,7 @@ func (g *lgraph) placeEndLabels() {
 			across := Length(math.Abs(uy))*r.X + Length(math.Abs(ux))*r.Y
 			// no further than the middle of the edge, so that the label
 			// stays nearer its own end
-			var length Length
-			for i := 0; i+1 < n; i++ {
-				d := edge.Path[i+1].Sub(edge.Path[i])
-				length += d.Len()
-			}
+			length := edge.Path.Length()
 			var spots []Vector
 			for step := range 6 {
 				a := pad + along + Length(step)*pad

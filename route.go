@@ -30,7 +30,7 @@ func newObstacles(byRank [][]*lnode, pad Length) *obstacles {
 // node. Segment i connects rank firstRank+i to firstRank+i+1; only nodes on
 // those two ranks can be hit. Obstacles on the lower rank are passed above,
 // on the upper rank below.
-func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []Vector {
+func routeAround(path Path, obs *obstacles, from, to *lnode, pad Length) Path {
 	var lastHit *lnode
 	inserted := 0
 	for i := 0; i+1 < len(path) && inserted < 16; i++ {
@@ -101,7 +101,7 @@ func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []V
 
 // routeAroundClusters detours segments that cut across a cluster box the
 // edge does not belong to, going around the nearest corner.
-func routeAroundClusters(path []Vector, clusters []*lcluster, from, to *lnode, pad Length) []Vector {
+func routeAroundClusters(path Path, clusters []*lcluster, from, to *lnode, pad Length) Path {
 	for _, cluster := range clusters {
 		if slices.Contains(cluster.Nodes, from) || slices.Contains(cluster.Nodes, to) {
 			continue

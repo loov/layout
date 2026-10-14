@@ -132,7 +132,7 @@ func translateLayout(l *Layout, d Vector) {
 
 // simplifyPath drops repeated points of a path, and points in the middle
 // of a straight run, which compaction leaves where it lined runs up
-func simplifyPath(path []Vector) []Vector {
+func simplifyPath(path Path) Path {
 	out := path[:0]
 	for i, p := range path {
 		if i > 0 && p == out[len(out)-1] && i < len(path)-1 {

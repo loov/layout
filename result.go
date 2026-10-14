@@ -34,7 +34,7 @@ type NodeBox struct {
 
 // EdgePath is the computed path of an edge.
 type EdgePath struct {
-	Path []Vector
+	Path Path
 	// LabelCenter and LabelSize place the label, when the edge has one.
 	LabelCenter Vector
 	LabelSize   Vector

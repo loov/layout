@@ -32,7 +32,7 @@ func (loops *loopCount) next(edge *ledge) int {
 	return k
 }
 
-func loopPath(edge *ledge, width, height Length, k, n int) []Vector {
+func loopPath(edge *ledge, width, height Length, k, n int) Path {
 	node := edge.From
 	right := node.Right() + width
 	// the n loops without ports stack down the right side, loop k in the

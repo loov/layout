@@ -340,8 +340,8 @@ type hierComponent struct {
 
 	// buffers that route fills again on every call, see route
 	byRank    [][]*lnode
-	edgePaths map[*hier.Edge][]Vector
-	pathBlock []Vector
+	edgePaths map[*hier.Edge]Path
+	pathBlock Path
 }
 
 // hierarchicalComponent lays out one connected graph top to bottom,
@@ -1026,12 +1026,12 @@ func (c *hierComponent) realByRank() [][]*lnode {
 // rankPaths returns the paths of the edges between ranks, along their
 // virtual nodes, by the hierarchical nodes they join; labels go beside the
 // middle virtual node
-func (c *hierComponent) rankPaths() map[*hier.Edge][]Vector {
+func (c *hierComponent) rankPaths() map[*hier.Edge]Path {
 	// assignPaths copies the paths out, so they live in a block that
 	// the next route reuses
 	edgePaths := c.edgePaths
 	if edgePaths == nil {
-		edgePaths = make(map[*hier.Edge][]Vector, len(c.graphdef.Edges))
+		edgePaths = make(map[*hier.Edge]Path, len(c.graphdef.Edges))
 		c.edgePaths = edgePaths
 	}
 	clear(edgePaths)
@@ -1045,7 +1045,7 @@ func (c *hierComponent) rankPaths() map[*hier.Edge][]Vector {
 		// virtual node, sized at once
 		n := 3 + len(e.Chain)
 		if cap(block)-len(block) < n {
-			block = make([]Vector, 0, max(2*cap(block), n, 64))
+			block = make(Path, 0, max(2*cap(block), n, 64))
 		}
 		path := block[len(block) : len(block) : len(block)+n]
 		block = block[:len(block)+n]
@@ -1094,7 +1094,7 @@ func (c *hierComponent) rankPaths() map[*hier.Edge][]Vector {
 // flatPaths adds the paths of flat edges, which run sideways along the
 // rank, arcing over nodes in between; overlapping arcs stack, narrower
 // ones below
-func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge][]Vector, byRank [][]*lnode) {
+func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lnode) {
 	type arc struct {
 		flat   *hier.Edge
 		lo, hi Length
@@ -1142,7 +1142,7 @@ func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge][]Vector, byRank [][]
 
 // assignPaths gives every edge its path, self-loops their own; edges
 // between the same pair of nodes share one route, so they are spread out
-func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge][]Vector, byRank [][]*lnode) {
+func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lnode) {
 	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
 	pairKey := func(edge *ledge) [2]hier.ID { return unorderedPair(c.nodes[edge.From], c.nodes[edge.To]) }
 	pairCount := make(map[[2]hier.ID]int, len(c.graphdef.Edges))
@@ -1181,7 +1181,7 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge][]Vector, byRank []
 			continue
 		}
 		if reversed {
-			path = reversePath(path) // the edge was reversed to break a cycle
+			path = path.reversed() // the edge was reversed to break a cycle
 		}
 
 		// pinned ports override the automatic attachment points

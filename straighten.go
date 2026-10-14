@@ -127,8 +127,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 	graphdef := st.graphdef
 	horizontal, vertical := st.horizontal[:0], st.vertical[:0]
 	for _, edge := range graphdef.Edges {
-		for i := 1; i < len(edge.Path); i++ {
-			a, b := edge.Path[i-1], edge.Path[i]
+		for a, b := range edge.Path.Segments() {
 			switch {
 			case a.Y == b.Y && a.X != b.X:
 				horizontal = append(horizontal, axisRun{a.Y, min(a.X, b.X), max(a.X, b.X), edge})
