@@ -438,6 +438,21 @@ func (p *point) set(axis, v int) {
 	}
 }
 
+// sameRow reports whether a and b are on one row
+func sameRow(a, b point) bool { return a.Y == b.Y }
+
+// sameCol reports whether a and b are in one column
+func sameCol(a, b point) bool { return a.X == b.X }
+
+// straight reports whether a and b are on one row or in one column
+func straight(a, b point) bool { return sameRow(a, b) || sameCol(a, b) }
+
+// inLine reports whether b is no corner between a and c: the steps to and
+// from it keep to rows and columns alike
+func inLine(a, b, c point) bool {
+	return sameCol(a, b) == sameCol(b, c) && sameRow(a, b) == sameRow(b, c)
+}
+
 // cellBox is the cells from Min to Max, both included
 type cellBox struct{ Min, Max point }
 

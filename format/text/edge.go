@@ -45,7 +45,7 @@ func (c *canvas) marker(style layout.Arrow, dir uint8, end point) (point, bool) 
 // first, so from b when the run starts at b. Within a cell, it is the
 // direction of the segment from a to b in graph coordinates, p to q.
 func arrival(a, b point, startsAtB bool, p, q layout.Vector) uint8 {
-	horizontal := a.X != b.X && (startsAtB || a.Y == b.Y)
+	horizontal := !sameCol(a, b) && (startsAtB || sameRow(a, b))
 	switch {
 	case horizontal && b.X > a.X:
 		return right
@@ -150,7 +150,7 @@ func (c *canvas) across(cells []point, from, to *layout.Node) []point {
 	}
 
 	bends := func(a, b point, first, last int) []point {
-		if a.X == b.X || a.Y == b.Y {
+		if straight(a, b) {
 			return nil
 		}
 		switch {
@@ -200,9 +200,9 @@ func (c *canvas) atDot(cells []point, i, j, k int, node *layout.Node) {
 	at, next := cells[i], cells[k]
 	turn := cells[j]
 	switch bend := cells[j]; {
-	case at.Y == bend.Y && bend.X == next.X && next.Y != at.Y:
+	case sameRow(at, bend) && sameCol(bend, next) && !sameRow(next, at):
 		turn = point{at.X, next.Y} // across first, then along
-	case at.X == bend.X && bend.Y == next.Y && next.X != at.X:
+	case sameCol(at, bend) && sameRow(bend, next) && !sameCol(next, at):
 		turn = point{next.X, at.Y}
 	}
 

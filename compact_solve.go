@@ -144,7 +144,7 @@ func simplifyPath(path Path) Path {
 		}
 		if n := len(out); n >= 2 && i < len(path) {
 			a, b := out[n-2], out[n-1]
-			if (a.X == b.X && b.X == p.X) || (a.Y == b.Y && b.Y == p.Y) {
+			if vertical(a, b) && vertical(b, p) || horizontal(a, b) && horizontal(b, p) {
 				out[n-1] = p
 				continue
 			}

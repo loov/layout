@@ -158,6 +158,15 @@ func (v Vector) Scale(f Length) Vector { return Vector{X: v.X * f, Y: v.Y * f} }
 // Unit returns v divided by its length
 func (v Vector) Unit() Vector { n := v.Len(); return Vector{X: v.X / n, Y: v.Y / n} }
 
+// vertical reports whether the segment from a to b runs straight up or down
+func vertical(a, b Vector) bool { return a.X == b.X }
+
+// horizontal reports whether the segment from a to b runs straight across
+func horizontal(a, b Vector) bool { return a.Y == b.Y }
+
+// diagonal reports whether the segment from a to b runs at a slant
+func diagonal(a, b Vector) bool { return !vertical(a, b) && !horizontal(a, b) }
+
 // midpoint returns the point halfway between a and b
 func midpoint(a, b Vector) Vector { return Vector{X: (a.X + b.X) / 2, Y: (a.Y + b.Y) / 2} }
 

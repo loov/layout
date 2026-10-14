@@ -117,7 +117,7 @@ func (st *straightener) countBends() (bends int) {
 	for _, edge := range st.graphdef.Edges {
 		for i := 2; i < len(edge.Path); i++ {
 			a, b, c := edge.Path[i-2], edge.Path[i-1], edge.Path[i]
-			if (a.X == b.X) != (b.X == c.X) {
+			if vertical(a, b) != vertical(b, c) {
 				bends++
 			}
 		}
@@ -130,31 +130,31 @@ func (st *straightener) countBends() (bends int) {
 // other or along the frame of a cluster
 func (st *straightener) measure() (crossings, overlaps int) {
 	graphdef := st.graphdef
-	horizontal, vertical := st.horizontal[:0], st.vertical[:0]
+	hruns, vruns := st.horizontal[:0], st.vertical[:0]
 	for _, edge := range graphdef.Edges {
 		for a, b := range edge.Path.Segments() {
 			switch {
-			case a.Y == b.Y && a.X != b.X:
-				horizontal = append(horizontal, axisRun{a.Y, min(a.X, b.X), max(a.X, b.X), edge})
-			case a.X == b.X && a.Y != b.Y:
-				vertical = append(vertical, axisRun{a.X, min(a.Y, b.Y), max(a.Y, b.Y), edge})
+			case horizontal(a, b) && a != b:
+				hruns = append(hruns, axisRun{a.Y, min(a.X, b.X), max(a.X, b.X), edge})
+			case vertical(a, b) && a != b:
+				vruns = append(vruns, axisRun{a.X, min(a.Y, b.Y), max(a.Y, b.Y), edge})
 			}
 		}
 	}
 
-	st.horizontal, st.vertical = horizontal, vertical
+	st.horizontal, st.vertical = hruns, vruns
 
 	// sorted, a run meets only the runs that start within its span
-	slices.SortFunc(horizontal, byStart)
-	slices.SortFunc(vertical, byStart)
-	for _, h := range horizontal {
-		i, _ := slices.BinarySearchFunc(vertical, h.lo, func(v axisRun, x Length) int {
+	slices.SortFunc(hruns, byStart)
+	slices.SortFunc(vruns, byStart)
+	for _, h := range hruns {
+		i, _ := slices.BinarySearchFunc(vruns, h.lo, func(v axisRun, x Length) int {
 			if v.at <= x {
 				return -1
 			}
 			return 1
 		})
-		for _, v := range vertical[i:] {
+		for _, v := range vruns[i:] {
 			if v.at >= h.hi {
 				break
 			}
@@ -165,7 +165,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 	}
 
 	// runs of different edges along each other
-	for _, runs := range [][]axisRun{horizontal, vertical} {
+	for _, runs := range [][]axisRun{hruns, vruns} {
 		for i, r := range runs {
 			for _, q := range runs[i+1:] {
 				if q.at != r.at || q.lo >= r.hi {
@@ -186,12 +186,12 @@ func (st *straightener) measure() (crossings, overlaps int) {
 	near := Vector{X: cell.X / 2, Y: cell.Y / 2}
 	for _, cluster := range graphdef.Clusters {
 		tl, br := cluster.TopLeft, cluster.BottomRight
-		for _, h := range horizontal {
+		for _, h := range hruns {
 			if ((h.at-tl.Y).Abs() <= near.Y || (h.at-br.Y).Abs() <= near.Y) && min(h.hi, br.X)-max(h.lo, tl.X) > near.X {
 				overlaps++
 			}
 		}
-		for _, v := range vertical {
+		for _, v := range vruns {
 			if ((v.at-tl.X).Abs() <= near.X || (v.at-br.X).Abs() <= near.X) && min(v.hi, br.Y)-max(v.lo, tl.Y) > near.Y {
 				overlaps++
 			}

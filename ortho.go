@@ -42,7 +42,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		}
 		for i := 0; i+1 < len(edge.Path); i++ {
 			a, b := edge.Path[i], edge.Path[i+1]
-			if a.X != b.X && a.Y != b.Y {
+			if diagonal(a, b) {
 				mid := (a.Y + b.Y) / 2
 				edge.Path = slices.Insert(edge.Path, i+1, Vector{a.X, mid}, Vector{b.X, mid})
 				i += 2
@@ -150,8 +150,8 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 		if edge.From == edge.To || !edge.flat || len(p) != 4 {
 			return false
 		}
-		rises := p[1].Y < p[0].Y && p[1].X == p[0].X // straight up from the first node
-		lands := p[3].X == p[2].X                    // straight down onto the second
+		rises := vertical(p[0], p[1]) && p[1].Y < p[0].Y // straight up from the first node
+		lands := vertical(p[2], p[3])                    // straight down onto the second
 		return rises && lands
 	}
 	for _, edge := range graph.Edges {
@@ -387,7 +387,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 		path := edge.Path
 		for i := 0; i+1 < len(path); i++ {
 			a, b := path[i], path[i+1]
-			if a.X == b.X {
+			if vertical(a, b) {
 				continue
 			}
 			top, bottom := a, b

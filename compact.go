@@ -239,9 +239,9 @@ func crowded(l *Layout, cell Vector) []bool {
 			return max(min(a0, a1), min(b0, b1)) < min(max(a0, a1), max(b0, b1))
 		}
 		switch {
-		case a.X == b.X && c.X == d.X:
+		case vertical(a, b) && vertical(c, d):
 			return (a.X-c.X).Abs() < cell.X/2 && overlap(a.Y, b.Y, c.Y, d.Y)
-		case a.Y == b.Y && c.Y == d.Y:
+		case horizontal(a, b) && horizontal(c, d):
 			return (a.Y-c.Y).Abs() < cell.Y/2 && overlap(a.X, b.X, c.X, d.X)
 		}
 

@@ -345,7 +345,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 	for i := len(cells) - 1; i >= 0; i-- {
 		if n := len(corners); n >= 2 {
 			a, b := corners[n-2], corners[n-1]
-			if (a.X == b.X) == (b.X == cells[i].X) && (a.Y == b.Y) == (b.Y == cells[i].Y) {
+			if inLine(a, b, cells[i]) {
 				corners[n-1] = cells[i]
 				continue
 			}
@@ -439,7 +439,7 @@ func (c *canvas) markCell(end, next point, node *layout.Node, id edgeID, marker 
 	}
 
 	// only when the line runs straight through it
-	if d := (next.X-end.X)*dx(out) + (next.Y-end.Y)*dy(out); d < 2 || next.X != end.X && next.Y != end.Y {
+	if d := (next.X-end.X)*dx(out) + (next.Y-end.Y)*dy(out); d < 2 || !straight(end, next) {
 		return
 	}
 	cell := end.step(out)
