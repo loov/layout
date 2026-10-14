@@ -120,15 +120,15 @@ func compact(l *Layout, grid compactGrid) {
 	best, base := area(), defectsOf(l)
 	// try reports whether jogging along x, or y with flip, at the runs
 	// that hold the width pays
-	try := func(flip bool) bool {
+	try := func(flip, beside bool) bool {
 		saved := saveLayout(l)
 		ok := false
 		if flip {
 			transposeLayout(l)
-			ok = jogAxis(l, Vector{X: cell.Y, Y: cell.X}, grid, !sideways, true, spanY, crowd)
+			ok = jogAxis(l, Vector{X: cell.Y, Y: cell.X}, grid, !sideways, true, spanY, crowd, beside)
 			transposeLayout(l)
 		} else {
-			ok = jogAxis(l, cell, grid, sideways, false, spanX, crowd)
+			ok = jogAxis(l, cell, grid, sideways, false, spanX, crowd, beside)
 		}
 		if !ok {
 			return false
@@ -143,8 +143,10 @@ func compact(l *Layout, grid compactGrid) {
 		return false
 	}
 	for range 8 {
-		x := try(false)
-		if y := try(true); !x && !y {
+		// a jog beside a label of its edge can leave the label with the
+		// wrong half, see critical; it is tried when the others don't pay
+		x := try(false, false) || try(false, true)
+		if y := try(true, false) || try(true, true); !x && !y {
 			break
 		}
 	}
@@ -371,9 +373,9 @@ func newPass(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []in
 
 // jogAxis splits the runs that hold the width of l along x, see
 // critical, compacts with jogs there, and reports whether it split any
-func jogAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool) bool {
+func jogAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool, beside bool) bool {
 	p, n, cons, lower, reach := newPass(l, cell, grid, tie, flip, span, crowd, nil)
-	splits := p.critical(cons, leastSolution(n, cons, lower), lower, reach)
+	splits := p.critical(cons, leastSolution(n, cons, lower), lower, reach, beside)
 	if len(splits) == 0 {
 		return false
 	}
@@ -405,16 +407,21 @@ type jogSplit struct {
 // it can come apart when what holds it from before lies on one side of
 // that row and what it holds after on the other, at least a row off. The
 // half that holds what comes after can then move before the other.
-func (p *compactPass) critical(cons []constraint, d, lower, reach []int) []jogSplit {
+func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside bool) []jogSplit {
 	n := len(d)
 	width := math.MinInt
 	for v := range n {
 		width = max(width, d[v]+reach[v])
 	}
-	tight := func(c constraint) bool { return d[c.b] == d[c.a]+c.min }
+	// the constraints that pull a label along with its run, see
+	// constraints, hold no rows: what holds the label holds the run too
+	tight := func(k int) bool {
+		c := cons[k]
+		return d[c.b] == d[c.a]+c.min && p.rows[k][0].c0 <= p.rows[k][0].c1
+	}
 	in := make([][]int, n)
 	for k, c := range cons {
-		if tight(c) {
+		if tight(k) {
 			in[c.b] = append(in[c.b], k)
 		}
 	}
@@ -439,25 +446,22 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int) []jogSp
 	}
 	out := make([][]int, n)
 	for k, c := range cons {
-		if tight(c) && crit[c.b] {
+		if tight(k) && crit[c.b] {
 			out[c.a] = append(out[c.a], k)
 		}
 	}
 	runs := make([][]int, n)
 	for i, o := range p.objs {
-		if v := p.varOf[o.item]; crit[v] && o.kind == runKind && o.group >= 0 && o.c1-o.c0 > 4*p.grid.lineSpace {
+		if v := p.varOf[o.item]; crit[v] && o.kind == runKind && o.group >= 0 && o.c1-o.c0 > 1 {
 			runs[v] = append(runs[v], i)
 		}
 	}
 	space := p.grid.lineSpace
 	// side returns 1 when what constraint k holds of v, own, lies below
 	// row and -1 when above; by the rows of the other side, other, when
-	// own lies across row; 0 when that lies around row too, and 3 when
-	// it holds no rows
+	// own lies across row; 0 when that lies around row too
 	side := func(own, other rowSpan, row int) int {
 		switch {
-		case own.c0 > own.c1:
-			return 3
 		case own.c1 < row || own.c0 <= row && row <= own.c1 && other.c1+space < row:
 			return -1
 		case own.c0 > row || own.c0 <= row && row <= own.c1 && other.c0-space > row:
@@ -476,19 +480,19 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int) []jogSp
 			if p.l.Edges[o.index].Merged != [2]int{} {
 				continue
 			}
-			// off the ends of the run by a cell for a marker and one for a
-			// border, so that the jog doesn't take an end's room; every row
-			// against every constraint, which a sweep over their rows would
-			// cut on tall graphs
-			for row := o.c1 - 2*space - 1; row > o.c0+2*space; row-- {
+			// every row against every constraint, which a sweep over their
+			// rows would cut on tall graphs
+			top, bottom := p.endRoom(o)
+			// a row beside a label of the edge only with beside, or when
+			// there is no other: the label goes with the half nearest to
+			// it, which can be the wrong one there
+			fallback, found := jogSplit{}, false
+			for row := o.c1 - bottom; row >= o.c0+top; row-- {
 				// what holds v from before on one side, what v holds on the
 				// other
 				ins, outs := 0, 0
 				for _, k := range in[v] {
 					s := side(p.rows[k][1], p.rows[k][0], row)
-					if s == 3 {
-						continue
-					}
 					if s == 0 || ins != 0 && s != ins {
 						ins = 2
 						break
@@ -497,9 +501,6 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int) []jogSp
 				}
 				for _, k := range out[v] {
 					s := side(p.rows[k][0], p.rows[k][1], row)
-					if s == 3 {
-						continue
-					}
 					if s == 0 || outs != 0 && s != outs {
 						outs = 2
 						break
@@ -509,14 +510,65 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int) []jogSp
 				if ins == 2 || outs == 2 || ins == outs {
 					continue
 				}
-				if split, ok := p.split(o, row, outs > 0); ok {
+				split, ok := p.split(o, row, outs > 0)
+				switch {
+				case ok && (beside || !p.labelled(o.index, row)):
 					splits = append(splits, split)
 					break runs
+				case ok && !found:
+					fallback, found = split, true
 				}
+			}
+			if found {
+				splits = append(splits, fallback)
+				break
 			}
 		}
 	}
 	return splits
+}
+
+// labelled reports whether a label of edge e lies in row: it goes with
+// the run nearest to it, which a jog there can make the wrong half
+func (p *compactPass) labelled(e, row int) bool {
+	for _, lb := range p.labels {
+		if o := p.objs[lb.obj]; lb.edge == e && o.c0 <= row && row <= o.c1 {
+			return true
+		}
+	}
+	return false
+}
+
+// endRoom returns the rows a jog keeps from the top and the bottom end
+// of run o: at a node, the cells the run keeps for a marker and past an
+// outline, see constraints, and a row between it and a turn
+func (p *compactPass) endRoom(o rigid) (top, bottom int) {
+	space := p.grid.lineSpace
+	top, bottom = 2*space, 2*space
+	path, items, edge := p.l.Edges[o.index].Path, p.pointItem[o.index], p.l.Graph.Edges[o.index]
+	for _, end := range [2]struct {
+		at     int
+		node   *Node
+		marked bool
+	}{{0, edge.From, tailMarked(edge)}, {len(path) - 1, edge.To, headMarked(edge)}} {
+		if items[end.at] != o.item {
+			continue
+		}
+		keep := 0
+		if end.marked {
+			keep += space
+		}
+		if p.l.Nodes[p.l.nodeIndex[end.node]].Shape != None {
+			keep += space
+		}
+		switch p.row(path[end.at].Y) {
+		case o.c0:
+			top = max(keep, space)
+		case o.c1:
+			bottom = max(keep, space)
+		}
+	}
+	return top, bottom
 }
 
 // split returns where to split run o at row, so that the half below row
@@ -624,7 +676,7 @@ func (p *compactPass) addEdges() {
 		pointGroup := make([]int, len(path.Path))
 		for i, pt := range path.Path {
 			c, r := p.col(pt.X), p.row(pt.Y)
-			jog := p.jogs[[2]int{e, i}]
+			_, jog := p.jogs[[2]int{e, i}]
 			if i == 0 || r == p.row(path.Path[i-1].Y) && c != p.col(path.Path[i-1].X) || jog {
 				group++
 				if jog {
