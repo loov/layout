@@ -26,9 +26,6 @@ type writer struct {
 // erred reports whether a write has failed
 func (svg *writer) erred() bool { return svg.err != nil }
 
-// Error returns the first write error, if any
-func (svg *writer) Error() error { return svg.err }
-
 func (svg *writer) write(format string, args ...any) {
 	if svg.erred() {
 		return
