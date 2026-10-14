@@ -469,8 +469,8 @@ func (c *canvas) stepDiamond(x0, y0, x1, y1 int) {
 // have, see Options.NoLegacyGlyphs: in the cells of the one cornerDiamond
 // draws, with its points where that one has them
 //
-//	 ╱╲
-//	 ╲╱
+//	╱╲
+//	╲╱
 func (c *canvas) smallDiamond(x0, y0 int) {
 	for i, row := range []string{" ╱╲ ", " ╲╱ "} {
 		for j, r := range []rune(row) {
