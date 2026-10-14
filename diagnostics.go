@@ -355,7 +355,7 @@ func (d *diagnosis) paths() {
 		path := edge.Path
 		for i := 1; i+1 < len(path); i++ {
 			a, b := path[i].Sub(path[i-1]), path[i+1].Sub(path[i])
-			if a == (Vector{}) || b == (Vector{}) {
+			if a.IsZero() || b.IsZero() {
 				continue
 			}
 			angle := math.Atan2(float64(a.X*b.Y-a.Y*b.X), float64(a.X*b.X+a.Y*b.Y))

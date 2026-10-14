@@ -118,7 +118,7 @@ func routeAroundClusters(path []Vector, clusters []*lcluster, from, to *lnode, p
 				continue
 			}
 			// nearest corner to the segment's midpoint
-			mid := Vector{(a.X + b.X) / 2, (a.Y + b.Y) / 2}
+			mid := midpoint(a, b)
 			best, bestDist := corners[0], Length(math.Inf(1))
 			for _, c := range corners {
 				if d := (c.X-mid.X)*(c.X-mid.X) + (c.Y-mid.Y)*(c.Y-mid.Y); d < bestDist {

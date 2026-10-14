@@ -139,6 +139,18 @@ func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y}
 // Len returns the length of v
 func (v Vector) Len() Length { return Length(math.Hypot(float64(v.X), float64(v.Y))) }
 
+// IsZero reports whether v is the zero vector
+func (v Vector) IsZero() bool { return v == Vector{} }
+
+// Scale returns v multiplied by f
+func (v Vector) Scale(f Length) Vector { return Vector{X: v.X * f, Y: v.Y * f} }
+
+// Unit returns v divided by its length
+func (v Vector) Unit() Vector { n := v.Len(); return Vector{X: v.X / n, Y: v.Y / n} }
+
+// midpoint returns the point halfway between a and b
+func midpoint(a, b Vector) Vector { return Vector{X: (a.X + b.X) / 2, Y: (a.Y + b.Y) / 2} }
+
 // Length is a distance in points.
 type Length float64
 

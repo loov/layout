@@ -81,14 +81,13 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		// waypoint, but rounding and multi-edge offsets move the line
 		if p, ok := nearestOnPath(own, edge.LabelPos); ok {
 			d := edge.LabelPos.Sub(p)
-			if l := float64(d.Len()); l > 0 {
-				ux, uy := float64(d.X)/l, float64(d.Y)/l
-				support := math.Abs(ux)*float64(edge.LabelRadius.X) + math.Abs(uy)*float64(edge.LabelRadius.Y)
-				dist := float64(pad) + support
+			if !d.IsZero() {
+				u := d.Unit()
+				dist := pad + u.X.Abs()*edge.LabelRadius.X + u.Y.Abs()*edge.LabelRadius.Y
 				// this side, or the other side of the line when only that
 				// one is free (parallel edges of a pair)
-				same := p.Add(Vector{Length(ux * dist), Length(uy * dist)})
-				other := p.Add(Vector{Length(-ux * dist), Length(-uy * dist)})
+				same := p.Add(u.Scale(dist))
+				other := p.Add(u.Scale(-dist))
 				edge.LabelPos = same
 				if !clear(edge, same) && clear(edge, other) {
 					edge.LabelPos = other
@@ -141,7 +140,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		for ring := 1; ring <= 4 && !found; ring++ {
 			d := Length(ring) * 2 * pad
 			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
-				if at := edge.LabelPos.Add(Vector{dir.X * d, dir.Y * d}); near(at) && clear(edge, at) {
+				if at := edge.LabelPos.Add(dir.Scale(d)); near(at) && clear(edge, at) {
 					edge.LabelPos, found = at, true
 					break
 				}
@@ -215,9 +214,9 @@ func (g *lgraph) placeEndLabels() {
 			r := end.label.radius
 			// along the edge away from the node, and across it
 			ux, uy := 0.0, 1.0
-			if d := end.next.Sub(end.at); d != (Vector{}) {
-				l := float64(d.Len())
-				ux, uy = float64(d.X)/l, float64(d.Y)/l
+			if d := end.next.Sub(end.at); !d.IsZero() {
+				u := d.Unit()
+				ux, uy = float64(u.X), float64(u.Y)
 			}
 			along := Length(math.Abs(ux))*r.X + Length(math.Abs(uy))*r.Y
 			across := Length(math.Abs(uy))*r.X + Length(math.Abs(ux))*r.Y

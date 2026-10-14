@@ -242,7 +242,7 @@ func (g *lgraph) Bounds() (min, max Vector) {
 			b.add(edge.labelRect())
 		}
 		for _, end := range []endLabel{edge.head, edge.tail} {
-			if end.radius != (Vector{}) {
+			if !end.radius.IsZero() {
 				b.add(centeredRect(end.pos, end.radius))
 			}
 		}

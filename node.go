@@ -168,7 +168,7 @@ func (node *lnode) outlineAlong(start, p Vector) Vector {
 	}
 	in, out := start, p
 	for range 32 {
-		mid := Vector{(in.X + out.X) / 2, (in.Y + out.Y) / 2}
+		mid := midpoint(in, out)
 		if inside(mid) {
 			in = mid
 		} else {

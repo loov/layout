@@ -1167,12 +1167,12 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge][]Vector, byRank []
 			if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
 				// ported loops can sit on any side; label the middle of the loop
 				p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
-				mid := Vector{X: (p.X + q.X) / 2, Y: (p.Y + q.Y) / 2}
+				mid := midpoint(p, q)
 				d := mid.Sub(edge.From.Center)
-				if n := d.Len(); n > 0 {
-					d = Vector{X: d.X / n, Y: d.Y / n}
+				if !d.IsZero() {
+					d = d.Unit()
 					gap := c.graphdef.EdgePadding + d.X.Abs()*edge.LabelRadius.X + d.Y.Abs()*edge.LabelRadius.Y
-					edge.LabelPos = mid.Add(Vector{X: d.X * gap, Y: d.Y * gap})
+					edge.LabelPos = mid.Add(d.Scale(gap))
 				}
 			}
 			continue

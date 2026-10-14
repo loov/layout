@@ -11,7 +11,7 @@ func layoutPinned(graph *lgraph) {
 	loops := countLoops(graph.Edges)
 	given := map[*ledge]bool{} // label positions that stay
 	for _, edge := range graph.Edges {
-		given[edge] = edge.LabelPos != (Vector{})
+		given[edge] = !edge.LabelPos.IsZero()
 	}
 	defer nudgeLabels(graph.Edges, graph.Nodes, graph.Clusters, graph.EdgePadding, 2*graph.RowPadding, given)
 	pairs := newPairs(graph)
@@ -34,11 +34,11 @@ func layoutPinned(graph *lgraph) {
 				edge.Path = []Vector{from, to}
 			}
 		}
-		if edge.Label != "" && edge.LabelPos == (Vector{}) {
+		if edge.Label != "" && edge.LabelPos.IsZero() {
 			mid := edge.Path[len(edge.Path)/2]
 			if len(edge.Path)%2 == 0 {
 				a, b := edge.Path[len(edge.Path)/2-1], edge.Path[len(edge.Path)/2]
-				mid = Vector{(a.X + b.X) / 2, (a.Y + b.Y) / 2}
+				mid = midpoint(a, b)
 			}
 			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X + graph.EdgePadding, 0})
 		}
