@@ -2,10 +2,11 @@ package text
 
 import (
 	"cmp"
-	"github.com/loov/layout"
-	"github.com/loov/layout/internal/draw"
 	"math"
 	"slices"
+
+	"github.com/loov/layout"
+	"github.com/loov/layout/internal/draw"
 )
 
 // record draws field texts in their boxes, see placed, with dividers between
@@ -55,7 +56,7 @@ func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *d
 }
 
 // clusterBox returns the cells of the frame of the cluster at index i
-func (c *canvas) clusterBox(i int) [4]int {
+func (c *canvas) clusterBox(i int) cellBox {
 	cluster, box := c.l.Graph.Clusters[i], c.l.Clusters[i]
 	x0, y0 := c.col(box.TopLeft.X), c.row(box.TopLeft.Y)
 	x1, y1 := c.col(box.BottomRight.X), c.row(box.BottomRight.Y)
@@ -64,14 +65,14 @@ func (c *canvas) clusterBox(i int) [4]int {
 		// for text can fall a few cells short
 		x1 = max(x1, x0+clusterLabelWidth(cluster))
 	}
-	return [4]int{x0, y0, x1, y1}
+	return cellBox{point{x0, y0}, point{x1, y1}}
 }
 
 // drawCluster draws the dashed frame and fill of the cluster at index i
 func (c *canvas) drawCluster(i int) {
 	cluster := c.l.Graph.Clusters[i]
 	b := c.clusterBox(i)
-	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
+	x0, y0, x1, y1 := b.Min.X, b.Min.Y, b.Max.X, b.Max.Y
 	c.ids++
 	c.pen = pen{ink: c.color(rgb(cluster.LineColor)), dashed: true, edge: c.ids, frame: true}
 	c.fill(x0, y0, x1, y1, c.color(rgb(cluster.FillColor)))
@@ -83,11 +84,11 @@ const peripheryGap = 4 * layout.Point
 
 // nodeBox returns the cells of the box of a node, which holds its label
 // with a space on either side; a dot takes one cell
-func (c *canvas) nodeBox(node *layout.Node) [4]int {
+func (c *canvas) nodeBox(node *layout.Node) cellBox {
 	box := c.l.Node(node)
 	if box.Shape == layout.PointShape {
 		x, y := c.col(box.Center.X), c.row(box.Center.Y)
-		return [4]int{x, y, x, y}
+		return cellBox{point{x, y}, point{x, y}}
 	}
 	// a double outline takes the cells of a single one, so the room the
 	// layout reserves for extra outlines stays outside the box
@@ -113,7 +114,7 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 			cols, rows = 4*k+2, 2*k+2
 		}
 		x0, y0 = (x0+x1+1-cols)/2, (y0+y1+1-rows)/2
-		return [4]int{x0, y0, x0 + cols - 1, y0 + rows - 1}
+		return cellBox{point{x0, y0}, point{x0 + cols - 1, y0 + rows - 1}}
 	}
 	if box.Shape == layout.Diamond {
 		// pointed when every point has at most one end, see diamond,
@@ -123,11 +124,11 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 		if c.pointed[node] {
 			k := draw.DiamondSteps(label)
 			x0, y0 = (x0+x1)/2-(2*k-1), (y0+y1)/2-k
-			return [4]int{x0, y0, x0 + 4*k - 2, y0 + 2*k}
+			return cellBox{point{x0, y0}, point{x0 + 4*k - 2, y0 + 2*k}}
 		}
 		k := draw.CornerDiamondSteps(label)
 		x0, y0 = (x0+x1+1)/2-2*k, (y0+y1+1)/2-k
-		return [4]int{x0, y0, x0 + 4*k - 1, y0 + 2*k - 1}
+		return cellBox{point{x0, y0}, point{x0 + 4*k - 1, y0 + 2*k - 1}}
 	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
@@ -146,7 +147,7 @@ func (c *canvas) nodeBox(node *layout.Node) [4]int {
 			x1 = max(x1, x0+max(len(top), len(bottom))+3) // past the slanted corners
 		}
 	}
-	return [4]int{x0, y0, x1, y1}
+	return cellBox{point{x0, y0}, point{x1, y1}}
 }
 
 // sideEnd is where an edge ends along the top or bottom of a node, in
@@ -160,7 +161,7 @@ type sideEnd struct {
 // node whose box is on rows y0 to y1, and of edges that come straight
 // down or up to it
 func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd) {
-	add := func(path []layout.Vector) {
+	add := func(path layout.Path) {
 		p := path[0]
 		// straight on past the first bend, see spreadSides
 		straight := len(path) < 3 || (path[2].X-path[1].X).Abs() < 0.01
@@ -230,7 +231,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 	graph := c.l.Graph
 	box := c.l.Node(node)
 	b := c.boxes[node]
-	x0, y0, x1, y1 := b[0], b[1], b[2], b[3]
+	x0, y0, x1, y1 := b.Min.X, b.Min.Y, b.Max.X, b.Max.Y
 	if box.Shape == layout.PointShape {
 		// an invisible point keeps its cell, where its edges end, as
 		// invisible boxes keep theirs
@@ -558,7 +559,7 @@ func (c *canvas) pointsFor(node *layout.Node) bool {
 // is 0 for the top and bottom, and 1 for the left and right sides.
 func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 	b := c.boxes[node]
-	lo, hi = b[along]+1, b[along+2]-1
+	lo, hi = b.Min.at(along)+1, b.Max.at(along)-1
 	switch c.l.Node(node).Shape {
 	case layout.Octagon:
 		if along == 0 {
@@ -568,27 +569,27 @@ func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 		if c.safe && c.l.Node(node).Label != "" {
 			// the points, see stepDiamond, as ▁ and ▔ lie on the far side
 			// of their cells
-			k := (b[3] - b[1] - 1) / 2
+			k := (b.Max.Y - b.Min.Y - 1) / 2
 			if along == 0 {
-				return b[0] + 2*k, b[0] + 2*k + 1
+				return b.Min.X + 2*k, b.Min.X + 2*k + 1
 			}
-			return b[1] + k, b[1] + k + 1
+			return b.Min.Y + k, b.Min.Y + k + 1
 		}
 		if !c.pointed[node] {
 			// the cells beside the points, see cornerDiamond, and
 			// smallDiamond
-			k := (b[3] - b[1] + 1) / 2
+			k := (b.Max.Y - b.Min.Y + 1) / 2
 			if along == 0 {
-				return b[0] + 2*k - 1, b[0] + 2*k
+				return b.Min.X + 2*k - 1, b.Min.X + 2*k
 			}
-			return b[1] + k - 1, b[1] + k
+			return b.Min.Y + k - 1, b.Min.Y + k
 		}
 		// the points, see diamond
-		k := (b[3] - b[1]) / 2
+		k := (b.Max.Y - b.Min.Y) / 2
 		if along == 0 {
-			return b[0] + 2*k - 1, b[0] + 2*k - 1
+			return b.Min.X + 2*k - 1, b.Min.X + 2*k - 1
 		}
-		return b[1] + k, b[1] + k
+		return b.Min.Y + k, b.Min.Y + k
 	}
 	return lo, hi
 }

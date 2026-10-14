@@ -1,6 +1,7 @@
 package text
 
 import (
+	"iter"
 	"unicode"
 
 	"github.com/loov/layout"
@@ -15,7 +16,7 @@ type canvas struct {
 	cellH  layout.Length
 	origin layout.Vector // graph coordinates of the top left cell
 	l      *layout.Layout
-	boxes  map[*layout.Node][4]int // drawn node boxes: x0, y0, x1, y1
+	boxes  map[*layout.Node]cellBox // drawn node boxes: x0, y0, x1, y1
 	rows   grid
 	pen    pen                     // what is drawn with from now on
 	ids    edgeID                  // edge ids handed out
@@ -24,11 +25,11 @@ type canvas struct {
 	owners []edgeID                // edge id of each label id, from 1, see cell.text
 	nodes  map[*layout.Node]nodeID // node ids, from 1, see cell.node
 	loops  map[*layout.Node]int    // self-loops per node
-	ended  map[[2]int]bool         // cells where merged edges have ended
+	ended  map[point]bool          // cells where merged edges have ended
 	// cells where edges end at fields, by edge id, see reserve
-	reserved map[[2]int]edgeID
+	reserved map[point]edgeID
 	// cells out from edge ends where their markers go, see markCell
-	markers map[[2]int]edgeID
+	markers map[point]edgeID
 	// diamonds drawn with a point for each end, see nodeBox
 	pointed map[*layout.Node]bool
 	// no characters of Symbols for Legacy Computing, see Options
@@ -66,7 +67,7 @@ type pen struct {
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
 func newCanvas(l *layout.Layout, safe bool) *canvas {
 	graph := l.Graph
-	c := &canvas{l: l, safe: safe, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node][4]int{}, ended: map[[2]int]bool{}, pointed: map[*layout.Node]bool{},
+	c := &canvas{l: l, safe: safe, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node]cellBox{}, ended: map[point]bool{}, pointed: map[*layout.Node]bool{},
 		palette: []uint32{0}, colors: map[uint32]colorID{0: 0}}
 	if c.cellW <= 0 {
 		c.cellW = 8
@@ -95,7 +96,7 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 		}
 	}
 	// boxes can be wider than the layout's, see nodeBox and clusterBox
-	fit := func(b [4]int) { c.w, c.h = max(c.w, b[2]+1), max(c.h, b[3]+1) }
+	fit := func(b cellBox) { c.w, c.h = max(c.w, b.Max.X+1), max(c.h, b.Max.Y+1) }
 	for _, node := range graph.Nodes {
 		c.boxes[node] = c.nodeBox(node)
 		fit(c.boxes[node])
@@ -324,13 +325,13 @@ func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
 // walk draws a run from (x0,y0) to (x1,y1) as a horizontal then a
 // vertical leg, see drawStep
 func (c *canvas) walk(x0, y0, x1, y1 int) {
-	c.steps([2]int{x0, y0}, [2]int{x1, y1}, c.drawStep)
+	c.steps(point{x0, y0}, point{x1, y1}, c.drawStep)
 }
 
 // drawStep draws the line of a step from cell to cell, see steps
-func (c *canvas) drawStep(from, to [2]int, dir uint8) {
-	c.line(from[0], from[1], dir)
-	c.line(to[0], to[1], opposite(dir))
+func (c *canvas) drawStep(from, to point, dir uint8) {
+	c.line(from.X, from.Y, dir)
+	c.line(to.X, to.Y, opposite(dir))
 }
 
 // cell is a drawn character with its colors, see canvas.color, and what
@@ -381,4 +382,66 @@ func (g grid) at(r, x int) *cell {
 		return nil
 	}
 	return &g[r][x]
+}
+
+// point is the place of a cell: its column X and its row Y
+type point struct{ X, Y int }
+
+func (p point) add(q point) point { return point{p.X + q.X, p.Y + q.Y} }
+func (p point) sub(q point) point { return point{p.X - q.X, p.Y - q.Y} }
+func (p point) isZero() bool      { return p == point{} }
+
+// step returns the cell next to p toward dir
+func (p point) step(dir uint8) point { return point{p.X + dx(dir), p.Y + dy(dir)} }
+
+// at returns the coordinate of p on axis: X for 0, Y for 1
+func (p point) at(axis int) int {
+	if axis == 0 {
+		return p.X
+	}
+	return p.Y
+}
+
+// set sets the coordinate of p on axis to v
+func (p *point) set(axis, v int) {
+	if axis == 0 {
+		p.X = v
+	} else {
+		p.Y = v
+	}
+}
+
+// cellBox is the cells from Min to Max, both included
+type cellBox struct{ Min, Max point }
+
+// contains reports whether p is in b, on its frame or inside it
+func (b cellBox) contains(p point) bool {
+	return p.X >= b.Min.X && p.X <= b.Max.X && p.Y >= b.Min.Y && p.Y <= b.Max.Y
+}
+
+// inside reports whether p is inside the frame of b
+func (b cellBox) inside(p point) bool { return b.insideX(p.X) && b.insideY(p.Y) }
+
+// insideX reports whether x is between the left and right sides of b
+func (b cellBox) insideX(x int) bool { return x > b.Min.X && x < b.Max.X }
+
+// insideY reports whether y is between the top and bottom sides of b
+func (b cellBox) insideY(y int) bool { return y > b.Min.Y && y < b.Max.Y }
+
+// overlaps reports whether b and o share a cell
+func (b cellBox) overlaps(o cellBox) bool {
+	return b.Min.X <= o.Max.X && o.Min.X <= b.Max.X && b.Min.Y <= o.Max.Y && o.Min.Y <= b.Max.Y
+}
+
+// cells yields the cells of b, row by row
+func (b cellBox) cells() iter.Seq[point] {
+	return func(yield func(point) bool) {
+		for y := b.Min.Y; y <= b.Max.Y; y++ {
+			for x := b.Min.X; x <= b.Max.X; x++ {
+				if !yield(point{x, y}) {
+					return
+				}
+			}
+		}
+	}
 }

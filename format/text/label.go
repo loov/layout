@@ -67,14 +67,14 @@ func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 // Where no place along the line has a blank ring around the text, as among
 // many lines side by side, the text goes where it has its own cells, and
 // failing that in the nearest blank cells.
-func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector, path [][2]int) {
+func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector, path []point) {
 	if label == "" {
 		return
 	}
 	label = draw.PlainLabel(label)
 	lines := draw.Lines(label)
 	w, h := draw.TextColumns(label), len(lines)
-	want := [2]int{c.col(center.X), c.row(center.Y)}
+	want := point{c.col(center.X), c.row(center.Y)}
 	// blank cells for the text, and around them no box nor other line
 	// than its own edge's
 	id := c.drawn[edge]
@@ -114,35 +114,35 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 		}
 	}
 	// no room beside its line near the end: the nearest blank cells
-	x, y := c.nearestBlank(want[0]-w/2, want[1]-h/2, w, h)
+	x, y := c.nearestBlank(want.X-w/2, want.Y-h/2, w, h)
 	c.edgeText(edge, lines, x, y, w)
 }
 
 // endText writes lines, w cells wide and h tall, beside the first of cells
 // where blank has room for them, the side nearer want first; it reports
 // whether it found one
-func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want [2]int, cells [][2]int, blank func(x, y int) bool) bool {
+func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want point, cells []point, blank func(x, y int) bool) bool {
 	for k, p := range cells {
-		if k+1 < len(cells) && k > 0 && cells[k-1][0] != cells[k+1][0] && cells[k-1][1] != cells[k+1][1] {
+		if k+1 < len(cells) && k > 0 && cells[k-1].X != cells[k+1].X && cells[k-1].Y != cells[k+1].Y {
 			continue // a turn
 		}
 		// beside the line: on either side of a column, above or below
 		// a row, the side nearer where the layout put it first
-		var spots [][2]int
-		if k+1 < len(cells) && cells[k+1][0] == p[0] || k > 0 && cells[k-1][0] == p[0] {
-			spots = [][2]int{{p[0] + 1, p[1] - h/2}, {p[0] - w, p[1] - h/2}}
+		var spots []point
+		if k+1 < len(cells) && cells[k+1].X == p.X || k > 0 && cells[k-1].X == p.X {
+			spots = []point{{p.X + 1, p.Y - h/2}, {p.X - w, p.Y - h/2}}
 		} else {
-			spots = [][2]int{{p[0] - w/2, p[1] - h}, {p[0] - w/2, p[1] + 1}}
+			spots = []point{{p.X - w/2, p.Y - h}, {p.X - w/2, p.Y + 1}}
 		}
-		dist := func(s [2]int) int {
-			return max(s[0]+w/2-want[0], want[0]-s[0]-w/2) + max(s[1]+h/2-want[1], want[1]-s[1]-h/2)
+		dist := func(s point) int {
+			return max(s.X+w/2-want.X, want.X-s.X-w/2) + max(s.Y+h/2-want.Y, want.Y-s.Y-h/2)
 		}
 		if dist(spots[1]) < dist(spots[0]) {
 			spots[0], spots[1] = spots[1], spots[0]
 		}
 		for _, s := range spots {
-			if blank(s[0], s[1]) {
-				c.edgeText(edge, lines, s[0], s[1], w)
+			if blank(s.X, s.Y) {
+				c.edgeText(edge, lines, s.X, s.Y, w)
 				return true
 			}
 		}
@@ -151,7 +151,7 @@ func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want [2
 }
 
 // reversed returns the cells of a path from its last to its first
-func reversed(path [][2]int) [][2]int {
+func reversed(path []point) []point {
 	out := slices.Clone(path)
 	slices.Reverse(out)
 	return out
@@ -178,7 +178,7 @@ func placed(x0, x1 int, line draw.Line) int {
 
 // drawLabels writes edge and cluster labels over everything else; paths
 // are the cells of the edges
-func (c *canvas) drawLabels(paths [][][2]int) {
+func (c *canvas) drawLabels(paths [][]point) {
 	graph := c.l.Graph
 	for i, edge := range graph.Edges {
 		if edge.Label != "" && !edge.Invisible {
@@ -211,15 +211,15 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 		fits := func(x, y int) bool {
 			for j, r := range runes {
 				p := c.at(x+j, y)
-				if p == nil || x+j >= b[2] || !dashedHorizontal(p.r) && !(r == ' ' && p.lines&(up|down) != 0) {
+				if p == nil || x+j >= b.Max.X || !dashedHorizontal(p.r) && !(r == ' ' && p.lines&(up|down) != 0) {
 					return false
 				}
 			}
 			return true
 		}
 		placed := false
-		for _, y := range []int{b[1], b[3]} {
-			for x := b[0] + 1; x < b[2] && !placed; x++ {
+		for _, y := range []int{b.Min.Y, b.Max.Y} {
+			for x := b.Min.X + 1; x < b.Max.X && !placed; x++ {
 				if fits(x, y) {
 					for j := range runes {
 						c.at(x+j, y).need = int16(len(runes))
@@ -233,7 +233,7 @@ func (c *canvas) drawLabels(paths [][][2]int) {
 			continue
 		}
 		c.pen = pen{}
-		c.text(b[0]+1, b[1], text)
+		c.text(b.Min.X+1, b.Min.Y, text)
 	}
 }
 
@@ -261,10 +261,10 @@ func (c *canvas) frameLabels(g grid) {
 // edge, drawn along path with id: where nearEdge moves it, or against the
 // edge from another side where the lines of other edges are further from
 // it, so that it reads as its edge's
-func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int) {
-	bx, by, against := c.nearEdge(x, y, w, h, path, [2]int{})
+func (c *canvas) besideEdge(x, y, w, h int, path []point, id edgeID) (int, int) {
+	bx, by, against := c.nearEdge(x, y, w, h, path, point{})
 	best := c.apart(bx, by, w, h, id)
-	for _, side := range [][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+	for _, side := range []point{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
 		if against && best >= 2 {
 			// against its edge with two blank cells to any other, which
 			// is clearly its own; moving it gains nothing and can keep
@@ -289,7 +289,7 @@ func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int)
 // nearest x, y, where it covers nothing: right beside its edge, drawn
 // along path, on either side of a column of it or above or below a row,
 // or else anywhere; x, y when there is none
-func (c *canvas) freeBeside(x, y, w, h int, path [][2]int) (int, int) {
+func (c *canvas) freeBeside(x, y, w, h int, path []point) (int, int) {
 	cells := c.pathCells(nil, path)
 	if len(cells) > 0 {
 		cells = cells[:len(cells)-1] // the cells steps leave from
@@ -300,16 +300,16 @@ func (c *canvas) freeBeside(x, y, w, h int, path [][2]int) (int, int) {
 		spots = append(spots, spot{sx, sy, max(sx-x, x-sx) + max(sy-y, y-sy)})
 	}
 	for k, p := range cells {
-		vertical := k+1 < len(cells) && cells[k+1][0] == p[0] || k > 0 && cells[k-1][0] == p[0]
+		vertical := k+1 < len(cells) && cells[k+1].X == p.X || k > 0 && cells[k-1].X == p.X
 		if vertical {
 			for dy := range h {
-				add(p[0]+1, p[1]-dy)
-				add(p[0]-w, p[1]-dy)
+				add(p.X+1, p.Y-dy)
+				add(p.X-w, p.Y-dy)
 			}
 		} else {
 			for dx := range w {
-				add(p[0]-dx, p[1]-h)
-				add(p[0]-dx, p[1]+1)
+				add(p.X-dx, p.Y-h)
+				add(p.X-dx, p.Y+1)
 			}
 		}
 	}
@@ -368,7 +368,7 @@ func (c *canvas) apart(x, y, w, h int, id edgeID) int {
 // whether the label ends against the edge. The layout keeps labels an
 // edge padding from their edge, which is a whole row in text, and
 // rounding can leave a blank row between them.
-func (c *canvas) nearEdge(x, y, w, h int, path [][2]int, side [2]int) (int, int, bool) {
+func (c *canvas) nearEdge(x, y, w, h int, path []point, side point) (int, int, bool) {
 	cells := c.pathCells(nil, path)
 	if len(cells) == 0 && len(path) > 0 {
 		cells = append(cells, path[len(path)-1]) // a path of one cell
@@ -378,30 +378,30 @@ func (c *canvas) nearEdge(x, y, w, h int, path [][2]int, side [2]int) (int, int,
 		// beside it on its rows, in blank cells between
 		dx, dy, gap := 0, 0, math.MaxInt
 		for _, p := range cells {
-			beside := p[1] >= y && p[1] < y+h
-			if side != [2]int{} {
+			beside := p.Y >= y && p.Y < y+h
+			if !side.isZero() {
 				// only the cells on that side
-				above, below := p[0] >= x && p[0] < x+w && p[1] < y, p[0] >= x && p[0] < x+w && p[1] >= y+h
-				left, right := beside && p[0] < x, beside && p[0] >= x+w
-				if !(side[1] < 0 && above || side[1] > 0 && below || side[0] < 0 && left || side[0] > 0 && right) {
+				above, below := p.X >= x && p.X < x+w && p.Y < y, p.X >= x && p.X < x+w && p.Y >= y+h
+				left, right := beside && p.X < x, beside && p.X >= x+w
+				if !(side.Y < 0 && above || side.Y > 0 && below || side.X < 0 && left || side.X > 0 && right) {
 					continue
 				}
 			}
 			switch {
-			case p[0] >= x && p[0] < x+w && p[1] < y:
-				if d := y - p[1] - 1; d < gap {
+			case p.X >= x && p.X < x+w && p.Y < y:
+				if d := y - p.Y - 1; d < gap {
 					dx, dy, gap = 0, -1, d
 				}
-			case p[0] >= x && p[0] < x+w && p[1] >= y+h:
-				if d := p[1] - (y + h); d < gap {
+			case p.X >= x && p.X < x+w && p.Y >= y+h:
+				if d := p.Y - (y + h); d < gap {
 					dx, dy, gap = 0, 1, d
 				}
-			case beside && p[0] < x:
-				if d := x - p[0] - 1; d < gap {
+			case beside && p.X < x:
+				if d := x - p.X - 1; d < gap {
 					dx, dy, gap = -1, 0, d
 				}
-			case beside && p[0] >= x+w:
-				if d := p[0] - (x + w); d < gap {
+			case beside && p.X >= x+w:
+				if d := p.X - (x + w); d < gap {
 					dx, dy, gap = 1, 0, d
 				}
 			}
@@ -434,9 +434,9 @@ func (c *canvas) blank(x, y, w, h int) bool {
 // one, a blank short of it. owners holds the edge of each label id.
 func hug(g grid, owners []edgeID) {
 	// the lines of edge id, and of other edges, in the cells
-	lines := func(cells [][2]int, id edgeID) (own, other bool) {
+	lines := func(cells []point, id edgeID) (own, other bool) {
 		for _, p := range cells {
-			c := g.at(p[0], p[1])
+			c := g.at(p.Y, p.X)
 			if c == nil || c.frame || c.text != 0 {
 				continue
 			}
@@ -452,14 +452,14 @@ func hug(g grid, owners []edgeID) {
 	// the box of every label, and of its characters without the blanks
 	// around them, and the labels in reading order, which is the order
 	// they move in, as one can take the cell another wants
-	boxes := map[edgeID][4]int{} // top, left, bottom, right
-	inked := map[edgeID][4]int{}
-	grow := func(boxes map[edgeID][4]int, id edgeID, r, x int) {
+	boxes := map[edgeID]cellBox{}
+	inked := map[edgeID]cellBox{}
+	grow := func(boxes map[edgeID]cellBox, id edgeID, r, x int) {
 		b, ok := boxes[id]
 		if !ok {
-			b = [4]int{r, x, r, x}
+			b = cellBox{point{x, r}, point{x, r}}
 		}
-		boxes[id] = [4]int{min(b[0], r), min(b[1], x), max(b[2], r), max(b[3], x)}
+		boxes[id] = cellBox{point{min(b.Min.X, x), min(b.Min.Y, r)}, point{max(b.Max.X, x), max(b.Max.Y, r)}}
 	}
 	var ids []edgeID
 	for r, row := range g {
@@ -477,52 +477,48 @@ func hug(g grid, owners []edgeID) {
 		}
 	}
 	// the cells of a side of b, n cells out
-	side := func(b [4]int, dir uint8, n int) [][2]int {
-		var cells [][2]int
+	side := func(b cellBox, dir uint8, n int) []point {
+		var cells []point
 		switch dir {
 		case left, right:
-			x := b[1] - n
+			x := b.Min.X - n
 			if dir == right {
-				x = b[3] + n
+				x = b.Max.X + n
 			}
-			for r := b[0]; r <= b[2]; r++ {
-				cells = append(cells, [2]int{r, x})
+			for r := b.Min.Y; r <= b.Max.Y; r++ {
+				cells = append(cells, point{x, r})
 			}
 		default:
-			r := b[0] - n
+			r := b.Min.Y - n
 			if dir == down {
-				r = b[2] + n
+				r = b.Max.Y + n
 			}
-			for x := b[1]; x <= b[3]; x++ {
-				cells = append(cells, [2]int{r, x})
+			for x := b.Min.X; x <= b.Max.X; x++ {
+				cells = append(cells, point{x, r})
 			}
 		}
 		return cells
 	}
 	// shift moves the cells of b n cells toward dir
-	shift := func(b [4]int, dir uint8, n int) {
+	shift := func(b cellBox, dir uint8, n int) {
 		cells := []cell{}
-		for r := b[0]; r <= b[2]; r++ {
-			for x := b[1]; x <= b[3]; x++ {
-				cells = append(cells, g[r][x])
-				g[r][x] = cell{r: ' ', glue: true}
-			}
+		for p := range b.cells() {
+			cells = append(cells, g[p.Y][p.X])
+			g[p.Y][p.X] = cell{r: ' ', glue: true}
 		}
 		i := 0
-		for r := b[0]; r <= b[2]; r++ {
-			for x := b[1]; x <= b[3]; x++ {
-				g[r+n*dy(dir)][x+n*dx(dir)] = cells[i]
-				i++
-			}
+		for p := range b.cells() {
+			g[p.Y+n*dy(dir)][p.X+n*dx(dir)] = cells[i]
+			i++
 		}
 	}
 	// passable reports whether a label in b can move over cells
-	passable := func(cells [][2]int, b [4]int) bool {
-		return !slices.ContainsFunc(cells, func(p [2]int) bool {
-			if p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3] {
+	passable := func(cells []point, b cellBox) bool {
+		return !slices.ContainsFunc(cells, func(p point) bool {
+			if b.contains(p) {
 				return false // the blanks of the label itself
 			}
-			c := g.at(p[0], p[1])
+			c := g.at(p.Y, p.X)
 			return c == nil || !free(*c) && !c.glue || c.solid
 		})
 	}
@@ -555,7 +551,7 @@ func hug(g grid, owners []edgeID) {
 				continue
 			}
 		}
-		var ring [][2]int
+		var ring []point
 		for _, dir := range []uint8{up, down, left, right} {
 			ring = append(ring, side(b, dir, 1)...)
 		}

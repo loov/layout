@@ -170,13 +170,13 @@ func TestFitsLayout(t *testing.T) {
 				for i, node := range graph.Nodes {
 					box := l.Nodes[i]
 					inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
-					want := [4]int{c.col(box.Left() + inset), c.row(box.Top() + inset), c.col(box.Right() - inset), c.row(box.Bottom() - inset)}
-					if got := c.boxes[node]; got[2] > want[2] || got[3] > want[3] {
+					want := cellBox{point{c.col(box.Left() + inset), c.row(box.Top() + inset)}, point{c.col(box.Right() - inset), c.row(box.Bottom() - inset)}}
+					if got := c.boxes[node]; got.Max.X > want.Max.X || got.Max.Y > want.Max.Y {
 						t.Errorf("%v %v %d: %q drawn at %v, laid out at %v", dir, shape, peripheries, node.Label, got, want)
 					}
 					for _, other := range graph.Nodes[i+1:] {
 						p, q := c.boxes[node], c.boxes[other]
-						if p[0] <= q[2] && q[0] <= p[2] && p[1] <= q[3] && q[1] <= p[3] {
+						if p.overlaps(q) {
 							t.Errorf("%v %v %d: %q at %v overlaps %q at %v", dir, shape, peripheries, node.Label, p, other.Label, q)
 						}
 					}

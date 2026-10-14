@@ -14,7 +14,7 @@ import (
 // away from the ends of others. Lines still cross other edges, and
 // merged edges, which are one, share runs. When there is no way around,
 // the edge keeps its cells.
-func (c *canvas) route(edge *layout.Edge, cells [][2]int) [][2]int {
+func (c *canvas) route(edge *layout.Edge, cells []point) []point {
 	if len(cells) < 2 {
 		return cells
 	}
@@ -37,7 +37,7 @@ func (c *canvas) route(edge *layout.Edge, cells [][2]int) [][2]int {
 // onSide reports whether end, heading to next along the edge, is where
 // an edge can end on the box of node, see sideCells, or off the box, where
 // it stays
-func (c *canvas) onSide(end, next [2]int, node *layout.Node) bool {
+func (c *canvas) onSide(end, next point, node *layout.Node) bool {
 	b, ok := c.boxes[node]
 	if !ok || c.l.Node(node).Shape == layout.PointShape {
 		return true
@@ -46,48 +46,48 @@ func (c *canvas) onSide(end, next [2]int, node *layout.Node) bool {
 	if out == 0 {
 		return true // off the box
 	}
-	along, at := 0, b[1]
+	along, at := 0, b.Min.Y
 	switch out {
 	case down:
-		at = b[3]
+		at = b.Max.Y
 	case left:
-		along, at = 1, b[0]
+		along, at = 1, b.Min.X
 	case right:
-		along, at = 1, b[2]
+		along, at = 1, b.Max.X
 	}
 	lo, hi := c.sideCells(node, along)
-	return end[1-along] == at && end[along] >= lo && end[along] <= hi
+	return end.at(1-along) == at && end.at(along) >= lo && end.at(along) <= hi
 }
 
 // side returns the side of the box of node that end is on, heading to
 // next along the edge: by where it is, or on a corner, or on a diamond
 // of only a few rows, by where it heads; 0 off the box
-func (c *canvas) side(end, next [2]int, node *layout.Node) uint8 {
+func (c *canvas) side(end, next point, node *layout.Node) uint8 {
 	b := c.boxes[node]
-	if end[0] < b[0] || end[0] > b[2] || end[1] < b[1] || end[1] > b[3] {
+	if !b.contains(end) {
 		return 0
 	}
-	inX, inY := end[0] > b[0] && end[0] < b[2], end[1] > b[1] && end[1] < b[3]
+	inX, inY := b.insideX(end.X), b.insideY(end.Y)
 	if c.l.Node(node).Shape != layout.Diamond {
 		switch {
-		case end[1] == b[1] && inX:
+		case end.Y == b.Min.Y && inX:
 			return up
-		case end[1] == b[3] && inX:
+		case end.Y == b.Max.Y && inX:
 			return down
-		case end[0] == b[0] && inY:
+		case end.X == b.Min.X && inY:
 			return left
-		case end[0] == b[2] && inY:
+		case end.X == b.Max.X && inY:
 			return right
 		}
 	}
-	switch d := [2]int{next[0] - end[0], next[1] - end[1]}; {
-	case max(d[0], -d[0]) >= max(d[1], -d[1]) && d[0] > 0:
+	switch d := next.sub(end); {
+	case max(d.X, -d.X) >= max(d.Y, -d.Y) && d.X > 0:
 		return right
-	case max(d[0], -d[0]) >= max(d[1], -d[1]) && d[0] < 0:
+	case max(d.X, -d.X) >= max(d.Y, -d.Y) && d.X < 0:
 		return left
-	case d[1] < 0:
+	case d.Y < 0:
 		return up
-	case d[1] > 0:
+	case d.Y > 0:
 		return down
 	}
 	return 0
@@ -96,7 +96,7 @@ func (c *canvas) side(end, next [2]int, node *layout.Node) uint8 {
 // endCell is a cell an edge can end at, with the direction from the box
 // out of it, and the cost of ending there instead of where it was
 type endCell struct {
-	at   [2]int
+	at   point
 	out  uint8
 	cost int
 }
@@ -104,7 +104,7 @@ type endCell struct {
 // endCells returns the cells on the sides of the box of node where an
 // edge can end instead of at end, toward next along the edge, the side it
 // is on first; only end itself for dots and fields
-func (c *canvas) endCells(end, next [2]int, node *layout.Node, field string) []endCell {
+func (c *canvas) endCells(end, next point, node *layout.Node, field string) []endCell {
 	b, ok := c.boxes[node]
 	out := uint8(0)
 	if ok {
@@ -127,22 +127,22 @@ func (c *canvas) endCells(end, next [2]int, node *layout.Node, field string) []e
 		if out != 0 && side != out {
 			cost = 50
 		}
-		along, at := 0, b[1]
+		along, at := 0, b.Min.Y
 		switch side {
 		case down:
-			at = b[3]
+			at = b.Max.Y
 		case left:
-			along, at = 1, b[0]
+			along, at = 1, b.Min.X
 		case right:
-			along, at = 1, b[2]
+			along, at = 1, b.Max.X
 		}
 		lo, hi := c.sideCells(node, along)
 		for i := lo; i <= hi; i++ {
-			cell := [2]int{i, at}
+			cell := point{i, at}
 			if along == 1 {
-				cell = [2]int{at, i}
+				cell = point{at, i}
 			}
-			cells = append(cells, endCell{cell, side, cost + 2*max(cell[0]-end[0], end[0]-cell[0], cell[1]-end[1], end[1]-cell[1])})
+			cells = append(cells, endCell{cell, side, cost + 2*max(cell.X-end.X, end.X-cell.X, cell.Y-end.Y, end.Y-cell.Y)})
 		}
 	}
 	return cells
@@ -151,8 +151,8 @@ func (c *canvas) endCells(end, next [2]int, node *layout.Node, field string) []e
 // clear reports whether an edge with id can run along cells, its ends at
 // the first and last, without sharing a run, an arrowhead or a box;
 // merged edges share their ends, and the arrowheads before them
-func (c *canvas) clear(cells [][2]int, id edgeID, merged bool) bool {
-	ends := map[[2]int]bool{cells[0]: true, cells[len(cells)-1]: true}
+func (c *canvas) clear(cells []point, id edgeID, merged bool) bool {
+	ends := map[point]bool{cells[0]: true, cells[len(cells)-1]: true}
 	if merged {
 		all := c.pathCells(nil, cells)
 		if len(all) >= 2 {
@@ -160,7 +160,7 @@ func (c *canvas) clear(cells [][2]int, id edgeID, merged bool) bool {
 		}
 	}
 	ok := true
-	c.pathSteps(cells, func(from, to [2]int, dir uint8) {
+	c.pathSteps(cells, func(from, to point, dir uint8) {
 		ok = ok && c.free(from, dir, id, ends[from]) && c.free(to, opposite(dir), id, ends[to])
 	})
 	return ok
@@ -168,25 +168,25 @@ func (c *canvas) clear(cells [][2]int, id edgeID, merged bool) bool {
 
 // steps calls step for every cell to cell step from a to b, as walk
 // draws them: along the row first, then the column
-func (c *canvas) steps(a, b [2]int, step func(from, to [2]int, dir uint8)) {
-	for x := a[0]; x != b[0]; x += sign(b[0] - x) {
+func (c *canvas) steps(a, b point, step func(from, to point, dir uint8)) {
+	for x := a.X; x != b.X; x += sign(b.X - x) {
 		dir := uint8(right)
-		if b[0] < x {
+		if b.X < x {
 			dir = left
 		}
-		step([2]int{x, a[1]}, [2]int{x + dx(dir), a[1]}, dir)
+		step(point{x, a.Y}, point{x + dx(dir), a.Y}, dir)
 	}
-	for y := a[1]; y != b[1]; y += sign(b[1] - y) {
+	for y := a.Y; y != b.Y; y += sign(b.Y - y) {
 		dir := uint8(down)
-		if b[1] < y {
+		if b.Y < y {
 			dir = up
 		}
-		step([2]int{b[0], y}, [2]int{b[0], y + dy(dir)}, dir)
+		step(point{b.X, y}, point{b.X, y + dy(dir)}, dir)
 	}
 }
 
 // pathSteps calls step for every cell to cell step along path, see steps
-func (c *canvas) pathSteps(path [][2]int, step func(from, to [2]int, dir uint8)) {
+func (c *canvas) pathSteps(path []point, step func(from, to point, dir uint8)) {
 	for i := 0; i+1 < len(path); i++ {
 		c.steps(path[i], path[i+1], step)
 	}
@@ -194,9 +194,9 @@ func (c *canvas) pathSteps(path [][2]int, step func(from, to [2]int, dir uint8))
 
 // pathCells appends the cells along path, from its first to its last, to
 // cells; none when path takes no step
-func (c *canvas) pathCells(cells [][2]int, path [][2]int) [][2]int {
+func (c *canvas) pathCells(cells []point, path []point) []point {
 	first := true
-	c.pathSteps(path, func(from, to [2]int, _ uint8) {
+	c.pathSteps(path, func(from, to point, _ uint8) {
 		if first {
 			cells, first = append(cells, from), false
 		}
@@ -208,8 +208,8 @@ func (c *canvas) pathCells(cells [][2]int, path [][2]int) [][2]int {
 // free reports whether an edge with id can draw the arm toward dir in
 // the cell at p: one that no other edge draws nor ends at, see reserve,
 // off boxes and arrowheads unless p ends the edge
-func (c *canvas) free(p [2]int, dir uint8, id edgeID, end bool) bool {
-	q := c.at(p[0], p[1])
+func (c *canvas) free(p point, dir uint8, id edgeID, end bool) bool {
+	q := c.at(p.X, p.Y)
 	if q == nil {
 		return false
 	}
@@ -224,8 +224,8 @@ func (c *canvas) free(p [2]int, dir uint8, id edgeID, end bool) bool {
 
 // crosses reports whether a line of an edge with id that enters the
 // cell at p toward dir crosses the line of another edge there
-func (c *canvas) crosses(p [2]int, dir uint8, id edgeID) bool {
-	q := c.at(p[0], p[1])
+func (c *canvas) crosses(p point, dir uint8, id edgeID) bool {
+	q := c.at(p.X, p.Y)
 	if q == nil || q.solid {
 		return false
 	}
@@ -244,7 +244,7 @@ func (c *canvas) crosses(p [2]int, dir uint8, id edgeID) bool {
 // search returns the cheapest cells from one of starts to one of goals,
 // as corners, for an edge with id to run along without sharing a run, see
 // route, or nil when there is no way
-func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
+func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 	const turn = 4 // a turn costs as much as this many steps
 	// and crossing the cell of another edge's marker as this many
 	const marker = 8
@@ -255,10 +255,10 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 	}
 	w, h := len(c.rows[0]), len(c.rows)
 	dirs := []uint8{up, down, left, right}
-	state := func(p [2]int, d int) int { return (p[1]*w+p[0])*4 + d }
+	state := func(p point, d int) int { return (p.Y*w+p.X)*4 + d }
 	cost := map[int]int{}
 	prev := map[int]int{}
-	goal := map[[2]int]endCell{}
+	goal := map[point]endCell{}
 	for _, g := range goals {
 		goal[g.at] = g
 	}
@@ -278,7 +278,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 			continue
 		}
 		k, d := item.state/4, item.state%4
-		p := [2]int{k % w, k / w}
+		p := point{k % w, k / w}
 		if _, ok := goal[p]; ok && prev[item.state] >= 0 {
 			end = item.state
 			break
@@ -291,8 +291,8 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 			if dir == opposite(dirs[d]) || (start || second) && nd != d {
 				continue
 			}
-			to := [2]int{p[0] + dx(dir), p[1] + dy(dir)}
-			if to[0] < 0 || to[1] < 0 || to[0] >= w || to[1] >= h {
+			to := p.step(dir)
+			if to.X < 0 || to.Y < 0 || to.X >= w || to.Y >= h {
 				continue
 			}
 			g, isGoal := goal[to]
@@ -324,17 +324,17 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) [][2]int {
 	if end < 0 {
 		return nil
 	}
-	var cells [][2]int
+	var cells []point
 	for k := end; k >= 0; k = prev[k] {
 		cell := k / 4
-		cells = append(cells, [2]int{cell % w, cell / w})
+		cells = append(cells, point{cell % w, cell / w})
 	}
 	// back to front, keeping only the corners
-	var corners [][2]int
+	var corners []point
 	for i := len(cells) - 1; i >= 0; i-- {
 		if n := len(corners); n >= 2 {
 			a, b := corners[n-2], corners[n-1]
-			if (a[0] == b[0]) == (b[0] == cells[i][0]) && (a[1] == b[1]) == (b[1] == cells[i][1]) {
+			if (a.X == b.X) == (b.X == cells[i].X) && (a.Y == b.Y) == (b.Y == cells[i].Y) {
 				corners[n-1] = cells[i]
 				continue
 			}
@@ -365,10 +365,10 @@ func (q *costQueue) Pop() any {
 // that the edges drawn before them keep off. Edges that end at one such
 // cell draw as one, merged. It marks the cells of other markers too, see
 // markCell.
-func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
-	c.reserved = map[[2]int]edgeID{}
-	c.markers = map[[2]int]edgeID{}
-	by := map[[2]int]*layout.Edge{}
+func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
+	c.reserved = map[point]edgeID{}
+	c.markers = map[point]edgeID{}
+	by := map[point]*layout.Edge{}
 	id := c.ids
 	for i, edge := range edges {
 		if edge.Invisible || len(paths[i]) < 2 {
@@ -383,7 +383,7 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 		}
 		markers := []bool{edge.ArrowTail != layout.ArrowDefault && edge.ArrowTail != layout.ArrowNone,
 			head != layout.ArrowDefault && head != layout.ArrowNone}
-		for k, end := range [][2]int{path[0], path[last]} {
+		for k, end := range []point{path[0], path[last]} {
 			next, node := path[1], edge.From
 			if k == 1 {
 				next, node = path[last-1], edge.To
@@ -405,7 +405,7 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 			// and a marker goes, see search
 			if out := c.side(end, next, node); out != 0 {
 				for step := 1; step <= 2; step++ {
-					cell := [2]int{end[0] + step*dx(out), end[1] + step*dy(out)}
+					cell := point{end.X + step*dx(out), end.Y + step*dy(out)}
 					if _, ok := c.reserved[cell]; !ok {
 						c.reserved[cell] = own
 					}
@@ -420,16 +420,16 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][][2]int) {
 // id: a run of another edge across it puts the marker on the border.
 // Unlike reserved cells, others can still cross it when there is no
 // other way, at a cost, see search.
-func (c *canvas) markCell(end, next [2]int, node *layout.Node, id edgeID, marker bool) {
+func (c *canvas) markCell(end, next point, node *layout.Node, id edgeID, marker bool) {
 	out := c.side(end, next, node)
 	if !marker || out == 0 {
 		return
 	}
 	// only when the line runs straight through it
-	if d := (next[0]-end[0])*dx(out) + (next[1]-end[1])*dy(out); d < 2 || next[0] != end[0] && next[1] != end[1] {
+	if d := (next.X-end.X)*dx(out) + (next.Y-end.Y)*dy(out); d < 2 || next.X != end.X && next.Y != end.Y {
 		return
 	}
-	cell := [2]int{end[0] + dx(out), end[1] + dy(out)}
+	cell := end.step(out)
 	if _, ok := c.markers[cell]; !ok {
 		c.markers[cell] = id
 	}
@@ -437,7 +437,7 @@ func (c *canvas) markCell(end, next [2]int, node *layout.Node, id edgeID, marker
 
 // marked reports whether p is the marker cell of an edge other than id,
 // see markCell
-func (c *canvas) marked(p [2]int, id edgeID) bool {
+func (c *canvas) marked(p point, id edgeID) bool {
 	owner, ok := c.markers[p]
 	return ok && owner != id
 }

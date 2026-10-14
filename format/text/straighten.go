@@ -341,7 +341,7 @@ type unjogger struct {
 	// one old keep
 	oldTry uint32
 	// the cells of the old line
-	olds []pos
+	olds []point
 	// the corners of the old line, from oldDirs, which leave the last cell
 	// the way the new line does, unlike the arms of the old
 	oldCorners int
@@ -349,29 +349,29 @@ type unjogger struct {
 	labeled, crossed []bool
 	// the old line, the new one and the arms of the old in reroute, which
 	// every try routes anew
-	oldPath, newPath, armsPath []pos
+	oldPath, newPath, armsPath []point
 	oldDirs, newDirs, armsDirs []uint8
 }
 
-func (u *unjogger) at(p pos) *cell { return u.g.at(p.r, p.c) }
+func (u *unjogger) at(p point) *cell { return u.g.at(p.Y, p.X) }
 
-func (u *unjogger) markAt(p pos) *rerouteMark {
+func (u *unjogger) markAt(p point) *rerouteMark {
 	g, mk := u.g, u.mk
-	if p.r < 0 || p.r >= len(g) || p.c < 0 || p.c >= len(g[p.r]) {
+	if p.Y < 0 || p.Y >= len(g) || p.X < 0 || p.X >= len(g[p.Y]) {
 		return nil
 	}
-	if len(mk.rows[p.r]) < len(g[p.r]) {
-		mk.rows[p.r] = append(mk.rows[p.r], make([]rerouteMark, len(g[p.r])-len(mk.rows[p.r]))...)
+	if len(mk.rows[p.Y]) < len(g[p.Y]) {
+		mk.rows[p.Y] = append(mk.rows[p.Y], make([]rerouteMark, len(g[p.Y])-len(mk.rows[p.Y]))...)
 	}
-	return &mk.rows[p.r][p.c]
+	return &mk.rows[p.Y][p.X]
 }
 
-func (u *unjogger) isNew(p pos) bool { m := u.markAt(p); return m != nil && m.new == u.mk.try }
+func (u *unjogger) isNew(p point) bool { m := u.markAt(p); return m != nil && m.new == u.mk.try }
 
-func (u *unjogger) isOld(p pos) bool { m := u.markAt(p); return m != nil && m.old == u.oldTry }
+func (u *unjogger) isOld(p point) bool { m := u.markAt(p); return m != nil && m.old == u.oldTry }
 
 // oldArms returns the arms of the old line at p, none off it
-func (u *unjogger) oldArms(p pos) uint8 {
+func (u *unjogger) oldArms(p point) uint8 {
 	if m := u.markAt(p); m != nil && m.old == u.oldTry {
 		return m.arms
 	}
@@ -392,7 +392,7 @@ func corners(dirs []uint8) (n int) {
 // arm in into the first, ending in head when it is set, if it can and the
 // new line has fewer crossings, or as many and fewer corners; again tries
 // another new line for the old of the try before
-func (u *unjogger) reroute(in uint8, old []pos, again bool, path []pos, dirs []uint8, head *cell) bool {
+func (u *unjogger) reroute(in uint8, old []point, again bool, path []point, dirs []uint8, head *cell) bool {
 	u.mk.try++
 	if !again {
 		u.markOld(in, old)
@@ -411,7 +411,7 @@ func (u *unjogger) reroute(in uint8, old []pos, again bool, path []pos, dirs []u
 
 // markOld marks old as the line of this try, with its arms, and notes
 // which of its cells have a label beside them and which are crossings
-func (u *unjogger) markOld(in uint8, old []pos) {
+func (u *unjogger) markOld(in uint8, old []point) {
 	u.oldTry = u.mk.try
 	u.olds = u.olds[:0]
 	u.armsPath, u.armsDirs = route(u.armsPath, u.armsDirs, in, down, old...)
@@ -428,8 +428,8 @@ func (u *unjogger) markOld(in uint8, old []pos) {
 	u.labeled, u.crossed = u.labeled[:0], u.crossed[:0]
 	for _, p := range u.olds {
 		label := false
-		for _, d := range []pos{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
-			if q := u.at(pos{p.r + d.r, p.c + d.c}); q != nil && !q.solid && (q.glue || q.keep) {
+		for _, d := range []point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
+			if q := u.at(p.add(d)); q != nil && !q.solid && (q.glue || q.keep) {
 				label = true
 			}
 		}
@@ -440,7 +440,7 @@ func (u *unjogger) markOld(in uint8, old []pos) {
 // accepts reports whether the new line, marked, can replace the old: it
 // leaves no label behind, runs over blanks or across lines, keeps a cell
 // off nodes, and crosses fewer lines, or as many with fewer corners
-func (u *unjogger) accepts(path []pos, dirs []uint8) bool {
+func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 	added, removed := 0, 0
 	for i, p := range u.olds {
 		if u.isNew(p) {
@@ -476,7 +476,7 @@ func (u *unjogger) accepts(path []pos, dirs []uint8) bool {
 		}
 		for _, dc := range []int{-1, 1} {
 			// a cell off nodes, other than an arrowhead that moves
-			n := pos{p.r, p.c + dc}
+			n := point{p.X + dc, p.Y}
 			if q := u.at(n); q != nil && q.solid && u.oldArms(n) == 0 {
 				return false
 			}
@@ -487,7 +487,7 @@ func (u *unjogger) accepts(path []pos, dirs []uint8) bool {
 
 // draw clears the old line, but for the lines it crossed, and draws the
 // new, ending in head when it is set
-func (u *unjogger) draw(old []pos, path []pos, dirs []uint8, head *cell) {
+func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 	// the edge of the line, by the arms it draws, not of lines it crosses
 	fg, id := u.at(old[0]).fg, edgeID(0)
 	for _, p := range u.olds {
@@ -531,7 +531,7 @@ func (u *unjogger) draw(old []pos, path []pos, dirs []uint8, head *cell) {
 
 // jog makes a step at r, c and the one after it one, see unjog
 func (u *unjogger) jog(r, c int) (moved bool) {
-	top := pos{r, c}
+	top := point{c, r}
 	if q := u.at(top); junction(u.g.runeAt(top)) && !q.solid {
 		// a line leaving a junction along the row and a step after
 		// it: one, on the row of the junction, which stays
@@ -540,19 +540,19 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 			if dir < 0 {
 				side, back = left, right
 			}
-			first := pos{r, c + dir}
+			first := point{c + dir, r}
 			b, ok := u.g.run(top, dir)
 			if arms(q.r)&side == 0 || !ok || u.at(first).solid {
 				continue
 			}
-			mid := pos{u.g.bottom(pos{r, b}), b}
+			mid := point{b, u.g.bottom(point{b, r})}
 			_, c2, turns := u.g.step(mid)
 			if !turns || (c2-c)*dir <= 0 {
 				continue
 			}
-			end := pos{mid.r, c2}
-			u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, back, down, first, pos{r, b}, mid, end)
-			u.newPath, u.newDirs = route(u.newPath, u.newDirs, back, down, first, pos{r, c2}, end)
+			end := point{c2, mid.Y}
+			u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, back, down, first, point{b, r}, mid, end)
+			u.newPath, u.newDirs = route(u.newPath, u.newDirs, back, down, first, point{c2, r}, end)
 			if u.reroute(back, u.oldPath, false, u.newPath, u.newDirs, nil) {
 				moved = true
 			}
@@ -563,16 +563,16 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 	if !ok {
 		return false
 	}
-	mid := pos{u.g.bottom(pos{r, b}), b}
+	mid := point{b, u.g.bottom(point{b, r})}
 	if dir, c2, turns := u.g.step(mid); dir != 0 {
 		// two steps: one, on the lower row or else the upper;
 		// a second that runs into something ends before it
-		end, out := pos{mid.r, c2}, uint8(down)
+		end, out := point{c2, mid.Y}, uint8(down)
 		if !turns {
-			end, out = pos{mid.r, c2 - dir}, map[int]uint8{-1: left, 1: right}[dir]
+			end, out = point{c2 - dir, mid.Y}, map[int]uint8{-1: left, 1: right}[dir]
 		}
-		u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, out, top, pos{r, b}, mid, end)
-		vias := []pos{{mid.r, c}, {r, c2}}
+		u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, out, top, point{b, r}, mid, end)
+		vias := []point{{c, mid.Y}, {c2, r}}
 		if !turns {
 			vias = vias[:1] // the run goes on along the lower row
 		}
@@ -593,15 +593,15 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 	// corner between
 	box := true
 	for x := min(c, b); x <= max(c, b); x++ {
-		p := u.at(pos{mid.r + 1, x})
+		p := u.at(point{x, mid.Y + 1})
 		box = box && p != nil && p.solid && (x == b || boxRowSide(p.r))
 	}
 	if !box {
 		return false
 	}
 	head := *u.at(mid)
-	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, top, pos{r, b}, mid)
-	u.newPath, u.newDirs = route(u.newPath, u.newDirs, up, down, top, pos{mid.r, c})
+	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, top, point{b, r}, mid)
+	u.newPath, u.newDirs = route(u.newPath, u.newDirs, up, down, top, point{c, mid.Y})
 	if u.reroute(up, u.oldPath, false, u.newPath, u.newDirs, &head) {
 		moved = true
 	}
@@ -611,19 +611,19 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 // slide moves a step along its line to where the line crosses fewer
 // lines, as two lines can cross twice to swap back
 func (u *unjogger) slide(r, c int) (moved bool) {
-	top := pos{r, c}
+	top := point{c, r}
 	_, b, ok := u.g.step(top)
 	if !ok {
 		return false
 	}
 	first := r
-	for verticalOrCrossing(u.g.runeAt(pos{first - 1, c})) {
+	for verticalOrCrossing(u.g.runeAt(point{c, first - 1})) {
 		first--
 	}
-	last := u.g.bottom(pos{r, b}) - 1
-	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, pos{first, c}, top, pos{r, b}, pos{last, b})
+	last := u.g.bottom(point{b, r}) - 1
+	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, point{c, first}, top, point{b, r}, point{b, last})
 	// a line that crosses none can't cross fewer
-	if !slices.ContainsFunc(u.oldPath, func(p pos) bool { q := u.at(p); return q != nil && q.r == '╂' }) {
+	if !slices.ContainsFunc(u.oldPath, func(p point) bool { q := u.at(p); return q != nil && q.r == '╂' }) {
 		return false
 	}
 	again := false
@@ -631,7 +631,7 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 		if row == r {
 			continue
 		}
-		u.newPath, u.newDirs = route(u.newPath, u.newDirs, up, down, pos{first, c}, pos{row, c}, pos{row, b}, pos{last, b})
+		u.newPath, u.newDirs = route(u.newPath, u.newDirs, up, down, point{c, first}, point{c, row}, point{b, row}, point{b, last})
 		if u.reroute(up, u.oldPath, again, u.newPath, u.newDirs, nil) {
 			moved = true
 			break
@@ -642,11 +642,10 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 }
 
 // pos is the row and column of a cell
-type pos struct{ r, c int }
 
 // runeAt returns the character of the cell at p, 0 off the grid
-func (g grid) runeAt(p pos) rune {
-	if q := g.at(p.r, p.c); q != nil {
+func (g grid) runeAt(p point) rune {
+	if q := g.at(p.Y, p.X); q != nil {
 		return q.r
 	}
 	return 0
@@ -655,21 +654,21 @@ func (g grid) runeAt(p pos) rune {
 // run returns where a line leaving p along the row in dir runs to, and
 // whether it goes on down there; when it does not, it runs into
 // something there, such as an arrowhead
-func (g grid) run(p pos, dir int) (to int, turns bool) {
-	c := p.c + dir
-	for horizontalOrCrossing(g.runeAt(pos{p.r, c})) {
+func (g grid) run(p point, dir int) (to int, turns bool) {
+	c := p.X + dir
+	for horizontalOrCrossing(g.runeAt(point{c, p.Y})) {
 		c += dir
 	}
 	corner := '╭'
 	if dir > 0 {
 		corner = '╮'
 	}
-	return c, g.runeAt(pos{p.r, c}) == corner
+	return c, g.runeAt(point{c, p.Y}) == corner
 }
 
 // step returns the direction of the step of a line that comes down to
 // p, where it runs along to and whether it goes on down there
-func (g grid) step(p pos) (dir, to int, turns bool) {
+func (g grid) step(p point) (dir, to int, turns bool) {
 	switch {
 	case g.runeAt(p) == '╰':
 		dir = 1
@@ -683,9 +682,9 @@ func (g grid) step(p pos) (dir, to int, turns bool) {
 }
 
 // bottom returns the row where a line going down from p turns or ends
-func (g grid) bottom(p pos) int {
-	r := p.r + 1
-	for verticalOrCrossing(g.runeAt(pos{r, p.c})) {
+func (g grid) bottom(p point) int {
+	r := p.Y + 1
+	for verticalOrCrossing(g.runeAt(point{p.X, r})) {
 		r++
 	}
 	return r
@@ -694,10 +693,10 @@ func (g grid) bottom(p pos) int {
 // route returns the cells along the points, with the arms of each in
 // the line: in into the first, out out of the last; they are in the
 // storage of path and dirs
-func route(path []pos, dirs []uint8, in, out uint8, points ...pos) ([]pos, []uint8) {
+func route(path []point, dirs []uint8, in, out uint8, points ...point) ([]point, []uint8) {
 	n := 1
 	for i := 1; i < len(points); i++ {
-		dr, dc := points[i].r-points[i-1].r, points[i].c-points[i-1].c
+		dr, dc := points[i].Y-points[i-1].Y, points[i].X-points[i-1].X
 		n += max(dr, -dr) + max(dc, -dc)
 	}
 	path = slices.Grow(path[:0], n)
@@ -707,21 +706,21 @@ func route(path []pos, dirs []uint8, in, out uint8, points ...pos) ([]pos, []uin
 			continue
 		}
 		q := path[len(path)-1]
-		dr, dc := cmp.Compare(p.r, q.r), cmp.Compare(p.c, q.c)
+		dr, dc := cmp.Compare(p.Y, q.Y), cmp.Compare(p.X, q.X)
 		for q != p {
-			q.r, q.c = q.r+dr, q.c+dc
+			q.Y, q.X = q.Y+dr, q.X+dc
 			path = append(path, q)
 		}
 	}
 	dirs = slices.Grow(dirs[:0], len(path))[:len(path)]
 	clear(dirs)
-	toward := func(from, to pos) uint8 {
+	toward := func(from, to point) uint8 {
 		switch {
-		case to.r < from.r:
+		case to.Y < from.Y:
 			return up
-		case to.r > from.r:
+		case to.Y > from.Y:
 			return down
-		case to.c < from.c:
+		case to.X < from.X:
 			return left
 		}
 		return right

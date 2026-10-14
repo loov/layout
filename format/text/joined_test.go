@@ -160,7 +160,7 @@ func randomGraph(seed uint64) *layout.Graph {
 // nodes: no run of cells joined by the edge's arms touches both, right
 // beside them or past an arrowhead or marker beside them
 func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
-	steps := map[uint8][2]int{up: {-1, 0}, down: {1, 0}, left: {0, -1}, right: {0, 1}}
+	steps := map[uint8]point{up: {0, -1}, down: {0, 1}, left: {-1, 0}, right: {1, 0}}
 	back := map[uint8]uint8{up: down, down: up, left: right, right: left}
 	// owns reports whether the edge id draws the arm of the cell
 	owns := func(p *cell, arm uint8, id edgeID) bool {
@@ -170,7 +170,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 	// beside a marker that is
 	touches := func(r, x int, node nodeID) bool {
 		for _, s := range steps {
-			q := g.at(r+s[0], x+s[1])
+			q := g.at(r+s.Y, x+s.X)
 			if q == nil || !q.solid {
 				continue
 			}
@@ -179,7 +179,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 			}
 			if q.node == 0 {
 				for _, t := range steps {
-					if n := g.at(r+s[0]+t[0], x+s[1]+t[1]); n != nil && n.node == node {
+					if n := g.at(r+s.Y+t.Y, x+s.X+t.X); n != nil && n.node == node {
 						return true
 					}
 				}
@@ -194,25 +194,25 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 			continue
 		}
 		from, to := c.nodes[edge.From], c.nodes[edge.To]
-		seen := map[[2]int]bool{}
+		seen := map[point]bool{}
 		joined := false
 		for r := range g {
 			for x := range g[r] {
-				if seen[[2]int{r, x}] || !ownsAny(g.at(r, x), id) {
+				if seen[point{x, r}] || !ownsAny(g.at(r, x), id) {
 					continue
 				}
 				// the run of the edge's cells joined to this one
 				a, b := false, false
-				stack := [][2]int{{r, x}}
-				seen[[2]int{r, x}] = true
+				stack := []point{{x, r}}
+				seen[point{x, r}] = true
 				for len(stack) > 0 {
 					p := stack[len(stack)-1]
 					stack = stack[:len(stack)-1]
-					a = a || touches(p[0], p[1], from)
-					b = b || touches(p[0], p[1], to)
+					a = a || touches(p.Y, p.X, from)
+					b = b || touches(p.Y, p.X, to)
 					for arm, s := range steps {
-						n := [2]int{p[0] + s[0], p[1] + s[1]}
-						if !seen[n] && owns(g.at(p[0], p[1]), arm, id) && owns(g.at(n[0], n[1]), back[arm], id) {
+						n := p.add(s)
+						if !seen[n] && owns(g.at(p.Y, p.X), arm, id) && owns(g.at(n.Y, n.X), back[arm], id) {
 							seen[n] = true
 							stack = append(stack, n)
 						}

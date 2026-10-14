@@ -156,7 +156,7 @@ func drawGraph(l *layout.Layout, spread, safe bool) *canvas {
 	for _, node := range graph.Nodes {
 		c.drawNode(node)
 	}
-	paths := make([][][2]int, len(graph.Edges))
+	paths := make([][]point, len(graph.Edges))
 	for i, edge := range graph.Edges {
 		if !edge.Invisible {
 			paths[i] = c.edgeCells(edge, l.Edges[i].Path)
