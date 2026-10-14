@@ -95,6 +95,7 @@ func Convert(l *layout.Layout) Graph {
 			Invisible: node.Invisible,
 		})
 	}
+
 	for i, edge := range graph.Edges {
 		at := l.Edges[i]
 		e := Edge{From: edge.From.ID, To: edge.To.ID, Directed: edge.Directed, Label: edge.Label, Path: [][2]float64{}, Invisible: edge.Invisible}
@@ -114,6 +115,7 @@ func Convert(l *layout.Layout) Graph {
 		}
 		out.Edges = append(out.Edges, e)
 	}
+
 	for i, cluster := range graph.Clusters {
 		box := l.Clusters[i]
 		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
@@ -128,6 +130,7 @@ func Convert(l *layout.Layout) Graph {
 		}
 		out.Clusters = append(out.Clusters, c)
 	}
+
 	return out
 }
 

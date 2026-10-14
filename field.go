@@ -14,6 +14,7 @@ func (graph *lgraph) resolveFields() {
 		}
 		return draw.ParseRecord(node.DefaultLabel(), sideways(graph.RankDir)).Field(field) != nil
 	}
+
 	for _, edge := range graph.Edges {
 		if edge.From == edge.To || !has(edge.From, edge.FromField) {
 			edge.FromField = ""
@@ -41,6 +42,7 @@ func (graph *lgraph) fieldOffset(node *lnode, field string) (Vector, bool) {
 		return Vector{}, false
 	}
 	d := Vector{Length(f.X0+f.X1)/2 - size.X/2, Length(f.Y0+f.Y1)/2 - size.Y/2}
+
 	// into the frame, see the transform back in hierarchical
 	switch graph.RankDir {
 	case BottomToTop:
@@ -50,6 +52,7 @@ func (graph *lgraph) fieldOffset(node *lnode, field string) (Vector, bool) {
 	case RightToLeft:
 		d.X, d.Y = d.Y, -d.X
 	}
+
 	return d, true
 }
 
@@ -80,6 +83,7 @@ func (c *hierComponent) fieldPorts() {
 		}
 		return max(-0.5, min(0.5, float32(d.X/(2*node.Radius.X))))
 	}
+
 	for _, edge := range c.graphdef.Edges {
 		if edge.FromField == "" && edge.ToField == "" {
 			continue
@@ -92,6 +96,7 @@ func (c *hierComponent) fieldPorts() {
 		if top.Rank == bottom.Rank {
 			continue
 		}
+
 		// the first and last steps of the chain of the edge down the
 		// ranks, through its virtual nodes
 		for _, first := range top.Out {

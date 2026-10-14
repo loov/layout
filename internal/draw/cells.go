@@ -20,6 +20,7 @@ func Columns(s string) int {
 			n++
 		}
 	}
+
 	return n
 }
 
@@ -61,6 +62,7 @@ func RecordRows(rec *Record) int {
 			rows = max(rows, RecordRows(field))
 		}
 	}
+
 	if rec.Vertical {
 		rows += len(rec.Fields) - 1
 	}

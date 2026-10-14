@@ -23,6 +23,7 @@ func newObstacles(byRank [][]*lnode, pad Length) *obstacles {
 			obs.colRadius[r] = max(obs.colRadius[r], node.Radius.X+pad)
 		}
 	}
+
 	return obs
 }
 
@@ -47,6 +48,7 @@ func routeAround(path Path, obs *obstacles, from, to *lnode, pad Length) Path {
 			if row := nodes[0].Center; row.Y+obs.rowRadius[rank] < top || row.Y-obs.rowRadius[rank] > bottom {
 				continue
 			}
+
 			// nodes are sorted by x; only those whose box can reach the
 			// segment's x span
 			reach := obs.colRadius[rank]
@@ -55,17 +57,20 @@ func routeAround(path Path, obs *obstacles, from, to *lnode, pad Length) Path {
 				if node.Center.X > right+reach {
 					break
 				}
+
 				// slightly less than pad: waypoints sit on the padded box
 				// and touching it is not a hit
 				if node == from || node == to || !node.rect().grow(pad-0.01).hitBy(a, b) {
 					continue
 				}
+
 				// nearest obstacle along the segment first
 				if d := (node.Center.X - a.X).Abs(); d < hitDist {
 					hit, hitDist = node, d
 				}
 			}
 		}
+
 		if hit == nil {
 			lastHit = nil
 			continue
@@ -81,6 +86,7 @@ func routeAround(path Path, obs *obstacles, from, to *lnode, pad Length) Path {
 		if hit.Center.Y > (a.Y+b.Y)/2 {
 			way.Y = hit.Top() - pad
 		}
+
 		// a segment that starts or ends beside the node goes around the
 		// corner on that end's side
 		beside := func(p Vector) bool { return p.Y > hit.Top() && p.Y < hit.Bottom() }
@@ -92,10 +98,12 @@ func routeAround(path Path, obs *obstacles, from, to *lnode, pad Length) Path {
 				}
 			}
 		}
+
 		path = slices.Insert(path, i+1, way)
 		inserted++
 		i-- // re-check segment a→way, which may hit something else
 	}
+
 	return path
 }
 
@@ -106,6 +114,7 @@ func routeAroundClusters(path Path, clusters []*lcluster, from, to *lnode, pad L
 		if slices.Contains(cluster.Nodes, from) || slices.Contains(cluster.Nodes, to) {
 			continue
 		}
+
 		// virtual nodes outside the box sit pad away from it; grow by
 		// less so that chains running alongside are not hits
 		pad := pad / 2
@@ -117,6 +126,7 @@ func routeAroundClusters(path Path, clusters []*lcluster, from, to *lnode, pad L
 			if !box.hitBy(a, b) {
 				continue
 			}
+
 			// nearest corner to the segment's midpoint
 			mid := midpoint(a, b)
 			best, bestDist := corners[0], Length(math.Inf(1))
@@ -133,6 +143,7 @@ func routeAroundClusters(path Path, clusters []*lcluster, from, to *lnode, pad L
 			i-- // re-check a→corner
 		}
 	}
+
 	return path
 }
 
@@ -160,6 +171,7 @@ func (r rect) hitBy(a, b Vector) bool {
 		}
 		return true
 	}
+
 	ax, ay := float64(a.X), float64(a.Y)
 	return clip(-dx, ax-x0) && clip(dx, x1-ax) && clip(-dy, ay-y0) && clip(dy, y1-ay) && t0 <= t1
 }

@@ -28,6 +28,7 @@ func ExampleParse() {
 	graph := graphs[0]
 	fmt.Println(graph.ID, graph.Directed)
 	fmt.Println(graph.Node("a").Label, len(graph.Edges))
+
 	// Output:
 	// G true
 	// Start 1
@@ -43,6 +44,7 @@ func ExampleParseString() {
 		log.Fatal(err)
 	}
 	fmt.Println(l.Node(graphs[0].Node("b")).Center)
+
 	// Output:
 	// {38.96 96}
 }
@@ -65,6 +67,7 @@ func ExampleWrite() {
 	if err := graphml.Write(os.Stdout, graph); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// <graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:y="http://www.yworks.com/xml/graphml" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
 	// 	<key id="d0" for="node" attr.name="label" attr.type="string"></key>
@@ -99,6 +102,7 @@ func ExampleConvert() {
 		fmt.Println(node.ID)
 	}
 	fmt.Println(converted.EdgeDefault)
+
 	// Output:
 	// a
 	// b

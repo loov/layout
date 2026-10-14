@@ -20,6 +20,7 @@ func TestRankDirMargins(t *testing.T) {
 		}
 		return l.Bounds()
 	}
+
 	near := func(a, b layout.Vector) bool {
 		return math.Abs(float64(a.X-b.X)) < 1e-3 && math.Abs(float64(a.Y-b.Y)) < 1e-3
 	}

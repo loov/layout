@@ -15,6 +15,7 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 	if len(graph.weights) == 0 && len(graph.Ports) == 0 {
 		return crossingsByPos(u, v)
 	}
+
 	// where the edges end on the neighbors, see Ports
 	in := func(w, u *Node) float32 { return float32(w.Pos) + graph.Ports[[2]ID{w.ID, u.ID}][0] }
 	out := func(u, w *Node) float32 { return float32(w.Pos) + graph.Ports[[2]ID{u.ID, w.ID}][1] }
@@ -27,6 +28,7 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 			}
 		}
 	}
+
 	for _, w := range u.Out {
 		for _, z := range v.Out {
 			if zx, wx := out(v, z), out(u, w); zx < wx {
@@ -36,6 +38,7 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 			}
 		}
 	}
+
 	return uv, vu
 }
 
@@ -52,6 +55,7 @@ func crossingsByPos(u, v *Node) (uv, vu float32) {
 			}
 		}
 	}
+
 	for _, w := range u.outPos {
 		for _, z := range v.outPos {
 			if z < w {
@@ -61,6 +65,7 @@ func crossingsByPos(u, v *Node) (uv, vu float32) {
 			}
 		}
 	}
+
 	return float32(a), float32(b)
 }
 
@@ -102,6 +107,7 @@ func (graph *Graph) TotalCrossings() float32 {
 	for r := 1; r < len(graph.ByRank); r++ {
 		total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
 	}
+
 	// a flat edge crosses every node it passes over; unweighted, so with
 	// heavy edges elsewhere it hardly counts
 	for _, edge := range graph.Flat {
@@ -119,6 +125,7 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 	if len(lower) == 0 {
 		return 0
 	}
+
 	// the leaf of the tree an edge reaches, in the order the edges leave
 	type edge struct {
 		at     int
@@ -146,6 +153,7 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 				ends = append(ends, end{float32(u.Pos) + p[0], float32(v.Pos) + p[1], graph.Weight(u, v)})
 			}
 		}
+
 		slices.SortFunc(ends, func(a, b end) int {
 			if a.from != b.from {
 				return cmp.Compare(a.from, b.from)
@@ -183,6 +191,7 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 			tree[i] += e.weight
 		}
 	}
+
 	return total
 }
 
@@ -200,6 +209,7 @@ func (graph *Graph) TotalEdgeLength() float32 {
 			total += graph.Weight(src, dst) * d
 		}
 	}
+
 	return total
 }
 
@@ -213,6 +223,7 @@ func (graph *Graph) edgeLength(node *Node, pos int) float32 {
 		}
 		total += graph.Weight(src, node) * d
 	}
+
 	for _, dst := range node.Out {
 		d := float32(dst.Pos - pos)
 		if d < 0 {
@@ -220,5 +231,6 @@ func (graph *Graph) edgeLength(node *Node, pos int) float32 {
 		}
 		total += graph.Weight(node, dst) * d
 	}
+
 	return total
 }

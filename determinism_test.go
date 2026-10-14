@@ -32,6 +32,7 @@ func TestDeterministic(t *testing.T) {
 		}
 		return out.Bytes()
 	}
+
 	for _, file := range files {
 		if !bytes.Equal(render(file), render(file)) {
 			t.Errorf("%s: layout is not deterministic", file)

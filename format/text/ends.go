@@ -18,6 +18,7 @@ import (
 // its place if it can; a moved end takes the bend before it along.
 func (c *canvas) spreadSides(edges []*layout.Edge, paths [][]point) {
 	sides := c.endsOnSides(edges, paths)
+
 	// sides in the order of the nodes, as an edge can end on two of them
 	// and moving one end can move the other
 	keys := slices.Collect(maps.Keys(sides))
@@ -28,6 +29,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][]point) {
 	slices.SortFunc(keys, func(a, b boxSide) int {
 		return cmp.Or(cmp.Compare(order[a.node], order[b.node]), cmp.Compare(a.along, b.along), cmp.Compare(boolInt(a.after), boolInt(b.after)))
 	})
+
 	// the ends alone on their side, until their side is done
 	alone := map[*point]bool{}
 	for _, ends := range sides {
@@ -65,6 +67,7 @@ type boxSide struct {
 // side, with the ends that merge with each in its also
 func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide][]spreadEnd {
 	sides := map[boxSide][]spreadEnd{}
+
 	// merged ends on a side move as one, led by an end that goes on
 	// straight when there is one, as that stays; leads holds where each
 	// group's lead is in sides
@@ -77,6 +80,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 		if len(path) < 2 {
 			continue
 		}
+
 		// the ends of a straight run share its bend, which they move
 		// along the same way, so moving one end drags the other's off its
 		// line: each gets one of its own, in the middle
@@ -106,6 +110,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 					!after && bend.at(across) >= b.Min.at(across) {
 					continue // not straight into the side from beyond it
 				}
+
 				// onto the side, also where a rounder outline curves inside
 				path[e.i].set(across, b.Min.at(across))
 				if after {
@@ -147,6 +152,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 			}
 		}
 	}
+
 	return sides
 }
 
@@ -154,6 +160,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 // holds the ends alone on their side, until their side is done
 func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool) {
 	lo, hi := c.sideCells(key.node, key.along)
+
 	// the other end of an edge may have moved its bend along already,
 	// see below: head for where it is now
 	for n := range ends {
@@ -162,6 +169,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 			e.toward = e.path[e.k].at(key.along)
 		}
 	}
+
 	if len(ends) > hi-lo+1 {
 		return // no room; keep them as they are
 	}
@@ -175,6 +183,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 		want[n], exact[n], fixed[n] = e.path[e.i].at(key.along), e.exact, e.fixed || c.boxBeside(e.path[e.i], e.path[e.j], key.along)
 	}
 	packEnds(want, exact, fixed)
+
 	// an end that turns toward a place along the side goes straight
 	// there instead, past no other end
 	for n, e := range ends {
@@ -187,6 +196,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 		if past {
 			continue
 		}
+
 		// a jog between two ends straightens from either: not from
 		// ends balanced on their side when the other end, still to
 		// come, is alone on its own
@@ -197,6 +207,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 		}
 		want[n], fixed[n] = e.toward, true
 	}
+
 	// with spread, a cell between ends where the side has room, as
 	// balanced as the ends were
 	rows := spreadRows(want, fixed, lo, hi, 1)
@@ -243,6 +254,7 @@ func (c *canvas) boxAcross(at, bend point, along, to int) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -292,6 +304,7 @@ func spreadRows(want []int, fixed []bool, lo, hi, gap int) []int {
 			blocks = append(blocks[:len(blocks)-2], block{a.sum + b.sum, a.weight + b.weight, a.n + b.n})
 		}
 	}
+
 	rows := make([]int, 0, len(want))
 	for _, b := range blocks {
 		first := min(max(int(math.Round(b.sum/b.weight)), lo), hi-(len(want)-1)*gap)
@@ -299,6 +312,7 @@ func spreadRows(want []int, fixed []bool, lo, hi, gap int) []int {
 			rows = append(rows, first+len(rows)*gap)
 		}
 	}
+
 	return rows
 }
 

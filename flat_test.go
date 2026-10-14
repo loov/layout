@@ -11,6 +11,7 @@ import (
 func TestFlatEdgesAvoidNodes(t *testing.T) {
 	graph := layout.NewDigraph()
 	graph.SameRank = [][]*layout.Node{{graph.Node("a"), graph.Node("b"), graph.Node("c"), graph.Node("d")}}
+
 	// a cycle, so that some edge has to run right to left
 	graph.Edge("a", "d")
 	graph.Edge("c", "a")

@@ -40,6 +40,7 @@ func ParseColor(value string) (Color, bool) {
 	case len(hex) == 8:
 		return RGBA{R: uint8(v >> 24), G: uint8(v >> 16), B: uint8(v >> 8), A: uint8(v)}, true
 	}
+
 	return nil, false
 }
 

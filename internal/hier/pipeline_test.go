@@ -19,6 +19,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 			}
 		}
 	}
+
 	for i, layer := range graph.ByRank {
 		if len(layer) == 0 {
 			t.Errorf("%s: empty rank %d", name, i)
@@ -35,6 +36,7 @@ func checkPipeline(t *testing.T, name string, graph *Graph) {
 			}
 		}
 	}
+
 	OrderRanksDepthFirst(graph)
 	before := graph.TotalCrossings()
 	OrderRanks(graph)

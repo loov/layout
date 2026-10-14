@@ -35,10 +35,12 @@ func TestEdgesJoined(t *testing.T) {
 		for _, edge := range lost(c, g, l) {
 			t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 		}
+
 		// a run that edges share can't tell them apart, nor which
 		// arrowhead is whose; merged edges are one edge
 		checkApart(t, c, g)
 	}
+
 	for name, build := range examples.Graphs {
 		t.Run(name, func(t *testing.T) { check(t, build(), examples.Options[name]) })
 	}
@@ -77,6 +79,7 @@ func checkApart(t *testing.T, c *canvas, g grid) {
 			}
 		}
 	}
+
 	if len(shared) > 0 {
 		t.Errorf("edges share cells at %s:\n%s", strings.Join(shared, " "), encode(g, c.palette, nil))
 	}
@@ -140,6 +143,7 @@ func randomGraph(seed uint64) *layout.Graph {
 			node.Label = "<a> a|<b> b|<c> c"
 		}
 	}
+
 	ports := []layout.Compass{layout.CompassAuto, layout.North, layout.South, layout.East, layout.West}
 	for range n + rng.IntN(2*n) {
 		edge := graph.Edge(fmt.Sprint("n", rng.IntN(n)), fmt.Sprint("n", rng.IntN(n)))
@@ -153,6 +157,7 @@ func randomGraph(seed uint64) *layout.Graph {
 			edge.FromPort, edge.ToPort = ports[rng.IntN(len(ports))], ports[rng.IntN(len(ports))]
 		}
 	}
+
 	return graph
 }
 
@@ -162,10 +167,12 @@ func randomGraph(seed uint64) *layout.Graph {
 func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 	steps := map[uint8]point{up: {0, -1}, down: {0, 1}, left: {-1, 0}, right: {1, 0}}
 	back := map[uint8]uint8{up: down, down: up, left: right, right: left}
+
 	// owns reports whether the edge id draws the arm of the cell
 	owns := func(p *cell, arm uint8, id edgeID) bool {
 		return p != nil && p.lines&arm != 0 && p.owner[bits.TrailingZeros(uint(arm))] == id
 	}
+
 	// touches reports whether the cell is beside the box of the node, or
 	// beside a marker that is
 	touches := func(r, x int, node nodeID) bool {
@@ -185,8 +192,10 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 				}
 			}
 		}
+
 		return false
 	}
+
 	var out []*layout.Edge
 	for _, edge := range l.Graph.Edges {
 		id, ok := c.drawn[edge]
@@ -201,6 +210,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 				if seen[point{x, r}] || !ownsAny(g.at(r, x), id) {
 					continue
 				}
+
 				// the run of the edge's cells joined to this one
 				a, b := false, false
 				stack := []point{{x, r}}
@@ -221,6 +231,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 				joined = joined || a && b
 			}
 		}
+
 		// an edge too short for a line has only its marker between them
 		for r := range g {
 			for x := range g[r] {
@@ -231,6 +242,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 			out = append(out, edge)
 		}
 	}
+
 	return out
 }
 

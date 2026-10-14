@@ -93,6 +93,7 @@ func (opts *Options) codes(fg, bg uint32) (string, string) {
 		}
 		return strconv.Itoa(n)
 	}
+
 	return code(f, "39"), code(b, "49")
 }
 
@@ -139,6 +140,7 @@ func ansi16(color uint32, role role) int {
 		case light < 0.3 || light >= 0.7:
 			return 0
 		}
+
 		return 90
 	}
 	var hue float64 // in sixths of the circle: red, yellow, green, cyan, blue, magenta
@@ -150,6 +152,7 @@ func ansi16(color uint32, role role) int {
 	default:
 		hue = (r-g)/(hi-lo) + 4
 	}
+
 	if light > 0.6 {
 		base += 60
 	}
@@ -180,6 +183,7 @@ func encode(g grid, palette []uint32, opts *Options) string {
 		}
 		return fb[0], fb[1]
 	}
+
 	var out strings.Builder
 	for _, line := range g {
 		end := 0
@@ -219,10 +223,12 @@ func encode(g grid, palette []uint32, opts *Options) string {
 				out.WriteRune(x.r)
 			}
 		}
+
 		if f != "39" || b != "49" || st != 0 {
 			out.WriteString("\x1b[0m")
 		}
 		out.WriteByte('\n')
 	}
+
 	return out.String()
 }

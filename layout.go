@@ -159,6 +159,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 			edge.LabelRadius.X, edge.LabelRadius.Y = edge.LabelRadius.Y, edge.LabelRadius.X
 		}
 	}
+
 	if sideways {
 		swapRadii()
 	}
@@ -189,6 +190,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 			}
 			edge.LabelPos = transform(edge.LabelPos)
 		}
+
 		for _, cluster := range graphdef.Clusters {
 			a, b := transform(cluster.TopLeft), transform(cluster.BottomRight)
 			cluster.TopLeft = Vector{min(a.X, b.X), min(a.Y, b.Y)}
@@ -212,6 +214,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 			}
 			edge.LabelPos = edge.LabelPos.Add(shift)
 		}
+
 		for _, cluster := range component.Clusters {
 			cluster.TopLeft = cluster.TopLeft.Add(shift)
 			cluster.BottomRight = cluster.BottomRight.Add(shift)
@@ -249,6 +252,7 @@ func components(graphdef *lgraph) []*lgraph {
 		}
 		return i
 	}
+
 	find := func(n *lnode) *lnode { return graphdef.Nodes[findIndex(index[n])] }
 	union := func(a, b *lnode) { parent[findIndex(index[a])] = findIndex(index[b]) }
 	for _, edge := range graphdef.Edges {
@@ -264,6 +268,7 @@ func components(graphdef *lgraph) []*lgraph {
 			union(cluster.Nodes[0], node)
 		}
 	}
+
 	// min/max pinned nodes share a rank, treat them as connected
 	for _, pinned := range [][]*lnode{graphdef.MinRank, graphdef.MaxRank} {
 		for _, node := range pinned {
@@ -285,6 +290,7 @@ func components(graphdef *lgraph) []*lgraph {
 		}
 		return graph
 	}
+
 	for _, node := range graphdef.Nodes {
 		g := sub(node)
 		g.Nodes = append(g.Nodes, node)
@@ -312,6 +318,7 @@ func components(graphdef *lgraph) []*lgraph {
 		g := sub(cluster.Nodes[0])
 		g.Clusters = append(g.Clusters, cluster)
 	}
+
 	return result
 }
 
@@ -394,6 +401,7 @@ func newHierComponent(graphdef *lgraph, opts Options) *hierComponent {
 			}
 		}
 	}
+
 	return c
 }
 
@@ -430,6 +438,7 @@ func (c *hierComponent) labelRow(cluster *lcluster) Length {
 	case label == "":
 		label = " "
 	}
+
 	return 2 * c.graphdef.textRadius(label, "", c.graphdef.FontSize).Y
 }
 
@@ -453,6 +462,7 @@ func (c *hierComponent) build() {
 		c.reverse[node.ID] = nodedef
 		node.Label = nodedef.ID
 	}
+
 	// parallel edges with the same ends share one hierarchical edge,
 	// which weighs as much as all of them, so that ordering keeps the
 	// others off the bundle; the longest wins. Edges to other ports of
@@ -552,6 +562,7 @@ func (c *hierComponent) addClusters() {
 		c.clusters[clusterdef] = cluster
 		c.graph.Clusters = append(c.graph.Clusters, cluster)
 	}
+
 	for clusterdef, cluster := range c.clusters {
 		cluster.Parent = c.clusters[clusterdef.Parent]
 	}
@@ -609,6 +620,7 @@ func (c *hierComponent) reserveEnds() {
 			e[map[bool]int{false: 0, true: 1}[below]]++
 			ends[node] = e
 		}
+
 		// sideways in text, flat edges leave along the top and bottom of
 		// the drawing, which are the sides of the frame here; they need a
 		// cell each across the frame, as ends between ranks do along it
@@ -655,16 +667,19 @@ func (c *hierComponent) reserveEnds() {
 				count(ends, edge.To, !below, c.graphdef.merged[edge][1])
 			}
 		}
+
 		for node, e := range flat {
 			if node.Shape == PointShape {
 				continue
 			}
+
 			// a line each across the frame, a column sideways
 			if grow := Length(max(e[0], e[1])+1)*c.graphdef.cell().Y/2 - node.Radius.Y; grow > 0 {
 				node.Radius.Y += grow
 				node.pad.Y += grow
 			}
 		}
+
 		for node, e := range ends {
 			if node.Shape == PointShape {
 				continue // edges meet at the dot
@@ -681,6 +696,7 @@ func (c *hierComponent) reserveEnds() {
 			node.pad = node.pad.Add(pad)
 		}
 	}
+
 	// edges along a rank between the same nodes run side by side, see
 	// assignPaths, so their nodes need room across the rank for them all
 	lanes := map[[2]hier.ID]int{}
@@ -690,6 +706,7 @@ func (c *hierComponent) reserveEnds() {
 			lanes[unorderedPair(from.ID, to.ID)]++
 		}
 	}
+
 	spacing := c.laneSpacing()
 	for pair, n := range lanes {
 		if n < 2 {
@@ -738,6 +755,7 @@ func (c *hierComponent) reserveFlatLabels() {
 		if to.Pos < from.Pos {
 			left = edge.To
 		}
+
 		// neighbors are already two node paddings apart
 		c.loopExtra[left] += max(0, 2*(edge.LabelRadius.X+c.graphdef.EdgePadding-c.graphdef.NodePadding))
 		below := c.graphdef.EdgePadding + 2*edge.LabelRadius.Y
@@ -821,6 +839,7 @@ func (c *hierComponent) reserveClusterLabels() {
 			node.Radius.Y = half + extra
 		}
 	}
+
 	// span returns how far the box of a cluster will reach along the
 	// ranks: ranks are stacked their half heights apart, and the box spans
 	// its members, see the cluster boxes below
@@ -844,6 +863,7 @@ func (c *hierComponent) reserveClusterLabels() {
 		}
 		return Length(bottom-top) + c.graphdef.RowPadding
 	}
+
 	for _, clusterdef := range c.graphdef.Clusters {
 		cluster := c.clusters[clusterdef]
 		pad := float32(c.graphdef.RowPadding / 2)
@@ -913,6 +933,7 @@ func (c *hierComponent) position() {
 				ends[id] = e
 			}
 		}
+
 		cell := float32(c.graphdef.cell().X)
 		for id, e := range ends {
 			room := [2]float32{}
@@ -1087,6 +1108,7 @@ func (c *hierComponent) rankPaths() map[*hier.Edge]Path {
 
 		edgePaths[e] = path
 	}
+
 	c.pathBlock = block
 	return edgePaths
 }
@@ -1121,6 +1143,7 @@ func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lno
 		}
 		arcs = append(arcs, a)
 	}
+
 	slices.SortStableFunc(arcs, func(a, b *arc) int { return cmp.Compare(a.hi-a.lo, b.hi-b.lo) })
 	for i, a := range arcs {
 		for _, below := range arcs[:i] {
@@ -1129,6 +1152,7 @@ func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lno
 				a.top = min(a.top, below.top)
 			}
 		}
+
 		sourcedef, targetdef := c.reverse[a.flat.From.ID], c.reverse[a.flat.To.ID]
 		y := a.top - 2*c.graphdef.EdgePadding*Length(a.level+1)
 		edgePaths[a.flat] = []Vector{
@@ -1254,8 +1278,10 @@ func (c *hierComponent) crossLabelBands() {
 				}
 			}
 		}
+
 		return false
 	}
+
 	for _, edge := range c.graphdef.Edges {
 		for i := len(edge.Path) - 2; i >= 1; i-- {
 			p := edge.Path[i]
@@ -1286,6 +1312,7 @@ func (c *hierComponent) shapePaths() {
 				rows[r][0], rows[r][1] = min(rows[r][0], top), max(rows[r][1], bottom)
 			}
 		}
+
 		orthoEdges(c.graphdef, rows, c.graphdef.EdgePadding, c.pack)
 	}
 	if c.graphdef.Splines != SplinesOrtho {

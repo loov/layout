@@ -76,6 +76,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		if !edge.flat {
 			continue // on a side, see spreadSides
 		}
+
 		// edges between neighbors that run side by side keep their lanes
 		if len(edge.Path) == 2 && pairs.count[pairs.key(edge)] > 1 {
 			if edge.freeStart() {
@@ -93,6 +94,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 			byNode[edge.To] = append(byNode[edge.To], end{edge, angle(edge.To, edge.Path[len(edge.Path)-2]), false, false})
 		}
 	}
+
 	for node, ends := range byNode {
 		if len(ends) < 2 {
 			continue
@@ -134,6 +136,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				ends[i].angle += (step - d) / 2
 			}
 		}
+
 		for _, e := range ends {
 			if e.fixed {
 				continue
@@ -173,6 +176,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 		k := side{node, bottom}
 		sides[k] = append(sides[k], end{edge, start, want})
 	}
+
 	for _, edge := range graph.Edges {
 		if edge.flat || len(edge.Path) < 2 {
 			continue
@@ -184,6 +188,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 			add(edge.To, edge, false, edge.Path[len(edge.Path)-2])
 		}
 	}
+
 	for k, ends := range sides {
 		node := k.node
 		slices.SortStableFunc(ends, func(a, b end) int { return cmp.Compare(a.want, b.want) })

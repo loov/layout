@@ -34,6 +34,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 		}
 		return false
 	}
+
 	for k, start := range starts {
 		start()
 		orderFlatEdges(graph)
@@ -55,6 +56,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 			}
 		}
 	}
+
 	// the best order can be one that no transpose has seen, such as a
 	// starting one, when every sweep from it ends up worse; blocks move
 	// columns that the sweeps move a node at a time
@@ -77,6 +79,7 @@ func OrderRanksN(graph *Graph, iterations int) {
 // ids; it keeps clusters together and flat edges left to right
 func orderTies(graph *Graph) {
 	flat := flatNeighbors(graph)
+
 	// every swap puts a pair in order, so this ends
 	graph.swapNeighbors(math.MaxInt, func(i int, left, right *Node) bool {
 		if right.ID > left.ID || left.Cluster != right.Cluster ||
@@ -137,6 +140,7 @@ func OrderRanksDepthFirst(graph *Graph) {
 // using incoming edges, otherwise bottom-to-top using outgoing edges.
 func OrderRanksByMedian(graph *Graph, down bool) {
 	assignGridX(graph)
+
 	// flat edges stay in order as the sweep goes, so that the next rank
 	// follows the order they need
 	var flat *flatOrder
@@ -161,6 +165,7 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 			}
 			node.Coef = medianGridX(graph.portGridX(node, adj, down), node.GridX)
 		}
+
 		clusterCoef(layer)
 		slices.SortStableFunc(layer, func(a, b *Node) int {
 			if a.Coef != b.Coef {
@@ -200,6 +205,7 @@ func (graph *Graph) portGridX(node *Node, adj Nodes, down bool) []float32 {
 			xs[i] += graph.Ports[[2]ID{node.ID, n.ID}][1]
 		}
 	}
+
 	return xs
 }
 
@@ -248,6 +254,7 @@ func flatShorter(flat map[*Node]Nodes, left, right *Node) (shorter float32) {
 			shorter--
 		}
 	}
+
 	for _, x := range flat[right] {
 		if x.Pos < left.Pos {
 			shorter++
@@ -255,6 +262,7 @@ func flatShorter(flat map[*Node]Nodes, left, right *Node) (shorter float32) {
 			shorter--
 		}
 	}
+
 	return shorter
 }
 
@@ -303,6 +311,7 @@ func (flat *flatOrder) fix(layer Nodes) {
 	preds := maps.Clone(flat.preds)
 	placed := make([]bool, len(layer))
 	sorted := make(Nodes, 0, len(layer))
+
 	// quadratic in the rank size; a ready queue by position if wide
 	// ranks with flat edges get slow
 	for len(sorted) < len(layer) {
@@ -320,6 +329,7 @@ func (flat *flatOrder) fix(layer Nodes) {
 				break
 			}
 		}
+
 		if pick < 0 {
 			pick = fallback
 		}
@@ -329,6 +339,7 @@ func (flat *flatOrder) fix(layer Nodes) {
 			preds[dst]--
 		}
 	}
+
 	copy(layer, sorted)
 	layer.assignPos()
 }
@@ -354,6 +365,7 @@ func OrderRanksTranspose(graph *Graph) (swaps int) {
 // cached, see cachePos.
 func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node) bool) (swaps int) {
 	graph.assignPos()
+
 	// a layer only needs another look when it or a neighbor changed
 	dirty := make([]bool, len(graph.ByRank))
 	for i := range dirty {
@@ -366,6 +378,7 @@ func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node
 			if !dirty[r] {
 				continue
 			}
+
 			// neighbor positions don't change while this layer is processed
 			nodes.cachePos()
 			for i := 0; i+1 < len(nodes); i++ {
@@ -379,6 +392,7 @@ func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node
 				}
 			}
 		}
+
 		for r := range dirty {
 			dirty[r] = changed[r] || (r > 0 && changed[r-1]) || (r+1 < len(changed) && changed[r+1])
 		}
@@ -386,6 +400,7 @@ func (graph *Graph) swapNeighbors(rounds int, swap func(i int, left, right *Node
 			return swaps
 		}
 	}
+
 	return swaps
 }
 
@@ -414,5 +429,6 @@ func orderRanksBreadthFirst(graph *Graph, down bool) {
 			}
 		}
 	}
+
 	graph.ByRank = ranking
 }

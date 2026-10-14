@@ -36,6 +36,7 @@ func randomGraph(n int, seed int64) *layout.Graph {
 			graph.Edge(fmt.Sprint("n", a), fmt.Sprint("n", b))
 		}
 	}
+
 	return graph
 }
 
@@ -88,6 +89,7 @@ func BenchmarkText(b *testing.B) {
 		graphs = append(graphs, func() *layout.Graph { return parsed[0] })
 		options = append(options, layout.Options{})
 	}
+
 	b.Run("fixtures", func(b *testing.B) {
 		for b.Loop() {
 			for i, build := range graphs {

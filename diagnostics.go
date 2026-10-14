@@ -151,6 +151,7 @@ func newDiagnosis(graph *lgraph) *diagnosis {
 			d.segments = append(d.segments, segment{path[i], path[i+1], edge, i == 0, i+2 == len(path)})
 		}
 	}
+
 	return d
 }
 
@@ -230,10 +231,12 @@ func cross(p, q segment) (crosses, collinear bool) {
 	}
 	d1, d2 := side(p.a, p.b, q.a), side(p.a, p.b, q.b)
 	d3, d4 := side(q.a, q.b, p.a), side(q.a, q.b, p.b)
+
 	// distance of q's ends from p's line
 	if math.Abs(d1)/length < float64(diagStroke) && math.Abs(d2)/length < float64(diagStroke) {
 		return false, p.overlap(q) > float64(diagArrow)
 	}
+
 	// a proper crossing has each segment's ends on opposite sides of
 	// the other; touching at an end does not count
 	return d1*d2 < -diagEps && d3*d4 < -diagEps, false
@@ -344,6 +347,7 @@ func (d *diagnosis) paths() {
 	case BottomToTop:
 		flow = Vector{0, -1}
 	}
+
 	for _, edge := range d.edges {
 		for a, b := range edge.Path.Segments() {
 			d.diag.EdgeLength += b.Sub(a).Len()
@@ -372,6 +376,7 @@ func (d *diagnosis) paths() {
 				last = angle
 			}
 		}
+
 		if flips >= 2 {
 			d.diag.WavyEdges++
 			d.detail("edge %v changes turn direction %d times", edge, flips)
@@ -405,6 +410,7 @@ func (d *diagnosis) unbalance() {
 			} else if edge.From != node {
 				continue
 			}
+
 			// a neighbor counts once for every edge to it
 			switch v := across(other.Center) - across(node.Center); {
 			case v < -diagEps:
@@ -413,6 +419,7 @@ func (d *diagnosis) unbalance() {
 				after = append(after, other)
 			}
 		}
+
 		for _, side := range [][]*lnode{before, after} {
 			if !slices.ContainsFunc(side, func(other *lnode) bool { return other != side[0] }) {
 				continue // no fork or join
@@ -458,6 +465,7 @@ func (d *diagnosis) labelOverlaps() {
 		labelEdges = append(labelEdges, edge)
 		labels = append(labels, edge.labelRect())
 	}
+
 	for i, l := range labels {
 		var hits []string
 		for _, node := range d.nodes {
@@ -510,6 +518,7 @@ func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 		})
 		return hit && t0 < t1
 	}
+
 	// ellipse: scale to a unit circle and test the distance from the center;
 	// circles are drawn with the larger radius
 	rx, ry := float64(node.Radius.X+pad), float64(node.Radius.Y+pad)
@@ -545,6 +554,7 @@ func (r rect) distance(a, b Vector) float64 {
 		}
 		return math.Hypot(float64(p.X-a.X)-t*dx, float64(p.Y-a.Y)-t*dy)
 	}
+
 	pointRect := func(p Vector) float64 {
 		dx := math.Max(0, math.Max(float64(r.Min.X-p.X), float64(p.X-r.Max.X)))
 		dy := math.Max(0, math.Max(float64(r.Min.Y-p.Y), float64(p.Y-r.Max.Y)))

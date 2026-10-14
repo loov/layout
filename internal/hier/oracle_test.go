@@ -25,6 +25,7 @@ func TestSimplexBruteForce(t *testing.T) {
 			a, b = min(a, b), max(a, b)
 			s.addEdge(int32(perm[a]), int32(perm[b]), float32(rng.IntN(4)), int32(rng.IntN(maxMinLen+1)))
 		}
+
 		s.run()
 
 		// edges by their head, which comes later in topological order
@@ -106,6 +107,7 @@ func randomLayers(rng *rand.Rand, weights, ports bool) *Graph {
 			graph.ByRank[r] = append(graph.ByRank[r], node)
 		}
 	}
+
 	offsets := []float32{-0.4, -0.2, 0, 0.2, 0.4}
 	for r := 1; r < len(graph.ByRank); r++ {
 		for _, u := range graph.ByRank[r-1] {
@@ -129,6 +131,7 @@ func randomLayers(rng *rand.Rand, weights, ports bool) *Graph {
 			}
 		}
 	}
+
 	for _, layer := range graph.ByRank {
 		if len(layer) > 2 && rng.IntN(2) == 0 {
 			a, b := rng.IntN(len(layer)), rng.IntN(len(layer))
@@ -137,6 +140,7 @@ func randomLayers(rng *rand.Rand, weights, ports bool) *Graph {
 			}
 		}
 	}
+
 	graph.assignPos()
 	return graph
 }
@@ -156,6 +160,7 @@ func pairCrossings(a, b []segment) float32 {
 			}
 		}
 	}
+
 	return total
 }
 
@@ -186,6 +191,7 @@ func TestCrossingsBruteForce(t *testing.T) {
 				t.Fatalf("iter %d rank %d: bilayerCrossings %v, want %v", iter, r, got, want)
 			}
 		}
+
 		for _, edge := range graph.Flat {
 			lo, hi := min(edge[0].Pos, edge[1].Pos), max(edge[0].Pos, edge[1].Pos)
 			for _, node := range graph.ByRank[edge[0].Rank] {
@@ -194,6 +200,7 @@ func TestCrossingsBruteForce(t *testing.T) {
 				}
 			}
 		}
+
 		if got := graph.TotalCrossings(); got != total {
 			t.Fatalf("iter %d: TotalCrossings %v, want %v", iter, got, total)
 		}
@@ -209,6 +216,7 @@ func TestCrossingsBruteForce(t *testing.T) {
 				}
 			}
 		}
+
 		// the edges of node to the rank above and below, with node at x
 		ends := func(node *Node, x float32, plain bool) (in, out []segment) {
 			for _, src := range node.In {
@@ -227,6 +235,7 @@ func TestCrossingsBruteForce(t *testing.T) {
 			}
 			return in, out
 		}
+
 		// crossings of the edges of u with those of v, u left of v
 		between := func(u, v *Node, plain bool) float32 {
 			uin, uout := ends(u, 0, plain)

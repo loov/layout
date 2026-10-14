@@ -49,6 +49,7 @@ func TestPinned(t *testing.T) {
 			t.Errorf("node %v moved from %v to %v", node.ID, want, got)
 		}
 	}
+
 	for i, edge := range graph.Edges {
 		want, got := l.Edges[i], again.Edges[i]
 		if len(got.Path) != len(want.Path) || !near(got.Path[0], want.Path[0]) || !near(got.Path[len(got.Path)-1], want.Path[len(want.Path)-1]) {

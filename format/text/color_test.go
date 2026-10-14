@@ -38,6 +38,7 @@ func TestANSI16(t *testing.T) {
 			t.Errorf("ansi16(%06X, %v) = %v, want %v", tc.color, tc.role, got, tc.want)
 		}
 	}
+
 	if got := ansi16(0, ink); got != 0 {
 		t.Errorf("unset color: got %v, want 0", got)
 	}
@@ -70,6 +71,7 @@ func TestBackground(t *testing.T) {
 				break
 			}
 		}
+
 		// lines without a color are black on white and white on black
 		if dark := tc.opts.Palette == TrueColor; !strings.Contains(buf.String(), map[bool]string{false: "\x1b[30;107m", true: "\x1b[38;2;255;255;255;48;2;0;0;0m"}[dark]) {
 			t.Errorf("%+v: lines are not drawn in a contrasting color\n%q", tc.opts, buf.String())

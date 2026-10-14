@@ -12,6 +12,7 @@ import (
 // avoid them.
 func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radius Length, keep map[*ledge]bool) {
 	paths := make([]Path, len(edges), len(edges)+len(clusters))
+
 	// all the flattened paths in one block
 	n := 0
 	for _, edge := range edges {
@@ -28,6 +29,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		points = flat
 		paths[i] = points[start:len(points):len(points)]
 	}
+
 	// the sides of cluster boxes are lines like edges, after the edge paths
 	for _, cluster := range clusters {
 		box := cluster.rect()
@@ -37,12 +39,14 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		corners := box.corners()
 		paths = append(paths, append(corners, corners[0]))
 	}
+
 	var placed []*ledge
 	for _, edge := range edges {
 		if keep[edge] && edge.Label != "" {
 			placed = append(placed, edge)
 		}
 	}
+
 	// clearOf reports whether a label of edge at at stays clear of nodes,
 	// placed labels and, with lines, every edge path
 	clearOf := func(edge *ledge, at Vector, lines bool) bool {
@@ -55,6 +59,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 				return false
 			}
 		}
+
 		// nodes only need to stay clear of the text itself
 		for _, node := range nodes {
 			if node.Left() < br.X-pad && tl.X+pad < node.Right() && node.Top() < br.Y && tl.Y < node.Bottom() {
@@ -68,11 +73,13 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		}
 		return true
 	}
+
 	clear := func(edge *ledge, at Vector) bool { return clearOf(edge, at, true) }
 	for _, edge := range edges {
 		if edge.Label == "" || len(edge.Path) < 2 || keep[edge] {
 			continue
 		}
+
 		// candidates in growing rings: along the rank first, then across
 		// it, then diagonally; never further from the edge than the text
 		// height, so the label stays attributable
@@ -100,6 +107,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			// for sideways layouts), minus a margin
 			return best <= float64(2*min(edge.LabelRadius.X, edge.LabelRadius.Y)-pad)
 		}
+
 		// slide along the own path, nearest spot first, trying both sides
 		found := false
 		type spot struct {
@@ -134,6 +142,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 				}
 			}
 		}
+
 		// otherwise rings: along the rank first, then across it, then
 		// diagonally; never further from the edge than the text height
 		for ring := 1; ring <= 4 && !found; ring++ {
@@ -145,6 +154,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 				}
 			}
 		}
+
 		// nowhere clear: crossing another edge reads better than covering
 		// another label or a node
 		if !found && !clearOf(edge, edge.LabelPos, false) {
@@ -173,6 +183,7 @@ func (g *lgraph) placeEndLabels() {
 			placed = append(placed, edge.labelRect())
 		}
 	}
+
 	covers := func(r rect) bool {
 		for _, node := range g.Nodes {
 			if node.rect().overlaps(r, 0) {
@@ -186,6 +197,7 @@ func (g *lgraph) placeEndLabels() {
 		}
 		return false
 	}
+
 	crosses := func(r rect) bool {
 		for _, edge := range g.Edges {
 			if r.hitByPath(edge.Path) {
@@ -194,6 +206,7 @@ func (g *lgraph) placeEndLabels() {
 		}
 		return false
 	}
+
 	for _, edge := range g.Edges {
 		n := len(edge.Path)
 		if n < 2 || edge.Invisible {
@@ -211,6 +224,7 @@ func (g *lgraph) placeEndLabels() {
 				continue
 			}
 			r := end.label.radius
+
 			// along the edge away from the node, and across it
 			ux, uy := 0.0, 1.0
 			if d := end.next.Sub(end.at); !d.IsZero() {
@@ -219,6 +233,7 @@ func (g *lgraph) placeEndLabels() {
 			}
 			along := Length(math.Abs(ux))*r.X + Length(math.Abs(uy))*r.Y
 			across := Length(math.Abs(uy))*r.X + Length(math.Abs(ux))*r.Y
+
 			// no further than the middle of the edge, so that the label
 			// stays nearer its own end
 			length := edge.Path.Length()
@@ -234,6 +249,7 @@ func (g *lgraph) placeEndLabels() {
 					spots = append(spots, end.at.Add(Vector{Length(ux)*a - Length(uy)*c, Length(uy)*a + Length(ux)*c}))
 				}
 			}
+
 			at, found := spots[0], false
 			for _, lines := range []bool{true, false} {
 				for _, spot := range spots {
@@ -247,6 +263,7 @@ func (g *lgraph) placeEndLabels() {
 					break
 				}
 			}
+
 			end.label.pos = at
 			placed = append(placed, centeredRect(at, r))
 		}

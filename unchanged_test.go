@@ -24,6 +24,7 @@ func TestLayoutLeavesGraphUnchanged(t *testing.T) {
 		graph.SameRank = [][]*layout.Node{{graph.Node("a")}}
 		return graph
 	}
+
 	snapshot := func(graph *layout.Graph) any {
 		var nodes []layout.Node
 		for _, node := range graph.Nodes {
@@ -41,6 +42,7 @@ func TestLayoutLeavesGraphUnchanged(t *testing.T) {
 		settings.Nodes, settings.Edges, settings.Clusters, settings.NodeByID = nil, nil, nil, nil
 		return []any{settings, nodes, edges, clusters}
 	}
+
 	for name, lay := range map[string]func(*layout.Graph) (*layout.Layout, error){
 		"hierarchical": func(g *layout.Graph) (*layout.Layout, error) {
 			return layout.Hierarchical(g, layout.Options{ForText: true})

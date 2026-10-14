@@ -55,6 +55,7 @@ func (c *canvas) onSide(end, next point, node *layout.Node) bool {
 	case right:
 		along, at = 1, b.Max.X
 	}
+
 	lo, hi := c.sideCells(node, along)
 	return end.at(1-along) == at && end.at(along) >= lo && end.at(along) <= hi
 }
@@ -90,6 +91,7 @@ func (c *canvas) side(end, next point, node *layout.Node) uint8 {
 	case d.Y > 0:
 		return down
 	}
+
 	return 0
 }
 
@@ -119,6 +121,7 @@ func (c *canvas) endCells(end, next point, node *layout.Node, field string) []en
 		}
 		return cells
 	}
+
 	// the cells of the side it is on, see side, then of the other sides,
 	// which an end takes only when it can't leave the side it is on
 	var cells []endCell
@@ -136,6 +139,7 @@ func (c *canvas) endCells(end, next point, node *layout.Node, field string) []en
 		case right:
 			along, at = 1, b.Max.X
 		}
+
 		lo, hi := c.sideCells(node, along)
 		for i := lo; i <= hi; i++ {
 			cell := point{i, at}
@@ -145,6 +149,7 @@ func (c *canvas) endCells(end, next point, node *layout.Node, field string) []en
 			cells = append(cells, endCell{cell, side, cost + 2*max(cell.X-end.X, end.X-cell.X, cell.Y-end.Y, end.Y-cell.Y)})
 		}
 	}
+
 	return cells
 }
 
@@ -176,6 +181,7 @@ func (c *canvas) steps(a, b point, step func(from, to point, dir uint8)) {
 		}
 		step(point{x, a.Y}, point{x + dx(dir), a.Y}, dir)
 	}
+
 	for y := a.Y; y != b.Y; y += sign(b.Y - y) {
 		dir := uint8(down)
 		if b.Y < y {
@@ -246,8 +252,10 @@ func (c *canvas) crosses(p point, dir uint8, id edgeID) bool {
 // route, or nil when there is no way
 func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 	const turn = 4 // a turn costs as much as this many steps
+
 	// and crossing the cell of another edge's marker as this many
 	const marker = 8
+
 	// and crossing the line of another edge as this many
 	const crossing = 8
 	if len(c.rows) == 0 {
@@ -271,6 +279,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 			heap.Push(&queue, costItem{k, s.cost})
 		}
 	}
+
 	end := -1
 	for queue.Len() > 0 {
 		item := heap.Pop(&queue).(costItem)
@@ -321,6 +330,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 			heap.Push(&queue, costItem{nk, next})
 		}
 	}
+
 	if end < 0 {
 		return nil
 	}
@@ -329,6 +339,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 		cell := k / 4
 		cells = append(cells, point{cell % w, cell / w})
 	}
+
 	// back to front, keeping only the corners
 	var corners []point
 	for i := len(cells) - 1; i >= 0; i-- {
@@ -341,6 +352,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 		}
 		corners = append(corners, cells[i])
 	}
+
 	return corners
 }
 
@@ -425,6 +437,7 @@ func (c *canvas) markCell(end, next point, node *layout.Node, id edgeID, marker 
 	if !marker || out == 0 {
 		return
 	}
+
 	// only when the line runs straight through it
 	if d := (next.X-end.X)*dx(out) + (next.Y-end.Y)*dy(out); d < 2 || next.X != end.X && next.Y != end.Y {
 		return

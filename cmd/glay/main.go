@@ -128,6 +128,7 @@ func main() {
 		errorf("unknown colors %q", *colors)
 		os.Exit(1)
 	}
+
 	if *bg != "" {
 		var ok bool
 		textOpts.Background, ok = layout.ParseColor(*bg)
@@ -259,6 +260,7 @@ func main() {
 		errorf("unknown preset %q", *quality)
 		os.Exit(1)
 	}
+
 	switch *align {
 	case "balanced":
 	case "left", "top":
@@ -269,6 +271,7 @@ func main() {
 		errorf("unknown alignment %q", *align)
 		os.Exit(1)
 	}
+
 	switch *outformat {
 	case "txt", "text", "ans", "ansi":
 		opts.ForText = true
@@ -282,6 +285,7 @@ func main() {
 	default:
 		err = fmt.Errorf("unknown algorithm %q", *algorithm)
 	}
+
 	if err != nil {
 		errorf("layout failed: %v", err)
 		os.Exit(1)

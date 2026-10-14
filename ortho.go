@@ -13,6 +13,7 @@ import (
 func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 	stepOut(graph, pad)
 	arcEnds := slotEnds(graph, pad, pack)
+
 	// arcs go straight up from where their ends moved
 	for _, edge := range arcEnds {
 		edge.Path[1].X, edge.Path[2].X = edge.Path[0].X, edge.Path[3].X
@@ -20,6 +21,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 
 	channels := channelJogs(graph, rows)
 	arcs := arcRoom(graph, rows)
+
 	// tracks per channel: overlapping jogs get distinct tracks
 	for k, jogs := range channels {
 		if len(jogs) == 0 {
@@ -30,6 +32,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
 
 	}
+
 	insertJogs(graph, channels)
 
 	// whatever is still diagonal (ports, offsets) gets a jog at mid height
@@ -138,6 +141,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 	for k, list := range ends {
 		ends[k] = list[:0]
 	}
+
 	// an edge along a rank arcs over it, see the flat edges in layout.go,
 	// with both ends on the tops of its nodes, which it shares with the
 	// ends of other edges
@@ -159,6 +163,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 			ends[k] = append(ends[k], slotEnd{edge, false, edge.Path[1].X, edge.Path[3].X})
 		}
 	}
+
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
@@ -173,6 +178,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 			ends[k] = append(ends[k], slotEnd{edge, false, edge.Path[len(edge.Path)-2].X, edge.Path[len(edge.Path)-1].X})
 		}
 	}
+
 	// the edges don't change between routes
 	parallel := graph.ortho.parallel
 	if parallel == nil {
@@ -193,6 +199,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 // slotSide moves the ends in list, on side k, to their slots
 func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]int, pad Length, pack bool) {
 	slices.SortStableFunc(list, func(a, b slotEnd) int { return cmp.Compare(a.towards, b.towards) })
+
 	// merged ends take one slot a group, that of its middle end
 	followers := map[*ledge][]slotEnd{}
 	groups := map[int][]slotEnd{}
@@ -217,7 +224,9 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		followers[mid.edge] = slices.Delete(group, len(group)/2, len(group)/2+1)
 		list = append(list, mid)
 	}
+
 	slices.SortStableFunc(list, func(a, b slotEnd) int { return cmp.Compare(a.towards, b.towards) })
+
 	// slots evenly spread around the center, or packed from the left
 	// an edge padding apart
 	n := Length(len(list))
@@ -234,6 +243,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		}
 		slot = func(i int) Length { return lo + Length(i)*spacing }
 	}
+
 	// ends whose route already runs straight across the side keep
 	// that x, so the edge needs no jog; the rest take the slots, and so
 	// do merged ends, which fork from their slot. In text, edges
@@ -250,6 +260,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 			want[i], weight[i] = e.towards, 1e9
 		}
 	}
+
 	// a straight end of edges merged at their other end takes the slot
 	// nearest it, and the rest the other slots in order: an end heading
 	// past it crosses its line rather than push it off it, where the
@@ -271,6 +282,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		}
 		at[i], taken[best] = best, true
 	}
+
 	j := 0
 	for i := range list {
 		if !firm(i) {
@@ -283,6 +295,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 			}
 		}
 	}
+
 	order := make([]int, len(list))
 	for i := range order {
 		order[at[i]] = i
@@ -321,6 +334,7 @@ func (node *lnode) outlineAt(x Length, bottom bool) Vector {
 			dy *= math.Sqrt(math.Max(0, 1-(dx/rx)*(dx/rx)))
 		}
 	}
+
 	if !bottom {
 		dy = -dy
 	}
@@ -335,6 +349,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 		channels[k] = channels[k][:0]
 	}
 	graph.ortho.channels = channels
+
 	// channel below the row that contains y
 	channelAt := func(y Length) int {
 		for k := 0; k+1 < len(rows); k++ {
@@ -344,6 +359,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 		}
 		return -1
 	}
+
 	// the jogs, and where they enter and leave, in blocks; at most one
 	// for every segment that isn't vertical, so that the pointers into
 	// them stay put
@@ -355,6 +371,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 			}
 		}
 	}
+
 	block := slices.Grow(graph.ortho.block[:0], segments)
 	xs := slices.Grow(graph.ortho.xs[:0], 2*segments)
 	graph.ortho.block, graph.ortho.xs = block, xs
@@ -376,6 +393,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 			if k < 0 || rows[k+1][0] > bottom.Y+0.5 {
 				continue // not a rank-to-rank segment
 			}
+
 			// each end its own slice, which appending copies out
 			xs = append(xs, top.X, bottom.X)
 			n := len(xs)
@@ -384,6 +402,7 @@ func channelJogs(graph *lgraph, rows [][2]Length) [][]*jog {
 			channels[k] = append(channels[k], &block[len(block)-1])
 		}
 	}
+
 	return channels
 }
 
@@ -398,6 +417,7 @@ func arcRoom(graph *lgraph, rows [][2]Length) []Length {
 		if edge.From == edge.To || !edge.flat || len(edge.Path) != 4 {
 			continue
 		}
+
 		// the channel above the rank of the edge, wherever the arc reaches
 		if y := edge.Path[1].Y; y < edge.Path[0].Y {
 			r := slices.IndexFunc(rows, func(row [2]Length) bool { return row[0] <= edge.From.Center.Y && edge.From.Center.Y <= row[1] })
@@ -407,9 +427,11 @@ func arcRoom(graph *lgraph, rows [][2]Length) []Length {
 			}
 		}
 	}
+
 	if !graph.ForText {
 		return arcs
 	}
+
 	// text draws the arcs on rows of their own, below the nodes of the
 	// rank above with a row between
 	for k := range arcs {
@@ -431,6 +453,7 @@ func arcRoom(graph *lgraph, rows [][2]Length) []Length {
 			}
 		}
 	}
+
 	return arcs
 }
 
@@ -451,6 +474,7 @@ func shareJogs(graph *lgraph, jogs []*jog) (_ []*jog, shared map[*jog][]*jog) {
 		default:
 			return false
 		}
+
 		f, ok := first[id]
 		if !ok {
 			first[id] = j
@@ -483,6 +507,7 @@ func splitOpposite(jogs []*jog) []*jog {
 			}
 		}
 	}
+
 	return jogs
 }
 
@@ -546,6 +571,7 @@ func (o *jogOrder) near(xs, ys []Length) bool {
 			}
 		}
 	}
+
 	return false
 }
 
@@ -569,6 +595,7 @@ func (o *jogOrder) findAbove() {
 			}
 		}
 	}
+
 	slices.SortFunc(exits, func(a, b jogExit) int { return cmp.Compare(a.x, b.x) })
 	o.exits = exits
 	for i, a := range jogs {
@@ -616,6 +643,7 @@ func (o *jogOrder) splitCycles() {
 				break
 			}
 		}
+
 		if widest == nil {
 			return
 		}
@@ -631,6 +659,7 @@ func (o *jogOrder) splitCycles() {
 				break
 			}
 		}
+
 		if !found {
 			return
 		}
@@ -656,6 +685,7 @@ func (o *jogOrder) topological() []int {
 			}
 		}
 	}
+
 	left := make([]int, n)
 	for i := range left {
 		left[i] = i
@@ -669,6 +699,7 @@ func (o *jogOrder) topological() []int {
 				break
 			}
 		}
+
 		p := left[pick]
 		order = append(order, p)
 		left = slices.Delete(left, pick, pick+1)
@@ -678,6 +709,7 @@ func (o *jogOrder) topological() []int {
 			}
 		}
 	}
+
 	return order
 }
 
@@ -696,6 +728,7 @@ func (o *jogOrder) leastCrossings(order []int) []int {
 		}
 		return n
 	}
+
 	pos := make([]int, n)
 	for i, p := range order {
 		pos[p] = i
@@ -729,13 +762,16 @@ func placeTracks(graph *lgraph, rows [][2]Length, arc Length, k int, jogs []*jog
 		}
 		tracks = max(tracks, track[i]+1)
 	}
+
 	top, bottom := rows[k][1], rows[k+1][0]-arc
+
 	// tracks are a pad apart, or a cell apart in text, a line or a
 	// column sideways, where the channel runs across the columns
 	step := pad
 	if graph.ForText {
 		step = graph.cell().Y
 	}
+
 	// above arcs, the arrows are below them, so tracks go right above,
 	// high in the channel; and next to the top or bottom of a cluster,
 	// which text draws on a row of its own, where the arrows or bends
@@ -774,11 +810,13 @@ func placeTracks(graph *lgraph, rows [][2]Length, arc Length, k int, jogs []*jog
 		case low:
 			j.y = top + Length(track[i]+1)*spacing
 		}
+
 		for _, o := range shared[j] {
 			o.y = j.y
 			placed = append(placed, o)
 		}
 	}
+
 	return placed
 }
 
@@ -854,10 +892,12 @@ func siftOrder[J any](order []J, cost func(above, below J) int, fixed func(above
 				order, moved = slices.Insert(rest, best, j), true
 			}
 		}
+
 		if !moved {
 			break
 		}
 	}
+
 	return order
 }
 
@@ -869,6 +909,7 @@ func jogCycle[J comparable](jogs []J, above func(i, k int) bool) []J {
 		open
 		done
 	)
+
 	// by index in jogs, which holds each jog once
 	state := make([]uint8, len(jogs))
 	stack, cycle := make([]J, 0, len(jogs)), []J(nil)
@@ -891,10 +932,12 @@ func jogCycle[J comparable](jogs []J, above func(i, k int) bool) []J {
 				}
 			}
 		}
+
 		stack = stack[:len(stack)-1]
 		state[i] = done
 		return false
 	}
+
 	for i := range jogs {
 		if state[i] == unseen && visit(i) {
 			return cycle
@@ -922,6 +965,7 @@ func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length 
 		sum, weight float64
 		n           int
 	}
+
 	// most sides have few ends
 	var buf [16]block
 	blocks := buf[:0]
@@ -935,6 +979,7 @@ func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length 
 			blocks = append(blocks[:len(blocks)-2], block{a.sum + b.sum, a.weight + b.weight, a.n + b.n})
 		}
 	}
+
 	xs = xs[:0]
 	for _, b := range blocks {
 		y := min(max(b.sum/b.weight, float64(lo)), float64(hi-Length(len(want)-1)*gap))
@@ -942,6 +987,7 @@ func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length 
 			xs = append(xs, Length(y+float64(len(xs))*float64(gap)))
 		}
 	}
+
 	return xs
 }
 
@@ -992,6 +1038,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 			count[g]++
 		}
 	}
+
 	merges := func(g group) bool { return g.node != nil && count[g] > 1 }
 	var both []*ledge
 	for _, e := range edges {
@@ -999,6 +1046,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 			both = append(both, e)
 		}
 	}
+
 	// all at once, as dropping one leaves another merging; groups only
 	// shrink, so no edge comes to merge at both ends
 	for _, e := range both {
@@ -1025,6 +1073,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 				m[i] = ids[g]
 			}
 		}
+
 		if m != [2]int{} {
 			merged[e] = m
 		}
@@ -1049,6 +1098,7 @@ func (graph *lgraph) shiftBelow(y, d Length) {
 			edge.LabelPos.Y += d
 		}
 	}
+
 	for _, cluster := range graph.Clusters {
 		if cluster.TopLeft.Y > y {
 			cluster.TopLeft.Y += d
@@ -1080,6 +1130,7 @@ func offFrames(graph *lgraph, crossed func(x0, x1 Length) bool, top, bottom Leng
 			}
 		}
 	}
+
 	return top, bottom, lower, upper
 }
 
@@ -1108,6 +1159,7 @@ func aroundNode(node *lnode, port Compass, end, next, far Vector, pad Length) []
 	default:
 		return nil
 	}
+
 	// a pad further out than the ends at side ports step out, see
 	// stepOut, which turn where they did
 	x := node.Right() + 2*pad

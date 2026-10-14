@@ -46,6 +46,7 @@ func TableRecord(label string, vertical bool) (string, bool) {
 		}
 		table = n
 	}
+
 	if table == nil {
 		return "", false
 	}
@@ -65,6 +66,7 @@ func TableRecord(label string, vertical bool) (string, bool) {
 		plainText(&out, table, "", Style{})
 		return escapeRecord(collapse(out.String())), true
 	}
+
 	return "", false
 }
 
@@ -96,6 +98,7 @@ func tableFields(table *html.Node) string {
 			cells = append(cells, cell)
 			only = td
 		}
+
 		switch {
 		case len(cells) != 1:
 			rows = append(rows, "{"+strings.Join(cells, "|")+"}")
@@ -107,8 +110,10 @@ func tableFields(table *html.Node) string {
 		default:
 			rows = append(rows, cells[0])
 		}
+
 		open = only != nil && !side(only, 'b')
 	}
+
 	return strings.Join(rows, "|")
 }
 
@@ -131,6 +136,7 @@ func rowsOf(table *html.Node) []*html.Node {
 			rows = append(rows, rowsOf(n)...)
 		}
 	}
+
 	return rows
 }
 
@@ -146,6 +152,7 @@ func onlyTable(td *html.Node) *html.Node {
 			return nil
 		}
 	}
+
 	return table
 }
 
@@ -201,6 +208,7 @@ func plainText(out *strings.Builder, n *html.Node, cell string, style Style) {
 			}
 			plainText(out, c, cell, style)
 		}
+
 		out.WriteString(row + "\n")
 		return
 	case n.Data == "b" || n.Data == "i" || n.Data == "u" || n.Data == "s" || n.Data == "font":
@@ -219,6 +227,7 @@ func plainText(out *strings.Builder, n *html.Node, cell string, style Style) {
 				inner.Color = color
 			}
 		}
+
 		out.WriteString(styleEnd + inner.open())
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			plainText(out, c, cell, inner)
@@ -226,6 +235,7 @@ func plainText(out *strings.Builder, n *html.Node, cell string, style Style) {
 		out.WriteString(styleEnd + style.open())
 		return
 	}
+
 	for c := n.FirstChild; c != nil; c = c.NextSibling {
 		plainText(out, c, cell, style)
 	}
@@ -242,6 +252,7 @@ func alignMark(n *html.Node, def string) string {
 	case "center":
 		return ""
 	}
+
 	return def
 }
 
@@ -258,6 +269,7 @@ func collapse(text string) string {
 			kept = append(kept, styledLine(spans)+line.Align.Mark())
 		}
 	}
+
 	return strings.Join(kept, "\n")
 }
 

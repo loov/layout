@@ -48,6 +48,7 @@ func TestEmptyNodeLabel(t *testing.T) {
 		if err := write(&out); err != nil {
 			t.Fatal(err)
 		}
+
 		// svg and graphml also have the id as an attribute, look for text
 		shown := func(id string) bool {
 			if name == "text" {
@@ -162,6 +163,7 @@ func samples(path []layout.Vector) []layout.Vector {
 			points = append(points, layout.Vector{X: a.X + (b.X-a.X)*f, Y: a.Y + (b.Y-a.Y)*f})
 		}
 	}
+
 	return points
 }
 
@@ -182,6 +184,7 @@ func TestEndLabels(t *testing.T) {
 		},
 		"force": func(g *layout.Graph) (*layout.Layout, error) { return layout.Force(g, layout.ForceOptions{}) },
 	}
+
 	for name, lay := range lays {
 		t.Run(name, func(t *testing.T) {
 			graphs, err := dot.ParseString(src)

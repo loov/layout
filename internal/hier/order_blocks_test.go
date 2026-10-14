@@ -24,6 +24,7 @@ func TestOrderRanksBlocks(t *testing.T) {
 	} {
 		graph.AddEdge(e[0], e[1])
 	}
+
 	Rank(graph)
 	graph.ByRank = []Nodes{{s, u1, u2, u3, h0, x1, x2, x3}, {n, t1, t2, t3, hub, y1, y2, y3}, {link2, link1, link3}}
 	before := graph.TotalCrossings()

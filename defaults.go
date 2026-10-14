@@ -125,5 +125,6 @@ func (graph *lgraph) endLabelRadius(label, fontName string, fontSize Length) Vec
 	case draw.IsHTMLLabel(label):
 		return graph.htmlLabelRadius(label, fontName, fontSize)
 	}
+
 	return graph.textRadius(label, fontName, fontSize)
 }

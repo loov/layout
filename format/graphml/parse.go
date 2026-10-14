@@ -39,6 +39,7 @@ func Parse(r io.Reader) ([]*layout.Graph, error) {
 		}
 		graphs = append(graphs, graph)
 	}
+
 	return graphs, nil
 }
 
@@ -79,12 +80,14 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string, di
 				node.Tooltip = value
 			}
 		}
+
 		for _, sub := range srcnode.Graph {
 			if err := convertGraph(graph, sub, keyName, directed); err != nil {
 				return err
 			}
 		}
 	}
+
 	for i, srcedge := range src.Edge {
 		if srcedge.Source == "" || srcedge.Target == "" {
 			return fmt.Errorf("graph %q: edge %d has an empty endpoint", src.ID, i)
@@ -103,8 +106,10 @@ func convertGraph(graph *layout.Graph, src *Graph, keyName map[string]string, di
 				edge.Tooltip = value
 			}
 		}
+
 		graph.AddEdge(edge)
 	}
+
 	return nil
 }
 
@@ -121,5 +126,6 @@ func attrText(attr Attr) string {
 			text.Write(chars)
 		}
 	}
+
 	return text.String()
 }

@@ -35,6 +35,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 		}
 		return total
 	}
+
 	// swap exchanges every chain node with its neighbor dir away
 	swap := func(chain Nodes, dir int) {
 		for _, v := range chain {
@@ -44,6 +45,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 			v.Pos, u.Pos = u.Pos, v.Pos
 		}
 	}
+
 	// movable reports whether every chain node has a neighbor dir away
 	// in its cluster to swap with
 	movable := func(chain Nodes, dir int) bool {
@@ -57,6 +59,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 				return false
 			}
 		}
+
 		return true
 	}
 
@@ -78,9 +81,11 @@ func OrderRanksChains(graph *Graph) (moves int) {
 				}
 			}
 		}
+
 		if !improved {
 			break
 		}
 	}
+
 	return moves
 }

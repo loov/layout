@@ -18,6 +18,7 @@ func TestMergeEdges(t *testing.T) {
 	ad.ArrowHead = layout.ArrowDot // looks different
 	ae := graph.Edge("a", "e")
 	ae.Label = "label"
+
 	// b -> f would merge with a's start and f's end: it merges at neither
 	bf, cf := graph.Edge("b", "f"), graph.Edge("c", "f")
 	bg, bh := graph.Edge("b", "g"), graph.Edge("b", "h")

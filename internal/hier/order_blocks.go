@@ -52,6 +52,7 @@ func alignBlocks(graph *Graph, flat map[*Node]Nodes) []Nodes {
 			}
 		}
 	}
+
 	var blocks []Nodes
 	for _, layer := range graph.ByRank {
 		for _, v := range layer {
@@ -65,6 +66,7 @@ func alignBlocks(graph *Graph, flat map[*Node]Nodes) []Nodes {
 			blocks = append(blocks, block)
 		}
 	}
+
 	return blocks
 }
 
@@ -120,9 +122,11 @@ func (m *blockMover) move(block Nodes) bool {
 			cost += graph.blockEdgeCrossings(block[i-1], b)
 		}
 	}
+
 	if least >= cost {
 		return false
 	}
+
 	// a node can only go where its own edges cross less than the block
 	// gains in all, so only those slots count
 	budget := cost - least
@@ -158,6 +162,7 @@ func (m *blockMover) move(block Nodes) bool {
 			m.from[i] = append(m.from[i], back)
 		}
 	}
+
 	last := n - 1
 	k := 0
 	for j, c := range m.best[last] {
@@ -190,6 +195,7 @@ func (m *blockMover) move(block Nodes) bool {
 		layer[to] = b
 		layer.assignPos()
 	}
+
 	if graph.rangeCrossings(lo, hi) < before {
 		return true
 	}
@@ -242,6 +248,7 @@ func (m *blockMover) slotCosts(b *Node, costs []float32) []float32 {
 			}
 		}
 	}
+
 	costs[0] = 0
 	for k := range others {
 		costs[0] += m.right[k]
@@ -284,6 +291,7 @@ func (m *blockMover) blockEdges(b, c *Node) {
 			m.edges = append(m.edges, blockEdge{x, y, graph.Weight(b, c) * graph.Weight(u, v)})
 		}
 	}
+
 	m.column = resize(m.column, len(upper))
 }
 
@@ -292,6 +300,7 @@ func (m *blockMover) blockEdges(b, c *Node) {
 func (m *blockMover) blockEdgeCosts(q int) []float32 {
 	costs := m.column
 	clear(costs)
+
 	// with b leftmost every edge is right of it at the top, and crosses
 	// b->c when it ends left of c; past slot p, the edges from it are
 	// left of b and cross b->c when they end right of c
@@ -303,6 +312,7 @@ func (m *blockMover) blockEdgeCosts(q int) []float32 {
 			costs[e.x+1] += e.weight
 		}
 	}
+
 	for p := 1; p < len(costs); p++ {
 		costs[p] += costs[p-1]
 	}
@@ -323,6 +333,7 @@ func (graph *Graph) blockEdgeCrossings(b, c *Node) float32 {
 			}
 		}
 	}
+
 	return total
 }
 

@@ -37,6 +37,7 @@ func RankNetworkSimplex(graph *Graph) {
 		}
 		return i
 	}
+
 	unify := func(group Nodes) {
 		if len(group) < 2 {
 			return
@@ -45,6 +46,7 @@ func RankNetworkSimplex(graph *Graph) {
 			rep[find(int(node.ID))] = find(int(group[0].ID))
 		}
 	}
+
 	for _, group := range graph.SameRank {
 		unify(group)
 	}
@@ -72,6 +74,7 @@ func RankNetworkSimplex(graph *Graph) {
 			}
 			index[node.ID] = index[r]
 		}
+
 		source, sink = -1, -1
 		if len(graph.MinRank) > 0 {
 			source = index[graph.MinRank[0].ID]
@@ -90,7 +93,9 @@ func RankNetworkSimplex(graph *Graph) {
 			}
 		}
 	}
+
 	contract()
+
 	// contracting groups can close cycles; a cycle of edges that may be
 	// flat puts its vertices on one rank, any other cycle contradicts the
 	// groups and loses an edge
@@ -103,6 +108,7 @@ func RankNetworkSimplex(graph *Graph) {
 				unify(Nodes{first[c], node})
 			}
 		}
+
 		contract()
 	}
 	edges = dropBackEdges(verts, edges)
@@ -111,6 +117,7 @@ func RankNetworkSimplex(graph *Graph) {
 	for _, e := range edges {
 		s.addEdge(e.tail, e.head, e.weight, e.minlen)
 	}
+
 	// zero weight edges keep the artificial source first and sink last
 	for v := range verts {
 		if source >= 0 && v != source {
@@ -120,6 +127,7 @@ func RankNetworkSimplex(graph *Graph) {
 			s.addEdge(int32(v), int32(sink), 0, 0)
 		}
 	}
+
 	s.run()
 
 	for _, node := range graph.Nodes {
@@ -164,6 +172,7 @@ func flatComponents(n int, edges []rankEdge) (comp []int32, count int) {
 				low[v] = min(low[v], order[w])
 			}
 		}
+
 		if low[v] == order[v] {
 			for {
 				w := stack[len(stack)-1]
@@ -176,6 +185,7 @@ func flatComponents(n int, edges []rankEdge) (comp []int32, count int) {
 			count++
 		}
 	}
+
 	for v := range n {
 		if order[v] == 0 {
 			visit(int32(v))
@@ -209,8 +219,10 @@ func dropBackEdges(n int, edges []rankEdge) []rankEdge {
 				visit(w)
 			}
 		}
+
 		state[v] = done
 	}
+
 	for v := range n {
 		if state[v] == unseen {
 			visit(int32(v))
@@ -332,6 +344,7 @@ func (s *simplex) run() {
 		}
 		s.exchange(leave, enter, side, sideIsTail)
 	}
+
 	s.normalize()
 }
 
@@ -428,6 +441,7 @@ func (s *simplex) moveSubtree(child, enter int32) {
 			}
 			s.low[v] = low
 		}
+
 		s.parent[inside] = enter
 		s.renumber(inside, p)
 		return
@@ -456,6 +470,7 @@ func (s *simplex) moveSubtree(child, enter int32) {
 		}
 		s.low[v] = low
 	}
+
 	s.parent[child] = -1
 	s.parent[outside] = enter
 	s.renumber(outside, p)
@@ -481,6 +496,7 @@ func (s *simplex) treeUpdate(v, w int32, cutvalue float32, dir bool) int32 {
 		}
 		v = s.other(p, v)
 	}
+
 	return v
 }
 
@@ -507,6 +523,7 @@ func (s *simplex) subtree(root, skip int32) []int32 {
 			s.stack = append(s.stack, w)
 		}
 	}
+
 	s.nodes = nodes
 	return nodes
 }
@@ -541,6 +558,7 @@ func (s *simplex) renumber(root int32, next int32) {
 				break
 			}
 		}
+
 		if !descended {
 			s.lim[v] = next
 			next++
@@ -591,6 +609,7 @@ func (s *simplex) initRank() {
 func (s *simplex) feasibleTree() {
 	inTree := make([]bool, s.n)
 	var members []int32
+
 	// out holds the edges leaving the tree from their tail, in those
 	// leaving from their head
 	var out, in edgeHeap
@@ -598,6 +617,7 @@ func (s *simplex) feasibleTree() {
 		if inTree[root] {
 			continue
 		}
+
 		// the members of the tree sit shift ranks below their s.rank,
 		// which is applied once the tree is complete
 		shift := int32(0)
@@ -644,6 +664,7 @@ func (s *simplex) feasibleTree() {
 			}
 			add(next)
 		}
+
 		for _, v := range members {
 			s.rank[v] += shift
 		}
@@ -687,6 +708,7 @@ func (s *simplex) treeNodes(root int32) []int32 {
 			}
 		}
 	}
+
 	return nodes
 }
 
@@ -768,6 +790,7 @@ func (s *simplex) cutValues() {
 				s.agg[v] -= s.weight[i]
 			}
 		}
+
 		if p := s.parent[v]; p >= 0 {
 			parent := s.other(p, v)
 			s.agg[parent] += s.agg[v]
@@ -805,6 +828,7 @@ func (s *simplex) enteringEdge(side []int32, sideIsTail bool) int32 {
 			if s.mark[w] == s.epoch {
 				continue // both ends on this side
 			}
+
 			// v is the tail exactly when this side is the tail side
 			if (s.tail[i] == v) == sideIsTail {
 				continue
@@ -814,6 +838,7 @@ func (s *simplex) enteringEdge(side []int32, sideIsTail bool) int32 {
 			}
 		}
 	}
+
 	return best
 }
 

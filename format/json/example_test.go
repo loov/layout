@@ -20,6 +20,7 @@ func ExampleWrite() {
 	if err := json.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// {
 	//   "directed": true,
@@ -75,6 +76,7 @@ func ExampleConvert() {
 	for _, node := range converted.Nodes {
 		fmt.Printf("%s: %vx%v at %v,%v\n", node.ID, node.Width, node.Height, node.X, node.Y)
 	}
+
 	// Output:
 	// a: 32x32 at 32,32
 	// b: 32x32 at 32,96

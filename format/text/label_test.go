@@ -257,6 +257,7 @@ func TestHugOrder(t *testing.T) {
 			g[r][x] = cell{r: ' '}
 		}
 	}
+
 	vertical := cell{r: '│', lines: up | down, owner: [4]edgeID{1, 1}}
 	horizontal := cell{r: '─', lines: left | right, owner: [4]edgeID{0, 0, 2, 2}}
 	for r := range g {
@@ -322,6 +323,7 @@ func TestHugPull(t *testing.T) {
 		}
 		g[r][8] = cell{r: '│', lines: up | down, owner: [4]edgeID{1, 1}}
 	}
+
 	g[1][1] = cell{r: '1', text: 1, keep: true}
 	g[1][2] = cell{r: '0', text: 1, keep: true}
 	hug(g, []edgeID{0, 1})
@@ -350,6 +352,7 @@ func TestLabelsDrawn(t *testing.T) {
 			}
 		}
 	}
+
 	for name, build := range examples.Graphs {
 		t.Run(name, func(t *testing.T) { check(t, build, examples.Options[name]) })
 	}
@@ -382,6 +385,7 @@ func missingLabels(l *layout.Layout, drawing string) []string {
 			}
 		}
 	}
+
 	var fields func(rec *draw.Record)
 	fields = func(rec *draw.Record) {
 		if len(rec.Fields) == 0 {
@@ -391,6 +395,7 @@ func missingLabels(l *layout.Layout, drawing string) []string {
 			fields(field)
 		}
 	}
+
 	graph := l.Graph
 	for _, node := range graph.Nodes {
 		box := l.Node(node)
@@ -402,6 +407,7 @@ func missingLabels(l *layout.Layout, drawing string) []string {
 			add(box.Label)
 		}
 	}
+
 	for _, edge := range graph.Edges {
 		if !edge.Invisible {
 			add(edge.Label)
@@ -409,6 +415,7 @@ func missingLabels(l *layout.Layout, drawing string) []string {
 			add(edge.TailLabel)
 		}
 	}
+
 	for _, cluster := range graph.Clusters {
 		if !cluster.Invisible && cluster.Label != "" {
 			add(clusterLabel(cluster))
@@ -424,6 +431,7 @@ func missingLabels(l *layout.Layout, drawing string) []string {
 			missing = append(missing, text)
 		}
 	}
+
 	slices.Sort(missing)
 	return missing
 }

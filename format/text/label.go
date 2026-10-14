@@ -36,6 +36,7 @@ func (c *canvas) edgeLabel(i int) (label string, x, y int) {
 // edgeText writes the lines of a label of edge, w cells wide, at x, y
 func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 	c.pen = pen{font: c.color(rgb(edge.FontColor))}
+
 	// each label its own id, so that hug moves it alone: merged edges,
 	// and an edge's head and tail labels, share the edge's id
 	c.owners = append(c.owners, c.drawn[edge])
@@ -50,6 +51,7 @@ func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 			}
 		}
 	}
+
 	// the blanks around the label keep lines from running into it, see
 	// free
 	for row := y - 1; row <= y+len(lines); row++ {
@@ -75,6 +77,7 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 	lines := draw.Lines(label)
 	w, h := draw.TextColumns(label), len(lines)
 	want := point{c.col(center.X), c.row(center.Y)}
+
 	// blank cells for the text, and around them no box nor other line
 	// than its own edge's
 	id := c.drawn[edge]
@@ -99,13 +102,16 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 				}
 			}
 		}
+
 		return true
 	}
+
 	// the cells of the line from the end, past the end on the box
 	cells := c.pathCells(nil, path)
 	if len(cells) > 0 {
 		cells = cells[1:]
 	}
+
 	// past halfway it reads as the other end's
 	cells = cells[:(len(cells)+1)/2]
 	for _, ring = range []bool{true, false} {
@@ -113,6 +119,7 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 			return
 		}
 	}
+
 	// no room beside its line near the end: the nearest blank cells
 	x, y := c.nearestBlank(want.X-w/2, want.Y-h/2, w, h)
 	c.edgeText(edge, lines, x, y, w)
@@ -126,6 +133,7 @@ func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want po
 		if k+1 < len(cells) && k > 0 && cells[k-1].X != cells[k+1].X && cells[k-1].Y != cells[k+1].Y {
 			continue // a turn
 		}
+
 		// beside the line: on either side of a column, above or below
 		// a row, the side nearer where the layout put it first
 		var spots []point
@@ -147,6 +155,7 @@ func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want po
 			}
 		}
 	}
+
 	return false
 }
 
@@ -173,6 +182,7 @@ func placed(x0, x1 int, line draw.Line) int {
 	case draw.Right:
 		return x1 - 1 - draw.Columns(line.Text)
 	}
+
 	return centered(x0, x1, line.Text)
 }
 
@@ -189,6 +199,7 @@ func (c *canvas) drawLabels(paths [][]point) {
 			c.edgeText(edge, lines, x, y, w)
 		}
 	}
+
 	for i, edge := range graph.Edges {
 		if edge.Invisible || len(paths[i]) < 2 {
 			continue
@@ -197,10 +208,12 @@ func (c *canvas) drawLabels(paths [][]point) {
 		c.endLabel(edge, edge.HeadLabel, at.HeadLabelCenter, reversed(paths[i]))
 		c.endLabel(edge, edge.TailLabel, at.TailLabelCenter, paths[i])
 	}
+
 	for i, cluster := range graph.Clusters {
 		if cluster.Label == "" || cluster.Invisible {
 			continue
 		}
+
 		// the label goes on the frame after tidying, see frameLabels, at
 		// the first place along the top, else along the bottom, where the
 		// lines that cross the frame fall on spaces of it; tidying keeps
@@ -229,6 +242,7 @@ func (c *canvas) drawLabels(paths [][]point) {
 				}
 			}
 		}
+
 		if placed {
 			continue
 		}
@@ -277,6 +291,7 @@ func (c *canvas) besideEdge(x, y, w, h int, path []point, id edgeID) (int, int) 
 			}
 		}
 	}
+
 	if !c.blank(bx, by, w, h) {
 		// the text would cover lines, which cuts the edges: the nearest
 		// blank place right beside its own edge instead, see freeBeside
@@ -313,12 +328,14 @@ func (c *canvas) freeBeside(x, y, w, h int, path []point) (int, int) {
 			}
 		}
 	}
+
 	slices.SortStableFunc(spots, func(a, b spot) int { return a.dist - b.dist })
 	for _, s := range spots {
 		if c.blank(s.x, s.y, w, h) {
 			return s.x, s.y
 		}
 	}
+
 	// nowhere beside the edge
 	return c.nearestBlank(x, y, w, h)
 }
@@ -335,6 +352,7 @@ func (c *canvas) nearestBlank(x, y, w, h int) (int, int) {
 			}
 		}
 	}
+
 	return x, y
 }
 
@@ -359,6 +377,7 @@ func (c *canvas) apart(x, y, w, h int, id edgeID) int {
 			}
 		}
 	}
+
 	return 3
 }
 
@@ -406,11 +425,13 @@ func (c *canvas) nearEdge(x, y, w, h int, path []point, side point) (int, int, b
 				}
 			}
 		}
+
 		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dx, y+dy, w, h) {
 			return x, y, gap <= 0
 		}
 		x, y = x+dx, y+dy
 	}
+
 	return x, y, false
 }
 
@@ -423,6 +444,7 @@ func (c *canvas) blank(x, y, w, h int) bool {
 			}
 		}
 	}
+
 	return true
 }
 
@@ -447,8 +469,10 @@ func hug(g grid, owners []edgeID) {
 				}
 			}
 		}
+
 		return own, other
 	}
+
 	// the box of every label, and of its characters without the blanks
 	// around them, and the labels in reading order, which is the order
 	// they move in, as one can take the cell another wants
@@ -461,6 +485,7 @@ func hug(g grid, owners []edgeID) {
 		}
 		boxes[id] = cellBox{point{min(b.Min.X, x), min(b.Min.Y, r)}, point{max(b.Max.X, x), max(b.Max.Y, r)}}
 	}
+
 	var ids []edgeID
 	for r, row := range g {
 		for x, c := range row {
@@ -476,6 +501,7 @@ func hug(g grid, owners []edgeID) {
 			}
 		}
 	}
+
 	// the cells of a side of b, n cells out
 	side := func(b cellBox, dir uint8, n int) []point {
 		var cells []point
@@ -497,8 +523,10 @@ func hug(g grid, owners []edgeID) {
 				cells = append(cells, point{x, r})
 			}
 		}
+
 		return cells
 	}
+
 	// shift moves the cells of b n cells toward dir
 	shift := func(b cellBox, dir uint8, n int) {
 		cells := []cell{}
@@ -512,6 +540,7 @@ func hug(g grid, owners []edgeID) {
 			i++
 		}
 	}
+
 	// passable reports whether a label in b can move over cells
 	passable := func(cells []point, b cellBox) bool {
 		return !slices.ContainsFunc(cells, func(p point) bool {
@@ -522,6 +551,7 @@ func hug(g grid, owners []edgeID) {
 			return c == nil || !free(*c) && !c.glue || c.solid
 		})
 	}
+
 	for _, id := range ids {
 		b, edge := boxes[id], owners[id]
 		if v, ok := inked[id]; ok {

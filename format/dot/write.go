@@ -39,6 +39,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 	// the drawing starts at the origin unless it reaches before it
 	lo, hi := l.Bounds()
 	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
+
 	// mirroring within the bounding box keeps coordinates in place
 	flipY := func(v layout.Vector) layout.Vector { return layout.Vector{X: v.X, Y: lo.Y + hi.Y - v.Y} }
 	pt := func(v layout.Vector) string {
@@ -83,6 +84,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 		attrs = append(attrs, lineAttrs(node.LineColor, node.FontColor, node.LineWidth, node.LineStyle, node.FillColor != nil, node.Invisible)...)
 		write("\t%s [%s];\n", quote(node.ID), strings.Join(attrs, ", "))
 	}
+
 	for i, edge := range graph.Edges {
 		at := l.Edges[i]
 		var attrs []string
@@ -106,6 +108,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 				ends = append(ends, "e,"+pt(path[n]))
 				path[n] = arrowBase(path[n], path[n-1])
 			}
+
 			// Graphviz expects 3n+1 cubic Bezier control points. Repeating
 			// each segment's ends represents the polyline without bending it.
 			points := append(ends, pt(path[0]))
@@ -123,6 +126,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 		case hasTail:
 			dir = "back"
 		}
+
 		defaultDir := "none"
 		if graph.Directed {
 			defaultDir = "forward"
@@ -161,6 +165,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 		}
 		write("\t%s %s %s [%s];\n", quote(edge.From.ID), arrow, quote(edge.To.ID), strings.Join(attrs, ", "))
 	}
+
 	var writeCluster func(cluster *layout.Cluster, indent string)
 	writeCluster = func(cluster *layout.Cluster, indent string) {
 		// Graphviz draws only subgraphs named cluster* as clusters
@@ -194,6 +199,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 		}
 		write("%s}\n", indent)
 	}
+
 	for _, cluster := range graph.Clusters {
 		if cluster.Parent == nil {
 			writeCluster(cluster, "\t")
@@ -258,6 +264,7 @@ func labelID(label string) string {
 			}
 		}
 	}
+
 	if depth != 0 {
 		return quote(label)
 	}

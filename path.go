@@ -35,6 +35,7 @@ func appendFlatPath(out, path Path, radius, maxDeviation Length) Path {
 		}
 		return Vector{X: a.X + (b.X-a.X)*d/l, Y: a.Y + (b.Y-a.Y)*d/l}
 	}
+
 	out = append(out, path[0])
 	for i := 1; i+1 < len(path); i++ {
 		prev, p, next := path[i-1], path[i], path[i+1]
@@ -43,6 +44,7 @@ func appendFlatPath(out, path Path, radius, maxDeviation Length) Path {
 		mid := Vector{X: (in.X + 2*p.X + exit.X) / 4, Y: (in.Y + 2*p.Y + exit.Y) / 4}
 		out = append(out, in, mid, exit)
 	}
+
 	return append(out, path[len(path)-1])
 }
 
@@ -60,6 +62,7 @@ func offsetPath(path Path, dx Length, from, to *lnode, along bool) Path {
 			out[i] = Vector{X: p.X, Y: p.Y + dx}
 		}
 	}
+
 	switch {
 	case along:
 		// straight across, at its own height on both
@@ -69,6 +72,7 @@ func offsetPath(path Path, dx Length, from, to *lnode, along bool) Path {
 		out[0] = from.Boundary(out[1])
 		out[len(out)-1] = to.Boundary(out[len(out)-2])
 	}
+
 	return out
 }
 
@@ -117,5 +121,6 @@ func (path Path) nearest(p Vector) (Vector, bool) {
 			best, bestDist = q, d
 		}
 	}
+
 	return best, bestDist < math.Inf(1)
 }

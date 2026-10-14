@@ -273,6 +273,7 @@ func (context *parserContext) parse(src *ast.Graph) {
 			node.Label = strings.TrimPrefix(node.Label, literalMark)
 		}
 	}
+
 	for _, edge := range context.Graph.Edges {
 		edge.FromField, edge.FromPort = resolvePort(edge.From, edge.FromField, edge.FromPort)
 		edge.ToField, edge.ToPort = resolvePort(edge.To, edge.ToField, edge.ToPort)
@@ -295,6 +296,7 @@ func (context *parserContext) pin() {
 		}
 		top = max(top, node.Pos.Y+node.MinSize.Y/2)
 	}
+
 	// the bounding box, when present, gives the exact extent; mirroring
 	// within it keeps coordinates in place
 	for _, attr := range context.allAttrs {
@@ -308,6 +310,7 @@ func (context *parserContext) pin() {
 			}
 		}
 	}
+
 	flip := func(v *layout.Vector) { v.Y = top - v.Y }
 	for _, node := range graph.Nodes {
 		flip(node.Pos)
@@ -365,8 +368,10 @@ func parseSpline(s string) []layout.Vector {
 			points = append(points, p)
 		}
 	}
+
 	// Repeated controls encode straight segments in our DOT output.
 	points = slices.Compact(points)
+
 	// The spline stops at the arrow base; replace the base with the tip,
 	// which lies on the line continuing the spline.
 	if start != nil {
@@ -487,10 +492,12 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 				cluster.Invisible = hasStyle(attr.Val, "invis")
 			}
 		}
+
 		if filled && cluster.FillColor == nil {
 			cluster.FillColor = color
 		}
 	}
+
 	// rank set on an enclosing graph before this subgraph is inherited
 	switch lastAttr(subcontext.allAttrs, "rank") {
 	case "same":
@@ -502,6 +509,7 @@ func (context *parserContext) parseSubgraph(src *ast.Subgraph) *parserContext {
 	case "max", "sink":
 		context.Graph.MaxRank = appendMissing(context.Graph.MaxRank, subcontext.touched)
 	}
+
 	return subcontext
 }
 
@@ -539,6 +547,7 @@ func subgraphAttrs(stmts []ast.Stmt) []*ast.Attr {
 			}
 		}
 	}
+
 	return attrs
 }
 
@@ -695,6 +704,7 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		if filled && node.FillColor == nil && color != nil {
 			node.FillColor = color
 		}
+
 		// the shape's outlines unless set otherwise
 		if !outlines.set {
 			node.Peripheries = outlines.shape
@@ -780,6 +790,7 @@ func applyEdgeAttrs(graphID string, edge *layout.Edge, attrs []*ast.Attr) {
 		case "forward":
 			edge.ArrowHead, edge.ArrowTail = layout.ArrowNormal, layout.ArrowNone
 		}
+
 		if head != "" {
 			edge.ArrowHead = head
 		}

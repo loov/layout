@@ -22,6 +22,7 @@ func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(la
 		}
 		return
 	}
+
 	// dividers first, so that field texts win when rows are too coarse
 	for i, field := range rec.Fields {
 		if i == 0 {
@@ -39,6 +40,7 @@ func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(la
 			}
 		}
 	}
+
 	for _, field := range rec.Fields {
 		c.record(field, origin, col, row)
 	}
@@ -90,6 +92,7 @@ func (c *canvas) nodeBox(node *layout.Node) cellBox {
 		x, y := c.col(box.Center.X), c.row(box.Center.Y)
 		return cellBox{point{x, y}, point{x, y}}
 	}
+
 	// a double outline takes the cells of a single one, so the room the
 	// layout reserves for extra outlines stays outside the box
 	inset := layout.Length(max(node.Peripheries-1, 0)) * peripheryGap
@@ -100,6 +103,7 @@ func (c *canvas) nodeBox(node *layout.Node) cellBox {
 	if box.Shape == layout.None {
 		w, h = draw.PlainBox(label) // no outline to keep the text off
 	}
+
 	// the box must hold the label and have distinct edges
 	if box.Shape != layout.Record {
 		x1 = max(x1, x0+w)
@@ -176,6 +180,7 @@ func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd)
 			bottom = append(bottom, e)
 		}
 	}
+
 	for i, edge := range c.l.Graph.Edges {
 		path := c.l.Edges[i].Path
 		if len(path) == 0 {
@@ -190,6 +195,7 @@ func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd)
 			add(back)
 		}
 	}
+
 	return top, bottom
 }
 
@@ -215,12 +221,14 @@ func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
 			lo, hi = min(lo, x), max(hi, x)
 		}
 	}
+
 	switch {
 	case hi < x1-1:
 		x1--
 	case lo > x0+1:
 		x0++
 	}
+
 	return x0, x1
 }
 
@@ -266,9 +274,11 @@ func (c *canvas) drawNode(node *layout.Node) {
 			}
 		}
 	}
+
 	if node.Invisible {
 		return
 	}
+
 	// rounded corners for round shapes, Auto included as it is drawn as
 	// an ellipse; there are no rounded double corners
 	style := "┌┐└┘─│"
@@ -280,6 +290,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 	case box.Shape == layout.Circle, box.Shape == layout.Ellipse, box.Shape == layout.Auto:
 		style = "╭╮╰╯─│"
 	}
+
 	switch box.Shape {
 	case layout.Octagon:
 		c.octagon(x0, y0, x1, y1)
@@ -298,6 +309,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 			c.cornerDiamond(x0, y0, x1, y1)
 			top = y0 + (y1-y0+1)/2 - (len(lines)+1)/2
 		}
+
 		for i, line := range lines {
 			c.text(placed(x0, x1, line), top+i, line.Text)
 		}
@@ -305,6 +317,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 	default:
 		c.rect(x0, y0, x1, y1, style)
 	}
+
 	if box.Shape == layout.Record {
 		rec := layoutRecord(graph, node, box)
 		c.evenRecord(rec, box.TopLeft())
@@ -459,6 +472,7 @@ func (c *canvas) stepDiamond(x0, y0, x1, y1 int) {
 		c.set(mid+2*r, y1-r, '╱')
 		c.set(mid+1+2*r, y1-r, '▔')
 	}
+
 	c.set(x0, y0+k, '╱')
 	c.set(x1, y0+k, '╲')
 	c.set(x0, y0+k+1, '╲')
@@ -534,11 +548,13 @@ func (c *canvas) pointsFor(node *layout.Node) bool {
 		default:
 			side = 2
 		}
+
 		if c.sideways() {
 			side = [4]int{2, 3, 0, 1}[side]
 		}
 		sides[side]++
 	}
+
 	for _, edge := range c.l.Graph.Edges {
 		if edge.Invisible {
 			continue
@@ -550,6 +566,7 @@ func (c *canvas) pointsFor(node *layout.Node) bool {
 			add(edge.From)
 		}
 	}
+
 	return max(sides[0], sides[1], sides[2], sides[3]) <= 1
 }
 
@@ -584,6 +601,7 @@ func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 			}
 			return b.Min.Y + k - 1, b.Min.Y + k
 		}
+
 		// the points, see diamond
 		k := (b.Max.Y - b.Min.Y) / 2
 		if along == 0 {
@@ -591,5 +609,6 @@ func (c *canvas) sideCells(node *layout.Node, along int) (lo, hi int) {
 		}
 		return b.Min.Y + k, b.Min.Y + k
 	}
+
 	return lo, hi
 }

@@ -102,6 +102,7 @@ func newWorkGraph(def *Graph) *lgraph {
 		}
 		return w
 	}
+
 	group := func(defs []*Node) []*lnode {
 		var out []*lnode
 		for _, n := range defs {
@@ -109,6 +110,7 @@ func newWorkGraph(def *Graph) *lgraph {
 		}
 		return out
 	}
+
 	g.Nodes = group(def.Nodes)
 
 	edges := make(map[*Edge]*ledge, len(def.Edges))
@@ -131,6 +133,7 @@ func newWorkGraph(def *Graph) *lgraph {
 		}
 		g.Clusters = append(g.Clusters, clusters[c])
 	}
+
 	for c, w := range clusters {
 		w.Nodes = group(c.Nodes)
 		if c.Parent != nil {
@@ -181,6 +184,7 @@ func (g *lgraph) result() *Layout {
 			Label:    n.DefaultLabel(),
 		})
 	}
+
 	for _, e := range g.Edges {
 		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: MergeGroups{Start: g.merged[e][0], End: g.merged[e][1]}}
 		if e.Label != "" {
@@ -195,6 +199,7 @@ func (g *lgraph) result() *Layout {
 		}
 		l.Edges = append(l.Edges, path)
 	}
+
 	for _, c := range g.Clusters {
 		l.Clusters = append(l.Clusters, ClusterBox{TopLeft: c.TopLeft, BottomRight: c.BottomRight})
 	}
@@ -210,6 +215,7 @@ func (l *Layout) work() *lgraph {
 		n.Radius = Vector{box.Size.X / 2, box.Size.Y / 2}
 		n.Shape, n.FontSize = box.Shape, box.FontSize
 	}
+
 	for i, e := range g.Edges {
 		path := l.Edges[i]
 		e.Path = path.Path
@@ -219,6 +225,7 @@ func (l *Layout) work() *lgraph {
 		e.tail = endLabel{path.TailLabelCenter, Vector{path.TailLabelSize.X / 2, path.TailLabelSize.Y / 2}}
 		e.FontSize = path.FontSize
 	}
+
 	for i, c := range g.Clusters {
 		c.TopLeft, c.BottomRight = l.Clusters[i].TopLeft, l.Clusters[i].BottomRight
 	}
@@ -247,6 +254,7 @@ func (g *lgraph) Bounds() (min, max Vector) {
 			}
 		}
 	}
+
 	min, max = b.Min, b.Max
 	if b.empty() { // nothing to bound
 		return Vector{}, Vector{}

@@ -41,6 +41,7 @@ func flipBackwardEdges(graph *Graph) {
 			}
 		}
 	}
+
 	for _, edge := range backward {
 		src, dst := edge[0], edge[1]
 		weight, minlen := graph.Weight(src, dst), graph.MinLen(src, dst)
@@ -62,6 +63,7 @@ func extractFlatEdges(graph *Graph) {
 			}
 		}
 	}
+
 	for _, edge := range graph.Flat {
 		src, dst := edge[0], edge[1]
 		src.Out.Remove(dst)
@@ -100,6 +102,7 @@ func RankCompact(graph *Graph) {
 			}
 		}
 	}
+
 	ranks := make([]int, 0, len(used))
 	for r := range used {
 		ranks = append(ranks, r)

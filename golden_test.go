@@ -118,6 +118,7 @@ func TestWriteDot(t *testing.T) {
 	if err := dot.Write(&got, l); err != nil {
 		t.Fatal(err)
 	}
+
 	// round trip: the output must parse again with the same nodes and edges
 	parsed, err := dot.Parse(bytes.NewReader(got.Bytes()))
 	if err != nil {
@@ -193,9 +194,11 @@ func TestDiagnostics(t *testing.T) {
 			t.Logf("%s: %s", name, line)
 		}
 	}
+
 	for _, name := range names {
 		diagnose(&out, name, examples.Graphs[name](), examples.Options[name])
 	}
+
 	// the fixtures by their path in testdata, as examples share their names
 	fixture := func(file string) string { return "graphviz/" + strings.TrimSuffix(filepath.Base(file), ".gv") }
 	for _, file := range files {
@@ -216,6 +219,7 @@ func TestDiagnostics(t *testing.T) {
 		merged.MergeEdges = true
 		diagnose(&text, name+"_merged", merged, layout.Options{ForText: true})
 	}
+
 	compareGolden(t, filepath.Join("testdata", "diagnostics_text.txt"), text.Bytes())
 }
 
@@ -236,6 +240,7 @@ func diffLines(want, got []byte) string {
 			fmt.Fprintf(&out, "line %d:\n\twant: %s\n\tgot:  %s\n", i+1, w, g)
 		}
 	}
+
 	return out.String()
 }
 

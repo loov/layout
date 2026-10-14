@@ -134,6 +134,7 @@ func roundedPath(path layout.Path, radius, maxDeviation layout.Length) string {
 		line.WriteString("L" + vec(in.X, in.Y))
 		line.WriteString("Q" + vec(p.X, p.Y) + vec(out.X, out.Y))
 	}
+
 	last := path[len(path)-1]
 	line.WriteString("L" + vec(last.X, last.Y))
 	return line.String()
@@ -148,6 +149,7 @@ func markerID(arrow layout.Arrow) string {
 	case layout.ArrowVee, layout.ArrowDot, layout.ArrowODot:
 		return string(arrow)
 	}
+
 	return string(layout.ArrowNormal)
 }
 
@@ -210,6 +212,7 @@ func (svg *writer) writeText(graph *layout.Graph, text string, center layout.Vec
 		case draw.Right:
 			anchor, x = "end", center.X+inset
 		}
+
 		svg.write("<text text-anchor='%v' alignment-baseline='middle' x='%v' y='%v'", anchor, x, top)
 		if fontSize != 0 {
 			svg.write(" font-size='%v'", fontSize)
@@ -253,6 +256,7 @@ func (svg *writer) writeSpan(span draw.Span) {
 		svg.write("%v", escapeString(span.Text))
 		return
 	}
+
 	// alignment-baseline is not inherited, so it is the text's again
 	svg.write("<tspan alignment-baseline='middle' %v>%v</tspan>", strings.Join(attrs, " "), escapeString(span.Text))
 }
@@ -407,6 +411,7 @@ func Write(w io.Writer, l *layout.Layout) error {
 			svg.writeLabel(graph, box.Label, box.Center, radius, box.FontSize, node.FontName, node.FontColor)
 		}
 	}
+
 	svg.finishG()
 	svg.finish()
 
@@ -442,6 +447,7 @@ func (svg *writer) writeShape(box layout.NodeBox, radius layout.Vector) string {
 			}
 			svg.write("%v,%v", p.X, p.Y)
 		}
+
 		svg.write("'")
 		return "polygon"
 	default:
@@ -461,6 +467,7 @@ func (svg *writer) writeStroke(width layout.Length, style layout.LineStyle) {
 	case layout.Dotted:
 		svg.write(" stroke-dasharray='%v %v' stroke-linecap='round'", width, 2*width)
 	}
+
 	svg.write(" stroke-width='%v'", width)
 }
 
@@ -498,6 +505,7 @@ func renderXML(out *strings.Builder, n *html.Node) {
 	default:
 		return
 	}
+
 	named := xmlName(n.Data)
 	if named {
 		out.WriteString("<" + n.Data)
@@ -508,6 +516,7 @@ func renderXML(out *strings.Builder, n *html.Node) {
 				out.WriteString(" " + a.Key + `="` + escapeString(a.Val) + `"`)
 			}
 		}
+
 		if n.FirstChild == nil {
 			out.WriteString("/>")
 			return
@@ -549,6 +558,7 @@ func sanitizeNode(n *html.Node) {
 		sanitizeNode(c)
 		c = next
 	}
+
 	if n.Type != html.ElementNode {
 		return
 	}

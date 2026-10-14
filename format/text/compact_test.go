@@ -55,6 +55,7 @@ func checkAttached(t *testing.T, drawing string) {
 		}
 		return row[x]
 	}
+
 	for y, line := range lines {
 		for x, r := range []rune(line) {
 			var from rune

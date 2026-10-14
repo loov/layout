@@ -14,6 +14,7 @@ import (
 // doesn't look at labels, so the caller places them after.
 func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	st := &straightener{graph: graph, graphdef: graphdef, cell: float32(graphdef.cell().X)}
+
 	// the nodes a node has edges to before or after it, see neighbors
 	st.real = make([]bool, len(graph.ByRank))
 	for r, layer := range graph.ByRank {
@@ -22,6 +23,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 	wide := st.width()
 	bends := st.countBends()
 	crossings, overlaps := st.measure()
+
 	// the node of the last move kept; the nodes after it were tried
 	// where they are now, so after a pass they would only fail again
 	last := len(graph.Nodes)
@@ -53,6 +55,7 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 				st.restore(before)
 			}
 		}
+
 		if !improved {
 			break
 		}
@@ -97,6 +100,7 @@ func byStart(a, b axisRun) int {
 	case a.lo > b.lo:
 		return 1
 	}
+
 	return 0
 }
 
@@ -118,6 +122,7 @@ func (st *straightener) countBends() (bends int) {
 			}
 		}
 	}
+
 	return bends
 }
 
@@ -136,7 +141,9 @@ func (st *straightener) measure() (crossings, overlaps int) {
 			}
 		}
 	}
+
 	st.horizontal, st.vertical = horizontal, vertical
+
 	// sorted, a run meets only the runs that start within its span
 	slices.SortFunc(horizontal, byStart)
 	slices.SortFunc(vertical, byStart)
@@ -156,6 +163,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 			}
 		}
 	}
+
 	// runs of different edges along each other
 	for _, runs := range [][]axisRun{horizontal, vertical} {
 		for i, r := range runs {
@@ -163,6 +171,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 				if q.at != r.at || q.lo >= r.hi {
 					break
 				}
+
 				// merged looks up maps, so it goes last
 				if r.edge != q.edge && !st.merged(r.edge, q.edge) {
 					overlaps++
@@ -170,6 +179,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 			}
 		}
 	}
+
 	// runs along the frame of a cluster, within half a cell of it, which
 	// text draws on it
 	cell := graphdef.cell()
@@ -187,6 +197,7 @@ func (st *straightener) measure() (crossings, overlaps int) {
 			}
 		}
 	}
+
 	return crossings, overlaps
 }
 
@@ -232,10 +243,12 @@ func (st *straightener) neighbors(node *hier.Node, before bool) []*hier.Node {
 			}
 			n = ends[0]
 		}
+
 		if !n.Virtual || n.Carrier && !st.graphdef.MergeEdges {
 			out = append(out, n)
 		}
 	}
+
 	st.adjacent = out
 	return out
 }
@@ -253,6 +266,7 @@ func (st *straightener) balanced(node *hier.Node) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -289,6 +303,7 @@ func (st *straightener) wants(node *hier.Node) []float32 {
 			}
 		}
 	}
+
 	for _, k := range []float32{1, -1, 2, -2} {
 		wants = append(wants, node.Center.X+k*st.cell)
 	}

@@ -48,6 +48,7 @@ func spansFrom(line string, style Style) ([]Span, Style) {
 			text.Reset()
 		}
 	}
+
 	for len(line) > 0 {
 		at := strings.Index(line, esc)
 		if at < 0 || at+1 == len(line) {
@@ -75,8 +76,10 @@ func spansFrom(line string, style Style) ([]Span, Style) {
 				style.Color, rest = rest, ""
 			}
 		}
+
 		line = rest
 	}
+
 	flush()
 	return spans, style
 }
@@ -104,6 +107,7 @@ func (style Style) open() string {
 			out.WriteString(esc + on.code)
 		}
 	}
+
 	if style.Color != "" {
 		out.WriteString(esc + "c" + style.Color + esc)
 	}
@@ -121,6 +125,7 @@ func styledLine(spans []Span) string {
 			out.WriteString(span.Text)
 		}
 	}
+
 	return out.String()
 }
 
@@ -143,10 +148,12 @@ func collapseSpaces(spans []Span) []Span {
 			}
 			text.WriteRune(r)
 		}
+
 		if text.Len() > 0 {
 			out = append(out, Span{text.String(), span.Style})
 		}
 	}
+
 	if n := len(out); n > 0 {
 		if out[n-1].Text = strings.TrimSuffix(out[n-1].Text, " "); out[n-1].Text == "" {
 			out = out[:n-1]

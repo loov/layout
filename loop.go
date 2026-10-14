@@ -35,6 +35,7 @@ func (loops *loopCount) next(edge *ledge) int {
 func loopPath(edge *ledge, width, height Length, k, n int) Path {
 	node := edge.From
 	right := node.Right() + width
+
 	// the n loops without ports stack down the right side, loop k in the
 	// k-th share of it; a single loop spans the middle half
 	share := 2 * node.Radius.Y / Length(max(n, 1))
@@ -61,6 +62,7 @@ func loopPath(edge *ledge, width, height Length, k, n int) Path {
 		if p != node.Center {
 			d = p.Sub(node.Center).Unit()
 		}
+
 		// where the ray along d leaves the grown box
 		t := Length(math.Inf(1))
 		if d.X != 0 {
@@ -71,6 +73,7 @@ func loopPath(edge *ledge, width, height Length, k, n int) Path {
 		}
 		return node.Center.Add(Vector{X: d.X * t, Y: d.Y * t})
 	}
+
 	a, b := outward(from), outward(to)
 	if from == to {
 		// both ends on one port: split the loop sideways
@@ -99,6 +102,7 @@ func loopPath(edge *ledge, width, height Length, k, n int) Path {
 			corners = append(corners, corner{math.Abs(at), p})
 		}
 	}
+
 	slices.SortFunc(corners, func(x, y corner) int { return cmp.Compare(x.at, y.at) })
 	path := []Vector{from, a}
 	for _, c := range corners {

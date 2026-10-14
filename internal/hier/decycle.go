@@ -90,6 +90,7 @@ func Decycle(graph *Graph) {
 		graph.SetMinLen(src, dst, edge.minlen)
 		graph.SetWeight(src, dst, edge.weight)
 	}
+
 	for _, node := range graph.Nodes {
 		node.In.Normalize()
 		node.Out.Normalize()

@@ -62,6 +62,7 @@ func force(graph *lgraph) {
 		index[node] = i
 		pos[i] = [2]float64{rng.Float64() * side, rng.Float64() * side}
 	}
+
 	// edges between the same nodes pull as one, so that their labels
 	// have room; a labeled edge rests longer by its label
 	pairs := newPairs(graph)
@@ -98,6 +99,7 @@ func force(graph *lgraph) {
 				disp[j][1] -= float64(dy * f)
 			}
 		}
+
 		for e, edge := range graph.Edges {
 			i, j := index[edge.From], index[edge.To]
 			if i == j {
@@ -108,6 +110,7 @@ func force(graph *lgraph) {
 			if d < 1e-3 {
 				continue
 			}
+
 			// attraction d²/rest, normalized by d
 			f := d * edge.Weight / rest[e] / float64(pairs.count[pairs.key(edge)])
 			disp[i][0] -= float64(dx * f)
@@ -115,6 +118,7 @@ func force(graph *lgraph) {
 			disp[j][0] += float64(dx * f)
 			disp[j][1] += float64(dy * f)
 		}
+
 		for i := range pos {
 			d := hypot(disp[i][0], disp[i][1])
 			if d > temperature {
@@ -124,6 +128,7 @@ func force(graph *lgraph) {
 			pos[i][0] += disp[i][0]
 			pos[i][1] += disp[i][1]
 		}
+
 		temperature *= 0.98
 	}
 
@@ -167,6 +172,7 @@ func force(graph *lgraph) {
 			Y: Length(pos[i][1]-minY) + graph.RowPadding,
 		}
 	}
+
 	for _, edge := range graph.Edges {
 		edge.Path, edge.LabelPos = nil, Vector{}
 	}

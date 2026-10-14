@@ -37,6 +37,7 @@ func AddClusterBorders(graph *Graph) {
 			}
 		}
 	}
+
 	// rank spans from the real members
 	rankSpan := func(cluster *Cluster) {
 		cluster.MinRank, cluster.MaxRank = math.MaxInt, -1
@@ -45,9 +46,11 @@ func AddClusterBorders(graph *Graph) {
 			cluster.MaxRank = max(cluster.MaxRank, node.Rank)
 		}
 	}
+
 	for _, cluster := range graph.Clusters {
 		rankSpan(cluster)
 	}
+
 	// a virtual node belongs to the innermost cluster of either end whose
 	// ranks it is on: a chain is inside the cluster it leaves until the
 	// cluster's last rank, and inside the one it enters from its first
@@ -122,6 +125,7 @@ func clusterCoef(layer Nodes) {
 			count[node.Cluster]++
 		}
 	}
+
 	for _, node := range layer {
 		if node.Cluster != nil {
 			node.Coef = sum[node.Cluster] / float32(count[node.Cluster])
@@ -137,6 +141,7 @@ func borderSide(node *Node) int {
 	case node.BorderRight:
 		return 1
 	}
+
 	return 0
 }
 
@@ -151,6 +156,7 @@ func orderClusters(graph *Graph) {
 	for i, c := range graph.Clusters {
 		clusterIndex[c] = i
 	}
+
 	// bary is the mean position of a node's neighbors in the ranks above
 	// and below, which decides on which side of a cluster a node at the
 	// cluster's mean position goes
@@ -162,11 +168,13 @@ func orderClusters(graph *Graph) {
 				n++
 			}
 		}
+
 		if n == 0 {
 			return float64(node.Pos)
 		}
 		return sum / float64(n)
 	}
+
 	for _, layer := range graph.ByRank {
 		// cluster key: mean position and neighbor position of its nodes in
 		// this layer, for the cluster and each enclosing cluster; borders
@@ -183,6 +191,7 @@ func orderClusters(graph *Graph) {
 				}
 			}
 		}
+
 		// node key: means from the outermost cluster inward, each followed
 		// by the cluster's index so that siblings with equal means don't
 		// mix, then the node's own position; borders sort to the ends of
@@ -200,10 +209,12 @@ func orderClusters(graph *Graph) {
 			}
 			keys[i] = append(key, last, bary(node))
 		}
+
 		index := make(map[*Node]int, len(layer))
 		for i, node := range layer {
 			index[node] = i
 		}
+
 		// a node outside a cluster whose position ties with the cluster's
 		// mean goes to the side of its neighbors, and with those tied too
 		// before all of the cluster, never among its nodes; equal keys
@@ -237,10 +248,12 @@ func AlignClusterBorders(graph *Graph) {
 		min float32
 	}
 	n := graph.NodeCount()
+
 	// class merges the borders on one side of a cluster into one position,
 	// which wants to be at target and stays gap.min left of gap.to
 	class := make([]ID, n)
 	target := make([]float32, n)
+
 	// clusters whose order contradicts another's across ranks can't line
 	// up, they stay as they are
 	stuck := map[*Cluster]bool{}
@@ -260,6 +273,7 @@ func AlignClusterBorders(graph *Graph) {
 				minLeft = min(minLeft, cluster.Left[i].Center.X)
 				maxRight = max(maxRight, cluster.Right[i].Center.X)
 			}
+
 			// widen to the least width by moving both borders out, so that
 			// the members stay centered
 			grow := max(0, cluster.MinWidth-(maxRight+right.Radius.X-minLeft+left.Radius.X))
@@ -268,6 +282,7 @@ func AlignClusterBorders(graph *Graph) {
 				gaps[left.ID] = append(gaps[left.ID], gap{right.ID, cluster.MinWidth - left.Radius.X - right.Radius.X})
 			}
 		}
+
 		for _, layer := range graph.ByRank {
 			for i := 1; i < len(layer); i++ {
 				a, b := layer[i-1], layer[i]
@@ -295,6 +310,7 @@ func AlignClusterBorders(graph *Graph) {
 				}
 			}
 		}
+
 		cyclic := false
 		for _, cluster := range graph.Clusters {
 			if !stuck[cluster] && len(cluster.Left) > 0 && (indeg[cluster.Left[0].ID] > 0 || indeg[cluster.Right[0].ID] > 0) {
@@ -322,5 +338,6 @@ func AlignClusterBorders(graph *Graph) {
 		}
 		break
 	}
+
 	flushLeft(graph)
 }

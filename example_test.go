@@ -44,6 +44,7 @@ func ExampleHierarchical() {
 	for i, edge := range graph.Edges {
 		fmt.Printf("%v through %v\n", edge, l.Edges[i].Path)
 	}
+
 	// Output:
 	// A at 64,32
 	// B at 32,96
@@ -70,6 +71,7 @@ func ExampleOptions() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ╭──────╮
 	// │ root │
@@ -100,6 +102,7 @@ func ExampleForce() {
 	for i, edge := range graph.Edges {
 		fmt.Printf("%v: %d points\n", edge, len(l.Edges[i].Path))
 	}
+
 	// Output:
 	// a->b: 2 points
 	// b->c: 2 points
@@ -120,6 +123,7 @@ func Example_text() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ╭───────╮
 	//   │ fetch │
@@ -152,6 +156,7 @@ func Example_rankDir() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ╭──────╮  ╭─────────╮  ╭──────╮
 	// │ idle ├─▶│ running ├─▶│ done │
@@ -178,6 +183,7 @@ func Example_clusters() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ╭────────╮
 	//         │ client │
@@ -213,6 +219,7 @@ func Example_records() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ┌─────────────┐
 	// │      │  id  │
@@ -242,6 +249,7 @@ func Example_ranks() {
 	for _, id := range []string{"b", "x", "c", "y"} {
 		fmt.Printf("%s at y=%v\n", id, l.Node(graph.Node(id)).Center.Y)
 	}
+
 	// Output:
 	// b at y=96
 	// x at y=96
@@ -263,6 +271,7 @@ func Example_pinned() {
 	}
 	fmt.Println(l.Node(graph.Node("b")).Center)
 	fmt.Println(len(l.Edges[0].Path) > 0)
+
 	// Output:
 	// {200 100}
 	// true
@@ -286,6 +295,7 @@ func Example_measureText() {
 	for i, node := range graph.Nodes {
 		fmt.Printf("%q is %v wide\n", node.ID, l.Nodes[i].Size.X)
 	}
+
 	// Output:
 	// "short" is 56 wide
 	// "a much longer label" is 173.6 wide
@@ -335,6 +345,7 @@ func ExampleDiagnose() {
 	diag := layout.Diagnose(l)
 	fmt.Println("node overlaps:", diag.NodeOverlaps)
 	fmt.Println("edge crossings:", diag.EdgeCrossings)
+
 	// Output:
 	// node overlaps: 0
 	// edge crossings: 1
@@ -344,6 +355,7 @@ func ExampleColorByName() {
 	color, ok := layout.ColorByName("forestgreen")
 	fmt.Println(ok)
 	fmt.Println(color.RGBA8())
+
 	// Output:
 	// true
 	// 34 139 34 255
@@ -357,6 +369,7 @@ func ExampleGraph_Edge() {
 
 	fmt.Println(first == again)
 	fmt.Println(len(graph.Nodes), len(graph.Edges))
+
 	// Output:
 	// true
 	// 2 1

@@ -125,6 +125,7 @@ func TestLineStyles(t *testing.T) {
 		if err := Write(&buf, l); err != nil {
 			t.Fatal(err)
 		}
+
 		// the run between the boxes, past the box sides
 		var run []rune
 		for _, line := range strings.Split(buf.String(), "\n") {
@@ -136,6 +137,7 @@ func TestLineStyles(t *testing.T) {
 				run = append(run, r[0])
 			}
 		}
+
 		if len(run) == 0 || strings.Trim(string(run), string(tc.want)) != "" {
 			t.Errorf("%q sideways=%v: got run %q, want only %q\n%s", tc.style, tc.sideways, string(run), tc.want, buf.String())
 		}
@@ -234,6 +236,7 @@ func TestDotFanOut(t *testing.T) {
 				}
 			}
 		}
+
 		if touching != tc.edges || strings.ContainsAny(buf.String(), "━┃") {
 			t.Errorf("%v with %d edges: %d lines touch the dot, want one per edge without overlaps:\n%s", tc.dir, tc.edges, touching, buf.String())
 		}
@@ -474,6 +477,7 @@ func TestWriteDeterministic(t *testing.T) {
 		}
 		graphs = append(graphs, parsed[0])
 	}
+
 	// edge ends close to the corners of a node, see nodeBox
 	fan := layout.NewDigraph()
 	fan.Edge("a", "b").Label = "iiiiiiiiiiiiiiii"
@@ -518,8 +522,10 @@ func TestUnjogJunction(t *testing.T) {
 			}
 			g = append(g, row)
 		}
+
 		return g
 	}
+
 	text := func(g [][]cell) string {
 		var b strings.Builder
 		for _, row := range g {
@@ -528,8 +534,10 @@ func TestUnjogJunction(t *testing.T) {
 			}
 			b.WriteByte('\n')
 		}
+
 		return b.String()
 	}
+
 	g := grid(`
   │          
   ├───╮      

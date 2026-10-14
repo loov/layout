@@ -29,6 +29,7 @@ func TestAlignClusterBorders(t *testing.T) {
 			}
 			clusters = append(clusters, cluster)
 		}
+
 		if rng.Intn(2) == 0 {
 			clusters = append(clusters, &Cluster{Parent: clusters[1], Members: Nodes{graph.Nodes[perm[3]], graph.Nodes[perm[4]]}})
 		}
@@ -45,11 +46,13 @@ func TestAlignClusterBorders(t *testing.T) {
 			if node.BorderLeft || node.BorderRight {
 				node.Radius.X = 4
 			}
+
 			// room beside some nodes, as for edges leaving them sideways
 			if !node.Virtual && node.ID%3 == 0 {
 				graph.Room[node.ID] = [2]float32{12, 12}
 			}
 		}
+
 		// Position, recording how wide each cluster is before aligning
 		PositionInitial(graph)
 		positionSimplex(graph, true, false)
@@ -64,6 +67,7 @@ func TestAlignClusterBorders(t *testing.T) {
 			}
 			need[c] = max(hi-lo, cluster.MinWidth-cluster.Left[0].Radius.X-cluster.Right[0].Radius.X)
 		}
+
 		// a nested cluster lining up can take room from its parent's
 		// other nodes in a rank, which then move aside
 		for c, cluster := range graph.Clusters {
@@ -81,6 +85,7 @@ func TestAlignClusterBorders(t *testing.T) {
 				}
 			}
 		}
+
 		for c, cluster := range graph.Clusters {
 			left, right := cluster.Left[0].Center.X, cluster.Right[0].Center.X
 			for k := range cluster.Left {

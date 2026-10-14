@@ -65,6 +65,7 @@ func crop(g grid) grid {
 			top, bottom = min(top, y), y+1
 		}
 	}
+
 	if top >= bottom {
 		return g[:0]
 	}
@@ -88,8 +89,10 @@ func drawn(l *layout.Layout, safe bool) (*canvas, grid) {
 			c, g = d, d.rows
 		}
 	}
+
 	g = tidy(g, c.sideways(), c.owners)
 	c.frameLabels(g)
+
 	// no margin above
 	for len(g) > 1 && !slices.ContainsFunc(g[0], func(c cell) bool { return c.r != ' ' || c.bg != 0 }) {
 		g = g[1:]
@@ -135,8 +138,10 @@ func better(a, b grid) bool {
 				}
 			}
 		}
+
 		return shared, bends, width * len(g)
 	}
+
 	sa, ba, aa := measure(a)
 	sb, bb, ab := measure(b)
 	return cmp.Or(cmp.Compare(sa, sb), cmp.Compare(ba, bb), cmp.Compare(aa, ab)) < 0
@@ -170,6 +175,7 @@ func drawGraph(l *layout.Layout, spread, safe bool) *canvas {
 			c.drawEdge(edge, l.Edges[i].Path, paths[i])
 		}
 	}
+
 	c.drawLabels(paths)
 	return c
 }

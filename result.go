@@ -131,6 +131,7 @@ func (l *Layout) Bounds() (min, max Vector) {
 			}
 		}
 	}
+
 	min, max = b.Min, b.Max
 	if b.empty() { // nothing to bound
 		return Vector{}, Vector{}

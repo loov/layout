@@ -21,6 +21,7 @@ func CornerRadius(prev, p, next Point, radius, maxDeviation float64) float64 {
 	if l1 == 0 || l2 == 0 {
 		return 0
 	}
+
 	// the quadratic curve's midpoint is r*cos(θ/2)/2 from the corner,
 	// θ being the angle between the two segments
 	ux, uy := (prev.X-p.X)/l1, (prev.Y-p.Y)/l1
@@ -62,6 +63,7 @@ func IsWide(r rune) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -94,8 +96,10 @@ func ApproxLineWidth(line string, fontSize float64) float64 {
 		default:
 			em = 0.52
 		}
+
 		width += em * fontSize
 	}
+
 	return width
 }
 

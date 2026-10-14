@@ -43,6 +43,7 @@ func TestClusterFitsLabel(t *testing.T) {
 		t.Fatal(err)
 	}
 	label, cluster, a := graph.Clusters[0].Label, l.Cluster(graph.Clusters[0]), l.Node(graph.Node("a"))
+
 	// most characters are about half an em wide, spaces and narrow
 	// letters less
 	if width := cluster.BottomRight.X - cluster.TopLeft.X; width < Length(len(label))*l.Graph.FontSize*0.45 {
@@ -69,6 +70,7 @@ func checkSiblingClusters(t *testing.T, l *layout.Layout) {
 				t.Errorf("clusters %s %v-%v and %s %v-%v overlap", a.ID, ab.TopLeft, ab.BottomRight, b.ID, bb.TopLeft, bb.BottomRight)
 			}
 		}
+
 		for k, node := range graph.Nodes {
 			if slices.Contains(a.Nodes, node) {
 				continue
@@ -114,6 +116,7 @@ func TestClusterNeighborsAlign(t *testing.T) {
 		t.Fatal(err)
 	}
 	checkSiblingClusters(t, l)
+
 	// every node side by side, with room to spare
 	var total Length
 	for _, box := range l.Nodes {
@@ -140,6 +143,7 @@ func TestClusterBoxesRelayout(t *testing.T) {
 		graph.Clusters = []*layout.Cluster{cluster}
 		return graph, cluster
 	}
+
 	encloses := func(l *layout.Layout, cluster *layout.Cluster) bool {
 		box := l.Cluster(cluster)
 		for _, node := range cluster.Nodes {
@@ -149,6 +153,7 @@ func TestClusterBoxesRelayout(t *testing.T) {
 				return false
 			}
 		}
+
 		return true
 	}
 

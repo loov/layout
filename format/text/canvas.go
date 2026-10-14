@@ -75,6 +75,7 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 	if c.cellH <= 0 {
 		c.cellH = 16
 	}
+
 	// the drawing can reach before the origin, with labels nudged there
 	// or pinned and force layouts; keep the usual margin otherwise
 	topLeft, size := l.Bounds()
@@ -95,6 +96,7 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 			c.loops[edge.From]++
 		}
 	}
+
 	// boxes can be wider than the layout's, see nodeBox and clusterBox
 	fit := func(b cellBox) { c.w, c.h = max(c.w, b.Max.X+1), max(c.h, b.Max.Y+1) }
 	for _, node := range graph.Nodes {
@@ -164,6 +166,7 @@ func (c *canvas) line(x, y int, mask uint8) {
 			p.heavy |= bit
 		}
 	}
+
 	p.lines |= mask
 	p.frame = p.frame || c.pen.frame
 	p.r = glyph(p.lines, p.heavy)
@@ -196,6 +199,7 @@ func (c *canvas) frame(x0, y0, x1, y1 int) {
 		c.line(x, y1, right)
 		c.line(x+1, y1, left)
 	}
+
 	for y := y0; y < y1; y++ {
 		c.line(x0, y, down)
 		c.line(x0, y+1, up)
@@ -245,6 +249,7 @@ func textStyle(style draw.Style) uint8 {
 			bits |= on.bit
 		}
 	}
+
 	return bits
 }
 
@@ -263,6 +268,7 @@ func cellRunes(s string) []rune {
 			runes = append(runes, r)
 		}
 	}
+
 	return runes
 }
 

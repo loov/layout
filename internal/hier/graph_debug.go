@@ -76,6 +76,7 @@ func (graph *Graph) EdgeMatrixString() string {
 				b.WriteString(", ")
 			}
 		}
+
 		b.WriteString("}")
 		return b.String()
 	}

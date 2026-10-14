@@ -22,6 +22,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 				c[i*n+k], c[k*n+i] = graph.crossingsBothWays(layer[i], layer[k])
 			}
 		}
+
 		// order holds indices into layer; the matrix does not depend on
 		// positions inside the layer, so it is valid for the whole pass
 		order := make([]int, n)
@@ -58,6 +59,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 				break
 			}
 		}
+
 		reordered := make(Nodes, n)
 		for i, k := range order {
 			reordered[i] = layer[k]
@@ -65,6 +67,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 		copy(layer, reordered)
 		layer.assignPos()
 	}
+
 	return moves
 }
 

@@ -19,6 +19,7 @@ func FuzzRendering(f *testing.F) {
 		f.Add([]byte{byte(mode), 3, 0, 1, 1, 2, 2, 0, 0, 0}, "漢字 é 👩‍💻\nsecond")
 		f.Add([]byte{byte(mode), 2, 5, 4, 0, 1, 1, 0}, "<TABLE><TR><TD>cell</TD></TR></TABLE>")
 	}
+
 	f.Fuzz(func(t *testing.T, data []byte, label string) {
 		if len(data) < 2 {
 			return
@@ -38,6 +39,7 @@ func FuzzRendering(f *testing.F) {
 			node.Label = labels[int(b>>3)%len(labels)]
 			node.Peripheries = int(b>>6) + 1
 		}
+
 		for i := 2; i+1 < len(data) && i < 66; i += 2 {
 			a, b := data[i], data[i+1]
 			edge := graph.Edge(graph.Nodes[int(a)%len(graph.Nodes)].ID, graph.Nodes[int(b)%len(graph.Nodes)].ID)
@@ -47,6 +49,7 @@ func FuzzRendering(f *testing.F) {
 				edge.Label = labels[int(b>>3)%len(labels)]
 			}
 		}
+
 		if data[0]&0x10 != 0 {
 			// pinned positions from the data, some of them overlapping
 			for i, node := range graph.Nodes {

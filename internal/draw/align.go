@@ -38,8 +38,10 @@ func Lines(label string) []Line {
 		case strings.HasSuffix(text, RightMark):
 			line = Line{strings.TrimSuffix(text, RightMark), Right}
 		}
+
 		lines = append(lines, line)
 	}
+
 	return lines
 }
 
@@ -51,6 +53,7 @@ func (align Align) Mark() string {
 	case Right:
 		return RightMark
 	}
+
 	return ""
 }
 
@@ -62,5 +65,6 @@ func (align Align) Offset(room, w float64) float64 {
 	case Right:
 		return room - w
 	}
+
 	return (room - w) / 2
 }

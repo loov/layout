@@ -29,6 +29,7 @@ func TestPackEdgeEnds(t *testing.T) {
 			break
 		}
 	}
+
 	if y := l.Edge(side).Path[0].Y; y <= want || y >= a.Bottom() {
 		t.Errorf("a -> c leaves a at y %v, want below %v and inside a", y, want)
 	}

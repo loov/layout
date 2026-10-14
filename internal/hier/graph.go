@@ -316,5 +316,6 @@ func (graph *Graph) CountUndirectedLinks() int {
 			counted[[2]ID{a, b}] = struct{}{}
 		}
 	}
+
 	return len(counted)
 }

@@ -12,6 +12,7 @@ import (
 
 func TestForce(t *testing.T) {
 	graph := layout.NewGraph()
+
 	// a 5-cycle plus a pendant node
 	for _, e := range [][2]string{{"A", "B"}, {"B", "C"}, {"C", "D"}, {"D", "E"}, {"E", "A"}, {"A", "F"}} {
 		graph.Edge(e[0], e[1])
@@ -36,6 +37,7 @@ func TestForce(t *testing.T) {
 			}
 		}
 	}
+
 	for i, edge := range graph.Edges {
 		if len(l.Edges[i].Path) != 2 {
 			t.Errorf("%v has no path", edge)
@@ -103,6 +105,7 @@ func TestForceClusterBoxes(t *testing.T) {
 			}
 		}
 	}
+
 	in, out := l.Cluster(inner), l.Cluster(outer)
 	if !inside(in.TopLeft, in.BottomRight, out.TopLeft, out.BottomRight) {
 		t.Errorf("inner %v %v is not inside outer %v %v", in.TopLeft, in.BottomRight, out.TopLeft, out.BottomRight)

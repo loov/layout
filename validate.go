@@ -35,8 +35,10 @@ func (graph *Graph) validate() error {
 		case node.Pos != nil && !finite(node.Pos.X, node.Pos.Y):
 			return fmt.Errorf("node %v: position %v is not finite", node, *node.Pos)
 		}
+
 		known[node] = true
 	}
+
 	for i, edge := range graph.Edges {
 		switch {
 		case edge == nil:
@@ -54,12 +56,14 @@ func (graph *Graph) validate() error {
 		case edge.LabelPos != nil && !finite(edge.LabelPos.X, edge.LabelPos.Y):
 			return fmt.Errorf("edge %v: label position %v is not finite", edge, *edge.LabelPos)
 		}
+
 		for _, p := range edge.Pos {
 			if !finite(p.X, p.Y) {
 				return fmt.Errorf("edge %v: path point %v is not finite", edge, p)
 			}
 		}
 	}
+
 	group := func(what string, nodes []*Node) error {
 		if len(nodes) == 0 {
 			return fmt.Errorf("%s has no nodes", what)
@@ -71,6 +75,7 @@ func (graph *Graph) validate() error {
 		}
 		return nil
 	}
+
 	for i, nodes := range graph.SameRank {
 		if err := group(fmt.Sprintf("same rank group %d", i), nodes); err != nil {
 			return err
@@ -87,6 +92,7 @@ func (graph *Graph) validate() error {
 			return err
 		}
 	}
+
 	clusters := make(map[*Cluster]bool, len(graph.Clusters))
 	for i, cluster := range graph.Clusters {
 		if cluster == nil {
@@ -94,6 +100,7 @@ func (graph *Graph) validate() error {
 		}
 		clusters[cluster] = true
 	}
+
 	for _, cluster := range graph.Clusters {
 		if err := group(fmt.Sprintf("cluster %q", cluster.ID), cluster.Nodes); err != nil {
 			return err
@@ -108,5 +115,6 @@ func (graph *Graph) validate() error {
 			}
 		}
 	}
+
 	return nil
 }

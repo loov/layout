@@ -47,6 +47,7 @@ func leastSolution(n int, cons []constraint, lower []int) []int {
 			}
 		}
 	}
+
 	return d
 }
 
@@ -75,6 +76,7 @@ func shortenRuns(n int, cons []constraint, lower, reach, d []int) []int {
 		}
 		add(int32(c.a), int32(c.b), c.min, w)
 	}
+
 	for v := range n {
 		add(left, int32(v), lower[v], 0)
 		add(int32(v), right, reach[v], 0)
@@ -104,6 +106,7 @@ func transposeLayout(l *Layout) {
 			swap(v)
 		}
 	}
+
 	for i := range l.Clusters {
 		swap(&l.Clusters[i].TopLeft)
 		swap(&l.Clusters[i].BottomRight)
@@ -124,6 +127,7 @@ func translateLayout(l *Layout, d Vector) {
 			*v = v.Add(d)
 		}
 	}
+
 	for i := range l.Clusters {
 		l.Clusters[i].TopLeft = l.Clusters[i].TopLeft.Add(d)
 		l.Clusters[i].BottomRight = l.Clusters[i].BottomRight.Add(d)
@@ -147,5 +151,6 @@ func simplifyPath(path Path) Path {
 		}
 		out = append(out, p)
 	}
+
 	return out
 }

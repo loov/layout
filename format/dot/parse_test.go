@@ -174,6 +174,7 @@ func TestNonFiniteNumbersAreIgnored(t *testing.T) {
 			t.Errorf("%s = %v", name, v)
 		}
 	}
+
 	if e.LabelPos != nil {
 		t.Errorf("lp = %v", *e.LabelPos)
 	}
@@ -403,6 +404,7 @@ func TestInvisible(t *testing.T) {
 			t.Error("cluster is visible")
 		}
 	}
+
 	check(graphs[0])
 	var out bytes.Buffer
 	if err := Write(&out, layoutOf(t, graphs[0])); err != nil {

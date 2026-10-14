@@ -84,6 +84,7 @@ func edgeDirected(edge *layout.Edge) bool {
 	case layout.ArrowNone:
 		return false
 	}
+
 	return true
 }
 

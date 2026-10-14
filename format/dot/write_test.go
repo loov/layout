@@ -220,6 +220,7 @@ func TestWriteParseRoundTrip(t *testing.T) {
 		}
 		return s
 	}
+
 	for _, tc := range []struct {
 		name      string
 		got, want any
@@ -238,6 +239,7 @@ func TestWriteParseRoundTrip(t *testing.T) {
 			t.Errorf("%s = %v, want %v", tc.name, tc.got, tc.want)
 		}
 	}
+
 	if len(got.Clusters) == 2 {
 		o, i := got.Clusters[0], got.Clusters[1]
 		if o.Label != outer.Label || rgba(o.LineColor) != rgba(outer.LineColor) || rgba(o.FillColor) != rgba(outer.FillColor) || len(o.Nodes) != 2 {

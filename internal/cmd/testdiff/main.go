@@ -139,6 +139,7 @@ func revisions(args []string) (base, target, title string, err error) {
 		}
 		return base, args[0], subject(args[0]), nil
 	}
+
 	return args[0], args[1], args[0] + " → " + args[1], nil
 }
 
@@ -160,6 +161,7 @@ func collect(base, target string, all bool) ([]Change, error) {
 	default:
 		args = []string{"diff", "--name-only", "--no-renames", base, target}
 	}
+
 	commit := target
 	listed, err := git(append(args, "--", "testdata")...)
 	if err != nil {
@@ -196,6 +198,7 @@ func collect(base, target string, all bool) ([]Change, error) {
 		data, _ := os.ReadFile(filepath.Join(root, path))
 		return string(data)
 	}
+
 	oldStats := map[string]map[string]map[string]float64{
 		"svg": diagnostics(show(base, "testdata/diagnostics.txt")),
 		"txt": diagnostics(show(base, "testdata/diagnostics_text.txt")),
@@ -231,6 +234,7 @@ func collectDirs(oldDir, newDir string, all bool) ([]Change, error) {
 			}
 		}
 	}
+
 	slices.Sort(paths)
 	paths = slices.Compact(paths)
 
@@ -250,6 +254,7 @@ func collectDirs(oldDir, newDir string, all bool) ([]Change, error) {
 			"txt": diagnostics(find("diagnostics_text.txt")),
 		}
 	}
+
 	oldStats, newStats := stats(oldDir), stats(newDir)
 
 	var changes []Change
@@ -272,6 +277,7 @@ func compare(path, old, new string, oldStats, newStats map[string]map[string]map
 	if !(all && (old != "" || new != "") || old != new) {
 		return Change{}, false
 	}
+
 	// drawings are named as their graph, by the path in testdata, text
 	// colored or not; diagnostics from before named fixtures without the
 	// path, which the examples can share
@@ -287,6 +293,7 @@ func compare(path, old, new string, oldStats, newStats map[string]map[string]map
 		}
 		return all[stats][filepath.Base(name)]
 	}
+
 	change = Change{
 		Path: path, Kind: kind, Old: old, New: new,
 		OldSize: size(kind, old), NewSize: size(kind, new),
@@ -368,8 +375,10 @@ func diagnostics(content string) map[string]map[string]float64 {
 				values[key] = v
 			}
 		}
+
 		stats[fields[0]] = values
 	}
+
 	return stats
 }
 
@@ -406,6 +415,7 @@ func write(file, title string, changes []Change) error {
 	if err != nil {
 		return err
 	}
+
 	// json escapes <, > and &, so the data can't close the script
 	html := strings.Replace(page, "/*DATA*/null", string(data), 1)
 	if html == page {
@@ -422,5 +432,6 @@ func open(file string) error {
 	case "windows":
 		return exec.Command("rundll32", "url.dll,FileProtocolHandler", file).Run()
 	}
+
 	return exec.Command("xdg-open", file).Run()
 }

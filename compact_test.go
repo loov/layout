@@ -55,6 +55,7 @@ func TestCompact(t *testing.T) {
 			}
 		}
 	}
+
 	for name, build := range examples.Graphs {
 		t.Run(name, func(t *testing.T) { check(t, build, examples.Options[name]) })
 	}

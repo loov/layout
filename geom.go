@@ -44,6 +44,7 @@ func (shape Shape) polygon() []Vector {
 		const c = octagonCut
 		return []Vector{{-c, -1}, {c, -1}, {1, -c}, {1, c}, {c, 1}, {-c, 1}, {-1, c}, {-1, -c}}
 	}
+
 	return nil
 }
 

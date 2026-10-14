@@ -23,14 +23,17 @@ func TextStats(content string) map[string]float64 {
 				row = append(row, 0) // the second column of a wide rune
 			}
 		}
+
 		grid = append(grid, row)
 	}
+
 	at := func(y, x int) rune {
 		if y < 0 || y >= len(grid) || x < 0 || x >= len(grid[y]) {
 			return ' '
 		}
 		return grid[y][x]
 	}
+
 	const (
 		topLeft     = "╭┌╔┏"
 		topRight    = "╮┐╗┓"
@@ -56,6 +59,7 @@ func TextStats(content string) map[string]float64 {
 			if !in(bottomLeft, at(y2, x)) {
 				continue
 			}
+
 			// along the bottom, or the top where a cluster label sits on
 			// the bottom
 			right := func(y int) int {
@@ -79,6 +83,7 @@ func TextStats(content string) map[string]float64 {
 			if !side {
 				continue
 			}
+
 			// the top and bottom are not checked, as cluster labels sit
 			// on them
 			frame := in(dashed, at(y+1, x)) || in(dashed, at(y2, x+1))
@@ -111,5 +116,6 @@ func TextStats(content string) map[string]float64 {
 			}
 		}
 	}
+
 	return map[string]float64{"corners": bends, "length": length, "crossings": crossings}
 }

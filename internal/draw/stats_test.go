@@ -21,6 +21,7 @@ func TestTextStats(t *testing.T) {
  ┊ └──────┘ ┊
  └┈┈┈┈┈┈┈┈┈┈┘
 `)
+
 	// bends: ╭╯ ╰╮ of R's outer edges, ╭╮ of the arc over B
 	want := map[string]float64{"corners": 6, "crossings": 1, "length": 42}
 	for k, v := range want {

@@ -60,6 +60,7 @@ func TestOrthoTrackCycle(t *testing.T) {
 			}
 		}
 	}
+
 	for i, a := range runs {
 		for _, b := range runs[i+1:] {
 			if a.edge != b.edge && (a.x-b.x).Abs() < 5 && a.y0 < b.y1-0.5 && b.y0 < a.y1-0.5 {

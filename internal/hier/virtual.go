@@ -80,6 +80,7 @@ func TraceEdges(graph *Graph) {
 			add(e)
 		}
 	}
+
 	for _, flat := range graph.Flat {
 		add(&Edge{From: flat[0], To: flat[1], Flat: true})
 	}

@@ -18,6 +18,7 @@ func ExampleWrite() {
 	if err := svg.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// <svg xmlns='http://www.w3.org/2000/svg' width='80.88' height='156'>
 	// 	<style type="text/css"><![CDATA[

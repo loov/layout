@@ -58,6 +58,7 @@ func FuzzHierarchical(f *testing.F) {
 						cluster.Nodes = append(cluster.Nodes, node)
 					}
 				}
+
 				// clusters must nest or be disjoint
 				valid := true
 				for _, other := range clusters {
@@ -77,6 +78,7 @@ func FuzzHierarchical(f *testing.F) {
 				}
 			}
 		}
+
 		graph.Clusters = clusters
 		l, err := layout.Hierarchical(graph, layout.Options{})
 		if err != nil {
@@ -94,6 +96,7 @@ func FuzzHierarchical(f *testing.F) {
 				}
 			}
 		}
+
 		for i, cluster := range clusters {
 			if box := l.Clusters[i]; !finite(box.TopLeft) || !finite(box.BottomRight) {
 				t.Fatalf("cluster %v box %v %v", cluster.ID, box.TopLeft, box.BottomRight)
@@ -112,6 +115,7 @@ func contains(outer, inner *layout.Cluster) bool {
 			return false
 		}
 	}
+
 	return true
 }
 

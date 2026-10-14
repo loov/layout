@@ -80,6 +80,7 @@ func (nodes *Nodes) Normalize() {
 				p = n
 			}
 		}
+
 		*nodes = unique
 	}
 }

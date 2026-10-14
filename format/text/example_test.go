@@ -23,6 +23,7 @@ func ExampleWrite() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ╭───╮
 	// │ a │

@@ -30,6 +30,7 @@ func (graph *lgraph) prepareText() {
 		graph.FontSize = graph.LineHeight * 14 / 16
 	}
 	cellW := graph.cellWidth()
+
 	// text draws every label in cells of one size, so edge and cluster
 	// labels, records and HTML tables are measured that way too
 	graph.MeasureText = func(line, _ string, _ Length) Length {
@@ -88,6 +89,7 @@ func (graph *lgraph) prepareText() {
 		}
 		return
 	}
+
 	// self-loops stack down the right side, each leaving and returning a
 	// quarter of its share from the share's ends: four rows a loop put
 	// them a row above and below its middle
@@ -132,6 +134,7 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 			walk(field, share)
 		}
 	}
+
 	walk(draw.LayoutRecord(node.DefaultLabel(), sideways(graph.RankDir), 2*float64(node.Radius.X), 2*float64(node.Radius.Y),
 		float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize)), 1)
 	node.Radius.X += grow / 2

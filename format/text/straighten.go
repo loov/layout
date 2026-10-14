@@ -16,6 +16,7 @@ func mergeRows(g grid) (grid, bool) {
 	along := func(row []cell) bool {
 		return slices.ContainsFunc(row, func(c cell) bool { return c.lines&(left|right) != 0 })
 	}
+
 	// most tries fail; they reuse these rows, and the one that merges
 	// keeps its row
 	var out, a, b []cell
@@ -67,6 +68,7 @@ func mergeRows(g grid) (grid, bool) {
 			}
 		}
 	}
+
 	return g, false
 }
 
@@ -98,6 +100,7 @@ func straighten(g grid) bool {
 			}
 		}
 	}
+
 	return false
 }
 
@@ -120,6 +123,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		return moves, false
 	}
 	id := turn.owner[bits.TrailingZeros(uint(dir))]
+
 	// a dashed line, whose corners are square, stays dashed, see canvas.line
 	dashed := turn.r == glyph(turn.lines, 0)
 	draw := func(lines uint8) rune {
@@ -131,10 +135,13 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case lines == left|right:
 			return '┈'
 		}
+
 		return glyph(lines, 0)
 	}
+
 	step := dy(dir)
 	moves = moves[:0]
+
 	// turns moves the turn at row y from x along its run, which grows or
 	// shrinks to meet it at x+dx
 	turns := func(y int, dirs uint8) bool {
@@ -146,6 +153,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case right:
 			side = 1
 		}
+
 		lo, hi := min(x, x+dx), max(x, x+dx)
 		for c := lo; c <= hi; c++ {
 			if c == x {
@@ -163,6 +171,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 				dirs = up | down
 			}
 		}
+
 		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]edgeID{id, id, id, id}}
 		for c := lo; c <= hi; c++ {
 			switch {
@@ -174,8 +183,10 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 				moves = append(moves, move{y, c, line})
 			}
 		}
+
 		return true
 	}
+
 	if !turns(r, turn.lines) {
 		return moves, false
 	}
@@ -260,6 +271,7 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 		case p.lines&(left|right) != 0 && q.lines&(left|right) != 0:
 			return out, x, false
 		}
+
 		lines := p.lines&^down | q.lines&^up
 		c := cell{r: ' ', fg: p.fg, bg: p.bg, lines: lines}
 		for arm := range 4 {
@@ -273,6 +285,7 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 				c.owner[arm], c.fg = q.owner[arm], q.fg
 			}
 		}
+
 		switch {
 		case lines == 0:
 		case lines == p.lines:
@@ -284,8 +297,10 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 		default:
 			c.r = corner(lines)
 		}
+
 		out[x] = c
 	}
+
 	return out, -1, true
 }
 
@@ -319,6 +334,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 	if len(mk.rows) < len(g) {
 		mk.rows = append(mk.rows, make([][]rerouteMark, len(g)-len(mk.rows))...)
 	}
+
 	// one sweep tries both on every cell, so that a step that can't be
 	// joined to the next slides in the same sweep
 	for r := range g {
@@ -328,6 +344,7 @@ func unjog(g grid, mk *rerouteMarks) (changed bool) {
 			}
 		}
 	}
+
 	return changed
 }
 
@@ -425,6 +442,7 @@ func (u *unjogger) markOld(in uint8, old []point) {
 			m.arms = u.armsDirs[i]
 		}
 	}
+
 	u.labeled, u.crossed = u.labeled[:0], u.crossed[:0]
 	for _, p := range u.olds {
 		label := false
@@ -446,6 +464,7 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 		if u.isNew(p) {
 			continue
 		}
+
 		// a label beside the line keeps it
 		if u.labeled[i] {
 			return false
@@ -454,6 +473,7 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 			removed++
 		}
 	}
+
 	for i, p := range path {
 		q := u.at(p)
 		if q == nil {
@@ -482,6 +502,7 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 			}
 		}
 	}
+
 	return cmp.Compare(added, removed) < 0 || added == removed && corners(dirs) < u.oldCorners
 }
 
@@ -498,6 +519,7 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 			}
 		}
 	}
+
 	for _, p := range u.olds {
 		a := u.oldArms(p)
 		if u.isNew(p) {
@@ -511,6 +533,7 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 			*q = cell{r: ' '}
 		}
 	}
+
 	for i, p := range path {
 		q := u.at(p)
 		switch {
@@ -557,6 +580,7 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 				moved = true
 			}
 		}
+
 		return moved
 	}
 	_, b, ok := u.g.step(top)
@@ -583,11 +607,13 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 				break
 			}
 		}
+
 		return moved
 	}
 	if u.g.runeAt(mid) != '▼' || u.at(mid).style&pinned != 0 {
 		return false
 	}
+
 	// a last step before an arrowhead into a box: the arrowhead
 	// goes along when the box goes on under the line, with no
 	// corner between
@@ -622,6 +648,7 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 	}
 	last := u.g.bottom(point{b, r}) - 1
 	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, point{c, first}, top, point{b, r}, point{b, last})
+
 	// a line that crosses none can't cross fewer
 	if !slices.ContainsFunc(u.oldPath, func(p point) bool { q := u.at(p); return q != nil && q.r == '╂' }) {
 		return false
@@ -638,6 +665,7 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 		}
 		again = true
 	}
+
 	return moved
 }
 
@@ -677,6 +705,7 @@ func (g grid) step(p point) (dir, to int, turns bool) {
 	default:
 		return 0, 0, false
 	}
+
 	to, turns = g.run(p, dir)
 	return dir, to, turns
 }
@@ -712,6 +741,7 @@ func route(path []point, dirs []uint8, in, out uint8, points ...point) ([]point,
 			path = append(path, q)
 		}
 	}
+
 	dirs = slices.Grow(dirs[:0], len(path))[:len(path)]
 	clear(dirs)
 	toward := func(from, to point) uint8 {
@@ -723,8 +753,10 @@ func route(path []point, dirs []uint8, in, out uint8, points ...point) ([]point,
 		case to.X < from.X:
 			return left
 		}
+
 		return right
 	}
+
 	for i, p := range path {
 		if i == 0 {
 			dirs[i] |= in
@@ -737,6 +769,7 @@ func route(path []point, dirs []uint8, in, out uint8, points ...point) ([]point,
 			dirs[i] |= toward(p, path[i+1])
 		}
 	}
+
 	return path, dirs
 }
 

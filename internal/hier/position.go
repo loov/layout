@@ -41,6 +41,7 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 	default:
 		positionSimplex(graph, straighten, fans)
 	}
+
 	if straighten {
 		StraightenChains(graph)
 	}
@@ -61,6 +62,7 @@ func StraightenChains(graph *Graph) {
 				if !node.Virtual || node.BorderLeft || node.BorderRight || len(node.In) != 1 || len(node.Out) != 1 {
 					continue
 				}
+
 				// align the anchors, where the edges actually pass
 				in, out := node.In[0], node.Out[0]
 				want := (in.Center.X+in.Anchor+out.Center.X+out.Anchor)/2 - node.Anchor
@@ -78,6 +80,7 @@ func StraightenChains(graph *Graph) {
 				}
 			}
 		}
+
 		if !moved {
 			break
 		}
@@ -128,6 +131,7 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 			layerOf[node.ID] = layer
 		}
 	}
+
 	// upper neighbors sorted by position
 	nbrs := make([]Nodes, n)
 	for _, node := range graph.Nodes {
@@ -143,6 +147,7 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 		}
 		return nil
 	}
+
 	for i := 1; i < len(layers); i++ {
 		layer, above := layers[i], layers[i-1]
 		k0, l := 0, 0
@@ -178,6 +183,7 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 			if len(nbrs[v.ID]) == 0 {
 				continue
 			}
+
 			// the first neighbor towards the side the layout packs to
 			if u := nbrs[v.ID][0]; !conflict[[2]ID{u.ID, v.ID}] && r < pos[u.ID] {
 				align[u.ID] = v
@@ -202,6 +208,7 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 		}
 		return graph.sep(node, prev)
 	}
+
 	x := make([]float32, n)
 	placed := make([]bool, n)
 	var place func(v *Node)
@@ -222,9 +229,11 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 			}
 		}
 	}
+
 	for _, node := range graph.Nodes {
 		place(root[node.ID])
 	}
+
 	// node centers from the anchors
 	final := make([]float32, n)
 	for _, node := range graph.Nodes {
@@ -295,6 +304,7 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 	for _, node := range graph.Nodes {
 		edges += len(node.Out)
 	}
+
 	// two more vertices bound the ranks on the left and the right, and
 	// the edge between them costs the width of the drawing; edges along a
 	// rank, see Flat, get a vertex each after them
@@ -313,6 +323,7 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 			s.addEdge(int32(a.ID), int32(b.ID), 0, int32(graph.sep(a, b)))
 		}
 	}
+
 	// an edge to a label carrier keeps straighter than a long edge
 	// leaving a node, the label beside it rather than between its bends
 	weight := func(src, dst *Node) float32 {
@@ -325,8 +336,10 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 		case src.Virtual || dst.Virtual:
 			omega = 2
 		}
+
 		return omega * graph.Weight(src, dst)
 	}
+
 	// packed ends of edges on a side of a node line up from its anchor
 	// on, in the order of the nodes they head to, see Graph.EndGap; an
 	// edge measures from where its ends attach
@@ -342,6 +355,7 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 			at[key(other)] = float32(i) * gap
 		}
 	}
+
 	for _, node := range graph.Nodes {
 		spread(node, node.Out, from, func(dst *Node) [2]ID { return [2]ID{node.ID, dst.ID} })
 		spread(node, node.In, to, func(src *Node) [2]ID { return [2]ID{src.ID, node.ID} })
@@ -358,6 +372,7 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 			v++
 		}
 	}
+
 	// an edge along a rank costs how far apart its ends are too, which
 	// keeps a node with only such edges beside the ones it has them to;
 	// one that isn't drawn only orders its ends, and pulling them
@@ -372,6 +387,7 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 		s.addEdge(v, int32(flat[1].ID), w, 0)
 		v++
 	}
+
 	return s, lft, rgt
 }
 
@@ -397,6 +413,7 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 			slices.Sort(at)
 			total += abs(float32(x) - float32(at[(len(at)-1)/2]+at[len(at)/2])/2)
 		}
+
 		if straighten {
 			if node.Virtual && len(node.In) == 1 && len(node.Out) == 1 {
 				total += chainWeight * abs(float32(2*x-s.rank[node.In[0].ID]-s.rank[node.Out[0].ID]))
@@ -410,6 +427,7 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 		}
 		return total
 	}
+
 	// the nodes a move of side changes the cost of
 	seen := make([]int32, n)
 	epoch := int32(0)
@@ -420,6 +438,7 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 			touched = append(touched, node)
 		}
 	}
+
 	s.balance(func(side []int32, delta int32) float32 {
 		epoch++
 		touched = touched[:0]
@@ -436,6 +455,7 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 				touch(nb)
 			}
 		}
+
 		gain := float32(0)
 		for _, node := range touched {
 			gain += cost(node)
@@ -472,8 +492,10 @@ func centerFans(graph *Graph, x []float32, lo, hi float32) {
 			}
 			c = c.Out[0]
 		}
+
 		return c
 	}
+
 	for r := len(graph.ByRank) - 1; r >= 0; r-- {
 		layer := graph.ByRank[r]
 		for i, node := range layer {
@@ -496,6 +518,7 @@ func centerFans(graph *Graph, x []float32, lo, hi float32) {
 			}
 		}
 	}
+
 	for r, layer := range graph.ByRank {
 		if real[r] {
 			continue

@@ -55,6 +55,7 @@ func TestDiamondSize(t *testing.T) {
 	if cols, rows := DiamondSize("lbl"); cols != 12 || rows != 6 {
 		t.Errorf("DiamondSize(\"lbl\") = %d, %d, want 12, 6", cols, rows)
 	}
+
 	// the diamond of steps fits too
 	for _, label := range []string{"a", "ab", "lbl", "a longer label", "one\ntwo", "one\ntwo\nthree", "x\nlonger line\ny\nz"} {
 		cols, rows := DiamondSize(label)

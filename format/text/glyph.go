@@ -39,6 +39,7 @@ func glyph(lines, heavy uint8) rune {
 		}
 		i = i*3 + w
 	}
+
 	return glyphs[i]
 }
 
@@ -101,6 +102,7 @@ func lookupArms(r rune) uint8 {
 			}
 			i /= 3
 		}
+
 		return mask
 	}
 	switch r {
@@ -135,6 +137,7 @@ func lookupArms(r rune) uint8 {
 	case '●', '○':
 		return up | down | left | right
 	}
+
 	return 0
 }
 

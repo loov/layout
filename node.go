@@ -143,6 +143,7 @@ func (node *lnode) CompassPoint(c Compass) Vector {
 	default:
 		return node.Center
 	}
+
 	return node.Boundary(Vector{node.Center.X + dir.X*node.Radius.X, node.Center.Y + dir.Y*node.Radius.Y})
 }
 
@@ -161,8 +162,10 @@ func (node *lnode) outlineAlong(start, p Vector) Vector {
 			sides(node.Shape.polygon(), func(nx, ny, h float64) { in = in && nx*dx/rx+ny*dy/ry <= h })
 			return in
 		}
+
 		return (dx/rx)*(dx/rx)+(dy/ry)*(dy/ry) <= 1
 	}
+
 	if !inside(start) || inside(p) {
 		return node.Boundary(p)
 	}
@@ -175,6 +178,7 @@ func (node *lnode) outlineAlong(start, p Vector) Vector {
 			out = mid
 		}
 	}
+
 	return in
 }
 
@@ -199,6 +203,7 @@ func (node *lnode) Boundary(p Vector) Vector {
 	default: // ellipse and circle
 		t = 1 / math.Hypot(dx/rx, dy/ry)
 	}
+
 	return Vector{node.Center.X + Length(dx*t), node.Center.Y + Length(dy*t)}
 }
 
@@ -223,6 +228,7 @@ func (node *lnode) halfHeightAt(x Length) Length {
 			h *= math.Sqrt(max(0, 1-dx*dx))
 		}
 	}
+
 	return Length(h)
 }
 
@@ -248,6 +254,7 @@ func (node *lnode) sideAt(y, x Length) Vector {
 			w *= math.Sqrt(max(0, 1-dy*dy))
 		}
 	}
+
 	if x < node.Center.X {
 		w = -w
 	}

@@ -21,6 +21,7 @@ func (graph *Graph) IsCyclic() bool {
 				return true
 			}
 		}
+
 		recursing.Remove(node)
 
 		return false

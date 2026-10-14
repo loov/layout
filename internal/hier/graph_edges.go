@@ -35,5 +35,6 @@ func (graph *Graph) ConvertToEdgeList() [][]int {
 		}
 		edges = append(edges, list)
 	}
+
 	return edges
 }

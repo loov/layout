@@ -72,6 +72,7 @@ func TestRankSameRankFlatCycle(t *testing.T) {
 			}
 		}
 	}
+
 	if a.Rank != b.Rank || b.Rank != c.Rank || c.Rank != d.Rank {
 		t.Errorf("ranks a=%d b=%d c=%d d=%d, want the same", a.Rank, b.Rank, c.Rank, d.Rank)
 	}

@@ -26,6 +26,7 @@ func (c *canvas) marker(style layout.Arrow, dir uint8, end point) (point, bool) 
 	case layout.ArrowODot:
 		r = '○'
 	}
+
 	// a node without outline has a blank frame where the end can go, see
 	// drawNode
 	if at := c.at(end.X, end.Y); at != nil && !at.solid {
@@ -55,6 +56,7 @@ func arrival(a, b point, startsAtB bool, p, q layout.Vector) uint8 {
 	case b.Y < a.Y:
 		return up
 	}
+
 	switch dx, dy := q.X-p.X, q.Y-p.Y; {
 	case dy < 0 && -dy >= dx.Abs():
 		return up
@@ -63,6 +65,7 @@ func arrival(a, b point, startsAtB bool, p, q layout.Vector) uint8 {
 	case dx < 0 && -dx > dy.Abs():
 		return left
 	}
+
 	return down
 }
 
@@ -105,6 +108,7 @@ func (c *canvas) centerLoop(cells []point, path layout.Path, node *layout.Node) 
 		if along == 1 {
 			span = float64((path[3].Y - path[0].Y) / c.cellH)
 		}
+
 		// the span nearest the layout's that splits evenly about the middle
 		sum := b.Min.at(along) + b.Max.at(along)
 		odd := (sum%2 + 2) % 2
@@ -141,8 +145,10 @@ func (c *canvas) across(cells []point, from, to *layout.Node) []point {
 		case inX && !inY:
 			return 1
 		}
+
 		return -1
 	}
+
 	bends := func(a, b point, first, last int) []point {
 		if a.X == b.X || a.Y == b.Y {
 			return nil
@@ -157,8 +163,10 @@ func (c *canvas) across(cells []point, from, to *layout.Node) []point {
 		case first == 1 || last == 0:
 			return []point{{a.X, b.Y}} // vertical, then horizontal
 		}
+
 		return nil
 	}
+
 	last := len(cells) - 1
 	start, end := axis(cells[0], from), axis(cells[last], to)
 	if last == 1 {
@@ -182,6 +190,7 @@ func (c *canvas) atDot(cells []point, i, j, k int, node *layout.Node) {
 	if k < 0 || k >= len(cells) {
 		return
 	}
+
 	// keep the first segment straight from the dot's cell
 	for axis := range 2 {
 		if from.at(axis) == cells[j].at(axis) {
@@ -196,6 +205,7 @@ func (c *canvas) atDot(cells []point, i, j, k int, node *layout.Node) {
 	case at.X == bend.X && bend.Y == next.Y && next.X != at.X:
 		turn = point{next.X, at.Y}
 	}
+
 	// not back along the run that reaches next, as an arc over a rank
 	// into a dot would
 	if l := k + k - j; l >= 0 && l < len(cells) {
@@ -216,6 +226,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path layout.Path, cells []point) {
 	}
 	last := len(cells) - 1
 	c.ids++
+
 	// merged edges share an id, so that they draw as one without overlaps
 	id, merged := c.merged[edge]
 	if !merged {
@@ -232,6 +243,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path layout.Path, cells []point) {
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
 	}
+
 	// merged edges share their ends, which get one marker; an end at a
 	// field stays across from it, see pinned
 	if !merged || !c.ended[cells[last]] {
@@ -294,12 +306,14 @@ func (c *canvas) join(end point, node *layout.Node) {
 	if p == nil {
 		return // pinned nodes can lie outside the canvas
 	}
+
 	// whether the cell at dx, dy from the end has an arm toward it
 	arm := func(dx, dy int, dir uint8) bool {
 		q := c.at(end.X+dx, end.Y+dy)
 		return q != nil && q.lines&dir != 0
 	}
 	b := c.boxes[node]
+
 	// junctions on the left, right, top and bottom side
 	joins := []rune("┤├┴┬")
 	if node.Peripheries > 1 {
@@ -345,6 +359,7 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 			count[meet{node: edge.To, field: edge.ToField}]++
 		}
 	}
+
 	meets := func(i int, edge *layout.Edge) []meet {
 		var out []meet
 		if m := l.Edges[i].Merged; !m.IsZero() {
@@ -358,8 +373,10 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 				out = append(out, m)
 			}
 		}
+
 		return out
 	}
+
 	// an edge that meets others at more than one place joins the groups
 	// there into one, as it draws in one id
 	parent := map[meet]meet{}
@@ -371,6 +388,7 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 		}
 		return m
 	}
+
 	for i, edge := range l.Graph.Edges {
 		ms := meets(i, edge)
 		for _, m := range ms[min(1, len(ms)):] {
@@ -379,6 +397,7 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 			}
 		}
 	}
+
 	ids := map[*layout.Edge]edgeID{}
 	groups := map[meet]edgeID{}
 	for i, edge := range l.Graph.Edges {
@@ -392,5 +411,6 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 		}
 		ids[edge] = groups[r]
 	}
+
 	return ids
 }

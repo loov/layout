@@ -28,6 +28,7 @@ func Example() {
 	if err := text.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// ┌───┐  ╭───╮  ╭───╮
 	// │ a ├─▶│ b ├─▶│ c │
@@ -43,6 +44,7 @@ func ExampleParse() {
 	for _, graph := range graphs {
 		fmt.Println(graph.ID, graph.Directed, len(graph.Nodes), len(graph.Edges))
 	}
+
 	// Output:
 	// G false 3 2
 }
@@ -59,6 +61,7 @@ func ExampleParseString() {
 	}
 	fmt.Println(graphs[0].ID, graphs[0].Edges[0].Label)
 	fmt.Println(graphs[1].ID, graphs[1].Node("x").Shape)
+
 	// Output:
 	// first go
 	// second box
@@ -86,6 +89,7 @@ func ExampleWrite() {
 	if err := dot.Write(os.Stdout, l); err != nil {
 		log.Fatal(err)
 	}
+
 	// Output:
 	// digraph {
 	// 	bb="0.00,0.00,48.00,112.00";

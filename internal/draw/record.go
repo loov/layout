@@ -35,6 +35,7 @@ func parseRecord(s string, vertical bool) (*Record, string) {
 		text.Reset()
 		grouped = false
 	}
+
 	for len(s) > 0 {
 		c := s[0]
 		switch {
@@ -75,8 +76,10 @@ func parseRecord(s string, vertical bool) (*Record, string) {
 		default:
 			text.WriteByte(c)
 		}
+
 		s = s[1:]
 	}
+
 	flush()
 	return rec, ""
 }
@@ -140,6 +143,7 @@ func measureRecord(rec *Record, lineHeight, fontSize float64, lineWidth func(lin
 			w, h = w+fw, max(h, fh)
 		}
 	}
+
 	rec.X1, rec.Y1 = w, h
 	return w, h
 }
@@ -159,6 +163,7 @@ func placeRecord(rec *Record, x, y, width, height float64) {
 			natural += field.X1
 		}
 	}
+
 	for _, field := range rec.Fields {
 		if rec.Vertical {
 			h := field.Y1 + (height-natural)/float64(len(rec.Fields))
