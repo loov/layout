@@ -3,6 +3,7 @@ package text
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -17,7 +18,7 @@ import (
 // themselves: compaction relies on how text draws.
 func TestCompactedJoined(t *testing.T) {
 	for name, build := range examples.Graphs {
-		t.Run(name, func(t *testing.T) { checkCompacted(t, build(), examples.Options[name]) })
+		t.Run(name, func(t *testing.T) { checkArrowsOffBorders(t, checkCompacted(t, build(), examples.Options[name])) })
 	}
 	files, _ := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
 	for _, file := range files {
@@ -28,7 +29,7 @@ func TestCompactedJoined(t *testing.T) {
 					t.Fatal(err)
 				}
 				graphs[0].MergeEdges = merge
-				checkCompacted(t, graphs[0], layout.Options{})
+				checkArrowsOffBorders(t, checkCompacted(t, graphs[0], layout.Options{}))
 			})
 		}
 	}
@@ -43,7 +44,8 @@ func TestCompactedRandom(t *testing.T) {
 	}
 }
 
-func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) {
+// checkCompacted returns the carved drawing.
+func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) string {
 	t.Helper()
 	opts.ForText, opts.Compact = true, true
 	l, err := layout.Hierarchical(graph, opts)
@@ -64,6 +66,24 @@ func checkCompacted(t *testing.T, graph *layout.Graph, opts layout.Options) {
 	// carving can draw an arrowhead out of a border on its own, see
 	// checkAttached
 	checkAttached(t, encode(d.rows, d.palette, nil))
+	return encode(g, c.palette, nil)
+}
+
+// arrowOnBorder matches an arrowhead drawn on the top or bottom border of a
+// box, as TestArrowsBesideNodes in the layout package checks the goldens
+var arrowOnBorder = regexp.MustCompile(`[╭┌╔╰└╚][─═┬┴╥╨▼▲]*[▼▲][─═┬┴╥╨▼▲]*[╮┐╗╯┘╝]`)
+
+// checkArrowsOffBorders checks that no arrowhead of drawing sits on a
+// border, where compaction leaves no row for it if text reroutes another
+// run through its cell. Random graphs draw some there without compaction
+// too, so only the examples and fixtures are checked.
+func checkArrowsOffBorders(t *testing.T, drawing string) {
+	t.Helper()
+	for i, line := range strings.Split(drawing, "\n") {
+		if m := arrowOnBorder.FindString(line); m != "" {
+			t.Errorf("%d: arrow on a border: %s\n%s", i+1, m, drawing)
+		}
+	}
 }
 
 // checkAttached checks that no arrowhead comes straight out of a line
