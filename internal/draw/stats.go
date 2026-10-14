@@ -56,9 +56,18 @@ func TextStats(content string) map[string]float64 {
 			if !in(bottomLeft, at(y2, x)) {
 				continue
 			}
-			x2 := x + 1
-			for in(horizontal, at(y2, x2)) {
-				x2++
+			// along the bottom, or the top where a cluster label sits on
+			// the bottom
+			right := func(y int) int {
+				x2 := x + 1
+				for in(horizontal, at(y, x2)) {
+					x2++
+				}
+				return x2
+			}
+			x2 := right(y2)
+			if !in(bottomRight, at(y2, x2)) {
+				x2 = right(y)
 			}
 			if !in(bottomRight, at(y2, x2)) || !in(topRight, at(y, x2)) {
 				continue
@@ -70,7 +79,8 @@ func TextStats(content string) map[string]float64 {
 			if !side {
 				continue
 			}
-			// the top is not checked, as cluster labels sit on it
+			// the top and bottom are not checked, as cluster labels sit
+			// on them
 			frame := in(dashed, at(y+1, x)) || in(dashed, at(y2, x+1))
 			for yy := y; yy <= y2; yy++ {
 				for xx := x; xx <= x2; xx++ {
