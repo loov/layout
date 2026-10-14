@@ -246,7 +246,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		if graph.ForText && parallel[unorderedNodes(e.edge)] > 1 {
 			continue
 		}
-		if absLength(e.towards-e.x) < 0.01 && e.towards >= lo && e.towards <= hi && len(followers[e.edge]) == 0 {
+		if (e.towards-e.x).Abs() < 0.01 && e.towards >= lo && e.towards <= hi && len(followers[e.edge]) == 0 {
 			want[i], weight[i] = e.towards, 1e9
 		}
 	}
@@ -265,7 +265,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		}
 		best := -1
 		for j := range list {
-			if !taken[j] && (best < 0 || absLength(slot(j)-want[i]) < absLength(slot(best)-want[i])) {
+			if !taken[j] && (best < 0 || (slot(j)-want[i]).Abs() < (slot(best)-want[i]).Abs()) {
 				best = j
 			}
 		}
@@ -293,7 +293,7 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	o.slots = separate(o.slots, want, weight, spacing, lo, hi)
 	xs := o.slots
 	for i, e := range list {
-		if weight[i] > 1 && absLength(xs[i]-want[i]) < spacing/1e3 {
+		if weight[i] > 1 && (xs[i]-want[i]).Abs() < spacing/1e3 {
 			xs[i] = want[i] // undo rounding, the run must stay exactly vertical
 		}
 		p := k.node.outlineAt(xs[i], k.bottom)
@@ -541,7 +541,7 @@ type jogExit struct {
 func (o *jogOrder) near(xs, ys []Length) bool {
 	for _, x := range xs {
 		for _, y := range ys {
-			if absLength(x-y) < o.pad/2 {
+			if (x - y).Abs() < o.pad/2 {
 				return true
 			}
 		}
@@ -585,7 +585,7 @@ func (o *jogOrder) findAbove() {
 				if e.x > x+pad {
 					break
 				}
-				if e.k != i && absLength(x-e.x) < pad/2 {
+				if e.k != i && (x-e.x).Abs() < pad/2 {
 					over[i*n+e.k] = true
 				}
 			}

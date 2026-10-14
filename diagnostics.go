@@ -419,7 +419,7 @@ func (d *diagnosis) unbalance() {
 			}
 			slices.Sort(at)
 			median := (at[(len(at)-1)/2] + at[len(at)/2]) / 2
-			if off := absLength(along(node.Center) - median); off > diagEps {
+			if off := (along(node.Center) - median).Abs(); off > diagEps {
 				d.diag.Unbalance += off
 			}
 		}

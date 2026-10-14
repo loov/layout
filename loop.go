@@ -66,10 +66,10 @@ func loopPath(edge *ledge, width, height Length, k, n int) []Vector {
 		// where the ray along d leaves the grown box
 		t := Length(math.Inf(1))
 		if d.X != 0 {
-			t = (node.Radius.X + width) / Length(math.Abs(float64(d.X)))
+			t = (node.Radius.X + width) / d.X.Abs()
 		}
 		if d.Y != 0 {
-			t = min(t, (node.Radius.Y+height)/Length(math.Abs(float64(d.Y))))
+			t = min(t, (node.Radius.Y+height)/d.Y.Abs())
 		}
 		return node.Center.Add(Vector{X: d.X * t, Y: d.Y * t})
 	}

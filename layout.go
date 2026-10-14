@@ -1171,7 +1171,7 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge][]Vector, byRank []
 				d := mid.Sub(edge.From.Center)
 				if n := Length(math.Hypot(float64(d.X), float64(d.Y))); n > 0 {
 					d = Vector{X: d.X / n, Y: d.Y / n}
-					gap := c.graphdef.EdgePadding + Length(math.Abs(float64(d.X)))*edge.LabelRadius.X + Length(math.Abs(float64(d.Y)))*edge.LabelRadius.Y
+					gap := c.graphdef.EdgePadding + d.X.Abs()*edge.LabelRadius.X + d.Y.Abs()*edge.LabelRadius.Y
 					edge.LabelPos = mid.Add(Vector{X: d.X * gap, Y: d.Y * gap})
 				}
 			}

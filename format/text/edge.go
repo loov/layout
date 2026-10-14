@@ -55,11 +55,11 @@ func arrival(a, b [2]int, startsAtB bool, p, q layout.Vector) uint8 {
 		return up
 	}
 	switch dx, dy := q.X-p.X, q.Y-p.Y; {
-	case dy < 0 && -dy >= absLength(dx):
+	case dy < 0 && -dy >= dx.Abs():
 		return up
-	case dx > 0 && dx > absLength(dy):
+	case dx > 0 && dx > dy.Abs():
 		return right
-	case dx < 0 && -dx > absLength(dy):
+	case dx < 0 && -dx > dy.Abs():
 		return left
 	}
 	return down
@@ -390,11 +390,4 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 		ids[edge] = groups[r]
 	}
 	return ids
-}
-
-func absLength(v layout.Length) layout.Length {
-	if v < 0 {
-		return -v
-	}
-	return v
 }

@@ -220,7 +220,7 @@ func onOutlines(l *Layout) {
 func crowded(l *Layout, cell Vector) []bool {
 	out := make([]bool, len(l.Edges))
 	near := func(a, b Vector) bool {
-		return math.Abs(float64(a.X-b.X)) < float64(cell.X)/2 && math.Abs(float64(a.Y-b.Y)) < float64(cell.Y)/2
+		return (a.X-b.X).Abs() < cell.X/2 && (a.Y-b.Y).Abs() < cell.Y/2
 	}
 	// along reports whether the segments ab and cd run along each other
 	along := func(a, b, c, d Vector) bool {
@@ -229,9 +229,9 @@ func crowded(l *Layout, cell Vector) []bool {
 		}
 		switch {
 		case a.X == b.X && c.X == d.X:
-			return math.Abs(float64(a.X-c.X)) < float64(cell.X)/2 && overlap(a.Y, b.Y, c.Y, d.Y)
+			return (a.X-c.X).Abs() < cell.X/2 && overlap(a.Y, b.Y, c.Y, d.Y)
 		case a.Y == b.Y && c.Y == d.Y:
-			return math.Abs(float64(a.Y-c.Y)) < float64(cell.Y)/2 && overlap(a.X, b.X, c.X, d.X)
+			return (a.Y-c.Y).Abs() < cell.Y/2 && overlap(a.X, b.X, c.X, d.X)
 		}
 		return false
 	}
@@ -1304,7 +1304,7 @@ func (p *compactPass) apply(d []int) bool {
 		i := l.nodeIndex[node]
 		moved := shift(i) + snap[i]
 		box := l.Nodes[i]
-		return absLength(x-(box.Left()-moved)) < 1e-3 || absLength(x-(box.Right()-moved)) < 1e-3
+		return (x-(box.Left()-moved)).Abs() < 1e-3 || (x-(box.Right()-moved)).Abs() < 1e-3
 	}
 	for e, items := range p.pointItem {
 		path := l.Edges[e].Path

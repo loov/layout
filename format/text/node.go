@@ -163,11 +163,11 @@ func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd)
 	add := func(path []layout.Vector) {
 		p := path[0]
 		// straight on past the first bend, see spreadSides
-		straight := len(path) < 3 || absLength(path[2].X-path[1].X) < 0.01
+		straight := len(path) < 3 || (path[2].X-path[1].X).Abs() < 0.01
 		e := sideEnd{float64((p.X - c.origin.X) / c.cellW), straight}
 		// an end straight down onto a rounder outline, which curves
 		// below the top, ends on the top of the box too, see spreadSides
-		vertical := len(path) > 1 && absLength(path[1].X-p.X) < 0.01
+		vertical := len(path) > 1 && (path[1].X-p.X).Abs() < 0.01
 		switch r := c.row(p.Y); {
 		case r <= y0 || vertical && path[1].Y < p.Y:
 			top = append(top, e)
@@ -525,9 +525,9 @@ func (c *canvas) pointsFor(node *layout.Node) bool {
 		}
 		side := 0
 		switch {
-		case absLength(across) > 0.01 && across > 0:
+		case across.Abs() > 0.01 && across > 0:
 			side = 1
-		case absLength(across) > 0.01:
+		case across.Abs() > 0.01:
 		case along > 0:
 			side = 3
 		default:

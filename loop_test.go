@@ -63,13 +63,11 @@ func TestLoopsApart(t *testing.T) {
 		if slices.Equal(a.Path, b.Path) {
 			t.Errorf("%s: loops share the route %v", name, a.Path)
 		}
-		if gap := absLength(a.LabelCenter.Y - b.LabelCenter.Y); gap < (a.LabelSize.Y+b.LabelSize.Y)/2 {
+		if gap := (a.LabelCenter.Y - b.LabelCenter.Y).Abs(); gap < (a.LabelSize.Y+b.LabelSize.Y)/2 {
 			t.Errorf("%s: labels at %v and %v overlap", name, a.LabelCenter, b.LabelCenter)
 		}
 	}
 }
-
-func absLength(v layout.Length) layout.Length { return max(v, -v) }
 
 // algorithms lays out a graph with each algorithm and default options
 var algorithms = map[string]func(*layout.Graph) (*layout.Layout, error){

@@ -62,7 +62,7 @@ func TestOrthoTrackCycle(t *testing.T) {
 	}
 	for i, a := range runs {
 		for _, b := range runs[i+1:] {
-			if a.edge != b.edge && absLength(a.x-b.x) < 5 && a.y0 < b.y1-0.5 && b.y0 < a.y1-0.5 {
+			if a.edge != b.edge && (a.x-b.x).Abs() < 5 && a.y0 < b.y1-0.5 && b.y0 < a.y1-0.5 {
 				t.Errorf("%v and %v run down x=%v together, %v-%v and %v-%v", a.edge, b.edge, a.x, a.y0, a.y1, b.y0, b.y1)
 			}
 		}

@@ -185,6 +185,14 @@ func (r rect) overlaps(o rect, eps Length) bool {
 	return r.Min.X < o.Max.X-eps && o.Min.X < r.Max.X-eps && r.Min.Y < o.Max.Y-eps && o.Min.Y < r.Max.Y-eps
 }
 
+// Abs returns the absolute value of l
+func (l Length) Abs() Length {
+	if l < 0 {
+		return -l
+	}
+	return l
+}
+
 // Units of Length.
 const (
 	Point = 1

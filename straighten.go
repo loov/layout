@@ -178,12 +178,12 @@ func (st *straightener) measure() (crossings, overlaps int) {
 	for _, cluster := range graphdef.Clusters {
 		tl, br := cluster.TopLeft, cluster.BottomRight
 		for _, h := range horizontal {
-			if (absLength(h.at-tl.Y) <= near.Y || absLength(h.at-br.Y) <= near.Y) && min(h.hi, br.X)-max(h.lo, tl.X) > near.X {
+			if ((h.at-tl.Y).Abs() <= near.Y || (h.at-br.Y).Abs() <= near.Y) && min(h.hi, br.X)-max(h.lo, tl.X) > near.X {
 				overlaps++
 			}
 		}
 		for _, v := range vertical {
-			if (absLength(v.at-tl.X) <= near.X || absLength(v.at-br.X) <= near.X) && min(v.hi, br.Y)-max(v.lo, tl.Y) > near.Y {
+			if ((v.at-tl.X).Abs() <= near.X || (v.at-br.X).Abs() <= near.X) && min(v.hi, br.Y)-max(v.lo, tl.Y) > near.Y {
 				overlaps++
 			}
 		}

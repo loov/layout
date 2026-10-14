@@ -61,7 +61,7 @@ func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []V
 					continue
 				}
 				// nearest obstacle along the segment first
-				if d := absLength(node.Center.X - a.X); d < hitDist {
+				if d := (node.Center.X - a.X).Abs(); d < hitDist {
 					hit, hitDist = node, d
 				}
 			}
@@ -97,13 +97,6 @@ func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []V
 		i-- // re-check segment a→way, which may hit something else
 	}
 	return path
-}
-
-func absLength(v Length) Length {
-	if v < 0 {
-		return -v
-	}
-	return v
 }
 
 // segmentHitsBox reports whether segment ab intersects node's box grown by pad

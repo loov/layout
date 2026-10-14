@@ -165,7 +165,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 	sides := map[side][]end{}
 	add := func(node *lnode, edge *ledge, start bool, next Vector) {
 		bottom := next.Y > node.Center.Y
-		dy := absLength(next.Y - node.Center.Y)
+		dy := (next.Y - node.Center.Y).Abs()
 		want := node.Center.X
 		if dy > 0 {
 			want += (next.X - node.Center.X) * node.Radius.Y / dy
