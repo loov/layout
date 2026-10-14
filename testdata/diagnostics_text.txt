@@ -81,7 +81,7 @@ graphviz/go-package_merged nodes=0 through=0 near=16 crossings=55 shallow=0 over
 graphviz/grammar nodes=0 through=0 near=8 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=46 wavy=0 back=0 labels=0 far=0 length=3818 area=457660 unbalance=0
 graphviz/grammar_merged nodes=0 through=0 near=7 crossings=0 shallow=0 overlaps=34 parallel=5 ends=34 shafts=0 jagged=0 bends=0 corners=54 wavy=0 back=0 labels=0 far=0 length=3813 area=448320 unbalance=18
 graphviz/hashtable nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=428 area=92750 unbalance=64
-graphviz/hashtable_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=4 parallel=3 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=630 area=104685 unbalance=112
+graphviz/hashtable_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=736 area=115526 unbalance=112
 graphviz/hello nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=48 area=6899 unbalance=0
 graphviz/hello_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=48 area=6899 unbalance=0
 graphviz/honda-tokoro nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=56 wavy=5 back=0 labels=0 far=0 length=4909 area=301840 unbalance=328
@@ -133,7 +133,7 @@ graphviz/psg_merged nodes=0 through=0 near=3 crossings=1 shallow=0 overlaps=0 pa
 graphviz/record2 nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=79 area=21683 unbalance=0
 graphviz/record2_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 labels=0 far=0 length=79 area=21683 unbalance=0
 graphviz/records nodes=0 through=0 near=2 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 labels=0 far=0 length=643 area=64790 unbalance=220
-graphviz/records_merged nodes=0 through=0 near=3 crossings=1 shallow=0 overlaps=1 parallel=1 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 labels=0 far=0 length=628 area=62696 unbalance=220
+graphviz/records_merged nodes=0 through=0 near=2 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 labels=0 far=0 length=643 area=64790 unbalance=220
 graphviz/rowe nodes=0 through=0 near=48 crossings=22 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=10 corners=132 wavy=10 back=13 labels=0 far=0 length=21638 area=705197 unbalance=905
 graphviz/rowe_merged nodes=0 through=0 near=48 crossings=36 shallow=0 overlaps=64 parallel=50 ends=64 shafts=0 jagged=0 bends=15 corners=148 wavy=15 back=13 labels=0 far=0 length=21098 area=659490 unbalance=1054
 graphviz/russian nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=571 area=119162 unbalance=212
@@ -159,7 +159,7 @@ graphviz/trapeziumlr_merged nodes=0 through=0 near=364 crossings=0 shallow=0 ove
 graphviz/tree nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=646 area=96206 unbalance=131
 graphviz/tree_merged nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=646 area=96288 unbalance=132
 graphviz/triedds nodes=0 through=0 near=7 crossings=5 shallow=0 overlaps=9 parallel=1 ends=9 shafts=0 jagged=0 bends=5 corners=40 wavy=5 back=2 labels=0 far=0 length=4005 area=546653 unbalance=524
-graphviz/triedds_merged nodes=0 through=0 near=2 crossings=7 shallow=0 overlaps=10 parallel=4 ends=9 shafts=0 jagged=0 bends=2 corners=36 wavy=2 back=2 labels=0 far=0 length=3728 area=536674 unbalance=708
+graphviz/triedds_merged nodes=0 through=0 near=3 crossings=5 shallow=0 overlaps=9 parallel=3 ends=9 shafts=0 jagged=0 bends=2 corners=36 wavy=2 back=2 labels=0 far=0 length=3776 area=536674 unbalance=636
 graphviz/try nodes=0 through=0 near=3 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=8 wavy=1 back=1 labels=0 far=0 length=1057 area=93184 unbalance=39
 graphviz/try_merged nodes=0 through=0 near=3 crossings=0 shallow=0 overlaps=2 parallel=2 ends=2 shafts=0 jagged=0 bends=1 corners=10 wavy=1 back=1 labels=0 far=0 length=1165 area=99008 unbalance=39
 graphviz/unix nodes=0 through=0 near=13 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=5 corners=70 wavy=5 back=0 labels=0 far=0 length=7752 area=682130 unbalance=1042

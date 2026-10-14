@@ -840,7 +840,9 @@ func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length 
 // look the same. An edge that would merge at both ends merges at
 // neither, or its line would join the sources of one group to the
 // targets of the other. Flat edges and loops don't merge, nor do edges
-// with labels, which could end up beside a stretch they share.
+// with labels, which could end up beside a stretch they share, nor edges
+// at a field of a record: those leave their own field, and a merged end
+// elsewhere can run along one of them.
 func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int) {
 	type look struct {
 		head, tail Arrow
@@ -857,7 +859,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 	count := map[group]int{}
 	for _, e := range edges {
 		from, to := rank(e.From), rank(e.To)
-		if from == to || e.Label != "" {
+		if from == to || e.Label != "" || e.FromField != "" || e.ToField != "" {
 			continue
 		}
 		l := look{head: e.ArrowHead, tail: e.ArrowTail, style: e.LineStyle, width: e.LineWidth}
