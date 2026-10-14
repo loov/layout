@@ -79,66 +79,115 @@ func (diag Diagnostics) String() string {
 
 // Diagnose computes Diagnostics for a layout.
 func Diagnose(l *Layout) Diagnostics {
-	graph := l.work()
-	var diag Diagnostics
-	const eps = 1e-3
+	d := newDiagnosis(l.work())
+	d.nodeOverlaps()
+	d.throughNodes()
+	d.segmentPairs()
+	d.shafts()
+	d.endOverlaps()
+	d.paths()
+	tl, br := d.graph.Bounds()
+	d.diag.Area = (br.X - tl.X) * (br.Y - tl.Y)
+	d.unbalance()
+	d.farLabels()
+	d.labelOverlaps()
+	return d.diag
+}
 
+const (
+	// diagEps is how far apart two lengths are the same in the
+	// diagnostics
+	diagEps = 1e-3
+	// segments closer than a stroke width over more than an arrowhead
+	// length draw as one line
+	diagStroke, diagArrow = 1.5 * Point, 6 * Point
+)
+
+// diagnosis is the drawn part of a layout that Diagnose measures, and the
+// diagnostics so far
+type diagnosis struct {
+	graph *lgraph
+	diag  Diagnostics
 	// what isn't drawn can't cross, overlap or crowd anything
-	var nodes []*lnode
+	nodes    []*lnode
+	edges    []*ledge
+	segments []segment
+}
+
+// segment is a straight piece of an edge as drawn, see newDiagnosis
+type segment struct {
+	a, b        Vector
+	edge        *ledge
+	first, last bool // the segment at the start, at the end
+}
+
+func newDiagnosis(graph *lgraph) *diagnosis {
+	d := &diagnosis{graph: graph}
 	for _, node := range graph.Nodes {
 		if !node.Invisible {
-			nodes = append(nodes, node)
+			d.nodes = append(d.nodes, node)
 		}
 	}
-	var edges []*ledge
 	for _, edge := range graph.Edges {
 		if !edge.Invisible {
-			edges = append(edges, edge)
+			d.edges = append(d.edges, edge)
 		}
 	}
-
-	type segment struct {
-		a, b        Vector
-		edge        *ledge
-		first, last bool // the segment at the start, at the end
-	}
-	var segments []segment
-	for _, edge := range edges {
-		path := edge.Path
-		if graph.Splines == SplinesRounded {
-			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
-		}
+	for _, edge := range d.edges {
+		path := d.drawn(edge)
 		for i := 0; i+1 < len(path); i++ {
-			segments = append(segments, segment{path[i], path[i+1], edge, i == 0, i+2 == len(path)})
+			d.segments = append(d.segments, segment{path[i], path[i+1], edge, i == 0, i+2 == len(path)})
 		}
 	}
+	return d
+}
 
-	boxes := func(node *lnode) (tl, br Vector) {
-		return Vector{node.Left(), node.Top()}, Vector{node.Right(), node.Bottom()}
+// drawn returns the path of edge as drawn, rounded corners flattened
+func (d *diagnosis) drawn(edge *ledge) []Vector {
+	if d.graph.Splines == SplinesRounded {
+		return flattenPath(edge.Path, 2*d.graph.RowPadding, d.graph.EdgePadding)
 	}
-	overlap := func(tl1, br1, tl2, br2 Vector) bool {
-		return tl1.X < br2.X-eps && tl2.X < br1.X-eps && tl1.Y < br2.Y-eps && tl2.Y < br1.Y-eps
-	}
+	return edge.Path
+}
 
-	for i, a := range nodes {
-		for _, b := range nodes[i+1:] {
-			tl1, br1 := boxes(a)
-			tl2, br2 := boxes(b)
-			if overlap(tl1, br1, tl2, br2) {
-				diag.NodeOverlaps++
-				diag.Details = append(diag.Details, fmt.Sprintf("nodes %v and %v overlap", a, b))
+// detail adds a line to the details
+func (d *diagnosis) detail(format string, args ...any) {
+	d.diag.Details = append(d.diag.Details, fmt.Sprintf(format, args...))
+}
+
+// nodeBox returns the corners of the box of node
+func nodeBox(node *lnode) (tl, br Vector) {
+	return Vector{node.Left(), node.Top()}, Vector{node.Right(), node.Bottom()}
+}
+
+// boxesOverlap reports whether two boxes share more than their borders
+func boxesOverlap(tl1, br1, tl2, br2 Vector) bool {
+	return tl1.X < br2.X-diagEps && tl2.X < br1.X-diagEps && tl1.Y < br2.Y-diagEps && tl2.Y < br1.Y-diagEps
+}
+
+func (d *diagnosis) nodeOverlaps() {
+	for i, a := range d.nodes {
+		for _, b := range d.nodes[i+1:] {
+			tl1, br1 := nodeBox(a)
+			tl2, br2 := nodeBox(b)
+			if boxesOverlap(tl1, br1, tl2, br2) {
+				d.diag.NodeOverlaps++
+				d.detail("nodes %v and %v overlap", a, b)
 			}
 		}
 	}
+}
 
+// throughNodes counts the edges through nodes and near them
+func (d *diagnosis) throughNodes() {
 	type edgeNode struct {
 		edge *ledge
 		node *lnode
 	}
 	through := map[edgeNode]bool{}
 	near := map[edgeNode]bool{}
-	for _, s := range segments {
-		for _, node := range nodes {
+	for _, s := range d.segments {
+		for _, node := range d.nodes {
 			own := node == s.edge.From || node == s.edge.To
 			// an edge leaves and reaches its own ends, and a loop runs
 			// beside its node all along
@@ -146,145 +195,155 @@ func Diagnose(l *Layout) Diagnostics {
 				continue
 			}
 			key := edgeNode{s.edge, node}
-			if !through[key] && segmentHitsNode(s.a, s.b, node, -eps) {
+			if !through[key] && segmentHitsNode(s.a, s.b, node, -diagEps) {
 				through[key] = true
-				diag.EdgeThroughNode++
-				diag.Details = append(diag.Details, fmt.Sprintf("edge %v through node %v at %v-%v", s.edge, node, s.a, s.b))
-			} else if !own && !through[key] && !near[key] && segmentHitsNode(s.a, s.b, node, graph.EdgePadding) {
+				d.diag.EdgeThroughNode++
+				d.detail("edge %v through node %v at %v-%v", s.edge, node, s.a, s.b)
+			} else if !own && !through[key] && !near[key] && segmentHitsNode(s.a, s.b, node, d.graph.EdgePadding) {
 				near[key] = true
-				diag.EdgeNearNode++
-				diag.Details = append(diag.Details, fmt.Sprintf("edge %v near node %v at %v-%v", s.edge, node, s.a, s.b))
+				d.diag.EdgeNearNode++
+				d.detail("edge %v near node %v at %v-%v", s.edge, node, s.a, s.b)
 			}
 		}
 	}
+}
 
-	// segments closer than a stroke width over more than an arrowhead
-	// length draw as one line
-	const stroke, arrow = 1.5 * Point, 6 * Point
-	// alongside reports whether q runs within dist of p's line for more
-	// than minLen
-	alongside := func(p, q segment, dist, minLen Length) bool {
-		d := func(a, b, c Vector) float64 {
-			return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
-		}
-		dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
-		length := math.Hypot(dx, dy)
-		if length < eps {
-			return false
-		}
-		if math.Abs(d(p.a, p.b, q.a))/length >= float64(dist) || math.Abs(d(p.a, p.b, q.b))/length >= float64(dist) {
-			return false
-		}
+// alongside reports whether q runs within dist of p's line for more than
+// minLen
+func alongside(p, q segment, dist, minLen Length) bool {
+	dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
+	length := math.Hypot(dx, dy)
+	if length < diagEps {
+		return false
+	}
+	if math.Abs(side(p.a, p.b, q.a))/length >= float64(dist) || math.Abs(side(p.a, p.b, q.b))/length >= float64(dist) {
+		return false
+	}
+	proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
+	lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
+	return math.Min(hi, length)-math.Max(lo, 0) > float64(minLen)
+}
+
+// cross reports whether p and q cross, and whether they run as one line
+// instead, within a stroke of each other for more than an arrowhead
+func cross(p, q segment) (crosses, collinear bool) {
+	dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
+	length := math.Hypot(dx, dy)
+	if length < diagEps {
+		return false, false
+	}
+	d1, d2 := side(p.a, p.b, q.a), side(p.a, p.b, q.b)
+	d3, d4 := side(q.a, q.b, p.a), side(q.a, q.b, p.b)
+	// distance of q's ends from p's line
+	if math.Abs(d1)/length < float64(diagStroke) && math.Abs(d2)/length < float64(diagStroke) {
 		proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
 		lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
-		return math.Min(hi, length)-math.Max(lo, 0) > float64(minLen)
+		return false, math.Min(hi, length)-math.Max(lo, 0) > float64(diagArrow)
 	}
-	cross := func(p, q segment) (crosses, collinear bool) {
-		d := func(a, b, c Vector) float64 {
-			return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
-		}
-		dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
-		length := math.Hypot(dx, dy)
-		if length < eps {
-			return false, false
-		}
-		d1, d2 := d(p.a, p.b, q.a), d(p.a, p.b, q.b)
-		d3, d4 := d(q.a, q.b, p.a), d(q.a, q.b, p.b)
-		// distance of q's ends from p's line
-		if math.Abs(d1)/length < float64(stroke) && math.Abs(d2)/length < float64(stroke) {
-			proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
-			lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
-			return false, math.Min(hi, length)-math.Max(lo, 0) > float64(arrow)
-		}
-		// a proper crossing has each segment's ends on opposite sides of
-		// the other; touching at an end does not count
-		return d1*d2 < -eps && d3*d4 < -eps, false
-	}
+	// a proper crossing has each segment's ends on opposite sides of
+	// the other; touching at an end does not count
+	return d1*d2 < -diagEps && d3*d4 < -diagEps, false
+}
+
+// side returns twice the signed area of a, b and c: which side of the
+// line through a and b c is on, and how far
+func side(a, b, c Vector) float64 {
+	return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
+}
+
+// segmentPairs counts the edges that run alongside, cross and overlap
+func (d *diagnosis) segmentPairs() {
 	type edgePair struct{ a, b *ledge }
 	overlaps := map[edgePair]bool{}
 	parallel := map[edgePair]bool{}
-	for i, p := range segments {
-		for _, q := range segments[i+1:] {
+	for i, p := range d.segments {
+		for _, q := range d.segments[i+1:] {
 			if p.edge == q.edge {
 				continue
 			}
-			if pair := (edgePair{p.edge, q.edge}); !parallel[pair] && alongside(p, q, arrow+stroke, 4*arrow) {
+			if pair := (edgePair{p.edge, q.edge}); !parallel[pair] && alongside(p, q, diagArrow+diagStroke, 4*diagArrow) {
 				parallel[pair] = true
-				diag.ParallelEdges++
-				diag.Details = append(diag.Details, fmt.Sprintf("edges %v and %v run alongside at %v-%v", p.edge, q.edge, p.a, p.b))
+				d.diag.ParallelEdges++
+				d.detail("edges %v and %v run alongside at %v-%v", p.edge, q.edge, p.a, p.b)
 			}
 			crosses, collinear := cross(p, q)
 			if crosses {
-				diag.EdgeCrossings++
+				d.diag.EdgeCrossings++
 				// angle between the segments
 				ux, uy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
 				vx, vy := float64(q.b.X-q.a.X), float64(q.b.Y-q.a.Y)
 				angle := math.Abs(math.Atan2(ux*vy-uy*vx, ux*vx+uy*vy))
 				angle = math.Min(angle, math.Pi-angle)
 				if angle < 30*math.Pi/180 {
-					diag.ShallowCrossings++
-					diag.Details = append(diag.Details, fmt.Sprintf("edges %v and %v cross at %.0f degrees", p.edge, q.edge, angle*180/math.Pi))
+					d.diag.ShallowCrossings++
+					d.detail("edges %v and %v cross at %.0f degrees", p.edge, q.edge, angle*180/math.Pi)
 				}
 			}
 			if collinear && !overlaps[edgePair{p.edge, q.edge}] {
 				overlaps[edgePair{p.edge, q.edge}] = true
-				diag.EdgeOverlaps++
-				diag.Details = append(diag.Details, fmt.Sprintf("edges %v and %v overlap at %v-%v", p.edge, q.edge, p.a, p.b))
+				d.diag.EdgeOverlaps++
+				d.detail("edges %v and %v overlap at %v-%v", p.edge, q.edge, p.a, p.b)
 			}
 		}
 	}
+}
 
-	// a shaft that enters its own node before the tip draws the arrowhead
-	// over the node; test the segment before the tip, trimmed at the tip
-	for _, edge := range edges {
+// shafts counts the ends whose shaft enters their own node before the
+// tip, which draws the arrowhead over the node: the segment before the
+// tip, trimmed at the tip, or the tip itself inside the node
+func (d *diagnosis) shafts() {
+	trim := func(inner, tip Vector) (Vector, Vector) {
+		return inner, Vector{tip.X + (inner.X-tip.X)*0.05, tip.Y + (inner.Y-tip.Y)*0.05}
+	}
+	inside := func(p Vector, node *lnode) bool { return segmentHitsNode(p, p, node, -0.5) }
+	for _, edge := range d.edges {
 		if edge.From == edge.To {
 			continue
 		}
-		path := edge.Path
-		if graph.Splines == SplinesRounded {
-			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
-		}
+		path := d.drawn(edge)
 		if len(path) < 2 {
 			continue
 		}
-		trim := func(inner, tip Vector) (Vector, Vector) {
-			return inner, Vector{tip.X + (inner.X-tip.X)*0.05, tip.Y + (inner.Y-tip.Y)*0.05}
+		if a, b := trim(path[1], path[0]); segmentHitsNode(a, b, edge.From, -diagEps) || inside(path[0], edge.From) {
+			d.diag.Shafts++
+			d.detail("edge %v starts inside node %v", edge, edge.From)
 		}
-		// the tip itself inside the node counts too
-		inside := func(p Vector, node *lnode) bool { return segmentHitsNode(p, p, node, -0.5) }
-		if a, b := trim(path[1], path[0]); segmentHitsNode(a, b, edge.From, -eps) || inside(path[0], edge.From) {
-			diag.Shafts++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v starts inside node %v", edge, edge.From))
-		}
-		if a, b := trim(path[len(path)-2], path[len(path)-1]); segmentHitsNode(a, b, edge.To, -eps) || inside(path[len(path)-1], edge.To) {
-			diag.Shafts++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v ends inside node %v", edge, edge.To))
+		if a, b := trim(path[len(path)-2], path[len(path)-1]); segmentHitsNode(a, b, edge.To, -diagEps) || inside(path[len(path)-1], edge.To) {
+			d.diag.Shafts++
+			d.detail("edge %v ends inside node %v", edge, edge.To)
 		}
 	}
+}
 
-	// ends closer than an arrowhead stack their arrowheads
+// endOverlaps counts the ends closer than an arrowhead, which stack their
+// arrowheads
+func (d *diagnosis) endOverlaps() {
 	type endpoint struct {
 		edge *ledge
 		p    Vector
 	}
 	var ends []endpoint
-	for _, edge := range edges {
+	for _, edge := range d.edges {
 		if len(edge.Path) > 0 {
 			ends = append(ends, endpoint{edge, edge.Path[0]}, endpoint{edge, edge.Path[len(edge.Path)-1]})
 		}
 	}
 	for i, a := range ends {
 		for _, b := range ends[i+1:] {
-			if a.edge != b.edge && math.Hypot(float64(a.p.X-b.p.X), float64(a.p.Y-b.p.Y)) < float64(arrow) {
-				diag.EndOverlaps++
-				diag.Details = append(diag.Details, fmt.Sprintf("ends of %v and %v overlap at %v", a.edge, b.edge, a.p))
+			if a.edge != b.edge && math.Hypot(float64(a.p.X-b.p.X), float64(a.p.Y-b.p.Y)) < float64(diagArrow) {
+				d.diag.EndOverlaps++
+				d.detail("ends of %v and %v overlap at %v", a.edge, b.edge, a.p)
 			}
 		}
 	}
+}
 
+// paths measures every edge: its length, whether it points against the
+// rank direction, and how it turns
+func (d *diagnosis) paths() {
 	// rank direction as a unit vector
 	flow := Vector{0, 1}
-	switch graph.RankDir {
+	switch d.graph.RankDir {
 	case LeftToRight:
 		flow = Vector{1, 0}
 	case RightToLeft:
@@ -292,17 +351,17 @@ func Diagnose(l *Layout) Diagnostics {
 	case BottomToTop:
 		flow = Vector{0, -1}
 	}
-	for _, edge := range edges {
+	for _, edge := range d.edges {
 		for i := 0; i+1 < len(edge.Path); i++ {
-			d := edge.Path[i+1].Sub(edge.Path[i])
-			diag.EdgeLength += Length(math.Hypot(float64(d.X), float64(d.Y)))
+			v := edge.Path[i+1].Sub(edge.Path[i])
+			d.diag.EdgeLength += Length(math.Hypot(float64(v.X), float64(v.Y)))
 		}
 		if edge.From == edge.To {
 			continue
 		}
-		if d := edge.To.Center.Sub(edge.From.Center); d.X*flow.X+d.Y*flow.Y < 0 {
-			diag.BackEdges++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v points against the rank direction", edge))
+		if v := edge.To.Center.Sub(edge.From.Center); v.X*flow.X+v.Y*flow.Y < 0 {
+			d.diag.BackEdges++
+			d.detail("edge %v points against the rank direction", edge)
 		}
 		turn, bends, flips, last := 0.0, 0, 0, 0.0
 		path := edge.Path
@@ -322,32 +381,32 @@ func Diagnose(l *Layout) Diagnostics {
 			}
 		}
 		if flips >= 2 {
-			diag.WavyEdges++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v changes turn direction %d times", edge, flips))
+			d.diag.WavyEdges++
+			d.detail("edge %v changes turn direction %d times", edge, flips)
 		}
 		if math.Abs(turn) > math.Pi/2 {
-			diag.JaggedEdges++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v winds %.0f degrees", edge, math.Abs(turn)*180/math.Pi))
+			d.diag.JaggedEdges++
+			d.detail("edge %v winds %.0f degrees", edge, math.Abs(turn)*180/math.Pi)
 		}
-		diag.Corners += bends
+		d.diag.Corners += bends
 		if bends > 3 {
-			diag.BendyEdges++
-			diag.Details = append(diag.Details, fmt.Sprintf("edge %v has %d bends", edge, bends))
+			d.diag.BendyEdges++
+			d.detail("edge %v has %d bends", edge, bends)
 		}
 	}
+}
 
-	tl, br := graph.Bounds()
-	diag.Area = (br.X - tl.X) * (br.Y - tl.Y)
-
-	// forks and joins off the median of their neighbors, before and after
-	// along the ranks, whichever way their edges go
+// unbalance adds up how far forks and joins are off the median of their
+// neighbors, before and after along the ranks, whichever way their edges
+// go
+func (d *diagnosis) unbalance() {
 	across, along := func(v Vector) Length { return v.Y }, func(v Vector) Length { return v.X }
-	if graph.RankDir == LeftToRight || graph.RankDir == RightToLeft {
+	if d.graph.RankDir == LeftToRight || d.graph.RankDir == RightToLeft {
 		across, along = along, across
 	}
-	for _, node := range nodes {
+	for _, node := range d.nodes {
 		var before, after []*lnode
-		for _, edge := range edges {
+		for _, edge := range d.edges {
 			other := edge.To
 			if edge.To == node {
 				other = edge.From
@@ -355,10 +414,10 @@ func Diagnose(l *Layout) Diagnostics {
 				continue
 			}
 			// a neighbor counts once for every edge to it
-			switch d := across(other.Center) - across(node.Center); {
-			case d < -eps:
+			switch v := across(other.Center) - across(node.Center); {
+			case v < -diagEps:
 				before = append(before, other)
-			case d > eps:
+			case v > diagEps:
 				after = append(after, other)
 			}
 		}
@@ -372,21 +431,21 @@ func Diagnose(l *Layout) Diagnostics {
 			}
 			slices.Sort(at)
 			median := (at[(len(at)-1)/2] + at[len(at)/2]) / 2
-			if off := absLength(along(node.Center) - median); off > eps {
-				diag.Unbalance += off
+			if off := absLength(along(node.Center) - median); off > diagEps {
+				d.diag.Unbalance += off
 			}
 		}
 	}
+}
 
-	// distance from a label box to its own path
-	for _, edge := range edges {
+// farLabels counts the labels further from their own edge than twice
+// their height
+func (d *diagnosis) farLabels() {
+	for _, edge := range d.edges {
 		if edge.Label == "" || len(edge.Path) < 2 {
 			continue
 		}
-		path := edge.Path
-		if graph.Splines == SplinesRounded {
-			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
-		}
+		path := d.drawn(edge)
 		ltl := edge.LabelPos.Sub(edge.LabelRadius)
 		lbr := edge.LabelPos.Add(edge.LabelRadius)
 		best := math.Inf(1)
@@ -394,15 +453,18 @@ func Diagnose(l *Layout) Diagnostics {
 			best = math.Min(best, rectSegmentDistance(ltl, lbr, path[i], path[i+1]))
 		}
 		if limit := float64(2 * edge.LabelRadius.Y); best > limit {
-			diag.FarLabels++
-			diag.Details = append(diag.Details, fmt.Sprintf("label %q of %v is %.0f from its edge", edge.Label, edge, best))
+			d.diag.FarLabels++
+			d.detail("label %q of %v is %.0f from its edge", edge.Label, edge, best)
 		}
 	}
+}
 
+// labelOverlaps counts the labels over a node, an edge or another label
+func (d *diagnosis) labelOverlaps() {
 	type box struct{ tl, br Vector }
 	var labels []box
 	var labelEdges []*ledge
-	for _, edge := range edges {
+	for _, edge := range d.edges {
 		if edge.Label == "" {
 			continue
 		}
@@ -411,28 +473,27 @@ func Diagnose(l *Layout) Diagnostics {
 	}
 	for i, l := range labels {
 		var hits []string
-		for _, node := range nodes {
-			tl, br := boxes(node)
-			if overlap(l.tl, l.br, tl, br) {
+		for _, node := range d.nodes {
+			tl, br := nodeBox(node)
+			if boxesOverlap(l.tl, l.br, tl, br) {
 				hits = append(hits, "node "+node.String())
 			}
 		}
-		for _, s := range segments {
-			if segmentHitsRect(s.a, s.b, l.tl.Add(Vector{eps, eps}), l.br.Add(Vector{-eps, -eps})) {
+		for _, s := range d.segments {
+			if segmentHitsRect(s.a, s.b, l.tl.Add(Vector{diagEps, diagEps}), l.br.Add(Vector{-diagEps, -diagEps})) {
 				hits = append(hits, "edge "+s.edge.String())
 			}
 		}
 		for k, o := range labels[:i] {
-			if overlap(l.tl, l.br, o.tl, o.br) {
+			if boxesOverlap(l.tl, l.br, o.tl, o.br) {
 				hits = append(hits, "label "+labelEdges[k].Label)
 			}
 		}
 		if len(hits) > 0 {
-			diag.LabelOverlaps++
-			diag.Details = append(diag.Details, fmt.Sprintf("label %q of %v overlaps %s", labelEdges[i].Label, labelEdges[i], strings.Join(slices.Compact(hits), ", ")))
+			d.diag.LabelOverlaps++
+			d.detail("label %q of %v overlaps %s", labelEdges[i].Label, labelEdges[i], strings.Join(slices.Compact(hits), ", "))
 		}
 	}
-	return diag
 }
 
 // segmentHitsNode reports whether segment ab enters the node's outline
