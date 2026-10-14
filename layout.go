@@ -1252,9 +1252,7 @@ func (c *hierComponent) crossLabelBands() {
 	cuts := func(edge *ledge, a, b Vector) bool {
 		for _, other := range c.graphdef.Edges {
 			if other != edge && other.Label != "" {
-				tl := other.LabelPos.Sub(other.LabelRadius).Sub(Vector{X: pad, Y: pad})
-				br := other.LabelPos.Add(other.LabelRadius).Add(Vector{X: pad, Y: pad})
-				if segmentHitsRect(a, b, tl, br) {
+				if other.labelRect().grow(pad).hitBy(a, b) {
 					return true
 				}
 			}

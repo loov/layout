@@ -47,14 +47,14 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 	clearOf := func(edge *ledge, at Vector, lines bool) bool {
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
-		tl := at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y})
-		br := at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})
+		box := rect{at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y}), at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})}
+		tl, br := box.Min, box.Max
 		for _, path := range paths {
 			if !lines {
 				break
 			}
 			for i := 0; i+1 < len(path); i++ {
-				if segmentHitsRect(path[i], path[i+1], tl, br) {
+				if box.hitBy(path[i], path[i+1]) {
 					return false
 				}
 			}
@@ -66,8 +66,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			}
 		}
 		for _, other := range placed {
-			if other.LabelPos.X-other.LabelRadius.X < br.X && tl.X < other.LabelPos.X+other.LabelRadius.X &&
-				other.LabelPos.Y-other.LabelRadius.Y < br.Y && tl.Y < other.LabelPos.Y+other.LabelRadius.Y {
+			if other.labelRect().overlaps(box, 0) {
 				return false
 			}
 		}
@@ -101,10 +100,10 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			}
 		}
 		near := func(at Vector) bool {
-			tl, br := at.Sub(edge.LabelRadius), at.Add(edge.LabelRadius)
+			label := rect{at.Sub(edge.LabelRadius), at.Add(edge.LabelRadius)}
 			best := math.Inf(1)
 			for i := 0; i+1 < len(own); i++ {
-				best = math.Min(best, rectSegmentDistance(tl, br, own[i], own[i+1]))
+				best = math.Min(best, label.distance(own[i], own[i+1]))
 			}
 			// the text height is the smaller extent (radii are swapped
 			// for sideways layouts), minus a margin
@@ -178,30 +177,29 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 // tight ones they can cover what is there.
 func (g *lgraph) placeEndLabels() {
 	pad := g.EdgePadding
-	type box struct{ tl, br Vector }
-	var placed []box
+	var placed []rect
 	for _, edge := range g.Edges {
 		if edge.Label != "" {
-			placed = append(placed, box{edge.LabelPos.Sub(edge.LabelRadius), edge.LabelPos.Add(edge.LabelRadius)})
+			placed = append(placed, edge.labelRect())
 		}
 	}
-	covers := func(tl, br Vector) bool {
+	covers := func(r rect) bool {
 		for _, node := range g.Nodes {
-			if node.Left() < br.X && tl.X < node.Right() && node.Top() < br.Y && tl.Y < node.Bottom() {
+			if node.rect().overlaps(r, 0) {
 				return true
 			}
 		}
 		for _, b := range placed {
-			if b.tl.X < br.X && tl.X < b.br.X && b.tl.Y < br.Y && tl.Y < b.br.Y {
+			if b.overlaps(r, 0) {
 				return true
 			}
 		}
 		return false
 	}
-	crosses := func(tl, br Vector) bool {
+	crosses := func(r rect) bool {
 		for _, edge := range g.Edges {
 			for i := 0; i+1 < len(edge.Path); i++ {
-				if segmentHitsRect(edge.Path[i], edge.Path[i+1], tl, br) {
+				if r.hitBy(edge.Path[i], edge.Path[i+1]) {
 					return true
 				}
 			}
@@ -255,8 +253,8 @@ func (g *lgraph) placeEndLabels() {
 			at, found := spots[0], false
 			for _, lines := range []bool{true, false} {
 				for _, spot := range spots {
-					tl, br := spot.Sub(r), spot.Add(r)
-					if !covers(tl, br) && (!lines || !crosses(tl, br)) {
+					box := rect{spot.Sub(r), spot.Add(r)}
+					if !covers(box) && (!lines || !crosses(box)) {
 						at, found = spot, true
 						break
 					}
@@ -266,7 +264,7 @@ func (g *lgraph) placeEndLabels() {
 				}
 			}
 			end.label.pos = at
-			placed = append(placed, box{at.Sub(r), at.Add(r)})
+			placed = append(placed, rect{at.Sub(r), at.Add(r)})
 		}
 	}
 }

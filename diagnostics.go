@@ -155,22 +155,10 @@ func (d *diagnosis) detail(format string, args ...any) {
 	d.diag.Details = append(d.diag.Details, fmt.Sprintf(format, args...))
 }
 
-// nodeBox returns the corners of the box of node
-func nodeBox(node *lnode) (tl, br Vector) {
-	return Vector{node.Left(), node.Top()}, Vector{node.Right(), node.Bottom()}
-}
-
-// boxesOverlap reports whether two boxes share more than their borders
-func boxesOverlap(tl1, br1, tl2, br2 Vector) bool {
-	return tl1.X < br2.X-diagEps && tl2.X < br1.X-diagEps && tl1.Y < br2.Y-diagEps && tl2.Y < br1.Y-diagEps
-}
-
 func (d *diagnosis) nodeOverlaps() {
 	for i, a := range d.nodes {
 		for _, b := range d.nodes[i+1:] {
-			tl1, br1 := nodeBox(a)
-			tl2, br2 := nodeBox(b)
-			if boxesOverlap(tl1, br1, tl2, br2) {
+			if a.rect().overlaps(b.rect(), diagEps) {
 				d.diag.NodeOverlaps++
 				d.detail("nodes %v and %v overlap", a, b)
 			}
@@ -446,11 +434,10 @@ func (d *diagnosis) farLabels() {
 			continue
 		}
 		path := d.drawn(edge)
-		ltl := edge.LabelPos.Sub(edge.LabelRadius)
-		lbr := edge.LabelPos.Add(edge.LabelRadius)
+		label := edge.labelRect()
 		best := math.Inf(1)
 		for i := 0; i+1 < len(path); i++ {
-			best = math.Min(best, rectSegmentDistance(ltl, lbr, path[i], path[i+1]))
+			best = math.Min(best, label.distance(path[i], path[i+1]))
 		}
 		if limit := float64(2 * edge.LabelRadius.Y); best > limit {
 			d.diag.FarLabels++
@@ -461,31 +448,29 @@ func (d *diagnosis) farLabels() {
 
 // labelOverlaps counts the labels over a node, an edge or another label
 func (d *diagnosis) labelOverlaps() {
-	type box struct{ tl, br Vector }
-	var labels []box
+	var labels []rect
 	var labelEdges []*ledge
 	for _, edge := range d.edges {
 		if edge.Label == "" {
 			continue
 		}
 		labelEdges = append(labelEdges, edge)
-		labels = append(labels, box{edge.LabelPos.Add(Vector{-edge.LabelRadius.X, -edge.LabelRadius.Y}), edge.LabelPos.Add(edge.LabelRadius)})
+		labels = append(labels, edge.labelRect())
 	}
 	for i, l := range labels {
 		var hits []string
 		for _, node := range d.nodes {
-			tl, br := nodeBox(node)
-			if boxesOverlap(l.tl, l.br, tl, br) {
+			if l.overlaps(node.rect(), diagEps) {
 				hits = append(hits, "node "+node.String())
 			}
 		}
 		for _, s := range d.segments {
-			if segmentHitsRect(s.a, s.b, l.tl.Add(Vector{diagEps, diagEps}), l.br.Add(Vector{-diagEps, -diagEps})) {
+			if l.grow(-diagEps).hitBy(s.a, s.b) {
 				hits = append(hits, "edge "+s.edge.String())
 			}
 		}
 		for k, o := range labels[:i] {
-			if boxesOverlap(l.tl, l.br, o.tl, o.br) {
+			if l.overlaps(o, diagEps) {
 				hits = append(hits, "label "+labelEdges[k].Label)
 			}
 		}
@@ -501,7 +486,7 @@ func (d *diagnosis) labelOverlaps() {
 func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	switch node.Shape {
 	case Box, Square, Record, None:
-		return segmentHitsRect(a, b, Vector{node.Left() - pad, node.Top() - pad}, Vector{node.Right() + pad, node.Bottom() + pad})
+		return segmentHitsBox(a, b, node, pad)
 	case Diamond, Octagon:
 		// clip the segment, in parts of the grown half size, to every side
 		rx, ry := float64(node.Radius.X+pad), float64(node.Radius.Y+pad)
@@ -545,12 +530,13 @@ func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	return px*px+py*py < 1
 }
 
-// rectSegmentDistance returns the distance between the rectangle tl-br and
-// segment ab, zero when they touch.
-func rectSegmentDistance(tl, br, a, b Vector) float64 {
-	if segmentHitsRect(a, b, tl, br) {
+// distance returns the distance between r and segment ab, zero when they
+// touch.
+func (r rect) distance(a, b Vector) float64 {
+	if r.hitBy(a, b) {
 		return 0
 	}
+	tl, br := r.Min, r.Max
 	pointSegment := func(p, a, b Vector) float64 {
 		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
 		t := 0.0

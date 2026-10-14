@@ -98,6 +98,9 @@ func (node *lnode) TopLeft() Vector { return Vector{node.Left(), node.Top()} }
 // BottomRight returns the bottom right corner of the node bounds.
 func (node *lnode) BottomRight() Vector { return Vector{node.Right(), node.Bottom()} }
 
+// rect returns the rect of the node's box
+func (node *lnode) rect() rect { return rect{node.TopLeft(), node.BottomRight()} }
+
 // TopCenter returns the middle of the top edge of the node bounds.
 func (node *lnode) TopCenter() Vector { return Vector{node.Center.X, node.Top()} }
 

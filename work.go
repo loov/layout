@@ -1,7 +1,6 @@
 package layout
 
 import (
-	"math"
 	"slices"
 )
 
@@ -59,6 +58,11 @@ type ledge struct {
 	// flat is set for an edge whose ends are on one rank, loops too, see
 	// hierComponent.rank
 	flat bool
+}
+
+// labelRect returns the rect of the edge's label
+func (edge *ledge) labelRect() rect {
+	return rect{edge.LabelPos.Sub(edge.LabelRadius), edge.LabelPos.Add(edge.LabelRadius)}
 }
 
 // endLabel is a label at an end of an edge: its center and half size
@@ -220,33 +224,28 @@ func (l *Layout) work() *lgraph {
 
 // Bounds returns the bounding box of all nodes and edge paths.
 func (g *lgraph) Bounds() (min, max Vector) {
-	inf := Length(math.Inf(1))
-	min, max = Vector{inf, inf}, Vector{-inf, -inf}
+	b := emptyRect()
 	for _, node := range g.Nodes {
-		minvector(&min, node.TopLeft())
-		maxvector(&max, node.BottomRight())
+		b.add(node.rect())
 	}
 	for _, cluster := range g.Clusters {
-		minvector(&min, cluster.TopLeft)
-		maxvector(&max, cluster.BottomRight)
+		b.add(rect{cluster.TopLeft, cluster.BottomRight})
 	}
 	for _, edge := range g.Edges {
 		for _, p := range edge.Path {
-			minvector(&min, p)
-			maxvector(&max, p)
+			b.point(p)
 		}
 		if edge.Label != "" {
-			minvector(&min, Vector{edge.LabelPos.X - edge.LabelRadius.X, edge.LabelPos.Y - edge.LabelRadius.Y})
-			maxvector(&max, Vector{edge.LabelPos.X + edge.LabelRadius.X, edge.LabelPos.Y + edge.LabelRadius.Y})
+			b.add(edge.labelRect())
 		}
 		for _, end := range []endLabel{edge.head, edge.tail} {
 			if end.radius != (Vector{}) {
-				minvector(&min, end.pos.Sub(end.radius))
-				maxvector(&max, end.pos.Add(end.radius))
+				b.add(rect{end.pos.Sub(end.radius), end.pos.Add(end.radius)})
 			}
 		}
 	}
-	if min.X > max.X { // nothing to bound
+	min, max = b.Min, b.Max
+	if b.empty() { // nothing to bound
 		return Vector{}, Vector{}
 	}
 	return

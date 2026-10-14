@@ -125,23 +125,3 @@ func (graph *Graph) AddNode(node *Node) bool {
 func (graph *Graph) AddEdge(edge *Edge) {
 	graph.Edges = append(graph.Edges, edge)
 }
-
-// minvector sets a to the component-wise minimum of a and b
-func minvector(a *Vector, b Vector) {
-	if b.X < a.X {
-		a.X = b.X
-	}
-	if b.Y < a.Y {
-		a.Y = b.Y
-	}
-}
-
-// maxvector sets a to the component-wise maximum of a and b
-func maxvector(a *Vector, b Vector) {
-	if b.X > a.X {
-		a.X = b.X
-	}
-	if b.Y > a.Y {
-		a.Y = b.Y
-	}
-}

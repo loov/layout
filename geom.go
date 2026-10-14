@@ -1,6 +1,7 @@
 package layout
 
 import (
+	"math"
 	"strconv"
 )
 
@@ -141,6 +142,48 @@ type Length float64
 // String formats the length with float32 precision: plenty for drawing,
 // and it hides cross-architecture rounding noise in the last bits.
 func (l Length) String() string { return strconv.FormatFloat(float64(l), 'f', -1, 32) }
+
+// rect is the rectangle from Min to Max, as image.Rectangle
+type rect struct{ Min, Max Vector }
+
+// emptyRect returns a rect around nothing yet, see add
+func emptyRect() rect {
+	inf := Length(math.Inf(1))
+	return rect{Vector{inf, inf}, Vector{-inf, -inf}}
+}
+
+// add grows r to take in o
+func (r *rect) add(o rect) {
+	if o.Min.X < r.Min.X {
+		r.Min.X = o.Min.X
+	}
+	if o.Min.Y < r.Min.Y {
+		r.Min.Y = o.Min.Y
+	}
+	if o.Max.X > r.Max.X {
+		r.Max.X = o.Max.X
+	}
+	if o.Max.Y > r.Max.Y {
+		r.Max.Y = o.Max.Y
+	}
+}
+
+// point grows r to take in p
+func (r *rect) point(p Vector) { r.add(rect{p, p}) }
+
+// empty reports whether r takes in nothing
+func (r rect) empty() bool { return r.Min.X > r.Max.X }
+
+// grow returns r grown by pad on every side; a negative pad shrinks it
+func (r rect) grow(pad Length) rect {
+	return rect{r.Min.Sub(Vector{pad, pad}), r.Max.Add(Vector{pad, pad})}
+}
+
+// overlaps reports whether r and o share more than their borders, by
+// more than eps
+func (r rect) overlaps(o rect, eps Length) bool {
+	return r.Min.X < o.Max.X-eps && o.Min.X < r.Max.X-eps && r.Min.Y < o.Max.Y-eps && o.Min.Y < r.Max.Y-eps
+}
 
 // Units of Length.
 const (

@@ -1,7 +1,5 @@
 package layout
 
-import "math"
-
 // Layout is a computed drawing of a Graph. Nodes, Edges and Clusters are
 // index-aligned with the graph's: Nodes[i] is where Graph.Nodes[i] goes.
 type Layout struct {
@@ -100,20 +98,16 @@ func indexOf[T comparable](items []T) map[T]int {
 // Bounds returns the bounding box of all nodes, clusters, edge paths and
 // labels.
 func (l *Layout) Bounds() (min, max Vector) {
-	inf := Length(math.Inf(1))
-	min, max = Vector{inf, inf}, Vector{-inf, -inf}
+	b := emptyRect()
 	for _, box := range l.Nodes {
-		minvector(&min, box.TopLeft())
-		maxvector(&max, box.BottomRight())
+		b.add(rect{box.TopLeft(), box.BottomRight()})
 	}
 	for _, box := range l.Clusters {
-		minvector(&min, box.TopLeft)
-		maxvector(&max, box.BottomRight)
+		b.add(rect{box.TopLeft, box.BottomRight})
 	}
 	for i, path := range l.Edges {
 		for _, p := range path.Path {
-			minvector(&min, p)
-			maxvector(&max, p)
+			b.point(p)
 		}
 		edge := l.Graph.Edges[i]
 		for _, label := range []struct {
@@ -126,12 +120,12 @@ func (l *Layout) Bounds() (min, max Vector) {
 		} {
 			if label.text != "" {
 				half := Vector{label.size.X / 2, label.size.Y / 2}
-				minvector(&min, label.center.Sub(half))
-				maxvector(&max, label.center.Add(half))
+				b.add(rect{label.center.Sub(half), label.center.Add(half)})
 			}
 		}
 	}
-	if min.X > max.X { // nothing to bound
+	min, max = b.Min, b.Max
+	if b.empty() { // nothing to bound
 		return Vector{}, Vector{}
 	}
 	return min, max

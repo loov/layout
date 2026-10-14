@@ -1,7 +1,6 @@
 package layout
 
 import (
-	"math"
 	"slices"
 )
 
@@ -54,22 +53,20 @@ func boxClusters(graph *lgraph) {
 	byDepth := slices.Clone(graph.Clusters)
 	slices.SortStableFunc(byDepth, func(a, b *lcluster) int { return b.depth() - a.depth() })
 	for _, cluster := range byDepth {
-		inf := Length(math.Inf(1))
-		tl, br := Vector{inf, inf}, Vector{-inf, -inf}
+		b := emptyRect()
 		for _, node := range cluster.Nodes {
-			minvector(&tl, node.TopLeft())
-			maxvector(&br, node.BottomRight())
+			b.add(node.rect())
 		}
 		for _, inner := range graph.Clusters {
 			if inner.Parent == cluster {
-				minvector(&tl, inner.TopLeft)
-				maxvector(&br, inner.BottomRight)
+				b.add(rect{inner.TopLeft, inner.BottomRight})
 			}
 		}
-		if tl.X > br.X {
+		if b.empty() {
 			continue // nothing inside
 		}
-		tl, br = tl.Sub(Vector{pad, pad}), br.Add(Vector{pad, pad})
+		b = b.grow(pad)
+		tl, br := b.Min, b.Max
 		if cluster.Label != "" {
 			label := graph.textRadius(cluster.Label, "", graph.FontSize)
 			tl.Y -= 2 * label.Y
