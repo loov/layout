@@ -28,6 +28,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 		jogs, shared := shareJogs(graph, jogs)
 		jogs = orderJogs(splitOpposite(jogs), shared, pad, &graph.ortho.over)
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
+
 	}
 	insertJogs(graph, channels)
 
@@ -568,14 +569,21 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 	// widest of a cycle splits into two steps, on two tracks, at a
 	// point where no other jog enters or leaves. The first step enters
 	// as the jog did and the second leaves as it did, so nothing needs
-	// to go above the first, which breaks the cycle
+	// to go above the first, which breaks the cycle. The jog of merged
+	// edges stays whole, as the others of its group take its track
+	// alone, see shareJogs, unless the cycle has no other.
 	for range len(jogs) {
 		n := len(jogs)
 		cycle := jogCycle(jogs, func(i, k int) bool { return over[i*n+k] })
 		var widest *jog
-		for _, j := range cycle {
-			if !j.split && j.next == nil && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
-				widest = j
+		for _, whole := range []bool{true, false} {
+			for _, j := range cycle {
+				if !j.split && j.next == nil && (!whole || len(shared[j]) == 0) && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
+					widest = j
+				}
+			}
+			if widest != nil {
+				break
 			}
 		}
 		if widest == nil {
@@ -905,10 +913,9 @@ func separate(xs, want []Length, weight []float64, gap, lo, hi Length) []Length 
 // merge when they leave or enter a node on the same side, of edges that
 // look the same. An edge that would merge at both ends merges at
 // neither, or its line would join the sources of one group to the
-// targets of the other. Flat edges and loops don't merge, nor do edges
-// with labels, which could end up beside a stretch they share, nor edges
-// at a field of a record: those leave their own field, and a merged end
-// elsewhere can run along one of them.
+// targets of the other. Ends at different fields of a record stay
+// apart. Flat edges and loops don't merge, nor do edges with labels,
+// which could end up beside a stretch they share.
 func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int) {
 	type look struct {
 		head, tail Arrow
@@ -918,6 +925,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 	}
 	type group struct {
 		node         *lnode
+		field        string // ends at different fields stay apart
 		below, start bool
 		look         look
 	}
@@ -925,7 +933,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 	count := map[group]int{}
 	for _, e := range edges {
 		from, to := rank(e.From), rank(e.To)
-		if from == to || e.Label != "" || e.FromField != "" || e.ToField != "" {
+		if from == to || e.Label != "" {
 			continue
 		}
 		l := look{head: e.ArrowHead, tail: e.ArrowTail, style: e.LineStyle, width: e.LineWidth}
@@ -934,7 +942,7 @@ func mergeEdges(merged map[*ledge][2]int, edges []*ledge, rank func(*lnode) int)
 			l.color = [5]uint8{r, g, b, a, 1}
 		}
 		below := from < to
-		k := [2]group{{e.From, below, true, l}, {e.To, !below, false, l}}
+		k := [2]group{{e.From, e.FromField, below, true, l}, {e.To, e.ToField, !below, false, l}}
 		if e.FromPort != CompassAuto {
 			k[0].node = nil
 		}
