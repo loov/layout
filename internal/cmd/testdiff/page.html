@@ -79,7 +79,10 @@ pre.drawing > svg.lines { position: absolute; left: 0; top: 0; width: 100%; heig
 .onion-wrap { position: relative; display: inline-block; }
 /* text compares cell by cell instead, see onionText */
 .onion-text { display: inline-grid; touch-action: none; cursor: grab; background: #fff; }
-.onion-text > pre.drawing { grid-area: 1 / 1; background: transparent; }
+/* each layer as large as its own drawing: stretched to the larger one,
+   the strokes of its lines, sized to it, would stretch with it, off the
+   cells of its text */
+.onion-text > pre.drawing { grid-area: 1 / 1; justify-self: start; align-self: start; background: transparent; }
 .onion-text > pre.drawing:first-child { background: #fff; }
 .onion-text.dragging { cursor: grabbing; }
 
