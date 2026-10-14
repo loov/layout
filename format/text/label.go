@@ -410,8 +410,10 @@ func (c *canvas) blank(x, y, w, h int) bool {
 
 // hug moves a label that another edge's line runs right beside a cell
 // over onto its own edge's line, where carving leaves that a blank cell
-// away from it: next to the other line, it should touch its own; owners
-// holds the edge of each label id
+// away from it: next to the other line, it should touch its own. A label
+// that no line of its own edge comes within two cells of, as straighten
+// slides lines without their labels, moves across blanks to the nearest
+// one, a blank short of it. owners holds the edge of each label id.
 func hug(g grid, owners []edgeID) {
 	// the lines of edge id, and of other edges, in the cells
 	lines := func(cells [][2]int, id edgeID) (own, other bool) {
@@ -429,21 +431,31 @@ func hug(g grid, owners []edgeID) {
 		}
 		return own, other
 	}
-	// the box of every label, and the labels in reading order, which
-	// is the order they move in, as one can take the cell another wants
+	// the box of every label, and of its characters without the blanks
+	// around them, and the labels in reading order, which is the order
+	// they move in, as one can take the cell another wants
 	boxes := map[edgeID][4]int{} // top, left, bottom, right
+	inked := map[edgeID][4]int{}
+	grow := func(boxes map[edgeID][4]int, id edgeID, r, x int) {
+		b, ok := boxes[id]
+		if !ok {
+			b = [4]int{r, x, r, x}
+		}
+		boxes[id] = [4]int{min(b[0], r), min(b[1], x), max(b[2], r), max(b[3], x)}
+	}
 	var ids []edgeID
 	for r, row := range g {
 		for x, c := range row {
 			if c.text == 0 {
 				continue
 			}
-			b, ok := boxes[c.text]
-			if !ok {
-				b = [4]int{r, x, r, x}
+			if _, ok := boxes[c.text]; !ok {
 				ids = append(ids, c.text)
 			}
-			boxes[c.text] = [4]int{min(b[0], r), min(b[1], x), max(b[2], r), max(b[3], x)}
+			grow(boxes, c.text, r, x)
+			if c.r != ' ' {
+				grow(inked, c.text, r, x)
+			}
 		}
 	}
 	// the cells of a side of b, n cells out
@@ -469,8 +481,62 @@ func hug(g grid, owners []edgeID) {
 		}
 		return cells
 	}
+	// shift moves the cells of b n cells toward dir
+	shift := func(b [4]int, dir uint8, n int) {
+		cells := []cell{}
+		for r := b[0]; r <= b[2]; r++ {
+			for x := b[1]; x <= b[3]; x++ {
+				cells = append(cells, g[r][x])
+				g[r][x] = cell{r: ' ', glue: true}
+			}
+		}
+		i := 0
+		for r := b[0]; r <= b[2]; r++ {
+			for x := b[1]; x <= b[3]; x++ {
+				g[r+n*dy(dir)][x+n*dx(dir)] = cells[i]
+				i++
+			}
+		}
+	}
+	// passable reports whether a label in b can move over cells
+	passable := func(cells [][2]int, b [4]int) bool {
+		return !slices.ContainsFunc(cells, func(p [2]int) bool {
+			if p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3] {
+				return false // the blanks of the label itself
+			}
+			c := g.at(p[0], p[1])
+			return c == nil || !free(*c) && !c.glue || c.solid
+		})
+	}
 	for _, id := range ids {
 		b, edge := boxes[id], owners[id]
+		if v, ok := inked[id]; ok {
+			near := false
+			for _, dir := range []uint8{up, down, left, right} {
+				for n := 1; n <= 2 && !near; n++ {
+					near, _ = lines(side(v, dir, n), edge)
+				}
+			}
+			if !near {
+				to, dist := uint8(0), 0
+				for _, dir := range []uint8{left, right, up, down} {
+					for n := 1; dist == 0 || n < dist; n++ {
+						cells := side(v, dir, n)
+						if own, other := lines(cells, edge); own && !other {
+							to, dist = dir, n
+							break
+						}
+						if !passable(cells, b) {
+							break
+						}
+					}
+				}
+				if dist > 0 {
+					shift(b, to, dist-2)
+				}
+				continue
+			}
+		}
 		var ring [][2]int
 		for _, dir := range []uint8{up, down, left, right} {
 			ring = append(ring, side(b, dir, 1)...)
@@ -485,24 +551,10 @@ func hug(g grid, owners []edgeID) {
 			if own, _ := lines(side(b, dir, 2), edge); !own {
 				continue
 			}
-			if slices.ContainsFunc(side(b, dir, 1), func(p [2]int) bool { c := g.at(p[0], p[1]); return c == nil || !free(*c) && !c.glue || c.solid }) {
+			if !passable(side(b, dir, 1), b) {
 				continue
 			}
-			// move the label, from the far end on
-			cells := []cell{}
-			for r := b[0]; r <= b[2]; r++ {
-				for x := b[1]; x <= b[3]; x++ {
-					cells = append(cells, g[r][x])
-					g[r][x] = cell{r: ' ', glue: true}
-				}
-			}
-			i := 0
-			for r := b[0]; r <= b[2]; r++ {
-				for x := b[1]; x <= b[3]; x++ {
-					g[r+dy(dir)][x+dx(dir)] = cells[i]
-					i++
-				}
-			}
+			shift(b, dir, 1)
 			break
 		}
 	}

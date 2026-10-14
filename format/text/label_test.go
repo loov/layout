@@ -304,3 +304,25 @@ func TestHugLabelsApart(t *testing.T) {
 		t.Errorf("edge %s -> %s is not joined:\n%s", edge.From, edge.To, encode(g, c.palette, nil))
 	}
 }
+
+// TestHugPull checks that hug moves a label that its edge's line was slid
+// away from back to it, a blank short of it.
+func TestHugPull(t *testing.T) {
+	//	..........
+	//	.10.....|.
+	//	..........
+	g := make(grid, 3)
+	for r := range g {
+		g[r] = make([]cell, 10)
+		for x := range g[r] {
+			g[r][x] = cell{r: ' '}
+		}
+		g[r][8] = cell{r: '│', lines: up | down, owner: [4]edgeID{1, 1}}
+	}
+	g[1][1] = cell{r: '1', text: 1, keep: true}
+	g[1][2] = cell{r: '0', text: 1, keep: true}
+	hug(g, []edgeID{0, 1})
+	if got, want := string(runes(g[1])), "     10 │ "; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
