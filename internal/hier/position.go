@@ -272,6 +272,24 @@ func abs(x float32) float32 { return max(x, -x) }
 // its two children; of those, simplex.balance moves towards the one that
 // centers nodes among their neighbors, see straighten in Position.
 func positionSimplex(graph *Graph, straighten, fans bool) {
+	s, lft, rgt := positionGraph(graph)
+	s.run()
+	balanceTies(graph, s, straighten)
+	x := make([]float32, graph.NodeCount())
+	for _, node := range graph.Nodes {
+		x[node.ID] = float32(s.rank[node.ID])
+	}
+	if fans {
+		centerFans(graph, x, float32(s.rank[lft]), float32(s.rank[rgt]))
+	}
+	for _, node := range graph.Nodes {
+		node.Center.X = x[node.ID] - node.Anchor
+	}
+}
+
+// positionGraph returns the auxiliary graph of positionSimplex, with the
+// vertices that bound the ranks on the left and the right
+func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 	n := graph.NodeCount()
 	edges := 0
 	for _, node := range graph.Nodes {
@@ -280,8 +298,8 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 	// two more vertices bound the ranks on the left and the right, and
 	// the edge between them costs the width of the drawing; edges along a
 	// rank, see Flat, get a vertex each after them
-	s := &simplex{n: int32(n + edges + 2 + len(graph.Flat))}
-	lft, rgt := int32(n+edges), int32(n+edges+1)
+	s = &simplex{n: int32(n + edges + 2 + len(graph.Flat))}
+	lft, rgt = int32(n+edges), int32(n+edges+1)
 	s.addEdge(lft, rgt, widthWeight, 0)
 	for _, layer := range graph.ByRank {
 		if len(layer) > 0 {
@@ -354,11 +372,16 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 		s.addEdge(v, int32(flat[1].ID), w, 0)
 		v++
 	}
-	s.run()
-	// a move that breaks a tie scores by how far forks and joins end up
-	// off the median of their neighbors, as Diagnose measures unbalance,
-	// and by how straight edges run: chains in line when edges are drawn
-	// through their bends, edges upright when routed orthogonally
+	return s, lft, rgt
+}
+
+// balanceTies breaks the ties the costs of s leave, see simplex.balance:
+// a move scores by how far forks and joins end up off the median of their
+// neighbors, as Diagnose measures unbalance, and by how straight edges
+// run: chains in line when edges are drawn through their bends, edges
+// upright when routed orthogonally
+func balanceTies(graph *Graph, s *simplex, straighten bool) {
+	n := graph.NodeCount()
 	var at []int32
 	cost := func(node *Node) float32 {
 		x := s.rank[node.ID]
@@ -428,12 +451,16 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 		}
 		return gain
 	})
+}
 
-	// fans: a node with several children goes over the middle of them,
-	// from the bottom up, as far as its neighbors in the rank let it; the
-	// children are the nodes right below, or below ranks of labels only,
-	// along edges that merge into the fork: not long edges past other
-	// nodes, nor edges with labels
+// centerFans puts a node with several children over the middle of them,
+// from the bottom up, as far as its neighbors in the rank let it, in x,
+// within lo and hi; the children are the nodes right below, or below
+// ranks of labels only, along edges that merge into the fork: not long
+// edges past other nodes, nor edges with labels. The edges stretched over
+// ranks of labels only run on in line with the node they end at, so that
+// forks fork right below their node.
+func centerFans(graph *Graph, x []float32, lo, hi float32) {
 	real := make([]bool, len(graph.ByRank))
 	for r, layer := range graph.ByRank {
 		real[r] = slices.ContainsFunc(layer, func(node *Node) bool { return !node.Virtual })
@@ -447,12 +474,7 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 		}
 		return c
 	}
-	x := make([]float32, n)
-	for _, node := range graph.Nodes {
-		x[node.ID] = float32(s.rank[node.ID])
-	}
-	lo, hi := float32(s.rank[lft]), float32(s.rank[rgt])
-	for r := len(graph.ByRank) - 1; r >= 0 && fans; r-- {
+	for r := len(graph.ByRank) - 1; r >= 0; r-- {
 		layer := graph.ByRank[r]
 		for i, node := range layer {
 			if node.Virtual {
@@ -474,10 +496,8 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 			}
 		}
 	}
-	// the edges stretched over ranks of labels only run on in line with
-	// the node they end at, so that forks fork right below their node
 	for r, layer := range graph.ByRank {
-		if real[r] || !fans {
+		if real[r] {
 			continue
 		}
 		for i, node := range layer {
@@ -491,9 +511,6 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 			left, right := graph.bounds(x, layer, i, float32(math.Inf(-1)), float32(math.Inf(1)))
 			x[node.ID] = min(max(x[end.ID], left), right)
 		}
-	}
-	for _, node := range graph.Nodes {
-		node.Center.X = x[node.ID] - node.Anchor
 	}
 }
 
