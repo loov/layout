@@ -981,21 +981,26 @@ func unorderedNodes(edge *ledge) [2]*lnode {
 }
 
 // aroundNode returns the points from the end at a port on the top or
-// bottom of node out past it and beside the node, toward next, when the
-// edge goes to far on the other side; nil when it goes the way it faces
+// bottom of node out past it, beside the node, toward next, and on past
+// its other side, when the edge goes to far on that side; nil when it
+// goes the way it faces. Stopping beside the node would leave the jog
+// toward next on the side the port faces, and the line from there would
+// run back through the node.
 func aroundNode(node *lnode, port Compass, end, next, far Vector, pad Length) []Vector {
-	var y Length
+	var y, past Length
 	switch {
 	case (port == North || port == NorthEast || port == NorthWest) && far.Y > node.Center.Y:
-		y = node.Top() - pad
+		y, past = node.Top()-pad, node.Bottom()+pad
 	case (port == South || port == SouthEast || port == SouthWest) && far.Y < node.Center.Y:
-		y = node.Bottom() + pad
+		y, past = node.Bottom()+pad, node.Top()-pad
 	default:
 		return nil
 	}
-	x := node.Right() + pad
+	// a pad further out than the ends at side ports step out, see
+	// stepOut, which turn where they did
+	x := node.Right() + 2*pad
 	if next.X < node.Center.X {
-		x = node.Left() - pad
+		x = node.Left() - 2*pad
 	}
-	return []Vector{{end.X, y}, {x, y}}
+	return []Vector{{end.X, y}, {x, y}, {x, past}}
 }

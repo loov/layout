@@ -12,8 +12,9 @@ import (
 type Diagnostics struct {
 	// NodeOverlaps counts pairs of node boxes that intersect.
 	NodeOverlaps int
-	// EdgeThroughNode counts edges passing through a node other than
-	// their own ends, once per edge and node.
+	// EdgeThroughNode counts edges passing through a node, once per edge
+	// and node: a node other than their own ends, or their own end past
+	// the segment that leaves or reaches it, see Shafts for that one.
 	EdgeThroughNode int
 	// EdgeCrossings counts pairs of edge segments that cross.
 	EdgeCrossings int
@@ -97,8 +98,9 @@ func Diagnose(l *Layout) Diagnostics {
 	}
 
 	type segment struct {
-		a, b Vector
-		edge *ledge
+		a, b        Vector
+		edge        *ledge
+		first, last bool // the segment at the start, at the end
 	}
 	var segments []segment
 	for _, edge := range edges {
@@ -107,7 +109,7 @@ func Diagnose(l *Layout) Diagnostics {
 			path = flattenPath(path, 2*graph.RowPadding, graph.EdgePadding)
 		}
 		for i := 0; i+1 < len(path); i++ {
-			segments = append(segments, segment{path[i], path[i+1], edge})
+			segments = append(segments, segment{path[i], path[i+1], edge, i == 0, i+2 == len(path)})
 		}
 	}
 
@@ -137,7 +139,10 @@ func Diagnose(l *Layout) Diagnostics {
 	near := map[edgeNode]bool{}
 	for _, s := range segments {
 		for _, node := range nodes {
-			if node == s.edge.From || node == s.edge.To {
+			own := node == s.edge.From || node == s.edge.To
+			// an edge leaves and reaches its own ends, and a loop runs
+			// beside its node all along
+			if own && (s.edge.From == s.edge.To || node == s.edge.From && s.first || node == s.edge.To && s.last) {
 				continue
 			}
 			key := edgeNode{s.edge, node}
@@ -145,7 +150,7 @@ func Diagnose(l *Layout) Diagnostics {
 				through[key] = true
 				diag.EdgeThroughNode++
 				diag.Details = append(diag.Details, fmt.Sprintf("edge %v through node %v at %v-%v", s.edge, node, s.a, s.b))
-			} else if !through[key] && !near[key] && segmentHitsNode(s.a, s.b, node, graph.EdgePadding) {
+			} else if !own && !through[key] && !near[key] && segmentHitsNode(s.a, s.b, node, graph.EdgePadding) {
 				near[key] = true
 				diag.EdgeNearNode++
 				diag.Details = append(diag.Details, fmt.Sprintf("edge %v near node %v at %v-%v", s.edge, node, s.a, s.b))

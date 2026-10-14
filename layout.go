@@ -877,16 +877,20 @@ func (c *hierComponent) position() {
 		// its arrowhead, beyond the padding of the nodes
 		c.graph.FlatGap = float32(2 * c.graphdef.cell().X)
 		// ends at ports on the sides along the rank turn beside the node:
-		// a row or column each, and one more beside the next node
+		// a row or column each, and one more beside the next node. Ends
+		// on the top or bottom facing away from the other end go around
+		// the node, on a side positioning decides, see aroundNode.
 		ends := map[hier.ID][2]int{}
 		for _, edge := range c.graphdef.Edges {
 			if edge.From == edge.To {
 				continue // loops have room of their own, see loopShift
 			}
+			from, to := c.graph.Nodes[c.nodes[edge.From]].Rank, c.graph.Nodes[c.nodes[edge.To]].Rank
 			for _, end := range []struct {
-				node *lnode
-				port Compass
-			}{{edge.From, edge.FromPort}, {edge.To, edge.ToPort}} {
+				node  *lnode
+				port  Compass
+				ahead int // how the other end's rank lies from this one's
+			}{{edge.From, edge.FromPort, to - from}, {edge.To, edge.ToPort, from - to}} {
 				id := c.nodes[end.node]
 				e := ends[id]
 				switch end.port {
@@ -894,6 +898,16 @@ func (c *hierComponent) position() {
 					e[0]++
 				case East:
 					e[1]++
+				case North, NorthEast, NorthWest:
+					if end.ahead > 0 {
+						e[0]++
+						e[1]++
+					}
+				case South, SouthEast, SouthWest:
+					if end.ahead < 0 {
+						e[0]++
+						e[1]++
+					}
 				}
 				ends[id] = e
 			}
