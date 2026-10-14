@@ -491,6 +491,17 @@ func splitOpposite(jogs []*jog) []*jog {
 // heading left by entry x ascending, so continuations don't cut through
 // the jogs below them
 func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*jog {
+	sortByEntry(jogs)
+	o := &jogOrder{jogs: jogs, shared: shared, pad: pad, buf: buf}
+	o.findAbove()
+	o.splitCycles()
+	order := o.leastCrossings(o.topological())
+	return permute(make([]*jog, 0, len(o.jogs)), o.jogs, order)
+}
+
+// sortByEntry sorts jogs heading right by entry x descending, then jogs
+// heading left by entry x ascending
+func sortByEntry(jogs []*jog) {
 	slices.SortStableFunc(jogs, func(a, b *jog) int {
 		ra, rb := a.xin == a.x0, b.xin == b.x0 // heading right
 		if ra != rb {
@@ -504,81 +515,100 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 		}
 		return cmp.Compare(a.xin, b.xin)
 	})
-	// a jog entering where another exits goes above it, or the exit
-	// would run down its stub; otherwise keep the sorted order. Where
-	// is within half a pad, as text draws closer runs in one cell
-	near := func(xs, ys []Length) bool {
-		for _, x := range xs {
-			for _, y := range ys {
-				if absLength(x-y) < pad/2 {
-					return true
-				}
-			}
-		}
-		return false
-	}
-	// whether jogs[i] goes above jogs[k], at i*n+k, as the loops below
-	// ask it again and again, in buf: above the second step of its own,
-	// and, unless it is a second step, above the jogs that end where it
-	// enters, unless they have a second step. The exits are sorted, so
-	// that a jog looks only at those around where it enters
-	var over []bool
-	type exit struct {
-		x Length
-		k int
-	}
-	var exits []exit
-	overAll := func() {
-		n := len(jogs)
-		over = slices.Grow((*buf)[:0], n*n)[:n*n]
-		*buf = over
-		clear(over)
-		exits = exits[:0]
-		for k, b := range jogs {
-			if b.next == nil {
-				for _, y := range b.outs {
-					exits = append(exits, exit{y, k})
-				}
-			}
-		}
-		slices.SortFunc(exits, func(a, b exit) int { return cmp.Compare(a.x, b.x) })
-		for i, a := range jogs {
-			if k := slices.Index(jogs, a.next); a.next != nil && k >= 0 && k != i {
-				over[i*n+k] = true
-			}
-			if a.split {
-				continue
-			}
-			for _, x := range a.ins {
-				// a pad either way holds all within half a pad
-				lo, _ := slices.BinarySearchFunc(exits, x-pad, func(e exit, x Length) int { return cmp.Compare(e.x, x) })
-				for _, e := range exits[lo:] {
-					if e.x > x+pad {
-						break
-					}
-					if e.k != i && absLength(x-e.x) < pad/2 {
-						over[i*n+e.k] = true
-					}
-				}
+}
+
+// jogOrder orders the jogs of a channel, see orderJogs. A jog entering
+// where another exits goes above it, or the exit would run down its stub;
+// otherwise the sorted order stays. Where is within half a pad, as text
+// draws closer runs in one cell.
+type jogOrder struct {
+	jogs   []*jog
+	shared map[*jog][]*jog
+	pad    Length
+	buf    *[]bool
+	// whether jogs[i] goes above jogs[k], at i*n+k, see findAbove
+	above []bool
+	exits []jogExit
+}
+
+// jogExit is where a jog leaves its channel, see findAbove
+type jogExit struct {
+	x Length
+	k int
+}
+
+// near reports whether any of xs and ys are within half a pad
+func (o *jogOrder) near(xs, ys []Length) bool {
+	for _, x := range xs {
+		for _, y := range ys {
+			if absLength(x-y) < o.pad/2 {
+				return true
 			}
 		}
 	}
-	overAll()
-	// jogs that must go above each other around a cycle, as longer
-	// chains and swaps over spans that differ can, have no order: the
-	// widest of a cycle splits into two steps, on two tracks, at a
-	// point where no other jog enters or leaves. The first step enters
-	// as the jog did and the second leaves as it did, so nothing needs
-	// to go above the first, which breaks the cycle. The jog of merged
-	// edges stays whole, as the others of its group take its track
-	// alone, see shareJogs, unless the cycle has no other.
-	for range len(jogs) {
-		n := len(jogs)
-		cycle := jogCycle(jogs, func(i, k int) bool { return over[i*n+k] })
+	return false
+}
+
+// findAbove finds which jogs go above which, as the loops after ask it
+// again and again, in buf: a jog above the second step of its own, and,
+// unless it is a second step, above the jogs that end where it enters,
+// unless they have a second step. The exits are sorted, so that a jog
+// looks only at those around where it enters.
+func (o *jogOrder) findAbove() {
+	jogs, pad := o.jogs, o.pad
+	n := len(jogs)
+	over := slices.Grow((*o.buf)[:0], n*n)[:n*n]
+	*o.buf = over
+	clear(over)
+	o.above = over
+	exits := o.exits[:0]
+	for k, b := range jogs {
+		if b.next == nil {
+			for _, y := range b.outs {
+				exits = append(exits, jogExit{y, k})
+			}
+		}
+	}
+	slices.SortFunc(exits, func(a, b jogExit) int { return cmp.Compare(a.x, b.x) })
+	o.exits = exits
+	for i, a := range jogs {
+		if k := slices.Index(jogs, a.next); a.next != nil && k >= 0 && k != i {
+			over[i*n+k] = true
+		}
+		if a.split {
+			continue
+		}
+		for _, x := range a.ins {
+			// a pad either way holds all within half a pad
+			lo, _ := slices.BinarySearchFunc(exits, x-pad, func(e jogExit, x Length) int { return cmp.Compare(e.x, x) })
+			for _, e := range exits[lo:] {
+				if e.x > x+pad {
+					break
+				}
+				if e.k != i && absLength(x-e.x) < pad/2 {
+					over[i*n+e.k] = true
+				}
+			}
+		}
+	}
+}
+
+// splitCycles splits jogs that must go above each other around a cycle,
+// as longer chains and swaps over spans that differ can, and have no
+// order: the widest of a cycle splits into two steps, on two tracks, at a
+// point where no other jog enters or leaves. The first step enters as the
+// jog did and the second leaves as it did, so nothing needs to go above
+// the first, which breaks the cycle. The jog of merged edges stays whole,
+// as the others of its group take its track alone, see shareJogs, unless
+// the cycle has no other.
+func (o *jogOrder) splitCycles() {
+	for range len(o.jogs) {
+		n := len(o.jogs)
+		cycle := jogCycle(o.jogs, func(i, k int) bool { return o.above[i*n+k] })
 		var widest *jog
 		for _, whole := range []bool{true, false} {
 			for _, j := range cycle {
-				if !j.split && j.next == nil && (!whole || len(shared[j]) == 0) && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
+				if !j.split && j.next == nil && (!whole || len(o.shared[j]) == 0) && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
 					widest = j
 				}
 			}
@@ -587,11 +617,11 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 			}
 		}
 		if widest == nil {
-			break
+			return
 		}
 		apart := func(x Length) bool {
-			return !slices.ContainsFunc(jogs, func(o *jog) bool {
-				return near(o.ins, []Length{x}) || near(o.outs, []Length{x})
+			return !slices.ContainsFunc(o.jogs, func(j *jog) bool {
+				return o.near(j.ins, []Length{x}) || o.near(j.outs, []Length{x})
 			})
 		}
 		mid, found := Length(0), false
@@ -602,22 +632,26 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 			}
 		}
 		if !found {
-			break
+			return
 		}
 		span := func(xs []Length) (Length, Length) { return min(mid, slices.Min(xs)), max(mid, slices.Max(xs)) }
 		second := &jog{edge: widest.edge, index: widest.index, xin: mid, split: true, ins: []Length{mid}, outs: widest.outs}
 		second.x0, second.x1 = span(widest.outs)
 		widest.x0, widest.x1 = span(widest.ins)
 		widest.next, widest.outs = second, []Length{mid}
-		jogs = append(jogs, second)
-		overAll()
+		o.jogs = append(o.jogs, second)
+		o.findAbove()
 	}
-	// the first jog that no jog left goes above, by how many do
-	n := len(jogs)
+}
+
+// topological returns the jogs in order: each time the first jog that no
+// jog left goes above, by how many do
+func (o *jogOrder) topological() []int {
+	n := len(o.jogs)
 	below := make([]int, n)
 	for i := range n {
 		for k := range n {
-			if over[i*n+k] {
+			if o.above[i*n+k] {
 				below[k]++
 			}
 		}
@@ -639,15 +673,21 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 		order = append(order, p)
 		left = slices.Delete(left, pick, pick+1)
 		for _, k := range left {
-			if over[p*n+k] {
+			if o.above[p*n+k] {
 				below[k]--
 			}
 		}
 	}
-	// a jog above another crosses the other's track with its line
-	// down where it leaves inside the other's span, and the other's
-	// line in where it enters inside its own; the order goes to where
-	// the jogs cross least
+	return order
+}
+
+// leastCrossings moves the jogs of order to where they cross least: a
+// jog above another crosses the other's track with its line down where it
+// leaves inside the other's span, and the other's line in where it enters
+// inside its own. Merged jogs keep their place, as they join their lines
+// there.
+func (o *jogOrder) leastCrossings(order []int) []int {
+	jogs, pad, n := o.jogs, o.pad, len(o.jogs)
 	inside := func(xs []Length, j *jog) (n int) {
 		for _, x := range xs {
 			if x > j.x0+pad/2 && x < j.x1-pad/2 {
@@ -656,17 +696,15 @@ func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*
 		}
 		return n
 	}
-	// merged jogs keep their place, as they join their lines there
 	pos := make([]int, n)
 	for i, p := range order {
 		pos[p] = i
 	}
-	merged := func(i int) bool { return len(shared[jogs[i]]) > 0 }
-	order = siftOrder(order, func(i, k int) int { return inside(jogs[i].outs, jogs[k]) + inside(jogs[k].ins, jogs[i]) },
+	merged := func(i int) bool { return len(o.shared[jogs[i]]) > 0 }
+	return siftOrder(order, func(i, k int) int { return inside(jogs[i].outs, jogs[k]) + inside(jogs[k].ins, jogs[i]) },
 		func(i, k int) bool {
-			return i != k && (over[i*n+k] || (merged(i) || merged(k)) && pos[i] < pos[k])
+			return i != k && (o.above[i*n+k] || (merged(i) || merged(k)) && pos[i] < pos[k])
 		})
-	return permute(make([]*jog, 0, n), jogs, order)
 }
 
 // placeTracks puts the ordered jogs of channel k on tracks, arc being how
