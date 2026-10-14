@@ -333,7 +333,6 @@ type hierComponent struct {
 	// edges line up, see packed
 	pack bool
 
-	labels    map[[2]hier.ID][]*ledge // labeled edges by unordered node pair
 	clusters  map[*lcluster]*hier.Cluster
 	labelNode map[*hier.Node][]*ledge // the labels the middle virtual node of an edge carries
 	flatBelow map[*lnode]Length       // room below a node for the labels of edges along its rank
@@ -341,7 +340,7 @@ type hierComponent struct {
 
 	// buffers that route fills again on every call, see route
 	byRank    [][]*lnode
-	edgePaths map[[2]hier.ID][]Vector
+	edgePaths map[*hier.Edge][]Vector
 	pathBlock []Vector
 }
 
@@ -377,7 +376,6 @@ func newHierComponent(graphdef *lgraph, opts Options) *hierComponent {
 		loopExtra: map[*lnode]Length{},
 		loopLeft:  map[*lnode]Length{},
 		pack:      graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho,
-		labels:    map[[2]hier.ID][]*ledge{},
 		clusters:  map[*lcluster]*hier.Cluster{},
 		labelNode: map[*hier.Node][]*ledge{},
 		flatBelow: map[*lnode]Length{},
@@ -518,13 +516,7 @@ func (c *hierComponent) rank() {
 
 	// labeled edges need a virtual node to hang the label on; doubling the
 	// ranks guarantees every edge has one in the middle
-	for _, edge := range c.graphdef.Edges {
-		if edge.Label != "" && edge.From != edge.To {
-			key := unorderedPair(c.nodes[edge.From], c.nodes[edge.To])
-			c.labels[key] = append(c.labels[key], edge)
-		}
-	}
-	if len(c.labels) > 0 {
+	if slices.ContainsFunc(c.graphdef.Edges, func(edge *ledge) bool { return edge.Label != "" && edge.From != edge.To }) {
 		hier.DoubleRanks(c.graph)
 	}
 
@@ -534,6 +526,14 @@ func (c *hierComponent) rank() {
 
 	// create virtual nodes
 	hier.AddVirtuals(c.graph)
+	hier.TraceEdges(c.graph)
+
+}
+
+// hierEdge returns the hierarchical edge that edge runs as, and whether
+// it runs backward, see hier.Graph.EdgeBetween
+func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
+	return c.graph.EdgeBetween(c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]])
 }
 
 // addClusters adds the borders of the clusters
@@ -563,23 +563,16 @@ func (c *hierComponent) addClusters() {
 func (c *hierComponent) order() {
 	hier.OrderRanksN(c.graph, c.opts.OrderIterations)
 
-	// the middle virtual node of every labeled edge carries the labels
-	for _, source := range c.graph.Nodes {
-		if source.Virtual {
+	// the middle virtual node of every labeled edge carries the labels,
+	// of every edge between the same nodes
+	for _, edge := range c.graphdef.Edges {
+		if edge.Label == "" || edge.From == edge.To {
 			continue
 		}
-		for _, out := range source.Out {
-			var chain []*hier.Node
-			target := out
-			for target.Virtual {
-				chain = append(chain, target)
-				target = target.Out[0]
-			}
-			if len(chain) == 0 {
-				continue
-			}
-			if edges := c.labels[unorderedPair(source.ID, target.ID)]; len(edges) > 0 {
-				c.labelNode[chain[len(chain)/2]] = edges
+		for _, e := range c.graph.EdgesBetween(c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]) {
+			if len(e.Chain) > 0 {
+				mid := e.Chain[len(e.Chain)/2]
+				c.labelNode[mid] = append(c.labelNode[mid], edge)
 			}
 		}
 	}
@@ -1036,83 +1029,66 @@ func (c *hierComponent) realByRank() [][]*lnode {
 // rankPaths returns the paths of the edges between ranks, along their
 // virtual nodes, by the hierarchical nodes they join; labels go beside the
 // middle virtual node
-func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
+func (c *hierComponent) rankPaths() map[*hier.Edge][]Vector {
 	// assignPaths copies the paths out, so they live in a block that
 	// the next route reuses
 	edgePaths := c.edgePaths
 	if edgePaths == nil {
-		edgePaths = make(map[[2]hier.ID][]Vector, len(c.graphdef.Edges))
+		edgePaths = make(map[*hier.Edge][]Vector, len(c.graphdef.Edges))
 		c.edgePaths = edgePaths
 	}
 	clear(edgePaths)
 	block := c.pathBlock[:0]
-	for _, source := range c.graph.Nodes {
-		if source.Virtual {
-			continue
+	for _, e := range c.graph.Edges() {
+		if e.Flat {
+			continue // see flatPaths
+		}
+		sourcedef := c.reverse[e.From.ID]
+		// the ends, a point past a flat label and one for every
+		// virtual node, sized at once
+		n := 3 + len(e.Chain)
+		if cap(block)-len(block) < n {
+			block = make([]Vector, 0, max(2*cap(block), n, 64))
+		}
+		path := block[len(block) : len(block) : len(block)+n]
+		block = block[:len(block)+n]
+		path = append(path, sourcedef.BottomCenter().Add(Vector{X: c.packed(sourcedef)}))
+		if below := sourcedef.Center.Y + c.flatBelow[sourcedef]; c.graphdef.Splines != SplinesOrtho && below > path[0].Y {
+			// past the label beside the node first, see reserveFlatLabels
+			path = append(path, Vector{path[0].X, below})
 		}
 
-		sourcedef := c.reverse[source.ID]
-		for _, out := range source.Out {
-			// the ends, a point past a flat label and one for every
-			// virtual node, sized at once
-			n := 3
-			for target := out; target.Virtual && len(target.Out) > 0; target = target.Out[0] {
-				n++
-			}
-			if cap(block)-len(block) < n {
-				block = make([]Vector, 0, max(2*cap(block), n, 64))
-			}
-			path := block[len(block) : len(block) : len(block)+n]
-			block = block[:len(block)+n]
-			path = append(path, sourcedef.BottomCenter().Add(Vector{X: c.packed(sourcedef)}))
-			if below := sourcedef.Center.Y + c.flatBelow[sourcedef]; c.graphdef.Splines != SplinesOrtho && below > path[0].Y {
-				// past the label beside the node first, see reserveFlatLabels
-				path = append(path, Vector{path[0].X, below})
-			}
-
-			target := out
-			for target != nil && target.Virtual {
-				if len(target.Out) < 1 { // should never happen
-					target = nil
-					break
+		for _, target := range e.Chain {
+			point := Vector{Length(target.Center.X), Length(target.Center.Y)}
+			if edges, ok := c.labelNode[target]; ok {
+				point.X = Length(target.Center.X + target.Anchor)
+				// labels sit right beside the line, stacked vertically
+				// around the node's center
+				var height Length
+				for _, edge := range edges {
+					height += 2 * edge.LabelRadius.Y
 				}
-
-				point := Vector{Length(target.Center.X), Length(target.Center.Y)}
-				if edges, ok := c.labelNode[target]; ok {
-					point.X = Length(target.Center.X + target.Anchor)
-					// labels sit right beside the line, stacked vertically
-					// around the node's center
-					var height Length
-					for _, edge := range edges {
-						height += 2 * edge.LabelRadius.Y
-					}
-					y := point.Y - height/2
-					side := Length(labelSide(c.graphdef.RankDir))
-					for _, edge := range edges {
-						edge.LabelPos = Vector{X: point.X + side*(c.graphdef.EdgePadding+edge.LabelRadius.X), Y: y + edge.LabelRadius.Y}
-						y += 2 * edge.LabelRadius.Y
-					}
+				y := point.Y - height/2
+				side := Length(labelSide(c.graphdef.RankDir))
+				for _, edge := range edges {
+					edge.LabelPos = Vector{X: point.X + side*(c.graphdef.EdgePadding+edge.LabelRadius.X), Y: y + edge.LabelRadius.Y}
+					y += 2 * edge.LabelRadius.Y
 				}
-				path = append(path, point)
-
-				target = target.Out[0]
 			}
-			if target == nil {
-				continue
-			}
-
-			targetdef := c.reverse[target.ID]
-			path = append(path, targetdef.TopCenter().Add(Vector{X: c.packed(targetdef)}))
-
-			// clip ends to node outlines so fan-ins don't converge on one
-			// point; packed ends stay at the first end, where they line up
-			if !c.pack {
-				path[0] = sourcedef.Boundary(path[1])
-				path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
-			}
-
-			edgePaths[[2]hier.ID{source.ID, target.ID}] = path
+			path = append(path, point)
 		}
+
+		targetdef := c.reverse[e.To.ID]
+		path = append(path, targetdef.TopCenter().Add(Vector{X: c.packed(targetdef)}))
+
+		// clip ends to node outlines so fan-ins don't converge on one
+		// point; packed ends stay at the first end, where they line up
+		if !c.pack {
+			path[0] = sourcedef.Boundary(path[1])
+			path[len(path)-1] = targetdef.Boundary(path[len(path)-2])
+		}
+
+		edgePaths[e] = path
 	}
 	c.pathBlock = block
 	return edgePaths
@@ -1121,24 +1097,27 @@ func (c *hierComponent) rankPaths() map[[2]hier.ID][]Vector {
 // flatPaths adds the paths of flat edges, which run sideways along the
 // rank, arcing over nodes in between; overlapping arcs stack, narrower
 // ones below
-func (c *hierComponent) flatPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]*lnode) {
+func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge][]Vector, byRank [][]*lnode) {
 	type arc struct {
-		flat   [2]*hier.Node
+		flat   *hier.Edge
 		lo, hi Length
 		top    Length
 		level  int
 	}
 	var arcs []*arc
-	for _, flat := range c.graph.Flat {
-		sourcedef, targetdef := c.reverse[flat[0].ID], c.reverse[flat[1].ID]
-		if max(flat[1].Pos-flat[0].Pos, flat[0].Pos-flat[1].Pos) <= 1 {
+	for _, flat := range c.graph.Edges() {
+		if !flat.Flat {
+			continue
+		}
+		sourcedef, targetdef := c.reverse[flat.From.ID], c.reverse[flat.To.ID]
+		if max(flat.To.Pos-flat.From.Pos, flat.From.Pos-flat.To.Pos) <= 1 {
 			path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
-			edgePaths[[2]hier.ID{flat[0].ID, flat[1].ID}] = path
+			edgePaths[flat] = path
 			continue
 		}
 		a := &arc{flat: flat, top: min(sourcedef.Top(), targetdef.Top())}
 		a.lo, a.hi = min(sourcedef.Center.X, targetdef.Center.X), max(sourcedef.Center.X, targetdef.Center.X)
-		for _, node := range byRank[flat[0].Rank] {
+		for _, node := range byRank[flat.From.Rank] {
 			if node.Center.X > a.lo && node.Center.X < a.hi {
 				a.top = min(a.top, node.Top())
 			}
@@ -1148,14 +1127,14 @@ func (c *hierComponent) flatPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]
 	slices.SortStableFunc(arcs, func(a, b *arc) int { return cmp.Compare(a.hi-a.lo, b.hi-b.lo) })
 	for i, a := range arcs {
 		for _, below := range arcs[:i] {
-			if below.flat[0].Rank == a.flat[0].Rank && below.lo <= a.hi && a.lo <= below.hi {
+			if below.flat.From.Rank == a.flat.From.Rank && below.lo <= a.hi && a.lo <= below.hi {
 				a.level = max(a.level, below.level+1)
 				a.top = min(a.top, below.top)
 			}
 		}
-		sourcedef, targetdef := c.reverse[a.flat[0].ID], c.reverse[a.flat[1].ID]
+		sourcedef, targetdef := c.reverse[a.flat.From.ID], c.reverse[a.flat.To.ID]
 		y := a.top - 2*c.graphdef.EdgePadding*Length(a.level+1)
-		edgePaths[[2]hier.ID{a.flat[0].ID, a.flat[1].ID}] = []Vector{
+		edgePaths[a.flat] = []Vector{
 			sourcedef.TopCenter(),
 			{sourcedef.Center.X, y},
 			{targetdef.Center.X, y},
@@ -1166,7 +1145,7 @@ func (c *hierComponent) flatPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]
 
 // assignPaths gives every edge its path, self-loops their own; edges
 // between the same pair of nodes share one route, so they are spread out
-func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank [][]*lnode) {
+func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge][]Vector, byRank [][]*lnode) {
 	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
 	pairKey := func(edge *ledge) [2]hier.ID { return unorderedPair(c.nodes[edge.From], c.nodes[edge.To]) }
 	pairCount := make(map[[2]hier.ID]int, len(c.graphdef.Edges))
@@ -1199,13 +1178,13 @@ func (c *hierComponent) assignPaths(edgePaths map[[2]hier.ID][]Vector, byRank []
 			continue
 		}
 
-		var path []Vector
-		if p, ok := edgePaths[[2]hier.ID{sourceid, targetid}]; ok {
-			path = p
-		} else if p, ok := edgePaths[[2]hier.ID{targetid, sourceid}]; ok {
-			path = reversePath(p) // the edge was reversed to break a cycle
-		} else {
+		e, reversed := c.hierEdge(edge)
+		path, ok := edgePaths[e]
+		if !ok {
 			continue
+		}
+		if reversed {
+			path = reversePath(path) // the edge was reversed to break a cycle
 		}
 
 		// pinned ports override the automatic attachment points

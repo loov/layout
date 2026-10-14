@@ -16,6 +16,10 @@ type Graph struct {
 	Flat [][2]*Node
 	// weights of edges by (src, dst); missing means 1
 	weights map[[2]ID]float32
+	// edges are the edges by (From, To) as they run, and traced in order,
+	// see TraceEdges
+	edges  map[[2]ID][]*Edge
+	traced []*Edge
 	// Unseen holds the edges by (src, dst) that aren't drawn: along a
 	// rank, positioning doesn't pull their ends together, see
 	// positionSimplex
