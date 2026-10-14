@@ -16,28 +16,59 @@ import (
 // a cell or land on a corner. An end whose run goes on straight keeps
 // its place if it can; a moved end takes the bend before it along.
 func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
-	type end struct {
-		path   [][2]int
-		i, j   int     // the end and the bend before it
-		k      int     // the point past the bend, -1 if none
-		fixed  bool    // the run goes on straight past the bend
-		toward int     // where the edge heads past the bend, along the side
-		group  int     // the merged ends there, see layout.EdgePath.Merged
-		exact  float64 // where the layout ends the edge along the side, in cells
+	sides := c.endsOnSides(edges, paths)
+	// sides in the order of the nodes, as an edge can end on two of them
+	// and moving one end can move the other
+	keys := slices.Collect(maps.Keys(sides))
+	order := map[*layout.Node]int{}
+	for i, node := range c.l.Graph.Nodes {
+		order[node] = i
+	}
+	slices.SortFunc(keys, func(a, b boxSide) int {
+		return cmp.Or(cmp.Compare(order[a.node], order[b.node]), cmp.Compare(a.along, b.along), cmp.Compare(boolInt(a.after), boolInt(b.after)))
+	})
+	// the ends alone on their side, until their side is done
+	alone := map[*[2]int]bool{}
+	for _, ends := range sides {
+		if len(ends) == 1 && len(ends[0].also) == 0 {
+			alone[&ends[0].path[ends[0].i]] = true
+		}
+	}
+	for _, key := range keys {
+		c.spreadSide(key, sides[key], alone)
+	}
+}
 
-		also []end // further edges of a shared start, which follow it
-	}
-	type side struct {
-		node  *layout.Node
-		along int  // the axis along the side: 1 for left and right
-		after bool // right or bottom
-	}
-	sides := map[side][]end{}
+// spreadEnd is an edge end on a side of a box, see spreadSides
+type spreadEnd struct {
+	path   [][2]int
+	i, j   int     // the end and the bend before it
+	k      int     // the point past the bend, -1 if none
+	fixed  bool    // the run goes on straight past the bend
+	toward int     // where the edge heads past the bend, along the side
+	group  int     // the merged ends there, see layout.EdgePath.Merged
+	exact  float64 // where the layout ends the edge along the side, in cells
+
+	also []spreadEnd // further edges of a shared start, which follow it
+}
+
+// boxSide is a side of the box of node
+type boxSide struct {
+	node  *layout.Node
+	along int  // the axis along the side: 1 for left and right
+	after bool // right or bottom
+}
+
+// endsOnSides returns the ends of the edges, drawn along paths, on every
+// side of a box that they come into straight from beyond it, put on the
+// side, with the ends that merge with each in its also
+func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][][2]int) map[boxSide][]spreadEnd {
+	sides := map[boxSide][]spreadEnd{}
 	// merged ends on a side move as one, led by an end that goes on
 	// straight when there is one, as that stays; leads holds where each
 	// group's lead is in sides
 	type group struct {
-		side side
+		side boxSide
 		id   int
 	}
 	leads := map[group]int{}
@@ -79,7 +110,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 				if after {
 					path[e.i][across] = b[across+2]
 				}
-				end := end{path: path, i: e.i, j: e.j, k: -1, fixed: true, toward: at[along]}
+				end := spreadEnd{path: path, i: e.i, j: e.j, k: -1, fixed: true, toward: at[along]}
 				if e.k >= 0 && e.k < len(path) {
 					end.k = e.k
 					end.fixed = path[e.k][along] == bend[along]
@@ -94,7 +125,7 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 				if along == 1 {
 					end.exact = float64((p.Y - c.origin.Y) / c.cellH)
 				}
-				key := side{e.node, along, after}
+				key := boxSide{e.node, along, after}
 				if n, ok := leads[group{key, end.group}]; ok {
 					lead := &sides[key][n]
 					if end.fixed && !lead.fixed {
@@ -112,89 +143,75 @@ func (c *canvas) spreadSides(edges []*layout.Edge, paths [][][2]int) {
 			}
 		}
 	}
-	// sides in the order of the nodes, as an edge can end on two of them
-	// and moving one end can move the other
-	keys := slices.Collect(maps.Keys(sides))
-	order := map[*layout.Node]int{}
-	for i, node := range c.l.Graph.Nodes {
-		order[node] = i
+	return sides
+}
+
+// spreadSide spreads the ends on the side key, see spreadSides; alone
+// holds the ends alone on their side, until their side is done
+func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*[2]int]bool) {
+	lo, hi := c.sideCells(key.node, key.along)
+	// the other end of an edge may have moved its bend along already,
+	// see below: head for where it is now
+	for n := range ends {
+		if e := &ends[n]; e.k >= 0 {
+			e.fixed = e.path[e.k][key.along] == e.path[e.j][key.along]
+			e.toward = e.path[e.k][key.along]
+		}
 	}
-	slices.SortFunc(keys, func(a, b side) int {
-		return cmp.Or(cmp.Compare(order[a.node], order[b.node]), cmp.Compare(a.along, b.along), cmp.Compare(boolInt(a.after), boolInt(b.after)))
+	if len(ends) > hi-lo+1 {
+		return // no room; keep them as they are
+	}
+	slices.SortStableFunc(ends, func(a, b spreadEnd) int {
+		return cmp.Or(cmp.Compare(a.path[a.i][key.along], b.path[b.i][key.along]), cmp.Compare(a.toward, b.toward))
 	})
-	// the ends alone on their side, until their side is done
-	alone := map[*[2]int]bool{}
-	for _, ends := range sides {
-		if len(ends) == 1 && len(ends[0].also) == 0 {
-			alone[&ends[0].path[ends[0].i]] = true
+	want := make([]int, len(ends))
+	exact := make([]float64, len(ends))
+	fixed := make([]bool, len(ends))
+	for n, e := range ends {
+		want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed || c.boxBeside(e.path[e.i], e.path[e.j], key.along)
+	}
+	packEnds(want, exact, fixed)
+	// an end that turns toward a place along the side goes straight
+	// there instead, past no other end
+	for n, e := range ends {
+		if fixed[n] || e.toward < lo || e.toward > hi || c.boxAcross(e.path[e.i], e.path[e.j], key.along, e.toward) {
+			continue
+		}
+		past := slices.ContainsFunc(want, func(w int) bool {
+			return w != want[n] && (w-want[n])*(w-e.toward) <= 0
+		})
+		if past {
+			continue
+		}
+		// a jog between two ends straightens from either: not from
+		// ends balanced on their side when the other end, still to
+		// come, is alone on its own
+		moved := slices.Clone(want)
+		moved[n] = e.toward
+		if len(e.path) == 4 && alone[&e.path[3-e.i]] && unbalance(want, lo, hi) == 0 && unbalance(moved, lo, hi) > 0 {
+			continue
+		}
+		want[n], fixed[n] = e.toward, true
+	}
+	// with spread, a cell between ends where the side has room, as
+	// balanced as the ends were
+	rows := spreadRows(want, fixed, lo, hi, 1)
+	if c.spread && 2*len(want)-1 <= hi-lo+1 {
+		wide := spreadRows(want, fixed, lo, hi, 2)
+		moved := false
+		for n := range want {
+			moved = moved || fixed[n] && wide[n] != want[n]
+		}
+		if !moved {
+			rows = wide
 		}
 	}
-	for _, key := range keys {
-		ends := sides[key]
-		lo, hi := c.sideCells(key.node, key.along)
-		// the other end of an edge may have moved its bend along already,
-		// see below: head for where it is now
-		for n := range ends {
-			if e := &ends[n]; e.k >= 0 {
-				e.fixed = e.path[e.k][key.along] == e.path[e.j][key.along]
-				e.toward = e.path[e.k][key.along]
-			}
-		}
-		if len(ends) > hi-lo+1 {
-			continue // no room; keep them as they are
-		}
-		slices.SortStableFunc(ends, func(a, b end) int {
-			return cmp.Or(cmp.Compare(a.path[a.i][key.along], b.path[b.i][key.along]), cmp.Compare(a.toward, b.toward))
-		})
-		want := make([]int, len(ends))
-		exact := make([]float64, len(ends))
-		fixed := make([]bool, len(ends))
-		for n, e := range ends {
-			want[n], exact[n], fixed[n] = e.path[e.i][key.along], e.exact, e.fixed || c.boxBeside(e.path[e.i], e.path[e.j], key.along)
-		}
-		packEnds(want, exact, fixed)
-		// an end that turns toward a place along the side goes straight
-		// there instead, past no other end
-		for n, e := range ends {
-			if fixed[n] || e.toward < lo || e.toward > hi || c.boxAcross(e.path[e.i], e.path[e.j], key.along, e.toward) {
-				continue
-			}
-			past := slices.ContainsFunc(want, func(w int) bool {
-				return w != want[n] && (w-want[n])*(w-e.toward) <= 0
-			})
-			if past {
-				continue
-			}
-			// a jog between two ends straightens from either: not from
-			// ends balanced on their side when the other end, still to
-			// come, is alone on its own
-			moved := slices.Clone(want)
-			moved[n] = e.toward
-			if len(e.path) == 4 && alone[&e.path[3-e.i]] && unbalance(want, lo, hi) == 0 && unbalance(moved, lo, hi) > 0 {
-				continue
-			}
-			want[n], fixed[n] = e.toward, true
-		}
-		// with spread, a cell between ends where the side has room, as
-		// balanced as the ends were
-		rows := spreadRows(want, fixed, lo, hi, 1)
-		if c.spread && 2*len(want)-1 <= hi-lo+1 {
-			wide := spreadRows(want, fixed, lo, hi, 2)
-			moved := false
-			for n := range want {
-				moved = moved || fixed[n] && wide[n] != want[n]
-			}
-			if !moved {
-				rows = wide
-			}
-		}
-		for n, at := range rows {
-			e := ends[n]
-			delete(alone, &e.path[e.i])
-			e.path[e.i][key.along], e.path[e.j][key.along] = at, at
-			for _, f := range e.also {
-				f.path[f.i][key.along], f.path[f.j][key.along] = at, at
-			}
+	for n, at := range rows {
+		e := ends[n]
+		delete(alone, &e.path[e.i])
+		e.path[e.i][key.along], e.path[e.j][key.along] = at, at
+		for _, f := range e.also {
+			f.path[f.i][key.along], f.path[f.j][key.along] = at, at
 		}
 	}
 }
