@@ -344,8 +344,8 @@ func mergedEdges(l *layout.Layout) map[*layout.Edge]edgeID {
 	}
 	meets := func(i int, edge *layout.Edge) []meet {
 		var out []meet
-		if m := l.Edges[i].Merged; m != [2]int{} {
-			out = append(out, meet{group: max(m[0], m[1])})
+		if m := l.Edges[i].Merged; !m.IsZero() {
+			out = append(out, meet{group: max(m.Start, m.End)})
 		}
 		for _, m := range []meet{{node: edge.From, field: edge.FromField}, {node: edge.To, field: edge.ToField}} {
 			switch {

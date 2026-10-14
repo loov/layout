@@ -116,7 +116,10 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][][2]int) map[boxSide
 					end.fixed = path[e.k][along] == bend[along]
 					end.toward = path[e.k][along]
 				}
-				end.group = c.l.Edges[k].Merged[min(e.i, 1)] // the start, else the end
+				end.group = c.l.Edges[k].Merged.End
+				if e.i == 0 {
+					end.group = c.l.Edges[k].Merged.Start
+				}
 				p := c.l.Edges[k].Path[0]
 				if e.i != 0 {
 					p = c.l.Edges[k].Path[len(c.l.Edges[k].Path)-1]

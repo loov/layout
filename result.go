@@ -46,10 +46,17 @@ type EdgePath struct {
 	// FontSize is the edge's own, or the graph default when unset.
 	FontSize Length
 	// Merged is the group of edges this one merges with at its start
-	// and at its end, see Graph.MergeEdges; 0 where it doesn't. Merged
-	// edges share the end, and run together to where they turn apart.
-	Merged [2]int
+	// and at its end, see Graph.MergeEdges. Merged edges share the end,
+	// and run together to where they turn apart.
+	Merged MergeGroups
 }
+
+// MergeGroups are the groups of merged edges at the start and at the end
+// of an edge; 0 where it merges with none.
+type MergeGroups struct{ Start, End int }
+
+// IsZero reports whether the edge merges with none at either end.
+func (m MergeGroups) IsZero() bool { return m == MergeGroups{} }
 
 // ClusterBox is the computed box of a cluster.
 type ClusterBox struct {

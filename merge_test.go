@@ -26,23 +26,23 @@ func TestMergeEdges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	merged := func(edge *layout.Edge) [2]int { return l.Edge(edge).Merged }
-	start := merged(ab)[0]
-	if start == 0 || merged(ac)[0] != start || merged(ab)[1] != 0 {
+	merged := func(edge *layout.Edge) layout.MergeGroups { return l.Edge(edge).Merged }
+	start := merged(ab).Start
+	if start == 0 || merged(ac).Start != start || merged(ab).End != 0 {
 		t.Errorf("a -> b and a -> c: %v %v, want one start group", merged(ab), merged(ac))
 	}
 	if l.Edge(ab).Path[0] != l.Edge(ac).Path[0] {
 		t.Errorf("a -> b and a -> c start at %v and %v, want together", l.Edge(ab).Path[0], l.Edge(ac).Path[0])
 	}
 	for _, edge := range []*layout.Edge{ad, ae, bf} {
-		if m := merged(edge); m != [2]int{} {
+		if m := merged(edge); !m.IsZero() {
 			t.Errorf("%v merged %v, want apart", edge, m)
 		}
 	}
-	if m := merged(bg); m[0] == 0 || m[0] != merged(bh)[0] || m[0] == start {
+	if m := merged(bg); m.Start == 0 || m.Start != merged(bh).Start || m.Start == start {
 		t.Errorf("b -> g and b -> h: %v %v, want a start group of their own", m, merged(bh))
 	}
-	if m := merged(cf); m[1] == 0 || m[1] != merged(gf)[1] {
+	if m := merged(cf); m.End == 0 || m.End != merged(gf).End {
 		t.Errorf("c -> f and g -> f: %v %v, want one end group", m, merged(gf))
 	}
 }

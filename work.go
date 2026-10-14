@@ -182,7 +182,7 @@ func (g *lgraph) result() *Layout {
 		})
 	}
 	for _, e := range g.Edges {
-		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: g.merged[e]}
+		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: MergeGroups{Start: g.merged[e][0], End: g.merged[e][1]}}
 		if e.Label != "" {
 			path.LabelCenter = e.LabelPos
 			path.LabelSize = Vector{2 * e.LabelRadius.X, 2 * e.LabelRadius.Y}

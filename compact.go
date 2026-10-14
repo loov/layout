@@ -239,7 +239,7 @@ func crowded(l *Layout, cell Vector) []bool {
 	for i, p := range l.Edges {
 		for j := i + 1; j < len(l.Edges); j++ {
 			q := l.Edges[j]
-			if len(p.Path) < 2 || len(q.Path) < 2 || p.Merged != [2]int{} && p.Merged == q.Merged {
+			if len(p.Path) < 2 || len(q.Path) < 2 || !p.Merged.IsZero() && p.Merged == q.Merged {
 				continue
 			}
 			// edges out of one node, or into one, leave it together and
@@ -477,7 +477,7 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 	runs:
 		for _, r := range runs[v] {
 			o := p.objs[r]
-			if p.l.Edges[o.index].Merged != [2]int{} {
+			if !p.l.Edges[o.index].Merged.IsZero() {
 				continue
 			}
 			// every row against every constraint, which a sweep over their
@@ -719,7 +719,7 @@ func (p *compactPass) addEdges() {
 		// merged edges run together from their shared end to where they
 		// turn apart, and stay together where their points meet
 		for i, pt := range path.Path {
-			for k, group := range path.Merged {
+			for k, group := range []int{path.Merged.Start, path.Merged.End} {
 				if group == 0 {
 					continue
 				}
