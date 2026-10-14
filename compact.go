@@ -1297,12 +1297,24 @@ func (p *compactPass) apply(d []int) bool {
 	// a run across the axis goes to the middle of its cell, where text
 	// draws it: off the middle, runs in neighboring cells can be a hair
 	// apart, which reads as overlapping where the diagnostics measure.
-	// The end of a run along it stays on the side of its node.
+	// The end of a run along it stays on the side of its node, and so
+	// does a run at the end that lies on that side, as from a field of a
+	// record: in the middle of the cell it would run inside the node.
+	onSide := func(node *Node, x Length) bool {
+		i := l.nodeIndex[node]
+		moved := shift(i) + snap[i]
+		box := l.Nodes[i]
+		return absLength(x-(box.Left()-moved)) < 1e-3 || absLength(x-(box.Right()-moved)) < 1e-3
+	}
 	for e, items := range p.pointItem {
 		path := l.Edges[e].Path
 		edge := l.Graph.Edges[e]
 		for i, item := range items {
 			switch {
+			case item == items[0] && onSide(edge.From, path[i].X):
+				path[i].X += shift(item) + snap[l.nodeIndex[edge.From]]
+			case item == items[len(items)-1] && onSide(edge.To, path[i].X):
+				path[i].X += shift(item) + snap[l.nodeIndex[edge.To]]
 			case i > 0 && items[i-1] == item || i+1 < len(items) && items[i+1] == item:
 				path[i].X = Length(p.col(path[i].X)+d[p.varOf[item]]) * cell.X
 			case i == 0:

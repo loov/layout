@@ -105,19 +105,21 @@ func TestEdgesApartRandom(t *testing.T) {
 }
 
 // TestThroughNodesRandom checks that no edge of a random graph, see
-// randomGraph, laid out for text without compaction, runs through a node,
-// its own ends included: an end at a port on the top or bottom facing
-// away from the other end goes around its node, see aroundNode.
-// Compaction can still turn a stub from a field inside its record.
+// randomGraph, laid out for text with and without compaction, runs
+// through a node, its own ends included: an end at a port on the top or
+// bottom facing away from the other end goes around its node, see
+// aroundNode, and a run along the side of its node stays on it.
 func TestThroughNodesRandom(t *testing.T) {
 	for seed := range 300 {
-		l, err := layout.Hierarchical(randomGraph(uint64(seed)), layout.Options{ForText: true, NoCompact: true})
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, line := range layout.Diagnose(l).Details {
-			if strings.Contains(line, " through node ") {
-				t.Errorf("%d: %s", seed, line)
+		for _, noCompact := range []bool{true, false} {
+			l, err := layout.Hierarchical(randomGraph(uint64(seed)), layout.Options{ForText: true, NoCompact: noCompact})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, line := range layout.Diagnose(l).Details {
+				if strings.Contains(line, " through node ") {
+					t.Errorf("%d, no compaction %v: %s", seed, noCompact, line)
+				}
 			}
 		}
 	}
