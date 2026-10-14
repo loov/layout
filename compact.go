@@ -60,7 +60,7 @@ func pointGrid(graph *Graph) compactGrid {
 // should be orthogonal; a sloped segment moves as a whole with its ends,
 // which keeps it but compacts less around it.
 func compact(l *Layout, grid compactGrid) {
-	sideways := sideways(l.Graph.RankDir)
+	sideways := l.Graph.RankDir.Sideways()
 
 	// a cluster is as wide as its label on the top of its frame, see
 	// format/text's clusterLabelWidth, and two cells tall for its frame
@@ -670,7 +670,11 @@ func (p *compactPass) addNodes(tie bool) {
 		if p.grid.text {
 			inset = outlines(&lnode{Node: *p.l.Graph.Nodes[i]})
 		}
-		o := rigid{item: i, lo: p.col(box.Left() + inset), hi: p.col(box.Right() - inset), c0: p.row(box.Top() + inset), c1: p.row(box.Bottom() - inset), kind: nodeKind, index: i}
+		o := rigid{
+			item: i, kind: nodeKind, index: i,
+			lo: p.col(box.Left() + inset), hi: p.col(box.Right() - inset),
+			c0: p.row(box.Top() + inset), c1: p.row(box.Bottom() - inset),
+		}
 		if box.Shape == PointShape {
 			// text draws a point in one cell, however much room the layout
 			// keeps around it
@@ -714,7 +718,10 @@ func (p *compactPass) addEdges() {
 				pointGroup[i] = group
 				items[i] = p.newItem()
 				groups = append(groups, len(p.objs))
-				p.objs = append(p.objs, rigid{item: items[i], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: group, hidden: edge.Invisible})
+				p.objs = append(p.objs, rigid{
+					item: items[i], lo: c, hi: c, c0: r, c1: r,
+					kind: runKind, index: e, group: group, hidden: edge.Invisible,
+				})
 				continue
 			}
 			pointGroup[i] = group
@@ -792,7 +799,10 @@ func (p *compactPass) addEdges() {
 			}
 
 			// not a group next to the runs of the edge, see need
-			p.objs = append(p.objs, rigid{item: items[end.at], lo: c, hi: c, c0: r, c1: r, kind: runKind, index: e, group: -2, hidden: edge.Invisible, marker: true})
+			p.objs = append(p.objs, rigid{
+				item: items[end.at], lo: c, hi: c, c0: r, c1: r,
+				kind: runKind, index: e, group: -2, hidden: edge.Invisible, marker: true,
+			})
 		}
 
 		p.pointItem[e] = items
@@ -1139,7 +1149,8 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 		}
 
 		// the halves of a run split by a jog, see jogAxis
-		if a.kind == runKind && b.kind == runKind && a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1) && p.jogGroup[[2]int{a.index, max(a.group, b.group)}] {
+		neighbors := a.kind == runKind && b.kind == runKind && a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1)
+		if neighbors && p.jogGroup[[2]int{a.index, max(a.group, b.group)}] {
 			return free
 		}
 		if grid.text && p.plain(a) && p.plain(b) {
@@ -1233,7 +1244,10 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 		for _, a := range found {
 			if !implied[a] && gap(a, c) != free {
 				x, y := pos[a], pos[c]
-				pairs = append(pairs, pair{uint64(min(x, y))<<32 | uint64(max(x, y)), constraint{varOf[objs[a].item], varOf[o.item], gap(a, c) - (o.lo - objs[a].hi), false}, [2]rowSpan{{objs[a].c0, objs[a].c1}, {o.c0, o.c1}}})
+				key := uint64(min(x, y))<<32 | uint64(max(x, y))
+				con := constraint{varOf[objs[a].item], varOf[o.item], gap(a, c) - (o.lo - objs[a].hi), false}
+				rows := [2]rowSpan{{objs[a].c0, objs[a].c1}, {o.c0, o.c1}}
+				pairs = append(pairs, pair{key, con, rows})
 			}
 		}
 	}

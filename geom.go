@@ -85,6 +85,9 @@ const (
 	RightToLeft RankDir = "RL"
 )
 
+// Sideways reports whether ranks run left or right, as columns.
+func (dir RankDir) Sideways() bool { return dir == LeftToRight || dir == RightToLeft }
+
 // LineStyle selects how outlines and edges are stroked.
 type LineStyle string
 

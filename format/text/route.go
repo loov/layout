@@ -225,7 +225,7 @@ func (c *canvas) free(p point, dir uint8, id edgeID, end bool) bool {
 	if q.solid {
 		return end
 	}
-	return q.lines&dir == 0 || q.owner[bits.TrailingZeros8(dir)] == id
+	return q.lines&dir == 0 || q.ownerOn(dir) == id
 }
 
 // crosses reports whether a line of an edge with id that enters the
@@ -240,7 +240,7 @@ func (c *canvas) crosses(p point, dir uint8, id edgeID) bool {
 		across = up | down
 	}
 	for _, d := range []uint8{across & -across, across &^ (across & -across)} {
-		if q.lines&d != 0 && q.owner[bits.TrailingZeros8(d)] != id {
+		if q.lines&d != 0 && q.ownerOn(d) != id {
 			return true
 		}
 	}

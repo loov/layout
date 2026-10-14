@@ -91,14 +91,11 @@ var (
 	Quality = Options{OrderIterations: 96}
 )
 
-// sideways reports whether ranks run left or right
-func sideways(dir RankDir) bool { return dir == LeftToRight || dir == RightToLeft }
-
 // labelSide is the side of an edge, in the top to bottom frame, that its
 // label goes on: right of downward edges, and above sideways ones, which
 // is the left in the frame
 func labelSide(dir RankDir) float32 {
-	if sideways(dir) {
+	if dir.Sideways() {
 		return -1
 	}
 	return 1
@@ -149,7 +146,7 @@ func hierarchical(graphdef *lgraph, opts Options) {
 	}
 
 	// lay out top to bottom in a transposed/flipped frame, then map back
-	sideways := graphdef.RankDir == LeftToRight || graphdef.RankDir == RightToLeft
+	sideways := graphdef.RankDir.Sideways()
 	swapRadii := func() {
 		for _, node := range graphdef.Nodes {
 			node.Radius.X, node.Radius.Y = node.Radius.Y, node.Radius.X
@@ -433,7 +430,7 @@ func (c *hierComponent) labelSpan(cluster *lcluster) Length {
 func (c *hierComponent) labelRow(cluster *lcluster) Length {
 	label := cluster.Label
 	switch {
-	case sideways(c.graphdef.RankDir), label == "" && !c.graphdef.ForText:
+	case c.graphdef.RankDir.Sideways(), label == "" && !c.graphdef.ForText:
 		return 0
 	case label == "":
 		label = " "
@@ -550,7 +547,7 @@ func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
 func (c *hierComponent) addClusters() {
 	for _, clusterdef := range c.graphdef.Clusters {
 		cluster := &hier.Cluster{}
-		if clusterdef.Label != "" && !sideways(c.graphdef.RankDir) {
+		if clusterdef.Label != "" && !c.graphdef.RankDir.Sideways() {
 			// room for the label across the top, with padding beside it;
 			// sideways the label runs along the ranks, see labelSpan
 			// across the borders, which the box keeps half of
@@ -720,7 +717,7 @@ func (c *hierComponent) reserveEnds() {
 			need := Length(n+1)*spacing/2 + outlines(node)
 			if c.graphdef.ForText {
 				need += spacing / 2 // a cell to spare, which rounding can take
-				if sideways(c.graphdef.RankDir) && node.Shape == Octagon {
+				if c.graphdef.RankDir.Sideways() && node.Shape == Octagon {
 					need += spacing // past the slanted corners on the top and bottom
 				}
 			}
@@ -869,7 +866,7 @@ func (c *hierComponent) reserveClusterLabels() {
 		pad := float32(c.graphdef.RowPadding / 2)
 		top, bottom := pad, pad
 		top += float32(c.labelRow(clusterdef))
-		if clusterdef.Label != "" && sideways(c.graphdef.RankDir) {
+		if clusterdef.Label != "" && c.graphdef.RankDir.Sideways() {
 			// the label runs along the ranks; make room for the box to
 			// reach as far on both sides
 			short := float32(max(0, c.labelSpan(clusterdef)-span(clusterdef, cluster))) / 2
@@ -1014,7 +1011,7 @@ func (c *hierComponent) placeClusters() {
 		left, top = min(left, clusterdef.TopLeft.X), min(top, clusterdef.TopLeft.Y)
 		right, bottom = max(right, clusterdef.BottomRight.X), max(bottom, clusterdef.BottomRight.Y)
 		top -= c.labelRow(clusterdef)
-		if clusterdef.Label != "" && sideways(c.graphdef.RankDir) {
+		if clusterdef.Label != "" && c.graphdef.RankDir.Sideways() {
 			if short := c.labelSpan(clusterdef) - (bottom - top); short > 0 {
 				top, bottom = top-short/2, bottom+short/2
 			}

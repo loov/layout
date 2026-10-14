@@ -2,6 +2,7 @@ package text
 
 import (
 	"iter"
+	"math/bits"
 	"unicode"
 
 	"github.com/loov/layout"
@@ -67,8 +68,12 @@ type pen struct {
 // cell is graph.FontSize*0.55 wide and graph.LineHeight tall.
 func newCanvas(l *layout.Layout, safe bool) *canvas {
 	graph := l.Graph
-	c := &canvas{l: l, safe: safe, cellW: graph.FontSize * 0.55, cellH: graph.LineHeight, boxes: map[*layout.Node]cellBox{}, ended: map[point]bool{}, pointed: map[*layout.Node]bool{},
-		palette: []uint32{0}, colors: map[uint32]colorID{0: 0}}
+	c := &canvas{
+		l: l, safe: safe,
+		cellW: graph.FontSize * 0.55, cellH: graph.LineHeight,
+		boxes: map[*layout.Node]cellBox{}, ended: map[point]bool{}, pointed: map[*layout.Node]bool{},
+		palette: []uint32{0}, colors: map[uint32]colorID{0: 0},
+	}
 	if c.cellW <= 0 {
 		c.cellW = 8
 	}
@@ -112,7 +117,7 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 
 // sideways reports whether the ranks of the graph are columns
 func (c *canvas) sideways() bool {
-	return c.l.Graph.RankDir == layout.LeftToRight || c.l.Graph.RankDir == layout.RightToLeft
+	return c.l.Graph.RankDir.Sideways()
 }
 
 // reset makes the canvas w by h blank cells
@@ -364,6 +369,9 @@ type cell struct {
 	solid  bool      // covered by a node; edges do not draw there
 	frame  bool      // of the frame of a cluster
 }
+
+// ownerOn returns the edge that drew the arm of c toward dir
+func (c *cell) ownerOn(dir uint8) edgeID { return c.owner[bits.TrailingZeros8(dir)] }
 
 // edgeID tells edges apart in cells, from 1, and the frames of clusters,
 // which take ids after the edges; edges that merge share a negative id,

@@ -58,7 +58,7 @@ func (graph *lgraph) prepareText() {
 		}
 		switch node.Shape {
 		case Record:
-			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel(), sideways(graph.RankDir)))
+			rows := draw.RecordRows(draw.ParseRecord(node.DefaultLabel(), graph.RankDir.Sideways()))
 			node.Radius.Y = max(node.Radius.Y, graph.LineHeight*Length(rows+1)/2)
 			graph.reserveRecord(node, cellW)
 		case Diamond:
@@ -74,7 +74,7 @@ func (graph *lgraph) prepareText() {
 
 	// sideways, the main path runs along the top row of the nodes, with
 	// further edges a row each below it; the layout makes room for them
-	sideways := graph.RankDir == LeftToRight || graph.RankDir == RightToLeft
+	sideways := graph.RankDir.Sideways()
 	graph.PackEdgeEnds = sideways
 	if sideways {
 		// nodes in a rank are stacked down the rows, which are twice as
@@ -135,7 +135,7 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 		}
 	}
 
-	walk(draw.LayoutRecord(node.DefaultLabel(), sideways(graph.RankDir), 2*float64(node.Radius.X), 2*float64(node.Radius.Y),
+	walk(draw.LayoutRecord(node.DefaultLabel(), graph.RankDir.Sideways(), 2*float64(node.Radius.X), 2*float64(node.Radius.Y),
 		float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize)), 1)
 	node.Radius.X += grow / 2
 }
@@ -148,7 +148,7 @@ func (graph *lgraph) cellWidth() Length { return graph.FontSize * 0.55 }
 // run down: X along the ranks, a column or a line sideways, and Y across
 // them, a line or a column sideways
 func (graph *lgraph) cell() Vector {
-	if sideways(graph.RankDir) {
+	if graph.RankDir.Sideways() {
 		return Vector{X: graph.LineHeight, Y: graph.cellWidth()}
 	}
 	return Vector{X: graph.cellWidth(), Y: graph.LineHeight}

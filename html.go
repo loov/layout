@@ -6,7 +6,7 @@ import "github.com/loov/layout/internal/draw"
 // borders a record, which draws the borders as its dividers, see
 // draw.TableRecord; the writers draw other HTML-like labels as they are
 func tableRecord(graph *lgraph, node *lnode) {
-	if rec, ok := draw.TableRecord(node.DefaultLabel(), sideways(graph.RankDir)); ok {
+	if rec, ok := draw.TableRecord(node.DefaultLabel(), graph.RankDir.Sideways()); ok {
 		node.Label, node.Shape = rec, Record
 	}
 }

@@ -106,7 +106,8 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 			for along := range 2 {
 				across := 1 - along
 				after := bend.at(across) > b.Max.at(across)
-				if b.Max.at(along)-b.Min.at(along) < 2 || at.at(along) != bend.at(along) || at.at(along) < b.Min.at(along) || at.at(along) > b.Max.at(along) ||
+				lo, hi, x := b.Min.at(along), b.Max.at(along), at.at(along)
+				if hi-lo < 2 || x != bend.at(along) || x < lo || x > hi ||
 					!after && bend.at(across) >= b.Min.at(across) {
 					continue // not straight into the side from beyond it
 				}

@@ -2,7 +2,6 @@ package text
 
 import (
 	"fmt"
-	"math/bits"
 	"math/rand/v2"
 	"path/filepath"
 	"slices"
@@ -170,7 +169,7 @@ func lost(c *canvas, g grid, l *layout.Layout) []*layout.Edge {
 
 	// owns reports whether the edge id draws the arm of the cell
 	owns := func(p *cell, arm uint8, id edgeID) bool {
-		return p != nil && p.lines&arm != 0 && p.owner[bits.TrailingZeros(uint(arm))] == id
+		return p != nil && p.lines&arm != 0 && p.ownerOn(arm) == id
 	}
 
 	// touches reports whether the cell is beside the box of the node, or

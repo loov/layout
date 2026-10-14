@@ -778,7 +778,7 @@ func placeTracks(graph *lgraph, rows [][2]Length, arc Length, k int, jogs []*jog
 	// are past it, high above a top and low below a bottom
 	margin := 3
 	high, low := arc > 0, false
-	if graph.ForText && !sideways(graph.RankDir) {
+	if graph.ForText && !graph.RankDir.Sideways() {
 		crossed := func(x0, x1 Length) bool {
 			return slices.ContainsFunc(jogs, func(j *jog) bool { return j.x0 <= x1 && x0 <= j.x1 })
 		}

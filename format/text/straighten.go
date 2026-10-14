@@ -122,7 +122,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 	if turn == nil || turn.lines&dir == 0 || bits.OnesCount(uint(turn.lines)) != 2 || turn.lines&(left|right) == 0 {
 		return moves, false
 	}
-	id := turn.owner[bits.TrailingZeros(uint(dir))]
+	id := turn.ownerOn(dir)
 
 	// a dashed line, whose corners are square, stays dashed, see canvas.line
 	dashed := turn.r == glyph(turn.lines, 0)
@@ -163,7 +163,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			// toward the run it shrinks over its own run, onto the turn at
 			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
-			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(dirs&(up|down)) && p.owner[bits.TrailingZeros(uint(opposite(run)))] == id
+			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(dirs&(up|down)) && p.ownerOn(opposite(run)) == id
 			if dx*side > 0 && !end && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
 				return false
 			}
@@ -224,7 +224,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			}
 			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
 			return moves, true
-		case p.lines&opposite(dir) != 0 && bits.OnesCount(uint(p.lines)) == 2 && p.lines&(left|right) != 0 && p.owner[bits.TrailingZeros(uint(opposite(dir)))] == id:
+		case p.lines&opposite(dir) != 0 && bits.OnesCount(uint(p.lines)) == 2 && p.lines&(left|right) != 0 && p.ownerOn(opposite(dir)) == id:
 			return moves, turns(y, p.lines)
 		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
 			// a port on the side of a box moves along its straight side

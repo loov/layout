@@ -12,7 +12,7 @@ func (graph *lgraph) resolveFields() {
 		if field == "" || node.Shape != Record {
 			return false
 		}
-		return draw.ParseRecord(node.DefaultLabel(), sideways(graph.RankDir)).Field(field) != nil
+		return draw.ParseRecord(node.DefaultLabel(), graph.RankDir.Sideways()).Field(field) != nil
 	}
 
 	for _, edge := range graph.Edges {
@@ -31,7 +31,7 @@ func (graph *lgraph) resolveFields() {
 func (graph *lgraph) fieldOffset(node *lnode, field string) (Vector, bool) {
 	// the record as it is drawn, in the frame of the drawing
 	size := Vector{2 * node.Radius.X, 2 * node.Radius.Y}
-	side := sideways(graph.RankDir)
+	side := graph.RankDir.Sideways()
 	if side {
 		size.X, size.Y = size.Y, size.X
 	}

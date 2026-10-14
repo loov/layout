@@ -52,7 +52,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 	clearOf := func(edge *ledge, at Vector, lines bool) bool {
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
-		box := rect{at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y}), at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})}
+		box := centeredRect(at, Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})
 		tl, br := box.Min, box.Max
 		for _, path := range paths {
 			if lines && box.hitByPath(path) {

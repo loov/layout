@@ -398,7 +398,7 @@ func (d *diagnosis) paths() {
 // go
 func (d *diagnosis) unbalance() {
 	across, along := func(v Vector) Length { return v.Y }, func(v Vector) Length { return v.X }
-	if d.graph.RankDir == LeftToRight || d.graph.RankDir == RightToLeft {
+	if d.graph.RankDir.Sideways() {
 		across, along = along, across
 	}
 	for _, node := range d.nodes {
