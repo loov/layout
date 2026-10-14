@@ -45,6 +45,11 @@ h1 { font-size: 18px; margin: 0 0 4px; }
 .panel h2 .dim { font-variant-numeric: tabular-nums; }
 pre.drawing { display: inline-block; font-family: var(--mono); font-size: 13px; line-height: 1.15; margin: 0; color: #000; background: #fff; white-space: pre; }
 :where(pre.drawing) { position: relative; } /* for the lines, see lines; layers place themselves */
+/* a character outside ASCII takes exactly its cells, one or two: fonts
+   fall back for them with widths of their own, which would move the rest
+   of the row off the cells of the lines, see lines */
+pre.drawing .cell { display: inline-block; width: 1ch; height: 1.15em; vertical-align: top; text-align: center; }
+pre.drawing .cell.wide { width: 2ch; }
 pre.drawing > svg.lines { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 
 /* detail view */
@@ -72,6 +77,11 @@ pre.drawing > svg.lines { position: absolute; left: 0; top: 0; width: 100%; heig
 .onion .new { mix-blend-mode: difference; }
 .context { position: absolute; left: 0; top: 0; opacity: .14; pointer-events: none; }
 .onion-wrap { position: relative; display: inline-block; }
+/* text compares cell by cell instead, see onionText */
+.onion-text { display: inline-grid; touch-action: none; cursor: grab; background: #fff; }
+.onion-text > pre.drawing { grid-area: 1 / 1; background: transparent; }
+.onion-text > pre.drawing:first-child { background: #fff; }
+.onion-text.dragging { cursor: grabbing; }
 
 /* dark: the chrome follows the theme, and the drawings, kept black on
    white, are inverted whole, onion skin included */
@@ -153,7 +163,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
 		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it (with ⌥, its lines stay joined), arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
-		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out. Holding p shows only what changed in text, as lined up by the onion offset. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
+		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out: in text, red is only in old and green only in new. Holding p grays what stayed the same in text, but for a cell around each change, as lined up by the onion offset. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
 		<div class="panel"><h2>old <span class="dim" id="oldsize"></span></h2><div class="scroll" id="old"></div></div>
@@ -306,32 +316,47 @@ function cellPaths(ch, x, y) {
 // do: fonts draw them their own size, which leaves gaps between rows, and
 // many lack the diagonals of Symbols for Legacy Computing, which fall back
 // to other fonts. Each becomes a blank, and its strokes, in its color, go
-// in an svg over the drawing, a unit a cell.
+// in an svg over the drawing, a unit a cell. Other characters outside
+// ASCII go in a box of their cells, see .cell.
 function lines(pre) {
 	pre.querySelector(":scope > svg.lines")?.remove();
 	const cells = []; // x, y, character, color
 	let x = 0, y = 0, cols = 0;
 	const walker = document.createTreeWalker(pre, NodeFilter.SHOW_TEXT);
-	for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+	const nodes = [];
+	for (let node = walker.nextNode(); node; node = walker.nextNode()) nodes.push(node);
+	for (const node of nodes) {
 		const color = node.parentElement === pre ? "" : node.parentElement.style.color;
-		let out = "", changed = false;
+		const out = document.createDocumentFragment();
+		let run = "", changed = false;
 		for (const ch of node.data) {
 			if (ch === "\n") {
 				y++, x = 0;
-				out += ch;
+				run += ch;
 				continue;
 			}
 			if (cellPaths(ch, 0, 0)) {
 				cells.push([x, y, ch, color]);
-				out += " ";
+				run += " ";
+				changed = true;
+			} else if (ch > "~") {
+				out.append(run);
+				run = "";
+				const cell = document.createElement("span");
+				cell.className = wide(ch) ? "cell wide" : "cell";
+				cell.textContent = ch;
+				out.append(cell);
 				changed = true;
 			} else {
-				out += ch;
+				run += ch;
 			}
 			x += wide(ch) ? 2 : 1;
 			cols = Math.max(cols, x);
 		}
-		if (changed) node.data = out;
+		if (changed) {
+			out.append(run);
+			node.replaceWith(out);
+		}
 	}
 	if (!cells.length) return pre;
 	const rows = (pre.textContent.match(/\n/g) || []).length + (pre.textContent.endsWith("\n") ? 0 : 1);
@@ -560,7 +585,7 @@ function drawPanes(change) {
 	document.getElementById("changes").classList.toggle("on", changesOnly);
 	if (only) {
 		[old, now] = masked(old, now, Math.round(offset.x / unit.x), Math.round(offset.y / unit.y));
-		kind = "txt";
+		kind = "ans";
 	}
 	for (const [pane, text] of [[panes[0], old], [panes[1], now]]) {
 		pane.replaceChildren(text ? drawing(kind, text) : none());
@@ -568,11 +593,10 @@ function drawPanes(change) {
 }
 
 // masked returns the old and new text with the cells that are the same
-// blanked, but for those within reach of a difference: new is moved by dx,
+// gray, but for those within reach of a difference: new is moved by dx,
 // dy cells, as the onion skin moves it
-function masked(oldText, newText, dx, dy, reach = 3) {
-	const grid = text => stripColors(text).replace(/\n+$/, "").split("\n").map(line => Array.from(line));
-	const a = grid(oldText), b = grid(newText);
+function masked(oldText, newText, dx, dy, reach = 1) {
+	const a = cellGrid(oldText), b = cellGrid(newText);
 	const at = (g, r, c) => g[r]?.[c] ?? " ";
 	const r0 = Math.min(0, dy), r1 = Math.max(a.length, b.length + dy);
 	const width = g => Math.max(0, ...g.map(row => row.length));
@@ -587,7 +611,10 @@ function masked(oldText, newText, dx, dy, reach = 3) {
 			}
 		}
 	}
-	const keep = (g, dr, dc) => g.map((row, r) => row.map((ch, c) => near.has((r + dr) + "," + (c + dc)) ? ch : " ").join("").replace(/\s+$/, "")).join("\n") + "\n";
+	const keep = (g, dr, dc) => g.map((row, r) => row.map((ch, c) => {
+		if (ch === "" || ch === " " || near.has((r + dr) + "," + (c + dc))) return ch;
+		return `\x1b[38;2;${SAME}m${ch}\x1b[39m`;
+	}).join("")).join("\n") + "\n";
 	return [keep(a, 0, 0), keep(b, dy, dx)];
 }
 
@@ -598,8 +625,52 @@ function none() {
 	return p;
 }
 
+// the colors of the text onion skin: cells the same in both, only in old
+// and only in new, as r;g;b for an SGR code
+const SAME = "176;176;176", REMOVED = "194;65;12", ADDED = "31;138;76";
+
+// cellGrid returns the rows of a text drawing by column, with "" for the
+// second column of a wide character
+function cellGrid(text) {
+	return stripColors(text).replace(/\n+$/, "").split("\n").map(line => {
+		const row = [];
+		for (const ch of line) {
+			row.push(ch);
+			if (wide(ch)) row.push("");
+		}
+		return row;
+	});
+}
+
+// onionText returns old and new as layers compared cell by cell, new moved
+// by dx, dy cells: old with the cells that are the same gray and the rest
+// red, new with only the cells that differ, green
+function onionText(oldText, newText, dx, dy) {
+	const a = cellGrid(oldText), b = cellGrid(newText);
+	const at = (g, r, c) => g[r]?.[c] ?? " ";
+	// g at r, c against other at or, oc: a character differs when any
+	// column it covers does
+	const differs = (g, r, c, other, or, oc) => {
+		for (let k = 0; k < (wide(g[r][c]) ? 2 : 1); k++) {
+			if (at(g, r, c + k) !== at(other, or, oc + k)) return true;
+		}
+		return false;
+	};
+	const layer = (g, other, dr, dc, same, changed) => g.map((row, r) => {
+		let out = "";
+		row.forEach((ch, c) => {
+			if (ch === "") return;
+			const color = differs(g, r, c, other, r + dr, c + dc) ? changed : same;
+			out += ch === " " || !color ? (wide(ch) ? "  " : " ") : `\x1b[38;2;${color}m${ch}\x1b[39m`;
+		});
+		return out;
+	}).join("\n");
+	return [ansi(layer(a, b, -dy, -dx, SAME, REMOVED)), ansi(layer(b, a, dy, dx, null, ADDED))];
+}
+
 // onion stacks new over old with a difference blend, inverted, so that what
-// is the same cancels to white; a faint copy of new keeps them in context
+// is the same cancels to white; a faint copy of new keeps them in context.
+// Text compares cell by cell instead, see onionText.
 function onion(change) {
 	if (!change.old || !change.new) {
 		return drawing(change.kind, change.new || change.old); // nothing to compare
@@ -607,14 +678,20 @@ function onion(change) {
 	const wrap = document.createElement("div");
 	wrap.className = "onion-wrap";
 	const stack = document.createElement("div");
-	stack.className = "onion";
-	stack.append(drawing(change.kind, change.old));
-	const top = drawing(change.kind, change.new);
-	top.classList.add("new");
-	stack.append(top);
-	const context = drawing(change.kind, change.new);
-	context.classList.add("context");
-	wrap.append(stack, context);
+	if (change.kind === "svg") {
+		stack.className = "onion";
+		stack.append(drawing(change.kind, change.old));
+		const top = drawing(change.kind, change.new);
+		top.classList.add("new");
+		stack.append(top);
+		const context = drawing(change.kind, change.new);
+		context.classList.add("context");
+		wrap.append(stack, context);
+	} else {
+		stack.className = "onion-text";
+		stack.change = change;
+		wrap.append(stack);
+	}
 
 	let start = null;
 	stack.addEventListener("pointerdown", e => {
@@ -646,10 +723,18 @@ function moved() {
 	for (const el of [top, context]) {
 		if (el) el.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
 	}
-	const text = unit.x !== 1
+	const text = panes[2].querySelector(".onion-text");
+	if (text) {
+		const [dx, dy] = [Math.round(offset.x / unit.x), Math.round(offset.y / unit.y)];
+		const [old, now] = onionText(text.change.old, text.change.new, dx, dy);
+		now.classList.add("new");
+		now.style.transform = `translate(${offset.x}px, ${offset.y}px)`;
+		text.replaceChildren(old, now);
+	}
+	const label = unit.x !== 1
 		? `${Math.round(offset.x / unit.x)}, ${Math.round(offset.y / unit.y)} cells`
 		: `${Math.round(offset.x)}, ${Math.round(offset.y)}px`;
-	document.getElementById("offset").textContent = offset.x || offset.y ? "offset " + text : "";
+	document.getElementById("offset").textContent = offset.x || offset.y ? "offset " + label : "";
 	if (changesOnly && current >= 0 && !editor) {
 		drawPanes(DATA.changes[current]);
 		setZoom(zoom);
