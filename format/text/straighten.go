@@ -189,7 +189,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			// a line it crosses it crosses where it goes too, and leaves
 			// whole where it was; a cell off nodes, as unjog keeps
 			q := g.at(y, x+dx)
-			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.lines == left|right && q.owner[2] != id
+			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.need == 0 && q.lines == left|right && q.owner[2] != id
 			if (p.lines != up|down && p.lines != up|down|left|right) || !blank(y, x+dx) && !across || solid(y, x+dx-1) || solid(y, x+dx+1) {
 				return moves, false
 			}

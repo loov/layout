@@ -2,6 +2,7 @@ package text
 
 import (
 	"bytes"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -9,7 +10,9 @@ import (
 	"unicode"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
 	"github.com/loov/layout/internal/draw"
+	"github.com/loov/layout/internal/examples"
 )
 
 func TestPlain(t *testing.T) {
@@ -325,4 +328,102 @@ func TestHugPull(t *testing.T) {
 	if got, want := string(runes(g[1])), "     10 │ "; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
+}
+
+// TestLabelsDrawn checks that the text of every label, of nodes, record
+// fields, edges and clusters, is in the drawing of the examples and the
+// Graphviz files, laid out for text with and without compaction: a line
+// drawn over a label loses its letters.
+func TestLabelsDrawn(t *testing.T) {
+	check := func(t *testing.T, build func() *layout.Graph, opts layout.Options) {
+		for _, compact := range []bool{false, true} {
+			opts := opts
+			opts.ForText, opts.Compact = true, compact
+			l, err := layout.Hierarchical(build(), opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+			c, g := carved(l, false)
+			drawing := encode(g, c.palette, nil)
+			for _, text := range missingLabels(l, drawing) {
+				t.Errorf("compact %v: %q is not drawn:\n%s", compact, text, drawing)
+			}
+		}
+	}
+	for name, build := range examples.Graphs {
+		t.Run(name, func(t *testing.T) { check(t, build, examples.Options[name]) })
+	}
+	files, _ := filepath.Glob(filepath.Join("..", "..", "testdata", "graphviz", "*.gv"))
+	for _, file := range files {
+		for suffix, merge := range map[string]bool{"": false, "_merged": true} {
+			t.Run(strings.TrimSuffix(filepath.Base(file), ".gv")+suffix, func(t *testing.T) {
+				check(t, func() *layout.Graph {
+					graphs, err := dot.ParseFile(file)
+					if err != nil {
+						t.Fatal(err)
+					}
+					graphs[0].MergeEdges = merge
+					return graphs[0]
+				}, layout.Options{})
+			})
+		}
+	}
+}
+
+// missingLabels returns the lines of the labels of l that drawing has
+// fewer of than l has labels with them; a line that crosses a cluster
+// frame on a space of its label can stand for the space, see frameLabels
+func missingLabels(l *layout.Layout, drawing string) []string {
+	want := map[string]int{}
+	add := func(label string) {
+		for _, line := range draw.Lines(draw.StripStyle(draw.PlainLabel(label))) {
+			if text := strings.TrimSpace(line.Text); text != "" {
+				want[text]++
+			}
+		}
+	}
+	var fields func(rec *draw.Record)
+	fields = func(rec *draw.Record) {
+		if len(rec.Fields) == 0 {
+			add(rec.Text)
+		}
+		for _, field := range rec.Fields {
+			fields(field)
+		}
+	}
+	graph := l.Graph
+	for _, node := range graph.Nodes {
+		box := l.Node(node)
+		switch {
+		case node.Invisible || box.Shape == layout.PointShape:
+		case box.Shape == layout.Record:
+			fields(draw.ParseRecord(box.Label, false))
+		default:
+			add(box.Label)
+		}
+	}
+	for _, edge := range graph.Edges {
+		if !edge.Invisible {
+			add(edge.Label)
+			add(edge.HeadLabel)
+			add(edge.TailLabel)
+		}
+	}
+	for _, cluster := range graph.Clusters {
+		if !cluster.Invisible && cluster.Label != "" {
+			add(clusterLabel(cluster))
+		}
+	}
+	var missing []string
+	for text, n := range want {
+		parts := strings.Split(text, " ")
+		for i := range parts {
+			parts[i] = regexp.QuoteMeta(parts[i])
+		}
+		if len(regexp.MustCompile(strings.Join(parts, "[ │┃║┆┇┊┋╂╋┼╫╪]")).FindAllString(drawing, -1)) < n {
+			missing = append(missing, text)
+		}
+	}
+	slices.Sort(missing)
+	return missing
 }

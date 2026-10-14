@@ -63,7 +63,10 @@ func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 
 // endLabel writes a head or tail label of edge right beside its line,
 // drawn along path from the end it labels, as near that end as there are
-// blank cells for it, on the side nearer center, where the layout put it
+// blank cells for it, on the side nearer center, where the layout put it.
+// Where no place along the line has a blank ring around the text, as among
+// many lines side by side, the text goes where it has its own cells, and
+// failing that in the nearest blank cells.
 func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector, path [][2]int) {
 	if label == "" {
 		return
@@ -75,6 +78,7 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 	// blank cells for the text, and around them no box nor other line
 	// than its own edge's
 	id := c.drawn[edge]
+	ring := true
 	blank := func(x, y int) bool {
 		for row := y - 1; row <= y+h; row++ {
 			for col := x - 1; col <= x+w; col++ {
@@ -85,11 +89,11 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 					return false
 				case inside && (p.r != ' ' || p.solid || p.glue || p.lines != 0):
 					return false
-				case !inside && (p.solid || p.text != 0):
+				case !inside && ring && (p.solid || p.text != 0):
 					return false
 				}
 				for arm := range 4 {
-					if !inside && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
+					if !inside && ring && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
 						return false
 					}
 				}
@@ -102,6 +106,22 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 	for i := 0; i+1 < len(path); i++ {
 		c.steps(path[i], path[i+1], func(_, to [2]int, _ uint8) { cells = append(cells, to) })
 	}
+	// past halfway it reads as the other end's
+	cells = cells[:(len(cells)+1)/2]
+	for _, ring = range []bool{true, false} {
+		if c.endText(edge, lines, w, h, want, cells, blank) {
+			return
+		}
+	}
+	// no room beside its line near the end: the nearest blank cells
+	x, y := c.nearestBlank(want[0]-w/2, want[1]-h/2, w, h)
+	c.edgeText(edge, lines, x, y, w)
+}
+
+// endText writes lines, w cells wide and h tall, beside the first of cells
+// where blank has room for them, the side nearer want first; it reports
+// whether it found one
+func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want [2]int, cells [][2]int, blank func(x, y int) bool) bool {
 	for k, p := range cells {
 		if k+1 < len(cells) && k > 0 && cells[k-1][0] != cells[k+1][0] && cells[k-1][1] != cells[k+1][1] {
 			continue // a turn
@@ -123,10 +143,11 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 		for _, s := range spots {
 			if blank(s[0], s[1]) {
 				c.edgeText(edge, lines, s[0], s[1], w)
-				return
+				return true
 			}
 		}
 	}
+	return false
 }
 
 // reversed returns the cells of a path from its last to its first
@@ -298,8 +319,14 @@ func (c *canvas) freeBeside(x, y, w, h int, path [][2]int) (int, int) {
 			return s.x, s.y
 		}
 	}
-	// nowhere beside the edge: the nearest blank place
-	for d := 1; d < c.w+c.h; d++ {
+	// nowhere beside the edge
+	return c.nearestBlank(x, y, w, h)
+}
+
+// nearestBlank returns the place for a text w cells wide and h tall
+// nearest x, y where it covers nothing; x, y when there is none
+func (c *canvas) nearestBlank(x, y, w, h int) (int, int) {
+	for d := 0; d < c.w+c.h; d++ {
 		for dy := -d; dy <= d; dy++ {
 			for _, dx := range []int{d - max(dy, -dy), max(dy, -dy) - d} {
 				if c.blank(x+dx, y+dy, w, h) {
