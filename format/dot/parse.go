@@ -243,12 +243,20 @@ type strictEdge struct {
 	attrs []*ast.Attr
 }
 
-// outlines is what decides a node's peripheries over all of its
-// attribute assignments: Graphviz draws doublecircle and doubleoctagon
-// with two, and tripleoctagon with three, unless peripheries is set
+// outlines is what decides a node's peripheries, and whether its shape
+// overrides its size, over all of its attribute assignments: Graphviz
+// draws doublecircle and doubleoctagon with two, and tripleoctagon with
+// three, unless peripheries is set
 type outlines struct {
 	shape int  // the outlines of the shape, 0 for one
 	set   bool // peripheries was set explicitly
+	// the shape is plain: plaintext with width and height 0, whatever
+	// they are set to, so that the node is as small as its label
+	plain bool
+	// the shape is a point, which Graphviz draws as wide as tall: as the
+	// smaller of width and height when both are set, so that height=0
+	// makes the smallest point whatever width the defaults give
+	point, width, height bool
 }
 
 func (context *parserContext) parse(src *ast.Graph) {
@@ -691,6 +699,13 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		if !outlines.set {
 			node.Peripheries = outlines.shape
 		}
+		if outlines.plain {
+			node.MinSize = layout.Vector{}
+		}
+		if outlines.point && outlines.width && outlines.height {
+			m := min(node.MinSize.X, node.MinSize.Y)
+			node.MinSize = layout.Vector{X: m, Y: m}
+		}
 	}()
 	for _, attr := range attrs {
 		switch attr.Key {
@@ -709,6 +724,8 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 		case "shape":
 			setShape(&node.Shape, attr.Val)
 			outlines.shape = map[string]int{"doublecircle": 2, "doubleoctagon": 2, "tripleoctagon": 3}[attr.Val]
+			outlines.plain = attr.Val == "plain"
+			outlines.point = attr.Val == "point"
 		case "label":
 			setString(&node.Label, expandLabel(attr.Val, `\N`, node.ID, `\G`, graphID))
 			node.NoLabel = node.Label == ""
@@ -729,8 +746,10 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 			setColor(&node.FillColor, attr.Val)
 		case "width":
 			setLength(&node.MinSize.X, attr.Val, layout.Inch)
+			outlines.width = true
 		case "height":
 			setLength(&node.MinSize.Y, attr.Val, layout.Inch)
+			outlines.height = true
 		case "tooltip":
 			setString(&node.Tooltip, attr.Val)
 		case "pos":

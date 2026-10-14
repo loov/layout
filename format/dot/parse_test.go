@@ -353,6 +353,32 @@ func TestPlaintextShape(t *testing.T) {
 	}
 }
 
+// TestShapeSizes checks the sizes Graphviz gives plain shapes and points
+// over the defaults: plain is width and height 0 whatever they are set
+// to, and a point is as wide as the smaller of the two when both are set
+func TestShapeSizes(t *testing.T) {
+	graphs, err := ParseString(`digraph {
+		node [width=2.2 height=1]
+		title [shape=plain label="Title"]
+		dot [shape=point height=0]
+		wide [shape=point]
+		box
+	}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[string]layout.Vector{
+		"title": {},
+		"dot":   {},
+		"wide":  {X: layout.Inch, Y: layout.Inch},
+		"box":   {X: 2.2 * layout.Inch, Y: layout.Inch},
+	} {
+		if got := graphs[0].Node(id).MinSize; got != want {
+			t.Errorf("%s: MinSize = %v, want %v", id, got, want)
+		}
+	}
+}
+
 // TestInvisible checks that style=invis hides nodes, edges and clusters
 // and survives writing the graph back as dot.
 func TestInvisible(t *testing.T) {
