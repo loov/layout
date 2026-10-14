@@ -154,25 +154,15 @@ func (c *canvas) endCells(end, next [2]int, node *layout.Node, field string) []e
 func (c *canvas) clear(cells [][2]int, id edgeID, merged bool) bool {
 	ends := map[[2]int]bool{cells[0]: true, cells[len(cells)-1]: true}
 	if merged {
-		var all [][2]int
-		for i := 0; i+1 < len(cells); i++ {
-			c.steps(cells[i], cells[i+1], func(from, to [2]int, dir uint8) {
-				if len(all) == 0 {
-					all = append(all, from)
-				}
-				all = append(all, to)
-			})
-		}
+		all := c.pathCells(nil, cells)
 		if len(all) >= 2 {
 			ends[all[1]], ends[all[len(all)-2]] = true, true
 		}
 	}
 	ok := true
-	for i := 0; ok && i+1 < len(cells); i++ {
-		c.steps(cells[i], cells[i+1], func(from, to [2]int, dir uint8) {
-			ok = ok && c.free(from, dir, id, ends[from]) && c.free(to, opposite(dir), id, ends[to])
-		})
-	}
+	c.pathSteps(cells, func(from, to [2]int, dir uint8) {
+		ok = ok && c.free(from, dir, id, ends[from]) && c.free(to, opposite(dir), id, ends[to])
+	})
 	return ok
 }
 
@@ -193,6 +183,26 @@ func (c *canvas) steps(a, b [2]int, step func(from, to [2]int, dir uint8)) {
 		}
 		step([2]int{b[0], y}, [2]int{b[0], y + dy(dir)}, dir)
 	}
+}
+
+// pathSteps calls step for every cell to cell step along path, see steps
+func (c *canvas) pathSteps(path [][2]int, step func(from, to [2]int, dir uint8)) {
+	for i := 0; i+1 < len(path); i++ {
+		c.steps(path[i], path[i+1], step)
+	}
+}
+
+// pathCells appends the cells along path, from its first to its last, to
+// cells; none when path takes no step
+func (c *canvas) pathCells(cells [][2]int, path [][2]int) [][2]int {
+	first := true
+	c.pathSteps(path, func(from, to [2]int, _ uint8) {
+		if first {
+			cells, first = append(cells, from), false
+		}
+		cells = append(cells, to)
+	})
+	return cells
 }
 
 // free reports whether an edge with id can draw the arm toward dir in

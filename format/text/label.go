@@ -102,9 +102,9 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 		return true
 	}
 	// the cells of the line from the end, past the end on the box
-	var cells [][2]int
-	for i := 0; i+1 < len(path); i++ {
-		c.steps(path[i], path[i+1], func(_, to [2]int, _ uint8) { cells = append(cells, to) })
+	cells := c.pathCells(nil, path)
+	if len(cells) > 0 {
+		cells = cells[1:]
 	}
 	// past halfway it reads as the other end's
 	cells = cells[:(len(cells)+1)/2]
@@ -290,9 +290,9 @@ func (c *canvas) besideEdge(x, y, w, h int, path [][2]int, id edgeID) (int, int)
 // along path, on either side of a column of it or above or below a row,
 // or else anywhere; x, y when there is none
 func (c *canvas) freeBeside(x, y, w, h int, path [][2]int) (int, int) {
-	var cells [][2]int
-	for i := 0; i+1 < len(path); i++ {
-		c.steps(path[i], path[i+1], func(from, _ [2]int, _ uint8) { cells = append(cells, from) })
+	cells := c.pathCells(nil, path)
+	if len(cells) > 0 {
+		cells = cells[:len(cells)-1] // the cells steps leave from
 	}
 	type spot struct{ x, y, dist int }
 	var spots []spot
@@ -369,18 +369,9 @@ func (c *canvas) apart(x, y, w, h int, id edgeID) int {
 // edge padding from their edge, which is a whole row in text, and
 // rounding can leave a blank row between them.
 func (c *canvas) nearEdge(x, y, w, h int, path [][2]int, side [2]int) (int, int, bool) {
-	var cells [][2]int
-	for i := 0; i+1 < len(path); i++ {
-		a, b := path[i], path[i+1]
-		for x := a[0]; x != b[0]; x += sign(b[0] - a[0]) {
-			cells = append(cells, [2]int{x, a[1]})
-		}
-		for y := a[1]; y != b[1]; y += sign(b[1] - a[1]) {
-			cells = append(cells, [2]int{b[0], y})
-		}
-	}
-	if len(path) > 0 {
-		cells = append(cells, path[len(path)-1])
+	cells := c.pathCells(nil, path)
+	if len(cells) == 0 && len(path) > 0 {
+		cells = append(cells, path[len(path)-1]) // a path of one cell
 	}
 	for range c.h + c.w {
 		// the nearest cell of the edge above or below the label, or

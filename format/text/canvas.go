@@ -322,26 +322,15 @@ func (c *canvas) rect(x0, y0, x1, y1 int, style string) {
 }
 
 // walk draws a run from (x0,y0) to (x1,y1) as a horizontal then a
-// vertical leg.
+// vertical leg, see drawStep
 func (c *canvas) walk(x0, y0, x1, y1 int) {
-	step := func(x, y int, dir, back uint8) {
-		c.line(x, y, dir)
-		c.line(x+dx(dir), y+dy(dir), back)
-	}
-	for x := x0; x != x1; x += sign(x1 - x0) {
-		if x1 > x0 {
-			step(x, y0, right, left)
-		} else {
-			step(x, y0, left, right)
-		}
-	}
-	for y := y0; y != y1; y += sign(y1 - y0) {
-		if y1 > y0 {
-			step(x1, y, down, up)
-		} else {
-			step(x1, y, up, down)
-		}
-	}
+	c.steps([2]int{x0, y0}, [2]int{x1, y1}, c.drawStep)
+}
+
+// drawStep draws the line of a step from cell to cell, see steps
+func (c *canvas) drawStep(from, to [2]int, dir uint8) {
+	c.line(from[0], from[1], dir)
+	c.line(to[0], to[1], opposite(dir))
 }
 
 // cell is a drawn character with its colors, see canvas.color, and what

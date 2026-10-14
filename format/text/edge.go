@@ -224,9 +224,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path []layout.Vector, cells [][2]in
 		dashed: edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted,
 		edge:   id,
 	}
-	for i := 0; i+1 < len(cells); i++ {
-		c.walk(cells[i][0], cells[i][1], cells[i+1][0], cells[i+1][1])
-	}
+	c.pathSteps(cells, c.drawStep)
 	head := edge.ArrowHead
 	if head == layout.ArrowDefault && edge.Directed {
 		head = layout.ArrowNormal
