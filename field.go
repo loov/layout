@@ -95,11 +95,7 @@ func (c *hierComponent) fieldPorts() {
 		// the first and last steps of the chain of the edge down the
 		// ranks, through its virtual nodes
 		for _, first := range top.Out {
-			end := first
-			for end.Virtual && len(end.Out) > 0 {
-				end = end.Out[0]
-			}
-			if end != bottom {
+			if first.ChainEnd() != bottom {
 				continue
 			}
 			last := top

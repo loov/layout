@@ -73,15 +73,10 @@ func TraceEdges(graph *Graph) {
 		}
 		for _, out := range src.Out {
 			e := &Edge{From: src}
-			dst := out
-			for dst.Virtual && len(dst.Out) > 0 {
-				e.Chain = append(e.Chain, dst)
-				dst = dst.Out[0]
-			}
-			if dst.Virtual {
+			if e.To = out.ChainEnd(); e.To.Virtual {
 				continue // a chain that doesn't end at a node
 			}
-			e.To = dst
+			e.Chain = slices.Collect(out.Chain())
 			add(e)
 		}
 	}

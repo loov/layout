@@ -799,10 +799,7 @@ func (c *hierComponent) widenParallel() {
 			continue
 		}
 		for _, out := range source.Out {
-			target := out
-			for target.Virtual && len(target.Out) > 0 {
-				target = target.Out[0]
-			}
+			target := out.ChainEnd()
 			n := pairs[unorderedPair(source.ID, target.ID)]
 			for v := out; n > 1 && v.Virtual && len(v.Out) > 0; v = v.Out[0] {
 				v.Radius.X += float32(Length(n-1) * c.graphdef.EdgePadding)

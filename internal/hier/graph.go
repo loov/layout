@@ -1,6 +1,9 @@
 package hier
 
-import "strconv"
+import (
+	"iter"
+	"strconv"
+)
 
 // Graph is the basic graph
 type Graph struct {
@@ -137,6 +140,27 @@ func (node *Node) InDegree() int { return len(node.In) }
 
 // OutDegree returns count of outbound edges
 func (node *Node) OutDegree() int { return len(node.Out) }
+
+// Chain yields node and the virtual nodes after it, down the chain of
+// virtual nodes it starts, up to the first node that is not virtual
+func (node *Node) Chain() iter.Seq[*Node] {
+	return func(yield func(*Node) bool) {
+		for n := node; n.Virtual && len(n.Out) > 0; n = n.Out[0] {
+			if !yield(n) {
+				return
+			}
+		}
+	}
+}
+
+// ChainEnd follows node down the chain of virtual nodes it starts, to the
+// first node that is not virtual, or the virtual node the chain stops at
+func (node *Node) ChainEnd() *Node {
+	for node.Virtual && len(node.Out) > 0 {
+		node = node.Out[0]
+	}
+	return node
+}
 
 // Vector represents a 2D vector
 type Vector struct {

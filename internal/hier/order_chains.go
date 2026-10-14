@@ -14,9 +14,11 @@ func OrderRanksChains(graph *Graph) (moves int) {
 		}
 		for _, next := range src.Out {
 			var chain Nodes
-			for next.Virtual && !next.BorderLeft && !next.BorderRight {
-				chain.Append(next)
-				next = next.Out[0]
+			for v := range next.Chain() {
+				if v.BorderLeft || v.BorderRight {
+					break
+				}
+				chain.Append(v)
 			}
 			if len(chain) > 1 {
 				chains = append(chains, chain)

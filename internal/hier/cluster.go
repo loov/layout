@@ -56,13 +56,8 @@ func AddClusterBorders(graph *Graph) {
 			continue
 		}
 		for _, out := range src.Out {
-			var chain Nodes
-			dst := out
-			for dst.Virtual {
-				chain.Append(dst)
-				dst = dst.Out[0]
-			}
-			for _, v := range chain {
+			dst := out.ChainEnd()
+			for v := range out.Chain() {
 				var owner *Cluster
 				for c := src.Cluster; c != nil; c = c.Parent {
 					if v.Rank <= c.MaxRank && (owner == nil || c.depth() > owner.depth()) {
