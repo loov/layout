@@ -341,10 +341,15 @@ func positionSimplex(graph *Graph, straighten, fans bool) {
 		}
 	}
 	// an edge along a rank costs how far apart its ends are too, which
-	// keeps a node with only such edges beside the ones it has them to
+	// keeps a node with only such edges beside the ones it has them to;
+	// one that isn't drawn only orders its ends, and pulling them
+	// together could bend the edges that are
 	v = int32(n + edges + 2)
 	for _, flat := range graph.Flat {
 		w := graph.Weight(flat[0], flat[1])
+		if graph.Unseen[[2]ID{flat[0].ID, flat[1].ID}] {
+			w = 0
+		}
 		s.addEdge(v, int32(flat[0].ID), w, 0)
 		s.addEdge(v, int32(flat[1].ID), w, 0)
 		v++

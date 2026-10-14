@@ -16,6 +16,10 @@ type Graph struct {
 	Flat [][2]*Node
 	// weights of edges by (src, dst); missing means 1
 	weights map[[2]ID]float32
+	// Unseen holds the edges by (src, dst) that aren't drawn: along a
+	// rank, positioning doesn't pull their ends together, see
+	// positionSimplex
+	Unseen map[[2]ID]bool
 	// minlens holds the minimum rank span of edges by (src, dst);
 	// missing means 1
 	minlens map[[2]ID]int32

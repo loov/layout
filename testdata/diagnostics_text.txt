@@ -140,8 +140,8 @@ graphviz/russian nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 paral
 graphviz/russian_merged nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=1 parallel=1 ends=1 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=0 labels=0 far=0 length=616 area=117438 unbalance=205
 graphviz/sdh nodes=0 through=0 near=83 crossings=45 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=10 bends=26 corners=200 wavy=26 back=1 labels=0 far=0 length=25573 area=806407 unbalance=1084
 graphviz/sdh_merged nodes=0 through=0 near=84 crossings=58 shallow=0 overlaps=82 parallel=82 ends=82 shafts=0 jagged=10 bends=27 corners=224 wavy=27 back=1 labels=0 far=0 length=23840 area=736075 unbalance=914
-graphviz/shells nodes=0 through=0 near=12 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=3 corners=40 wavy=3 back=0 labels=0 far=0 length=5563 area=335770 unbalance=564
-graphviz/shells_merged nodes=0 through=0 near=12 crossings=10 shallow=0 overlaps=16 parallel=13 ends=16 shafts=0 jagged=0 bends=3 corners=44 wavy=3 back=0 labels=0 far=0 length=5420 area=321779 unbalance=578
+graphviz/shells nodes=0 through=0 near=11 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=34 wavy=1 back=0 labels=0 far=0 length=5369 area=347392 unbalance=549
+graphviz/shells_merged nodes=0 through=0 near=11 crossings=10 shallow=0 overlaps=16 parallel=13 ends=16 shafts=0 jagged=0 bends=1 corners=38 wavy=1 back=0 labels=0 far=0 length=5203 area=332288 unbalance=554
 graphviz/siblings nodes=0 through=0 near=76 crossings=458 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=30 corners=548 wavy=30 back=0 labels=0 far=0 length=173365 area=13424153 unbalance=41114
 graphviz/siblings_merged nodes=0 through=0 near=86 crossings=460 shallow=0 overlaps=22 parallel=16 ends=22 shafts=0 jagged=0 bends=36 corners=596 wavy=36 back=0 labels=0 far=0 length=173154 area=13241113 unbalance=41121
 graphviz/states nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=8 wavy=1 back=0 labels=0 far=0 length=955 area=66327 unbalance=36

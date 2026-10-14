@@ -465,8 +465,18 @@ func (c *hierComponent) build() {
 		fromPort, toPort   Compass
 	}
 	seen := map[ends]bool{}
+	drawn := map[[2]hier.ID]bool{}
 	for _, edge := range c.graphdef.Edges {
 		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+		if pair := [2]hier.ID{from.ID, to.ID}; edge.Invisible && !drawn[pair] {
+			if c.graph.Unseen == nil {
+				c.graph.Unseen = map[[2]hier.ID]bool{}
+			}
+			c.graph.Unseen[pair] = true
+		} else {
+			drawn[pair] = true
+			delete(c.graph.Unseen, pair)
+		}
 		k := ends{edge.From, edge.To, edge.FromField, edge.ToField, edge.FromPort, edge.ToPort}
 		if seen[k] {
 			c.graph.SetWeight(from, to, c.graph.Weight(from, to)+float32(edge.Weight))

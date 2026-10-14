@@ -30,7 +30,7 @@ subnets_merged nodes=0 through=0 near=4 crossings=0 shallow=0 overlaps=0 paralle
 weighted     nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=181 area=9216 unbalance=128
 graphviz/Genetic_Programming nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=2000 area=683693 unbalance=332
 graphviz/KW91 nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=1 wavy=0 back=0 labels=0 far=0 length=767 area=168038 unbalance=171
-graphviz/Linux_kernel_diagram nodes=0 through=1 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=2868 area=1467155 unbalance=552
+graphviz/Linux_kernel_diagram nodes=0 through=1 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=2834 area=1467155 unbalance=552
 graphviz/NaN nodes=0 through=0 near=0 crossings=13 shallow=4 overlaps=3 parallel=27 ends=60 shafts=0 jagged=5 bends=8 corners=86 wavy=4 back=7 labels=0 far=0 length=27208 area=1383316 unbalance=3790
 graphviz/UML_Class_diagram nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=0 labels=0 far=0 length=876 area=329902 unbalance=171
 graphviz/abstract nodes=0 through=0 near=0 crossings=50 shallow=7 overlaps=0 parallel=4 ends=8 shafts=0 jagged=2 bends=5 corners=40 wavy=1 back=0 labels=0 far=0 length=9538 area=476588 unbalance=1727
@@ -84,7 +84,7 @@ graphviz/records nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 paral
 graphviz/rowe nodes=0 through=0 near=14 crossings=22 shallow=2 overlaps=2 parallel=4 ends=8 shafts=0 jagged=3 bends=3 corners=47 wavy=0 back=13 labels=0 far=0 length=13823 area=593600 unbalance=1221
 graphviz/russian nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=326 area=110596 unbalance=108
 graphviz/sdh nodes=0 through=0 near=6 crossings=47 shallow=2 overlaps=0 parallel=15 ends=44 shafts=0 jagged=12 bends=5 corners=103 wavy=0 back=1 labels=0 far=0 length=19875 area=891316 unbalance=1671
-graphviz/shells nodes=0 through=0 near=6 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=0 corners=15 wavy=0 back=0 labels=0 far=0 length=4235 area=414629 unbalance=895
+graphviz/shells nodes=0 through=0 near=6 crossings=2 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=0 corners=15 wavy=0 back=0 labels=0 far=0 length=4235 area=422405 unbalance=895
 graphviz/siblings nodes=0 through=0 near=0 crossings=447 shallow=166 overlaps=17 parallel=52 ends=0 shafts=0 jagged=5 bends=22 corners=297 wavy=18 back=0 labels=0 far=0 length=73978 area=5544089 unbalance=40333
 graphviz/states nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=4 wavy=0 back=0 labels=0 far=0 length=913 area=55125 unbalance=20
 graphviz/structs nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=151 area=34838 unbalance=14
