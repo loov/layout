@@ -139,6 +139,11 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		return glyph(lines, 0)
 	}
 
+	// a cell of the line in lines, drawn as the turn is
+	lineCell := func(lines uint8) cell {
+		return cell{r: draw(lines), fg: turn.fg, lines: lines, owner: [4]edgeID{id, id, id, id}}
+	}
+
 	step := dy(dir)
 	moves = moves[:0]
 
@@ -154,6 +159,8 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			side = 1
 		}
 
+		// toward the run it shrinks, away from it it grows
+		toward, away := dx*side > 0, dx*side < 0
 		lo, hi := min(x, x+dx), max(x, x+dx)
 		for c := lo; c <= hi; c++ {
 			if c == x {
@@ -163,8 +170,10 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			// toward the run it shrinks over its own run, onto the turn at
 			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
-			end := c == x+dx && p != nil && p.lines == opposite(run)|opposite(dirs&(up|down)) && p.ownerOn(opposite(run)) == id
-			if dx*side > 0 && !end && (p == nil || p.lines != left|right || p.owner[2] != id) || dx*side < 0 && !blank(y, c) {
+			back := opposite(run)
+			end := c == x+dx && p.drawnBy(id, back) && p.lines == back|opposite(dirs&(up|down))
+			ownRun := p.drawnBy(id, left) && p.lines == left|right
+			if toward && !end && !ownRun || away && !blank(y, c) {
 				return false
 			}
 			if end {
@@ -172,12 +181,12 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			}
 		}
 
-		line := cell{r: draw(left | right), fg: turn.fg, lines: left | right, owner: [4]edgeID{id, id, id, id}}
+		line := lineCell(left | right)
 		for c := lo; c <= hi; c++ {
 			switch {
 			case c == x+dx:
-				moves = append(moves, move{y, c, cell{r: draw(dirs), fg: turn.fg, lines: dirs, owner: [4]edgeID{id, id, id, id}}})
-			case dx*side > 0:
+				moves = append(moves, move{y, c, lineCell(dirs)})
+			case toward:
 				moves = append(moves, move{y, c, cell{r: ' '}})
 			default:
 				moves = append(moves, move{y, c, line})
@@ -190,18 +199,22 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 	if !turns(r, turn.lines) {
 		return moves, false
 	}
-	vertical := cell{r: draw(up | down), fg: turn.fg, lines: up | down, owner: [4]edgeID{id, id, id, id}}
+	vertical := lineCell(up | down)
 	for y := r + step; ; y += step {
 		p := g.at(y, x)
 		switch {
 		case p == nil:
 			return moves, false
-		case p.lines&(up|down) == up|down && p.owner[0] == id && p.owner[1] == id && !p.solid:
+		case p.drawnBy(id, up|down) && !p.solid:
 			// a line it crosses it crosses where it goes too, and leaves
 			// whole where it was; a cell off nodes, as unjog keeps
 			q := g.at(y, x+dx)
-			across := p.lines != up|down && q != nil && !q.solid && !q.keep && !q.glue && q.need == 0 && q.lines == left|right && q.owner[2] != id
-			if (p.lines != up|down && p.lines != up|down|left|right) || !blank(y, x+dx) && !across || solid(y, x+dx-1) || solid(y, x+dx+1) {
+			movable := q != nil && !q.solid && !q.keep && !q.glue && q.need == 0
+			other := movable && q.lines == left|right && q.ownerOn(left) != id
+			across := p.lines != up|down && other
+			upright := p.lines == up|down || p.lines == up|down|left|right
+			besideBox := solid(y, x+dx-1) || solid(y, x+dx+1)
+			if !upright || !blank(y, x+dx) && !across || besideBox {
 				return moves, false
 			}
 			was := cell{r: ' '}
@@ -219,7 +232,8 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
 			below, to := g.at(y+1, x), g.at(y+1, x+dx)
-			if p.style&pinned != 0 || !blank(y, x+dx) || below == nil || to == nil || below.node == 0 || to.node != below.node || to.r != below.r {
+			sameBox := below != nil && to != nil && below.node != 0 && to.node == below.node && to.r == below.r
+			if p.style&pinned != 0 || !blank(y, x+dx) || !sameBox {
 				return moves, false
 			}
 			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})

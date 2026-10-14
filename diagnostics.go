@@ -192,7 +192,9 @@ func (d *diagnosis) throughNodes() {
 			own := node == s.edge.From || node == s.edge.To
 			// an edge leaves and reaches its own ends, and a loop runs
 			// beside its node all along
-			if own && (s.edge.From == s.edge.To || node == s.edge.From && s.first || node == s.edge.To && s.last) {
+			loop := s.edge.From == s.edge.To
+			atEnd := node == s.edge.From && s.first || node == s.edge.To && s.last
+			if own && (loop || atEnd) {
 				continue
 			}
 			key := edgeNode{s.edge, node}

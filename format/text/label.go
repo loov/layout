@@ -395,41 +395,22 @@ func (c *canvas) nearEdge(x, y, w, h int, path []point, side point) (int, int, b
 	for range c.h + c.w {
 		// the nearest cell of the edge above or below the label, or
 		// beside it on its rows, in blank cells between
-		dx, dy, gap := 0, 0, math.MaxInt
+		label := cellBox{point{x, y}, point{x + w - 1, y + h - 1}}
+		dir, gap := point{}, math.MaxInt
 		for _, p := range cells {
-			beside := p.Y >= y && p.Y < y+h
-			if !side.isZero() {
-				// only the cells on that side
-				above, below := p.X >= x && p.X < x+w && p.Y < y, p.X >= x && p.X < x+w && p.Y >= y+h
-				left, right := beside && p.X < x, beside && p.X >= x+w
-				if !(side.Y < 0 && above || side.Y > 0 && below || side.X < 0 && left || side.X > 0 && right) {
-					continue
-				}
+			d, n := label.sideOf(p)
+			if d.isZero() || !side.isZero() && d != side {
+				continue // not straight out from the label, or not on side
 			}
-			switch {
-			case p.X >= x && p.X < x+w && p.Y < y:
-				if d := y - p.Y - 1; d < gap {
-					dx, dy, gap = 0, -1, d
-				}
-			case p.X >= x && p.X < x+w && p.Y >= y+h:
-				if d := p.Y - (y + h); d < gap {
-					dx, dy, gap = 0, 1, d
-				}
-			case beside && p.X < x:
-				if d := x - p.X - 1; d < gap {
-					dx, dy, gap = -1, 0, d
-				}
-			case beside && p.X >= x+w:
-				if d := p.X - (x + w); d < gap {
-					dx, dy, gap = 1, 0, d
-				}
+			if n < gap {
+				dir, gap = d, n
 			}
 		}
 
-		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dx, y+dy, w, h) {
+		if gap <= 0 || gap == math.MaxInt || !c.blank(x+dir.X, y+dir.Y, w, h) {
 			return x, y, gap <= 0
 		}
-		x, y = x+dx, y+dy
+		x, y = x+dir.X, y+dir.Y
 	}
 
 	return x, y, false

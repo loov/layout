@@ -98,7 +98,8 @@ func loopPath(edge *ledge, width, height Length, k, n int) Path {
 		{X: node.Left() - width, Y: node.Bottom() + height},
 	} {
 		at := math.Remainder(angle(p)-start, 2*math.Pi)
-		if (sweep > 0 && at > 0 && at < sweep) || (sweep < 0 && at < 0 && at > sweep) {
+		// strictly between the start and the end of the sweep
+		if lo, hi := min(0, sweep), max(0, sweep); at > lo && at < hi {
 			corners = append(corners, corner{math.Abs(at), p})
 		}
 	}

@@ -301,6 +301,20 @@ type rigid struct {
 	marker bool // the cell of an arrowhead before a box, see addEdges
 }
 
+// meets reports whether a ends across where b starts, or b where a starts
+func (a rigid) meets(b rigid) bool { return a.c1 == b.c0 || b.c1 == a.c0 }
+
+// apart reports whether a and b share no cell across
+func (a rigid) apart(b rigid) bool { return a.c0 > b.c1 || b.c0 > a.c1 }
+
+// spans reports whether a covers row across
+func (a rigid) spans(row int) bool { return a.c0 <= row && row <= a.c1 }
+
+// nextRun reports whether a and b are runs of one edge, one after the other
+func (a rigid) nextRun(b rigid) bool {
+	return a.kind == runKind && b.kind == runKind && a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1)
+}
+
 type rigidKind uint8
 
 const (
@@ -483,10 +497,11 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 	// row and -1 when above; by the rows of the other side, other, when
 	// own lies across row; 0 when that lies around row too
 	side := func(own, other rowSpan, row int) int {
+		across := own.c0 <= row && row <= own.c1
 		switch {
-		case own.c1 < row || own.c0 <= row && row <= own.c1 && other.c1+space < row:
+		case own.c1 < row || across && other.c1+space < row:
 			return -1
-		case own.c0 > row || own.c0 <= row && row <= own.c1 && other.c0-space > row:
+		case own.c0 > row || across && other.c0-space > row:
 			return 1
 		}
 
@@ -558,7 +573,7 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 // the run nearest to it, which a jog there can make the wrong half
 func (p *compactPass) labelled(e, row int) bool {
 	for _, lb := range p.labels {
-		if o := p.objs[lb.obj]; lb.edge == e && o.c0 <= row && row <= o.c1 {
+		if o := p.objs[lb.obj]; lb.edge == e && o.spans(row) {
 			return true
 		}
 	}
@@ -992,7 +1007,7 @@ func (p *compactPass) need(a, b rigid) int {
 		// a marker only keeps its own cell
 		return p.grid.lineSpace
 	case a.kind == runKind && b.kind == runKind:
-		if a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1) && (a.c1 == b.c0 || b.c1 == a.c0) && !a.corner && !b.corner {
+		if a.nextRun(b) && a.meets(b) && !a.corner && !b.corner {
 			return 0
 		}
 		return p.grid.lineSpace
@@ -1144,13 +1159,12 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 		if varOf[a.item] == varOf[b.item] {
 			return dist
 		}
-		if (a.c0 > b.c1 || b.c0 > a.c1) && p.own(a, b) {
+		if a.apart(b) && p.own(a, b) {
 			return free
 		}
 
 		// the halves of a run split by a jog, see jogAxis
-		neighbors := a.kind == runKind && b.kind == runKind && a.index == b.index && (a.group-b.group == 1 || b.group-a.group == 1)
-		if neighbors && p.jogGroup[[2]int{a.index, max(a.group, b.group)}] {
+		if a.nextRun(b) && p.jogGroup[[2]int{a.index, max(a.group, b.group)}] {
 			return free
 		}
 		if grid.text && p.plain(a) && p.plain(b) {
@@ -1161,7 +1175,8 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 			return dist + min(int(math.Ceil(float64(over/p.cell.X)-1e-6)), 0)
 		}
 		need := p.need(a, b)
-		if !a.marker && !b.marker && (a.kind == runKind && p.crowded[a.index] || b.kind == runKind && p.crowded[b.index]) {
+		crowded := func(o rigid) bool { return o.kind == runKind && p.crowded[o.index] }
+		if !a.marker && !b.marker && (crowded(a) || crowded(b)) {
 			need += grid.lineSpace // room to draw them apart, see crowded
 		}
 		return min(need, dist)

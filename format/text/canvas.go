@@ -373,6 +373,19 @@ type cell struct {
 // ownerOn returns the edge that drew the arm of c toward dir
 func (c *cell) ownerOn(dir uint8) edgeID { return c.owner[bits.TrailingZeros8(dir)] }
 
+// drawnBy reports whether c has all the arms in arms, each drawn by id
+func (c *cell) drawnBy(id edgeID, arms uint8) bool {
+	if c == nil || c.lines&arms != arms {
+		return false
+	}
+	for arm := uint8(up); arm <= right; arm <<= 1 {
+		if arms&arm != 0 && c.ownerOn(arm) != id {
+			return false
+		}
+	}
+	return true
+}
+
 // edgeID tells edges apart in cells, from 1, and the frames of clusters,
 // which take ids after the edges; edges that merge share a negative id,
 // see mergedEdges. Ids are int16 to keep cells small, see fits.
@@ -441,6 +454,25 @@ func (b cellBox) insideX(x int) bool { return x > b.Min.X && x < b.Max.X }
 
 // insideY reports whether y is between the top and bottom sides of b
 func (b cellBox) insideY(y int) bool { return y > b.Min.Y && y < b.Max.Y }
+
+// sideOf returns the side of b that p lies straight out from, as the step
+// from b toward p, and the cells between them; zero when p is inside b or
+// off its corners
+func (b cellBox) sideOf(p point) (point, int) {
+	overX := p.X >= b.Min.X && p.X <= b.Max.X
+	overY := p.Y >= b.Min.Y && p.Y <= b.Max.Y
+	switch {
+	case overX && p.Y < b.Min.Y:
+		return point{0, -1}, b.Min.Y - p.Y - 1
+	case overX && p.Y > b.Max.Y:
+		return point{0, 1}, p.Y - b.Max.Y - 1
+	case overY && p.X < b.Min.X:
+		return point{-1, 0}, b.Min.X - p.X - 1
+	case overY && p.X > b.Max.X:
+		return point{1, 0}, p.X - b.Max.X - 1
+	}
+	return point{}, 0
+}
 
 // overlaps reports whether b and o share a cell
 func (b cellBox) overlaps(o cellBox) bool {

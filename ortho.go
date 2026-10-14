@@ -147,7 +147,12 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 	// ends of other edges
 	arc := func(edge *ledge) bool {
 		p := edge.Path
-		return edge.From != edge.To && edge.flat && len(p) == 4 && p[1].Y < p[0].Y && p[0].X == p[1].X && p[2].X == p[3].X
+		if edge.From == edge.To || !edge.flat || len(p) != 4 {
+			return false
+		}
+		rises := p[1].Y < p[0].Y && p[1].X == p[0].X // straight up from the first node
+		lands := p[3].X == p[2].X                    // straight down onto the second
+		return rises && lands
 	}
 	for _, edge := range graph.Edges {
 		if !arc(edge) {
@@ -635,7 +640,8 @@ func (o *jogOrder) splitCycles() {
 		var widest *jog
 		for _, whole := range []bool{true, false} {
 			for _, j := range cycle {
-				if !j.split && j.next == nil && (!whole || len(o.shared[j]) == 0) && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
+				free := !j.split && j.next == nil && (!whole || len(o.shared[j]) == 0)
+				if free && (widest == nil || j.x1-j.x0 > widest.x1-widest.x0) {
 					widest = j
 				}
 			}
