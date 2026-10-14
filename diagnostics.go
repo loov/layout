@@ -121,6 +121,18 @@ type segment struct {
 	first, last bool // the segment at the start, at the end
 }
 
+// dir returns the segment as a vector from a to b
+func (s segment) dir() Vector { return s.b.Sub(s.a) }
+
+// overlap returns how far q runs along p, with both projected onto p's line
+func (p segment) overlap(q segment) float64 {
+	d := p.dir()
+	length := float64(d.Len())
+	proj := func(v Vector) float64 { return float64(v.Sub(p.a).Dot(d)) / length }
+	lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
+	return math.Min(hi, length) - math.Max(lo, 0)
+}
+
 func newDiagnosis(graph *lgraph) *diagnosis {
 	d := &diagnosis{graph: graph}
 	for _, node := range graph.Nodes {
@@ -199,24 +211,20 @@ func (d *diagnosis) throughNodes() {
 // alongside reports whether q runs within dist of p's line for more than
 // minLen
 func alongside(p, q segment, dist, minLen Length) bool {
-	dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
-	length := math.Hypot(dx, dy)
+	length := float64(p.dir().Len())
 	if length < diagEps {
 		return false
 	}
 	if math.Abs(side(p.a, p.b, q.a))/length >= float64(dist) || math.Abs(side(p.a, p.b, q.b))/length >= float64(dist) {
 		return false
 	}
-	proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
-	lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
-	return math.Min(hi, length)-math.Max(lo, 0) > float64(minLen)
+	return p.overlap(q) > float64(minLen)
 }
 
 // cross reports whether p and q cross, and whether they run as one line
 // instead, within a stroke of each other for more than an arrowhead
 func cross(p, q segment) (crosses, collinear bool) {
-	dx, dy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
-	length := math.Hypot(dx, dy)
+	length := float64(p.dir().Len())
 	if length < diagEps {
 		return false, false
 	}
@@ -224,9 +232,7 @@ func cross(p, q segment) (crosses, collinear bool) {
 	d3, d4 := side(q.a, q.b, p.a), side(q.a, q.b, p.b)
 	// distance of q's ends from p's line
 	if math.Abs(d1)/length < float64(diagStroke) && math.Abs(d2)/length < float64(diagStroke) {
-		proj := func(v Vector) float64 { return (float64(v.X-p.a.X)*dx + float64(v.Y-p.a.Y)*dy) / length }
-		lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
-		return false, math.Min(hi, length)-math.Max(lo, 0) > float64(diagArrow)
+		return false, p.overlap(q) > float64(diagArrow)
 	}
 	// a proper crossing has each segment's ends on opposite sides of
 	// the other; touching at an end does not count
@@ -236,7 +242,7 @@ func cross(p, q segment) (crosses, collinear bool) {
 // side returns twice the signed area of a, b and c: which side of the
 // line through a and b c is on, and how far
 func side(a, b, c Vector) float64 {
-	return float64((b.X-a.X)*(c.Y-a.Y) - (b.Y-a.Y)*(c.X-a.X))
+	return float64(b.Sub(a).Cross(c.Sub(a)))
 }
 
 // segmentPairs counts the edges that run alongside, cross and overlap
@@ -258,9 +264,8 @@ func (d *diagnosis) segmentPairs() {
 			if crosses {
 				d.diag.EdgeCrossings++
 				// angle between the segments
-				ux, uy := float64(p.b.X-p.a.X), float64(p.b.Y-p.a.Y)
-				vx, vy := float64(q.b.X-q.a.X), float64(q.b.Y-q.a.Y)
-				angle := math.Abs(math.Atan2(ux*vy-uy*vx, ux*vx+uy*vy))
+				u, v := p.dir(), q.dir()
+				angle := math.Abs(math.Atan2(float64(u.Cross(v)), float64(u.Dot(v))))
 				angle = math.Min(angle, math.Pi-angle)
 				if angle < 30*math.Pi/180 {
 					d.diag.ShallowCrossings++
@@ -357,7 +362,7 @@ func (d *diagnosis) paths() {
 			if a.IsZero() || b.IsZero() {
 				continue
 			}
-			angle := math.Atan2(float64(a.X*b.Y-a.Y*b.X), float64(a.X*b.X+a.Y*b.Y))
+			angle := math.Atan2(float64(a.Cross(b)), float64(a.Dot(b)))
 			turn += angle
 			if math.Abs(angle) > 5*math.Pi/180 {
 				bends++

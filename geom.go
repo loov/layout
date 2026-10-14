@@ -136,6 +136,12 @@ func (v Vector) Add(o Vector) Vector { return Vector{X: v.X + o.X, Y: v.Y + o.Y}
 // Sub returns v - o.
 func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y} }
 
+// Dot returns the dot product of v and o.
+func (v Vector) Dot(o Vector) Length { return v.X*o.X + v.Y*o.Y }
+
+// Cross returns the z component of the cross product of v and o.
+func (v Vector) Cross(o Vector) Length { return v.X*o.Y - v.Y*o.X }
+
 // Len returns the length of v
 func (v Vector) Len() Length { return Length(math.Hypot(float64(v.X), float64(v.Y))) }
 
