@@ -6,7 +6,6 @@ import (
 	"fmt"
 	stdhtml "html"
 	"io"
-	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -111,16 +110,13 @@ func vec(x, y layout.Length) string {
 // roundedPath draws the path as straight segments with rounded corners.
 // Each corner is a quadratic curve with the vertex as control point, cut at
 // most radius away from the vertex (less if the adjacent segments are short).
-func roundedPath(path []layout.Vector, radius, maxDeviation layout.Length) string {
+func roundedPath(path layout.Path, radius, maxDeviation layout.Length) string {
 	var line strings.Builder
 	line.WriteString("M" + vec(path[0].X, path[0].Y))
 
-	length := func(a, b layout.Vector) layout.Length {
-		return layout.Length(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
-	}
 	// point at distance d from a towards b
 	towards := func(a, b layout.Vector, d layout.Length) layout.Vector {
-		l := length(a, b)
+		l := b.Sub(a).Len()
 		if l == 0 {
 			return a
 		}

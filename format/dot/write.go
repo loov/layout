@@ -3,7 +3,6 @@ package dot
 import (
 	"fmt"
 	"io"
-	"math"
 	"slices"
 	"strconv"
 	"strings"
@@ -110,8 +109,8 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 			// Graphviz expects 3n+1 cubic Bezier control points. Repeating
 			// each segment's ends represents the polyline without bending it.
 			points := append(ends, pt(path[0]))
-			for i := 1; i < len(path); i++ {
-				points = append(points, pt(path[i-1]), pt(path[i]), pt(path[i]))
+			for a, b := range path.Segments() {
+				points = append(points, pt(a), pt(b), pt(b))
 			}
 			attrs = append(attrs, "pos="+quote(strings.Join(points, " ")))
 		}
@@ -272,12 +271,12 @@ const arrowLength = 10 * layout.Point
 // next by the arrow length but at most halfway, so both ends fit.
 func arrowBase(tip, next layout.Vector) layout.Vector {
 	d := next.Sub(tip)
-	n := layout.Length(math.Hypot(float64(d.X), float64(d.Y)))
+	n := d.Len()
 	if n == 0 {
 		return tip
 	}
 	t := min(arrowLength/n, 0.5)
-	return layout.Vector{X: tip.X + d.X*t, Y: tip.Y + d.Y*t}
+	return tip.Add(d.Scale(t))
 }
 
 // quote returns s as a dot string literal, with the marks of where lines
