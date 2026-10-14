@@ -247,7 +247,7 @@ func (p *pairs) shift(edge *ledge, spacing Length) Vector {
 	k := p.index[key]
 	p.index[key]++
 	d := key[1].Center.Sub(key[0].Center)
-	length := Length(math.Hypot(float64(d.X), float64(d.Y)))
+	length := d.Len()
 	if length == 0 {
 		return Vector{}
 	}

@@ -30,11 +30,12 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 	}
 	// the sides of cluster boxes are lines like edges, after the edge paths
 	for _, cluster := range clusters {
-		tl, br := cluster.TopLeft, cluster.BottomRight
-		if tl.X > br.X {
+		box := cluster.rect()
+		if box.empty() {
 			continue // nothing inside
 		}
-		paths = append(paths, []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}, tl})
+		corners := box.corners()
+		paths = append(paths, append(corners, corners[0]))
 	}
 	var placed []*ledge
 	for _, edge := range edges {
@@ -50,13 +51,8 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		box := rect{at.Add(Vector{-edge.LabelRadius.X - pad + 0.01, -edge.LabelRadius.Y}), at.Add(Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})}
 		tl, br := box.Min, box.Max
 		for _, path := range paths {
-			if !lines {
-				break
-			}
-			for i := 0; i+1 < len(path); i++ {
-				if box.hitBy(path[i], path[i+1]) {
-					return false
-				}
+			if lines && box.hitByPath(path) {
+				return false
 			}
 		}
 		// nodes only need to stay clear of the text itself
@@ -85,7 +81,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		// waypoint, but rounding and multi-edge offsets move the line
 		if p, ok := nearestOnPath(own, edge.LabelPos); ok {
 			d := edge.LabelPos.Sub(p)
-			if l := math.Hypot(float64(d.X), float64(d.Y)); l > 0 {
+			if l := float64(d.Len()); l > 0 {
 				ux, uy := float64(d.X)/l, float64(d.Y)/l
 				support := math.Abs(ux)*float64(edge.LabelRadius.X) + math.Abs(uy)*float64(edge.LabelRadius.Y)
 				dist := float64(pad) + support
@@ -100,11 +96,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			}
 		}
 		near := func(at Vector) bool {
-			label := rect{at.Sub(edge.LabelRadius), at.Add(edge.LabelRadius)}
-			best := math.Inf(1)
-			for i := 0; i+1 < len(own); i++ {
-				best = math.Min(best, label.distance(own[i], own[i+1]))
-			}
+			best := centeredRect(at, edge.LabelRadius).pathDistance(own)
 			// the text height is the smaller extent (radii are swapped
 			// for sideways layouts), minus a margin
 			return best <= float64(2*min(edge.LabelRadius.X, edge.LabelRadius.Y)-pad)
@@ -130,7 +122,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 				off := float64(pad) + support
 				for t := 0.0; t <= l; t += float64(pad) {
 					p := Vector{a.X + Length(t*dx/l), a.Y + Length(t*dy/l)}
-					d := math.Hypot(float64(p.X-base.X), float64(p.Y-base.Y))
+					d := float64(p.Sub(base).Len())
 					spots = append(spots,
 						spot{p.Add(Vector{Length(nx * off), Length(ny * off)}), d},
 						spot{p.Add(Vector{Length(-nx * off), Length(-ny * off)}), d})
@@ -198,10 +190,8 @@ func (g *lgraph) placeEndLabels() {
 	}
 	crosses := func(r rect) bool {
 		for _, edge := range g.Edges {
-			for i := 0; i+1 < len(edge.Path); i++ {
-				if r.hitBy(edge.Path[i], edge.Path[i+1]) {
-					return true
-				}
+			if r.hitByPath(edge.Path) {
+				return true
 			}
 		}
 		return false
@@ -226,7 +216,7 @@ func (g *lgraph) placeEndLabels() {
 			// along the edge away from the node, and across it
 			ux, uy := 0.0, 1.0
 			if d := end.next.Sub(end.at); d != (Vector{}) {
-				l := math.Hypot(float64(d.X), float64(d.Y))
+				l := float64(d.Len())
 				ux, uy = float64(d.X)/l, float64(d.Y)/l
 			}
 			along := Length(math.Abs(ux))*r.X + Length(math.Abs(uy))*r.Y
@@ -236,7 +226,7 @@ func (g *lgraph) placeEndLabels() {
 			var length Length
 			for i := 0; i+1 < n; i++ {
 				d := edge.Path[i+1].Sub(edge.Path[i])
-				length += Length(math.Hypot(float64(d.X), float64(d.Y)))
+				length += d.Len()
 			}
 			var spots []Vector
 			for step := range 6 {
@@ -253,7 +243,7 @@ func (g *lgraph) placeEndLabels() {
 			at, found := spots[0], false
 			for _, lines := range []bool{true, false} {
 				for _, spot := range spots {
-					box := rect{spot.Sub(r), spot.Add(r)}
+					box := centeredRect(spot, r)
 					if !covers(box) && (!lines || !crosses(box)) {
 						at, found = spot, true
 						break
@@ -264,7 +254,7 @@ func (g *lgraph) placeEndLabels() {
 				}
 			}
 			end.label.pos = at
-			placed = append(placed, rect{at.Sub(r), at.Add(r)})
+			placed = append(placed, centeredRect(at, r))
 		}
 	}
 }

@@ -59,7 +59,7 @@ func boxClusters(graph *lgraph) {
 		}
 		for _, inner := range graph.Clusters {
 			if inner.Parent == cluster {
-				b.add(rect{inner.TopLeft, inner.BottomRight})
+				b.add(inner.rect())
 			}
 		}
 		if b.empty() {

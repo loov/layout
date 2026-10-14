@@ -60,7 +60,7 @@ func loopPath(edge *ledge, width, height Length, k, n int) []Vector {
 		d := Vector{X: 1} // the center port leaves to the right
 		if p != node.Center {
 			v := p.Sub(node.Center)
-			n := Length(math.Hypot(float64(v.X), float64(v.Y)))
+			n := v.Len()
 			d = Vector{X: v.X / n, Y: v.Y / n}
 		}
 		// where the ray along d leaves the grown box

@@ -120,7 +120,7 @@ func (l *Layout) Bounds() (min, max Vector) {
 		} {
 			if label.text != "" {
 				half := Vector{label.size.X / 2, label.size.Y / 2}
-				b.add(rect{label.center.Sub(half), label.center.Add(half)})
+				b.add(centeredRect(label.center, half))
 			}
 		}
 	}

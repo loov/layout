@@ -57,7 +57,7 @@ func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []V
 				}
 				// slightly less than pad: waypoints sit on the padded box
 				// and touching it is not a hit
-				if node == from || node == to || !segmentHitsBox(a, b, node, pad-0.01) {
+				if node == from || node == to || !node.rect().grow(pad-0.01).hitBy(a, b) {
 					continue
 				}
 				// nearest obstacle along the segment first
@@ -99,11 +99,6 @@ func routeAround(path []Vector, obs *obstacles, from, to *lnode, pad Length) []V
 	return path
 }
 
-// segmentHitsBox reports whether segment ab intersects node's box grown by pad
-func segmentHitsBox(a, b Vector, node *lnode, pad Length) bool {
-	return node.rect().grow(pad).hitBy(a, b)
-}
-
 // routeAroundClusters detours segments that cut across a cluster box the
 // edge does not belong to, going around the nearest corner.
 func routeAroundClusters(path []Vector, clusters []*lcluster, from, to *lnode, pad Length) []Vector {
@@ -114,9 +109,8 @@ func routeAroundClusters(path []Vector, clusters []*lcluster, from, to *lnode, p
 		// virtual nodes outside the box sit pad away from it; grow by
 		// less so that chains running alongside are not hits
 		pad := pad / 2
-		box := rect{cluster.TopLeft, cluster.BottomRight}.grow(pad)
-		tl, br := box.Min, box.Max
-		corners := []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}}
+		box := cluster.rect().grow(pad)
+		corners := box.corners()
 		inserted := 0
 		for i := 0; i+1 < len(path) && inserted < 8; i++ {
 			a, b := path[i], path[i+1]

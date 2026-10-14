@@ -136,6 +136,9 @@ func (v Vector) Add(o Vector) Vector { return Vector{X: v.X + o.X, Y: v.Y + o.Y}
 // Sub returns v - o.
 func (v Vector) Sub(o Vector) Vector { return Vector{X: v.X - o.X, Y: v.Y - o.Y} }
 
+// Len returns the length of v
+func (v Vector) Len() Length { return Length(math.Hypot(float64(v.X), float64(v.Y))) }
+
 // Length is a distance in points.
 type Length float64
 
@@ -181,6 +184,34 @@ func (r rect) grow(pad Length) rect {
 
 // overlaps reports whether r and o share more than their borders, by
 // more than eps
+// centeredRect returns the rect of radius around at
+func centeredRect(at, radius Vector) rect { return rect{at.Sub(radius), at.Add(radius)} }
+
+// corners returns the corners of r, clockwise from Min
+func (r rect) corners() []Vector {
+	return []Vector{r.Min, {r.Max.X, r.Min.Y}, r.Max, {r.Min.X, r.Max.Y}}
+}
+
+// hitByPath reports whether any segment of path intersects r
+func (r rect) hitByPath(path []Vector) bool {
+	for i := 0; i+1 < len(path); i++ {
+		if r.hitBy(path[i], path[i+1]) {
+			return true
+		}
+	}
+	return false
+}
+
+// pathDistance returns the distance between r and the nearest segment of
+// path, infinite for a path without segments.
+func (r rect) pathDistance(path []Vector) float64 {
+	best := math.Inf(1)
+	for i := 0; i+1 < len(path); i++ {
+		best = math.Min(best, r.distance(path[i], path[i+1]))
+	}
+	return best
+}
+
 func (r rect) overlaps(o rect, eps Length) bool {
 	return r.Min.X < o.Max.X-eps && o.Min.X < r.Max.X-eps && r.Min.Y < o.Max.Y-eps && o.Min.Y < r.Max.Y-eps
 }

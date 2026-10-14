@@ -318,7 +318,7 @@ func (d *diagnosis) endOverlaps() {
 	}
 	for i, a := range ends {
 		for _, b := range ends[i+1:] {
-			if a.edge != b.edge && math.Hypot(float64(a.p.X-b.p.X), float64(a.p.Y-b.p.Y)) < float64(diagArrow) {
+			if a.edge != b.edge && a.p.Sub(b.p).Len() < diagArrow {
 				d.diag.EndOverlaps++
 				d.detail("ends of %v and %v overlap at %v", a.edge, b.edge, a.p)
 			}
@@ -342,7 +342,7 @@ func (d *diagnosis) paths() {
 	for _, edge := range d.edges {
 		for i := 0; i+1 < len(edge.Path); i++ {
 			v := edge.Path[i+1].Sub(edge.Path[i])
-			d.diag.EdgeLength += Length(math.Hypot(float64(v.X), float64(v.Y)))
+			d.diag.EdgeLength += v.Len()
 		}
 		if edge.From == edge.To {
 			continue
@@ -435,10 +435,7 @@ func (d *diagnosis) farLabels() {
 		}
 		path := d.drawn(edge)
 		label := edge.labelRect()
-		best := math.Inf(1)
-		for i := 0; i+1 < len(path); i++ {
-			best = math.Min(best, label.distance(path[i], path[i+1]))
-		}
+		best := label.pathDistance(path)
 		if limit := float64(2 * edge.LabelRadius.Y); best > limit {
 			d.diag.FarLabels++
 			d.detail("label %q of %v is %.0f from its edge", edge.Label, edge, best)
@@ -486,7 +483,7 @@ func (d *diagnosis) labelOverlaps() {
 func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	switch node.Shape {
 	case Box, Square, Record, None:
-		return segmentHitsBox(a, b, node, pad)
+		return node.rect().grow(pad).hitBy(a, b)
 	case Diamond, Octagon:
 		// clip the segment, in parts of the grown half size, to every side
 		rx, ry := float64(node.Radius.X+pad), float64(node.Radius.Y+pad)
@@ -536,7 +533,6 @@ func (r rect) distance(a, b Vector) float64 {
 	if r.hitBy(a, b) {
 		return 0
 	}
-	tl, br := r.Min, r.Max
 	pointSegment := func(p, a, b Vector) float64 {
 		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
 		t := 0.0
@@ -546,12 +542,12 @@ func (r rect) distance(a, b Vector) float64 {
 		return math.Hypot(float64(p.X-a.X)-t*dx, float64(p.Y-a.Y)-t*dy)
 	}
 	pointRect := func(p Vector) float64 {
-		dx := math.Max(0, math.Max(float64(tl.X-p.X), float64(p.X-br.X)))
-		dy := math.Max(0, math.Max(float64(tl.Y-p.Y), float64(p.Y-br.Y)))
+		dx := math.Max(0, math.Max(float64(r.Min.X-p.X), float64(p.X-r.Max.X)))
+		dy := math.Max(0, math.Max(float64(r.Min.Y-p.Y), float64(p.Y-r.Max.Y)))
 		return math.Hypot(dx, dy)
 	}
 	best := math.Min(pointRect(a), pointRect(b))
-	for _, c := range []Vector{tl, {br.X, tl.Y}, br, {tl.X, br.Y}} {
+	for _, c := range r.corners() {
 		best = math.Min(best, pointSegment(c, a, b))
 	}
 	return best

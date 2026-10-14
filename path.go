@@ -28,7 +28,7 @@ func appendFlatPath(out, path []Vector, radius, maxDeviation Length) []Vector {
 		return path
 	}
 	length := func(a, b Vector) Length {
-		return Length(math.Hypot(float64(b.X-a.X), float64(b.Y-a.Y)))
+		return b.Sub(a).Len()
 	}
 	towards := func(a, b Vector, d Length) Vector {
 		l := length(a, b)
@@ -94,7 +94,7 @@ func nearestOnPath(path []Vector, p Vector) (Vector, bool) {
 			t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
 		}
 		q := Vector{a.X + Length(t*dx), a.Y + Length(t*dy)}
-		if d := math.Hypot(float64(p.X-q.X), float64(p.Y-q.Y)); d < bestDist {
+		if d := float64(p.Sub(q).Len()); d < bestDist {
 			best, bestDist = q, d
 		}
 	}

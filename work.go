@@ -62,7 +62,7 @@ type ledge struct {
 
 // labelRect returns the rect of the edge's label
 func (edge *ledge) labelRect() rect {
-	return rect{edge.LabelPos.Sub(edge.LabelRadius), edge.LabelPos.Add(edge.LabelRadius)}
+	return centeredRect(edge.LabelPos, edge.LabelRadius)
 }
 
 // endLabel is a label at an end of an edge: its center and half size
@@ -78,6 +78,9 @@ type lcluster struct {
 
 	TopLeft, BottomRight Vector
 }
+
+// rect returns the cluster's box
+func (cluster *lcluster) rect() rect { return rect{cluster.TopLeft, cluster.BottomRight} }
 
 // newWorkGraph copies a validated graph for layout. Nodes, edges and
 // clusters listed more than once get one copy each.
@@ -229,7 +232,7 @@ func (g *lgraph) Bounds() (min, max Vector) {
 		b.add(node.rect())
 	}
 	for _, cluster := range g.Clusters {
-		b.add(rect{cluster.TopLeft, cluster.BottomRight})
+		b.add(cluster.rect())
 	}
 	for _, edge := range g.Edges {
 		for _, p := range edge.Path {
@@ -240,7 +243,7 @@ func (g *lgraph) Bounds() (min, max Vector) {
 		}
 		for _, end := range []endLabel{edge.head, edge.tail} {
 			if end.radius != (Vector{}) {
-				b.add(rect{end.pos.Sub(end.radius), end.pos.Add(end.radius)})
+				b.add(centeredRect(end.pos, end.radius))
 			}
 		}
 	}
