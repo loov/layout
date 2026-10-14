@@ -196,8 +196,10 @@ func TestDiagnostics(t *testing.T) {
 	for _, name := range names {
 		diagnose(&out, name, examples.Graphs[name](), examples.Options[name])
 	}
+	// the fixtures by their path in testdata, as examples share their names
+	fixture := func(file string) string { return "graphviz/" + strings.TrimSuffix(filepath.Base(file), ".gv") }
 	for _, file := range files {
-		diagnose(&out, strings.TrimSuffix(filepath.Base(file), ".gv"), parse(file), layout.Options{})
+		diagnose(&out, fixture(file), parse(file), layout.Options{})
 	}
 	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
 
@@ -208,7 +210,7 @@ func TestDiagnostics(t *testing.T) {
 		diagnose(&text, name, examples.Graphs[name](), opts)
 	}
 	for _, file := range files {
-		name := strings.TrimSuffix(filepath.Base(file), ".gv")
+		name := fixture(file)
 		diagnose(&text, name, parse(file), layout.Options{ForText: true})
 		merged := parse(file)
 		merged.MergeEdges = true

@@ -272,17 +272,25 @@ func compare(path, old, new string, oldStats, newStats map[string]map[string]map
 	if !(all && (old != "" || new != "") || old != new) {
 		return Change{}, false
 	}
-	// drawings are named as the graph, text colored or not
-	name := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
-	name = strings.TrimSuffix(name, ".truecolor")
+	// drawings are named as their graph, by the path in testdata, text
+	// colored or not; diagnostics from before named fixtures without the
+	// path, which the examples can share
+	name := strings.TrimSuffix(filepath.ToSlash(path), filepath.Ext(path))
+	name = strings.TrimPrefix(strings.TrimSuffix(name, ".truecolor"), "testdata/")
 	stats := "txt"
 	if kind == "svg" {
 		stats = "svg"
 	}
+	lookup := func(all map[string]map[string]map[string]float64) map[string]float64 {
+		if values, ok := all[stats][name]; ok {
+			return values
+		}
+		return all[stats][filepath.Base(name)]
+	}
 	change = Change{
 		Path: path, Kind: kind, Old: old, New: new,
 		OldSize: size(kind, old), NewSize: size(kind, new),
-		OldStats: oldStats[stats][name], NewStats: newStats[stats][name],
+		OldStats: lookup(oldStats), NewStats: lookup(newStats),
 	}
 	if kind != "svg" {
 		// text is counted as drawn, see textStats
