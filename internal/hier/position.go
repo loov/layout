@@ -34,7 +34,7 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 
 	switch align {
 	case Left, Right:
-		xs := brandesKoepf(graph, true, align == Left, true)
+		xs := brandesKoepf(graph, align == Left)
 		for _, node := range graph.Nodes {
 			node.Center.X = xs[node.ID]
 		}
@@ -46,45 +46,6 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 	}
 	flushLeft(graph)
 	AlignClusterBorders(graph)
-}
-
-// balancedKoepf returns the average of the two median x of the four
-// Brandes-Köpf layouts, after lining them up with the narrowest one
-func balancedKoepf(graph *Graph) []float32 {
-	// four alignments: up/down x left/right
-	var xs [4][]float32
-	for i := range xs {
-		up, left := i < 2, i%2 == 0
-		xs[i] = brandesKoepf(graph, up, left, false)
-	}
-
-	// align layouts to the narrowest one, then take the average of the two medians
-	width := func(x []float32) float32 { return slices.Max(x) - slices.Min(x) }
-	narrow := 0
-	for i := range xs {
-		if width(xs[i]) < width(xs[narrow]) {
-			narrow = i
-		}
-	}
-	for i := range xs {
-		var shift float32
-		if i%2 == 0 {
-			shift = slices.Min(xs[narrow]) - slices.Min(xs[i])
-		} else {
-			shift = slices.Max(xs[narrow]) - slices.Max(xs[i])
-		}
-		for k := range xs[i] {
-			xs[i][k] += shift
-		}
-	}
-
-	x := make([]float32, len(graph.Nodes))
-	for _, node := range graph.Nodes {
-		v := []float32{xs[0][node.ID], xs[1][node.ID], xs[2][node.ID], xs[3][node.ID]}
-		slices.Sort(v)
-		x[node.ID] = (v[1] + v[2]) / 2
-	}
-	return x
 }
 
 // StraightenChains moves virtual nodes towards the midpoint of their
@@ -144,29 +105,19 @@ func PositionInitial(graph *Graph) {
 	}
 }
 
-// brandesKoepf computes x coordinates for one of the four alignment directions.
-// up: align to neighbors in the rank above (otherwise below);
-// left: compact towards the left (otherwise right);
-// first: align to the first neighbor towards that side, not the median.
-func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
+// brandesKoepf computes x coordinates by Brandes-Köpf, aligning each node
+// with its first neighbor in the rank above towards the side it compacts
+// to: the left with left, otherwise the right.
+func brandesKoepf(graph *Graph, left bool) []float32 {
 	n := graph.NodeCount()
 
-	// orient the problem so that we always align "up" and compact "left"
+	// orient the problem so that we always compact "left"
 	layers := make([]Nodes, len(graph.ByRank))
 	for i, layer := range graph.ByRank {
 		layers[i] = slices.Clone(layer)
 		if !left {
 			slices.Reverse(layers[i])
 		}
-	}
-	if !up {
-		slices.Reverse(layers)
-	}
-	upper := func(node *Node) Nodes {
-		if up {
-			return node.In
-		}
-		return node.Out
 	}
 
 	pos := make([]int, n)
@@ -180,7 +131,7 @@ func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
 	// upper neighbors sorted by position
 	nbrs := make([]Nodes, n)
 	for _, node := range graph.Nodes {
-		nbrs[node.ID] = slices.Clone(upper(node))
+		nbrs[node.ID] = slices.Clone(node.In)
 		slices.SortFunc(nbrs[node.ID], func(a, b *Node) int { return pos[a.ID] - pos[b.ID] })
 	}
 
@@ -224,27 +175,15 @@ func brandesKoepf(graph *Graph, up, left, first bool) []float32 {
 	for i := 1; i < len(layers); i++ {
 		r := -1
 		for _, v := range layers[i] {
-			d := len(nbrs[v.ID])
-			if d == 0 {
+			if len(nbrs[v.ID]) == 0 {
 				continue
 			}
-			// the median neighbors, or the first one towards the side
-			// the layout packs to
-			lo, hi := (d-1)/2, d/2
-			if first {
-				lo, hi = 0, 0
-			}
-			for m := lo; m <= hi; m++ {
-				if align[v.ID] != v {
-					break
-				}
-				u := nbrs[v.ID][m]
-				if !conflict[[2]ID{u.ID, v.ID}] && r < pos[u.ID] {
-					align[u.ID] = v
-					root[v.ID] = root[u.ID]
-					align[v.ID] = root[v.ID]
-					r = pos[u.ID]
-				}
+			// the first neighbor towards the side the layout packs to
+			if u := nbrs[v.ID][0]; !conflict[[2]ID{u.ID, v.ID}] && r < pos[u.ID] {
+				align[u.ID] = v
+				root[v.ID] = root[u.ID]
+				align[v.ID] = root[v.ID]
+				r = pos[u.ID]
 			}
 		}
 	}
