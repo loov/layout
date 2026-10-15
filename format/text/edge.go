@@ -229,10 +229,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path layout.Path, cells []point) {
 	c.ids++
 
 	// merged edges share an id, so that they draw as one without overlaps
-	id, merged := c.merged[edge]
-	if !merged {
-		id = c.ids
-	}
+	id, merged := c.edgeOwner(edge, c.ids)
 	c.drawn[edge] = id
 	c.pen = pen{
 		ink:    c.color(rgb(edge.LineColor)),

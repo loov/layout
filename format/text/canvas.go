@@ -176,7 +176,7 @@ func (c *canvas) line(x, y int, mask uint8) {
 	p.frame = p.frame || c.pen.frame
 	p.r = glyph(p.lines, p.heavy)
 	p.fg = c.pen.ink
-	if o := p.owner; p.lines == up|down|left|right && p.heavy == 0 && o[0] == o[1] && o[2] == o[3] && o[0] != o[2] {
+	if p.crossed() && p.heavy == 0 {
 		p.r = '╂' // two edges crossing, not joining
 	} else if r, ok := rounded[p.r]; ok && !c.pen.dashed {
 		p.r = r // bends of edges, unlike cluster frames, are round
@@ -384,6 +384,35 @@ func (c *cell) drawnBy(id edgeID, arms uint8) bool {
 		}
 	}
 	return true
+}
+
+// setOwner sets id as the edge that drew each arm of c in arms
+func (c *cell) setOwner(arms uint8, id edgeID) {
+	for arm := range 4 {
+		if arms&(1<<arm) != 0 {
+			c.owner[arm] = id
+		}
+	}
+}
+
+// linesBy reports whether c has an arm drawn by id, and one drawn by
+// another edge
+func (c *cell) linesBy(id edgeID) (own, other bool) {
+	for arm := range 4 {
+		if c.lines&(1<<arm) != 0 {
+			own = own || c.owner[arm] == id
+			other = other || c.owner[arm] != id
+		}
+	}
+	return own, other
+}
+
+// crossed reports whether two edges cross in c without joining: it has
+// all four arms, up and down drawn by one edge and left and right by
+// another
+func (c *cell) crossed() bool {
+	return c.lines == up|down|left|right && c.ownerOn(up) == c.ownerOn(down) &&
+		c.ownerOn(left) == c.ownerOn(right) && c.ownerOn(up) != c.ownerOn(left)
 }
 
 // edgeID tells edges apart in cells, from 1, and the frames of clusters,

@@ -93,10 +93,8 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 			case !inside && ring && (p.solid || p.text != 0):
 				return false
 			}
-			for arm := range 4 {
-				if !inside && ring && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
-					return false
-				}
+			if _, other := p.linesBy(id); !inside && ring && other {
+				return false
 			}
 		}
 
@@ -377,10 +375,8 @@ func (c *canvas) apart(x, y, w, h int, id edgeID) int {
 			if p == nil || p.lines == 0 || p.frame {
 				continue
 			}
-			for arm := range 4 {
-				if p.lines&(1<<arm) != 0 && p.owner[arm] != id {
-					return d
-				}
+			if _, other := p.linesBy(id); other {
+				return d
 			}
 		}
 	}
@@ -448,12 +444,8 @@ func hug(g grid, owners []edgeID) {
 			if c == nil || c.frame || c.text != 0 {
 				continue
 			}
-			for arm := range 4 {
-				if c.lines&(1<<arm) != 0 {
-					own = own || c.owner[arm] == id
-					other = other || c.owner[arm] != id
-				}
-			}
+			o, x := c.linesBy(id)
+			own, other = own || o, other || x
 		}
 
 		return own, other

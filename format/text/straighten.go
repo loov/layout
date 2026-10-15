@@ -2,7 +2,6 @@ package text
 
 import (
 	"cmp"
-	"math/bits"
 	"slices"
 )
 
@@ -79,7 +78,7 @@ func straighten(g grid) bool {
 	for r, row := range g {
 		for x, c := range row {
 			// the turn at the left end of a step
-			if c.lines&right == 0 || bits.OnesCount(uint(c.lines)) != 2 || c.lines&(up|down) == 0 {
+			if c.lines&right == 0 || !isTurn(c.lines) {
 				continue
 			}
 			end := x + 1
@@ -119,7 +118,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 	blank := func(r, x int) bool { c := g.at(r, x); return c != nil && free(*c) }
 	solid := func(r, x int) bool { c := g.at(r, x); return c != nil && c.solid }
 	turn := g.at(r, x)
-	if turn == nil || turn.lines&dir == 0 || bits.OnesCount(uint(turn.lines)) != 2 || turn.lines&(left|right) == 0 {
+	if turn == nil || turn.lines&dir == 0 || !isTurn(turn.lines) {
 		return moves, false
 	}
 	id := turn.ownerOn(dir)
@@ -220,12 +219,14 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			was := cell{r: ' '}
 			if p.lines != up|down {
 				was = *p
-				was.r, was.lines, was.owner[0], was.owner[1] = '─', left|right, 0, 0
+				was.r, was.lines = '─', left|right
+				was.setOwner(up|down, 0)
 			}
 			to := vertical
 			if across {
 				to = *q
-				to.r, to.lines, to.owner[0], to.owner[1] = '╂', up|down|left|right, id, id
+				to.r, to.lines = '╂', up|down|left|right
+				to.setOwner(up|down, id)
 			}
 			moves = append(moves, move{y, x, was}, move{y, x + dx, to})
 			continue
@@ -238,7 +239,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			}
 			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
 			return moves, true
-		case p.lines&opposite(dir) != 0 && bits.OnesCount(uint(p.lines)) == 2 && p.lines&(left|right) != 0 && p.ownerOn(opposite(dir)) == id:
+		case p.lines&opposite(dir) != 0 && isTurn(p.lines) && p.ownerOn(opposite(dir)) == id:
 			return moves, turns(y, p.lines)
 		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
 			// a port on the side of a box moves along its straight side
@@ -306,7 +307,7 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 			c.r, c.fg = p.r, p.fg
 		case lines == q.lines:
 			c.r, c.fg = q.r, q.fg
-		case lines == up|down|left|right && c.owner[0] != c.owner[2]:
+		case lines == up|down|left|right && c.ownerOn(up) != c.ownerOn(left):
 			c.r = '╂' // a line across another
 		default:
 			c.r = corner(lines)
@@ -412,7 +413,7 @@ func (u *unjogger) oldArms(p point) uint8 {
 // corners returns how many of dirs turn
 func corners(dirs []uint8) (n int) {
 	for _, d := range dirs {
-		if d != up|down && d != left|right {
+		if !isStraight(d) {
 			n++
 		}
 	}
@@ -495,13 +496,12 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 		}
 		if u.isOld(p) {
 			// a crossing on the old line stays one on the new
-			if q.r == '╂' && dirs[i] != up|down && dirs[i] != left|right {
+			if q.r == '╂' && !isStraight(dirs[i]) {
 				return false
 			}
 			continue
 		}
-		straight := dirs[i] == up|down || dirs[i] == left|right
-		across := straight && (dirs[i] == up|down && q.r == '─' || dirs[i] == left|right && q.r == '│')
+		across := dirs[i] == up|down && q.r == '─' || dirs[i] == left|right && q.r == '│'
 		if q.solid || !free(*q) && !across {
 			return false
 		}
@@ -555,11 +555,7 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 			*q = *head
 		case q.r == '╂' || q.r != ' ' && u.oldArms(p) == 0:
 			q.r, q.lines = '╂', up|down|left|right
-			for arm := range 4 {
-				if dirs[i]&(1<<arm) != 0 {
-					q.owner[arm] = id
-				}
-			}
+			q.setOwner(dirs[i], id)
 		default:
 			*q = cell{r: corner(dirs[i]), fg: fg, lines: dirs[i], owner: [4]edgeID{id, id, id, id}}
 		}

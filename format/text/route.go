@@ -19,10 +19,7 @@ func (c *canvas) route(edge *layout.Edge, cells []point) []point {
 	if len(cells) < 2 {
 		return cells
 	}
-	id, merged := c.merged[edge]
-	if !merged {
-		id = c.ids + 1 // see drawEdge
-	}
+	id, merged := c.edgeOwner(edge, c.ids+1) // see drawEdge
 	last := len(cells) - 1
 	if c.clear(cells, id, merged) && c.onSide(cells[0], cells[1], edge.From) && c.onSide(cells[last], cells[last-1], edge.To) {
 		return cells
@@ -33,6 +30,15 @@ func (c *canvas) route(edge *layout.Edge, cells []point) []point {
 		return route
 	}
 	return cells
+}
+
+// edgeOwner returns the id that edge draws with: that of its merged
+// group, else own; and whether it is merged
+func (c *canvas) edgeOwner(edge *layout.Edge, own edgeID) (edgeID, bool) {
+	if id, ok := c.merged[edge]; ok {
+		return id, true
+	}
+	return own, false
 }
 
 // onSide reports whether end, heading to next along the edge, is where
@@ -174,7 +180,7 @@ func (c *canvas) clear(cells []point, id edgeID, merged bool) bool {
 	}
 	ok := true
 	c.pathSteps(cells, func(from, to point, dir uint8) {
-		ok = ok && c.free(from, dir, id, ends[from]) && c.free(to, opposite(dir), id, ends[to])
+		ok = ok && c.passes(from, to, dir, id, ends[from], ends[to])
 	})
 	return ok
 }
@@ -236,6 +242,13 @@ func (c *canvas) free(p point, dir uint8, id edgeID, end bool) bool {
 	return q.lines&dir == 0 || q.ownerOn(dir) == id
 }
 
+// passes reports whether an edge with id can draw the step from from to
+// to toward dir, see free; fromEnd and toEnd tell whether the cells end
+// the edge
+func (c *canvas) passes(from, to point, dir uint8, id edgeID, fromEnd, toEnd bool) bool {
+	return c.free(from, dir, id, fromEnd) && c.free(to, opposite(dir), id, toEnd)
+}
+
 // crosses reports whether a line of an edge with id that enters the
 // cell at p toward dir crosses the line of another edge there
 func (c *canvas) crosses(p point, dir uint8, id edgeID) bool {
@@ -243,11 +256,11 @@ func (c *canvas) crosses(p point, dir uint8, id edgeID) bool {
 	if q == nil || q.solid {
 		return false
 	}
-	across := uint8(left | right)
+	across := []uint8{left, right}
 	if dir == left || dir == right {
-		across = up | down
+		across = []uint8{up, down}
 	}
-	for _, d := range []uint8{across & -across, across &^ (across & -across)} {
+	for _, d := range across {
 		if q.lines&d != 0 && q.ownerOn(d) != id {
 			return true
 		}
@@ -314,7 +327,7 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 			}
 			g, isGoal := goal[to]
 			isGoal = isGoal && dir == opposite(g.out) && nd == d && !start
-			if !c.free(p, dir, id, start) || !c.free(to, opposite(dir), id, isGoal) {
+			if !c.passes(p, to, dir, id, start, isGoal) {
 				continue
 			}
 			next := item.cost + 1
@@ -408,10 +421,7 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
 			if k == 1 {
 				next, node = path[last-1], edge.To
 			}
-			own, merged := c.merged[edge]
-			if !merged {
-				own = id
-			}
+			own, _ := c.edgeOwner(edge, id)
 			if !ends[k] {
 				c.markCell(end, next, node, own, markers[k])
 				continue

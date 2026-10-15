@@ -1,6 +1,7 @@
 package text
 
 import (
+	"math/bits"
 	"slices"
 )
 
@@ -52,6 +53,17 @@ var (
 func opposite(dir uint8) uint8 {
 	return [right + 1]uint8{up: down, down: up, left: right, right: left}[dir]
 }
+
+// isTurn reports whether lines are two arms, one up or down and one left
+// or right
+func isTurn(lines uint8) bool {
+	return bits.OnesCount8(lines) == 2 && lines&(up|down) != 0 && lines&(left|right) != 0
+}
+
+// isStraight reports whether lines run straight through, up and down or
+// left and right
+func isStraight(lines uint8) bool { return lines == up|down || lines == left|right }
+
 func dx(dir uint8) int { return [right + 1]int{left: -1, right: 1}[dir] }
 func dy(dir uint8) int { return [right + 1]int{up: -1, down: 1}[dir] }
 func sign(v int) int {
