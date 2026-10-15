@@ -39,6 +39,7 @@ func (svg *writer) start(left, top, right, bottom layout.Length) {
 	}
 	svg.write(">")
 }
+
 func (svg *writer) finish() {
 	svg.write("</svg>\n")
 }
@@ -81,7 +82,8 @@ func colortext(color layout.Color) string {
 	if a != 0xFF {
 		return fmt.Sprintf("rgba(%d,%d,%d,%.3g)", r, g, b, float64(a)/0xFF)
 	}
-	return string([]byte{'#',
+	return string([]byte{
+		'#',
 		hex[r>>4], hex[r&0xF],
 		hex[g>>4], hex[g&0xF],
 		hex[b>>4], hex[b&0xF],

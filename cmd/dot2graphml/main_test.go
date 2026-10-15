@@ -15,7 +15,7 @@ func TestConvertInPlace(t *testing.T) {
 		return
 	}
 	path := filepath.Join(t.TempDir(), "graph.dot")
-	if err := os.WriteFile(path, []byte("digraph {alpha -> beta}"), 0600); err != nil {
+	if err := os.WriteFile(path, []byte("digraph {alpha -> beta}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestConvertInPlace$")
@@ -40,7 +40,7 @@ func TestErrorsAreReported(t *testing.T) {
 	}
 	dir := t.TempDir()
 	missing, valid := filepath.Join(dir, "missing"), filepath.Join(dir, "valid.dot")
-	if err := os.WriteFile(valid, []byte("digraph {a}"), 0600); err != nil {
+	if err := os.WriteFile(valid, []byte("digraph {a}"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, tc := range []struct{ args, stdin, want string }{

@@ -148,7 +148,7 @@ func checkGolden(t *testing.T, path string, graph *layout.Graph, opts layout.Opt
 func compareGolden(t *testing.T, path string, got []byte) {
 	t.Helper()
 	if *update {
-		if err := os.WriteFile(path, got, 0644); err != nil {
+		if err := os.WriteFile(path, got, 0o644); err != nil {
 			t.Fatal(err)
 		}
 		return

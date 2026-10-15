@@ -79,8 +79,11 @@ func TestDecyclePreservesAntiparallelMinimumLengths(t *testing.T) {
 		name                    string
 		forward, backward, want int32
 	}{
-		{"longer reverse", 2, 5, 5}, {"longer forward", 5, 2, 5},
-		{"default forward", 1, 0, 1}, {"default reverse", 0, 1, 1}, {"zero", 0, 0, 0},
+		{"longer reverse", 2, 5, 5},
+		{"longer forward", 5, 2, 5},
+		{"default forward", 1, 0, 1},
+		{"default reverse", 0, 1, 1},
+		{"zero", 0, 0, 0},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			graph := NewGraph()

@@ -16,7 +16,7 @@ func TestInvalidOutputFormatPreservesExistingFile(t *testing.T) {
 	}
 	path := filepath.Join(t.TempDir(), "existing.svg")
 	const original = "existing drawing"
-	if err := os.WriteFile(path, []byte(original), 0600); err != nil {
+	if err := os.WriteFile(path, []byte(original), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestInvalidOutputFormatPreservesExistingFile$")

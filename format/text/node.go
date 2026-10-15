@@ -444,10 +444,14 @@ func (c *canvas) diamond(x0, y0, x1, y1 int) {
 			x, y int
 			r    rune
 		}{
-			{mid - 2*r, y0 + r, '🯐'}, {mid - 2*r + 1, y0 + r, '🯑'},
-			{mid + 2*r - 1, y0 + r, '🯒'}, {mid + 2*r, y0 + r, '🯓'},
-			{mid - 2*r, y1 - r, '🯒'}, {mid - 2*r + 1, y1 - r, '🯓'},
-			{mid + 2*r - 1, y1 - r, '🯐'}, {mid + 2*r, y1 - r, '🯑'},
+			{mid - 2*r, y0 + r, '🯐'},
+			{mid - 2*r + 1, y0 + r, '🯑'},
+			{mid + 2*r - 1, y0 + r, '🯒'},
+			{mid + 2*r, y0 + r, '🯓'},
+			{mid - 2*r, y1 - r, '🯒'},
+			{mid - 2*r + 1, y1 - r, '🯓'},
+			{mid + 2*r - 1, y1 - r, '🯐'},
+			{mid + 2*r, y1 - r, '🯑'},
 		} {
 			c.set(cell.x, cell.y, cell.r)
 		}
@@ -522,10 +526,14 @@ func (c *canvas) cornerDiamond(x0, y0, y1 int) {
 			x, y int
 			r    rune
 		}{
-			{mid - 2 - 2*r, y0 + r, '🯐'}, {mid - 1 - 2*r, y0 + r, '🯑'},
-			{mid + 2*r, y0 + r, '🯒'}, {mid + 1 + 2*r, y0 + r, '🯓'},
-			{mid - 2 - 2*r, y1 - r, '🯒'}, {mid - 1 - 2*r, y1 - r, '🯓'},
-			{mid + 2*r, y1 - r, '🯐'}, {mid + 1 + 2*r, y1 - r, '🯑'},
+			{mid - 2 - 2*r, y0 + r, '🯐'},
+			{mid - 1 - 2*r, y0 + r, '🯑'},
+			{mid + 2*r, y0 + r, '🯒'},
+			{mid + 1 + 2*r, y0 + r, '🯓'},
+			{mid - 2 - 2*r, y1 - r, '🯒'},
+			{mid - 1 - 2*r, y1 - r, '🯓'},
+			{mid + 2*r, y1 - r, '🯐'},
+			{mid + 1 + 2*r, y1 - r, '🯑'},
 		} {
 			c.set(cell.x, cell.y, cell.r)
 		}

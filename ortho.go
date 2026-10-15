@@ -424,8 +424,10 @@ func channelJogs(graph *lgraph, rows rowSpans) [][]*jog {
 			// each end its own slice, which appending copies out
 			xs = append(xs, top.X, bottom.X)
 			n := len(xs)
-			block = append(block, jog{edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X,
-				ins: xs[n-2 : n-1 : n-1], outs: xs[n-1 : n : n]})
+			block = append(block, jog{
+				edge: edge, index: i, x0: min(a.X, b.X), x1: max(a.X, b.X), xin: top.X,
+				ins: xs[n-2 : n-1 : n-1], outs: xs[n-1 : n : n],
+			})
 			channels[k] = append(channels[k], &block[len(block)-1])
 		}
 	}
@@ -525,8 +527,10 @@ func splitOpposite(jogs []*jog) []*jog {
 		for _, l := range jogs {
 			if l.leftward() && l.x0 == r.x0 && l.x1 == r.x1 {
 				mid := (r.x0 + r.x1) / 2
-				r.next = &jog{edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true,
-					ins: []Length{mid}, outs: r.outs}
+				r.next = &jog{
+					edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true,
+					ins: []Length{mid}, outs: r.outs,
+				}
 				r.x1, r.outs = mid, []Length{mid}
 				jogs = append(jogs, r.next)
 				break

@@ -137,8 +137,10 @@ func TestControlCharacters(t *testing.T) {
 // node boxes and cluster frames don't grow past their layout boxes, and
 // node boxes don't overlap, and edge labels get their columns.
 func TestFitsLayout(t *testing.T) {
-	labels := []string{"a", "hello world", "one\ntwo\nthree", "漢字", "é 👩‍💻", "iiiiiiii", "<<b>bold</b> text>",
-		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>"}
+	labels := []string{
+		"a", "hello world", "one\ntwo\nthree", "漢字", "é 👩‍💻", "iiiiiiii", "<<b>bold</b> text>",
+		"<<TABLE><TR><TD>a</TD><TD>b</TD></TR><TR><TD>c</TD></TR></TABLE>>",
+	}
 	records := []string{"a|b", "{a|b|c}", "<p> left|{top|mid|bottom}|right", "x|{y|{z|w}}", "{a\\nb|c}"}
 	shapes := []layout.Shape{layout.Box, layout.Ellipse, layout.Circle, layout.Square, layout.None, layout.Record, layout.Auto}
 	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight} {

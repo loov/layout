@@ -17,10 +17,24 @@ func TestOrderRanksBlocks(t *testing.T) {
 	n, t1, t2, t3, hub, y1, y2, y3 := node(), node(), node(), node(), node(), node(), node(), node()
 	link2, link1, link3 := node(), node(), node()
 	for _, e := range [][2]*Node{
-		{s, n}, {n, link2},
-		{u1, t1}, {u2, t2}, {u3, t3}, {t1, link1}, {t2, link1}, {t3, link1},
-		{h0, hub}, {hub, link1}, {hub, link2}, {hub, link3},
-		{x1, y1}, {x2, y2}, {x3, y3}, {y1, link3}, {y2, link3}, {y3, link3},
+		{s, n},
+		{n, link2},
+		{u1, t1},
+		{u2, t2},
+		{u3, t3},
+		{t1, link1},
+		{t2, link1},
+		{t3, link1},
+		{h0, hub},
+		{hub, link1},
+		{hub, link2},
+		{hub, link3},
+		{x1, y1},
+		{x2, y2},
+		{x3, y3},
+		{y1, link3},
+		{y2, link3},
+		{y3, link3},
 	} {
 		graph.AddEdge(e[0], e[1])
 	}

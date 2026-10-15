@@ -308,7 +308,6 @@ func main() {
 	}
 
 	err = write(out, result)
-
 	if err != nil {
 		errorf("writing %q failed: %v", output, err)
 		os.Exit(1)

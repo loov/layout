@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"strings"
 
 	"github.com/loov/layout"
-	"strings"
 )
 
 // rgb packs a color for a cell: 0 is the terminal default, anything else

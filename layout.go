@@ -540,7 +540,6 @@ func (c *hierComponent) rank() {
 	// create virtual nodes
 	hier.AddVirtuals(c.graph)
 	hier.TraceEdges(c.graph)
-
 }
 
 // hnode returns the hierarchical node of node
@@ -1311,7 +1310,6 @@ func (c *hierComponent) crossLabelBands() {
 			}
 		}
 	}
-
 }
 
 // shapePaths routes the paths as the splines of the graph ask for

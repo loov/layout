@@ -80,11 +80,13 @@ type Cluster struct {
 func Convert(l *layout.Layout) Graph {
 	graph := l.Graph
 	lo, hi := l.Extent()
-	out := Graph{ID: graph.ID, Directed: graph.Directed,
+	out := Graph{
+		ID: graph.ID, Directed: graph.Directed,
 		X: float64(lo.X), Y: float64(lo.Y),
 		Width:  float64(hi.X + graph.NodePadding - lo.X),
 		Height: float64(hi.Y + graph.RowPadding - lo.Y),
-		Nodes:  []Node{}, Edges: []Edge{}}
+		Nodes:  []Node{}, Edges: []Edge{},
+	}
 	for i, node := range graph.Nodes {
 		box := l.Nodes[i]
 		out.Nodes = append(out.Nodes, Node{
@@ -117,10 +119,12 @@ func Convert(l *layout.Layout) Graph {
 
 	for i, cluster := range graph.Clusters {
 		box := l.Clusters[i]
-		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
+		c := Cluster{
+			ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
 			X: float64(box.TopLeft.X), Y: float64(box.TopLeft.Y),
 			Width:  float64(box.Size().X),
-			Height: float64(box.Size().Y)}
+			Height: float64(box.Size().Y),
+		}
 		if cluster.Parent != nil {
 			c.Parent = cluster.Parent.ID
 		}
