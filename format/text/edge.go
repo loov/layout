@@ -232,7 +232,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path layout.Path, cells []point) {
 	id, merged := c.edgeOwner(edge, c.ids)
 	c.drawn[edge] = id
 	c.pen = pen{
-		ink:    c.color(rgb(edge.LineColor)),
+		ink:    c.colorOf(edge.LineColor),
 		dashed: edge.LineStyle == layout.Dashed || edge.LineStyle == layout.Dotted,
 		edge:   id,
 	}

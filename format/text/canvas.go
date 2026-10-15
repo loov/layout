@@ -54,6 +54,9 @@ func (c *canvas) color(rgb uint32) colorID {
 	return i
 }
 
+// colorOf returns the index of color in the palette, see color
+func (c *canvas) colorOf(color layout.Color) colorID { return c.color(rgb(color)) }
+
 // pen is what the canvas draws with. Each drawing sets all of it, so
 // that nothing carries over from the drawing before.
 type pen struct {
@@ -219,7 +222,7 @@ func (c *canvas) text(x, y int, s string) {
 	for _, span := range draw.Spans(s) {
 		fg := c.pen.font
 		if color, ok := layout.ParseColor(span.Style.Color); ok {
-			fg = c.color(rgb(color))
+			fg = c.colorOf(color)
 		}
 		style := textStyle(span.Style)
 		for _, r := range cellRunes(span.Text) {

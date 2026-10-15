@@ -76,8 +76,8 @@ func (c *canvas) drawCluster(i int) {
 	b := c.clusterBox(i)
 	x0, y0, x1, y1 := b.Min.X, b.Min.Y, b.Max.X, b.Max.Y
 	c.ids++
-	c.pen = pen{ink: c.color(rgb(cluster.LineColor)), dashed: true, edge: c.ids, frame: true}
-	c.fill(x0, y0, x1, y1, c.color(rgb(cluster.FillColor)))
+	c.pen = pen{ink: c.colorOf(cluster.LineColor), dashed: true, edge: c.ids, frame: true}
+	c.fill(x0, y0, x1, y1, c.colorOf(cluster.FillColor))
 	c.frame(x0, y0, x1, y1)
 }
 
@@ -252,9 +252,9 @@ func (c *canvas) drawNode(node *layout.Node) {
 		// an invisible point keeps its cell, where its edges end, as
 		// invisible boxes keep theirs
 		if !node.Invisible {
-			c.pen = pen{ink: c.color(rgb(node.LineColor))}
+			c.pen = pen{ink: c.colorOf(node.LineColor)}
 			if node.FillColor != nil {
-				c.pen.ink = c.color(rgb(node.FillColor))
+				c.pen.ink = c.colorOf(node.FillColor)
 			}
 			c.set(x0, y0, '●')
 		}
@@ -264,9 +264,9 @@ func (c *canvas) drawNode(node *layout.Node) {
 		c.hold(x0, y0) // no line through the blank frame
 		return
 	}
-	c.pen = pen{ink: c.color(rgb(node.LineColor)), font: c.color(rgb(node.FontColor))}
+	c.pen = pen{ink: c.colorOf(node.LineColor), font: c.colorOf(node.FontColor)}
 	if !node.Invisible {
-		c.fill(x0, y0, x1, y1, c.color(rgb(node.FillColor)))
+		c.fill(x0, y0, x1, y1, c.colorOf(node.FillColor))
 	}
 	for p := range b.cells() {
 		c.set(p.X, p.Y, ' ')
@@ -537,26 +537,25 @@ func (c *canvas) cornerDiamond(x0, y0, x1, y1 int) {
 // at the other end, across the ranks, or along a rank for edges in one
 func (c *canvas) pointsFor(node *layout.Node) bool {
 	center := c.l.Node(node).Center
-	var sides [4]int // top, bottom, left, right
+	var sides [right + 1]int // by direction
 	add := func(other *layout.Node) {
 		d := c.l.Node(other).Center.Sub(center)
 		across, along := d.Y, d.X // across the ranks, and along them
 		if c.sideways() {
 			across, along = d.X, d.Y
 		}
-		side := 0
+		side := uint8(left)
 		switch {
-		case across.Abs() > 0.01 && across > 0:
-			side = 1
-		case across.Abs() > 0.01:
+		case across > 0.01:
+			side = down
+		case across < -0.01:
+			side = up
 		case along > 0:
-			side = 3
-		default:
-			side = 2
+			side = right
 		}
 
 		if c.sideways() {
-			side = [4]int{2, 3, 0, 1}[side]
+			side = transposed(side)
 		}
 		sides[side]++
 	}
@@ -573,7 +572,7 @@ func (c *canvas) pointsFor(node *layout.Node) bool {
 		}
 	}
 
-	return max(sides[0], sides[1], sides[2], sides[3]) <= 1
+	return max(sides[up], sides[down], sides[left], sides[right]) <= 1
 }
 
 // sideCells returns the first and last cells along the side of the box

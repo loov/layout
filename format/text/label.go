@@ -35,7 +35,7 @@ func (c *canvas) edgeLabel(i int) (label string, x, y int) {
 
 // edgeText writes the lines of a label of edge, w cells wide, at x, y
 func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
-	c.pen = pen{font: c.color(rgb(edge.FontColor))}
+	c.pen = pen{font: c.colorOf(edge.FontColor)}
 
 	// each label its own id, so that hug moves it alone: merged edges,
 	// and an edge's head and tail labels, share the edge's id

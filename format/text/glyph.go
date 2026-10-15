@@ -54,6 +54,12 @@ func opposite(dir uint8) uint8 {
 	return [right + 1]uint8{up: down, down: up, left: right, right: left}[dir]
 }
 
+// transposed returns dir mirrored across the diagonal, as for ranks that
+// are columns
+func transposed(dir uint8) uint8 {
+	return [right + 1]uint8{up: left, down: right, left: up, right: down}[dir]
+}
+
 // isTurn reports whether lines are two arms, one up or down and one left
 // or right
 func isTurn(lines uint8) bool {

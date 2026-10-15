@@ -22,6 +22,11 @@ func rgb(color layout.Color) uint32 {
 	return 1<<24 | uint32(r)<<16 | uint32(g)<<8 | uint32(b)
 }
 
+// channels returns the red, green and blue of a color packed by rgb
+func channels(color uint32) (r, g, b uint32) {
+	return color >> 16 & 0xFF, color >> 8 & 0xFF, color & 0xFF
+}
+
 // Options configure WriteColor and WriteOptions.
 type Options struct {
 	// Palette selects how colors are written.
@@ -53,7 +58,8 @@ const (
 func (opts *Options) codes(fg, bg uint32) (string, string) {
 	if opts.Palette == TrueColor {
 		code := func(set int, color uint32) string {
-			return fmt.Sprintf("%d;2;%d;%d;%d", set, color>>16&0xFF, color>>8&0xFF, color&0xFF)
+			r, g, b := channels(color)
+			return fmt.Sprintf("%d;2;%d;%d;%d", set, r, g, b)
 		}
 		if bg == 0 {
 			bg = rgb(opts.Background)
@@ -118,9 +124,8 @@ func ansi16(color uint32, role role) int {
 	if color == 0 {
 		return 0
 	}
-	r := float64(color>>16&0xFF) / 0xFF
-	g := float64(color>>8&0xFF) / 0xFF
-	b := float64(color&0xFF) / 0xFF
+	r8, g8, b8 := channels(color)
+	r, g, b := float64(r8)/0xFF, float64(g8)/0xFF, float64(b8)/0xFF
 	hi, lo := max(r, g, b), min(r, g, b)
 	light := (hi + lo) / 2
 	base := 30
@@ -161,7 +166,7 @@ func ansi16(color uint32, role role) int {
 
 // lightness returns the HSL lightness of a cell color, in [0, 1]
 func lightness(color uint32) float64 {
-	r, g, b := color>>16&0xFF, color>>8&0xFF, color&0xFF
+	r, g, b := channels(color)
 	return float64(max(r, g, b)+min(r, g, b)) / (2 * 0xFF)
 }
 
