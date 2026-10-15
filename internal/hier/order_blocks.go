@@ -87,7 +87,6 @@ type blockMover struct {
 
 	left, right []float32
 	edges       []blockEdge
-	starts      []int
 	column      []float32
 }
 

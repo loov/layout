@@ -389,7 +389,6 @@ type cell struct {
 	text   edgeID    // label it is part of, see canvas.owners
 	lines  uint8     // direction mask, for joining edge runs
 	heavy  uint8     // arms that runs of different edges share
-	kind   uint8     // class of r, which seams keep up to date for their use
 	style  uint8     // the style bits of text, see textStyle, or pinned
 	keep   bool      // inside a node or of text, which lines keep out of
 	glue   bool      // beside a label, which lines keep out of
