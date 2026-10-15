@@ -217,6 +217,10 @@ func (r rect) grow(pad Length) rect {
 	return rect{r.Min.Sub(Vector{pad, pad}), r.Max.Add(Vector{pad, pad})}
 }
 
+// centeredOffset returns where the i-th of n places spacing apart lies
+// from their middle
+func centeredOffset(i, n int, spacing Length) Length { return (Length(i) - Length(n-1)/2) * spacing }
+
 // centeredRect returns the rect of radius around at
 func centeredRect(at, radius Vector) rect { return rect{at.Sub(radius), at.Add(radius)} }
 

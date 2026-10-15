@@ -71,8 +71,31 @@ func (edge *ledge) loop() bool { return edge.From == edge.To }
 // ported reports whether either end of the edge has a compass port
 func (edge *ledge) ported() bool { return edge.FromPort != CompassAuto || edge.ToPort != CompassAuto }
 
+// arcShaped reports whether the edge runs along a rank as an arc of
+// three segments, see the flat edges in layout.go
+func (edge *ledge) arcShaped() bool { return !edge.loop() && edge.flat && len(edge.Path) == 4 }
+
+// setEnd sets the first point of the edge's path for the start, and the
+// last for the end
+func (edge *ledge) setEnd(start bool, p Vector) {
+	if start {
+		edge.Path[0] = p
+	} else {
+		edge.Path[len(edge.Path)-1] = p
+	}
+}
+
 // endLabel is a label at an end of an edge: its center and half size
 type endLabel struct{ pos, radius Vector }
+
+// mergeGroup returns the group that the start or the end of edge merges
+// in, 0 when it doesn't
+func (graph *lgraph) mergeGroup(edge *ledge, start bool) int {
+	if start {
+		return graph.merged[edge][0]
+	}
+	return graph.merged[edge][1]
+}
 
 // lcluster is the working copy of a Cluster, of working nodes.
 type lcluster struct {

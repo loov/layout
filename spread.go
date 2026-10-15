@@ -39,7 +39,7 @@ func spreadWaypoints(edges []*ledge, pad Length) {
 		// the edges from crossing
 		slices.SortStableFunc(list, func(a, b at) int { return cmp.Compare(a.next.X, b.next.X) })
 		for i, a := range list {
-			offset := (Length(i) - Length(len(list)-1)/2) * 2 * pad
+			offset := centeredOffset(i, len(list), 2*pad)
 			a.edge.Path[a.index] = point.Add(Vector{offset, 0})
 		}
 	}
@@ -142,11 +142,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 				continue
 			}
 			p := node.Boundary(node.Center.Add(Vector{Length(math.Cos(e.angle)), Length(math.Sin(e.angle))}))
-			if e.start {
-				e.edge.Path[0] = p
-			} else {
-				e.edge.Path[len(e.edge.Path)-1] = p
-			}
+			e.edge.setEnd(e.start, p)
 		}
 	}
 }
@@ -204,11 +200,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 			if !k.bottom {
 				p.Y = node.Center.Y - node.halfHeightAt(xs[i])
 			}
-			if e.start {
-				e.edge.Path[0] = p
-			} else {
-				e.edge.Path[len(e.edge.Path)-1] = p
-			}
+			e.edge.setEnd(e.start, p)
 		}
 	}
 }
@@ -256,6 +248,6 @@ func (p *pairs) shift(edge *ledge, spacing Length) Vector {
 	if length == 0 {
 		return Vector{}
 	}
-	offset := (Length(k) - Length(n-1)/2) * spacing / length
+	offset := centeredOffset(k, n, spacing) / length
 	return Vector{X: -d.Y * offset, Y: d.X * offset}
 }

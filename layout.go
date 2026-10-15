@@ -659,17 +659,17 @@ func (c *hierComponent) reserveEnds() {
 			}
 			if from.Rank == to.Rank {
 				if c.graphdef.ForText && c.pack && !edge.loop() {
-					count(flat, edge.From, from.Pos < to.Pos, c.graphdef.merged[edge][0])
-					count(flat, edge.To, to.Pos < from.Pos, c.graphdef.merged[edge][1])
+					count(flat, edge.From, from.Pos < to.Pos, c.graphdef.mergeGroup(edge, true))
+					count(flat, edge.To, to.Pos < from.Pos, c.graphdef.mergeGroup(edge, false))
 				}
 				continue // loops and flat edges leave sideways
 			}
 			below := from.Rank < to.Rank
 			if edge.FromPort == CompassAuto {
-				count(ends, edge.From, below, c.graphdef.merged[edge][0])
+				count(ends, edge.From, below, c.graphdef.mergeGroup(edge, true))
 			}
 			if edge.ToPort == CompassAuto {
-				count(ends, edge.To, !below, c.graphdef.merged[edge][1])
+				count(ends, edge.To, !below, c.graphdef.mergeGroup(edge, false))
 			}
 		}
 
@@ -1231,7 +1231,7 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*l
 			if along {
 				spacing = c.laneSpacing()
 			}
-			offset := (Length(k) - Length(n-1)/2) * spacing
+			offset := centeredOffset(k, n, spacing)
 			path = offsetPath(path, offset, edge.From, edge.To, along)
 		}
 
