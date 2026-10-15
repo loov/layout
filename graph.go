@@ -31,6 +31,10 @@ type Graph struct {
 	// built-in approximation is used.
 	MeasureText func(line string, fontName string, fontSize Length) Length
 
+	// Background fills the whole drawing; nil leaves it transparent.
+	// DOT calls this bgcolor.
+	Background Color
+
 	// Defaults for nodes and edges that leave the value unset
 	LineHeight Length
 	FontSize   Length

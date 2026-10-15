@@ -45,6 +45,9 @@ func write(w io.Writer, l *layout.Layout, opts Options, color bool) error {
 	}
 	c, g := drawn(l, opts.NoLegacyGlyphs)
 	g = crop(g)
+	if opts.Background == nil {
+		opts.Background = l.Graph.Background
+	}
 	colors := &opts
 	if !color {
 		colors = nil

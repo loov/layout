@@ -31,7 +31,8 @@ func channels(color uint32) (r, g, b uint32) {
 type Options struct {
 	// Palette selects how colors are written.
 	Palette Palette
-	// Background fills the whole drawing; nil leaves it to the terminal.
+	// Background fills the whole drawing; nil takes the graph's, see
+	// layout.Graph.Background, and leaves it to the terminal without one.
 	Background layout.Color
 	// NoLegacyGlyphs draws diamonds without the diagonals of Symbols for
 	// Legacy Computing, such as 🯐, which fewer fonts have, with ╱, ╲, ▁

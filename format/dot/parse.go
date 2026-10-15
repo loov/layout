@@ -415,6 +415,8 @@ func applyGraphAttrs(graph *layout.Graph, attrs []*ast.Attr) {
 			}
 		case "concentrate":
 			graph.MergeEdges, _ = strconv.ParseBool(attr.Val)
+		case "bgcolor":
+			setColor(&graph.Background, attr.Val)
 		case "nodesep":
 			setLength(&graph.NodePadding, attr.Val, layout.Inch)
 		case "ranksep":

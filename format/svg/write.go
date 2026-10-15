@@ -298,9 +298,14 @@ func Write(w io.Writer, l *layout.Layout) error {
 	graph := l.Graph
 
 	topLeft, bottomRight := l.Extent()
-	svg.start(topLeft.X, topLeft.Y, bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
+	bottomRight = bottomRight.Add(layout.Vector{X: graph.NodePadding, Y: graph.RowPadding})
+	svg.start(topLeft.X, topLeft.Y, bottomRight.X, bottomRight.Y)
 	svg.writeStyle()
 	svg.writeDefs()
+	if graph.Background != nil {
+		size := bottomRight.Sub(topLeft)
+		svg.write("<rect x='%v' y='%v' width='%v' height='%v' fill='%v'/>", topLeft.X, topLeft.Y, size.X, size.Y, colortext(graph.Background))
+	}
 
 	svg.startG()
 	for i, cluster := range graph.Clusters {

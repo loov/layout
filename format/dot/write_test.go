@@ -212,6 +212,7 @@ func TestWriteParseRoundTrip(t *testing.T) {
 	outer := &layout.Cluster{ID: "cluster_outer", Label: "<<u>outer</u>>", Nodes: []*layout.Node{a, b}, LineColor: layout.RGB{R: 9}, FillColor: layout.RGB{G: 9}}
 	inner := &layout.Cluster{ID: "inner", Label: "in", Nodes: []*layout.Node{b}, Parent: outer}
 	g.Clusters = []*layout.Cluster{outer, inner}
+	g.Background = layout.RGB{R: 0x12, G: 0x34, B: 0x56}
 	var out bytes.Buffer
 	if err := Write(&out, layoutOf(t, g)); err != nil {
 		t.Fatal(err)
@@ -238,6 +239,7 @@ func TestWriteParseRoundTrip(t *testing.T) {
 		name      string
 		got, want any
 	}{
+		{"background", colors(got.Background), colors(g.Background)},
 		{"node label", ga.Label, a.Label},
 		{"unbalanced label", strings.TrimPrefix(gb.Label, literalMark), b.Label},
 		{"node colors", colors(ga.LineColor, ga.FillColor, ga.FontColor), colors(a.LineColor, a.FillColor, a.FontColor)},

@@ -61,6 +61,9 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 	if graph.RankDir != layout.TopToBottom {
 		write("\trankdir=%s;\n", graph.RankDir)
 	}
+	if graph.Background != nil {
+		write("\tbgcolor=%s;\n", colorID(graph.Background))
+	}
 	write("\tbb=\"%s,%s\";\n", pt(layout.Vector{X: lo.X, Y: hi.Y}), pt(layout.Vector{X: hi.X, Y: lo.Y}))
 	for i, node := range graph.Nodes {
 		box := l.Nodes[i]
