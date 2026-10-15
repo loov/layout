@@ -55,6 +55,12 @@ type spreadEnd struct {
 	also []spreadEnd // further edges of a shared start, which follow it
 }
 
+// end returns the cell of the end
+func (e spreadEnd) end() point { return e.path[e.i] }
+
+// bend returns the cell of the bend before the end
+func (e spreadEnd) bend() point { return e.path[e.j] }
+
 // boxSide is a side of the box of node
 type boxSide struct {
 	node  *layout.Node
@@ -84,7 +90,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 		// the ends of a straight run share its bend, which they move
 		// along the same way, so moving one end drags the other's off its
 		// line: each gets one of its own, in the middle
-		if last := len(path) - 1; last <= 2 && (path[0].X == path[last].X || path[0].Y == path[last].Y) {
+		if last := len(path) - 1; last <= 2 && straight(path[0], path[last]) {
 			mid := point{(path[0].X + path[last].X) / 2, (path[0].Y + path[last].Y) / 2}
 			if last == 2 {
 				mid = path[1]
@@ -107,7 +113,7 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 				across := 1 - along
 				after := bend.at(across) > b.Max.at(across)
 				lo, hi, x := b.Min.at(along), b.Max.at(along), at.at(along)
-				if hi-lo < 2 || x != bend.at(along) || x < lo || x > hi ||
+				if hi-lo < 2 || x != bend.at(along) || !between(x, lo, hi) ||
 					!after && bend.at(across) >= b.Min.at(across) {
 					continue // not straight into the side from beyond it
 				}
@@ -166,7 +172,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 	// see below: head for where it is now
 	for n := range ends {
 		if e := &ends[n]; e.k >= 0 {
-			e.fixed = e.path[e.k].at(key.along) == e.path[e.j].at(key.along)
+			e.fixed = e.path[e.k].at(key.along) == e.bend().at(key.along)
 			e.toward = e.path[e.k].at(key.along)
 		}
 	}
@@ -175,24 +181,24 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 		return // no room; keep them as they are
 	}
 	slices.SortStableFunc(ends, func(a, b spreadEnd) int {
-		return cmp.Or(cmp.Compare(a.path[a.i].at(key.along), b.path[b.i].at(key.along)), cmp.Compare(a.toward, b.toward))
+		return cmp.Or(cmp.Compare(a.end().at(key.along), b.end().at(key.along)), cmp.Compare(a.toward, b.toward))
 	})
 	want := make([]int, len(ends))
 	exact := make([]float64, len(ends))
 	fixed := make([]bool, len(ends))
 	for n, e := range ends {
-		want[n], exact[n], fixed[n] = e.path[e.i].at(key.along), e.exact, e.fixed || c.boxBeside(e.path[e.i], e.path[e.j], key.along)
+		want[n], exact[n], fixed[n] = e.end().at(key.along), e.exact, e.fixed || c.boxBeside(e.end(), e.bend(), key.along)
 	}
 	packEnds(want, exact, fixed)
 
 	// an end that turns toward a place along the side goes straight
 	// there instead, past no other end
 	for n, e := range ends {
-		if fixed[n] || e.toward < lo || e.toward > hi || c.boxAcross(e.path[e.i], e.path[e.j], key.along, e.toward) {
+		if fixed[n] || !between(e.toward, lo, hi) || c.boxAcross(e.end(), e.bend(), key.along, e.toward) {
 			continue
 		}
 		past := slices.ContainsFunc(want, func(w int) bool {
-			return w != want[n] && (w-want[n])*(w-e.toward) <= 0
+			return w != want[n] && between(w, want[n], e.toward)
 		})
 		if past {
 			continue
@@ -266,7 +272,7 @@ func unbalance(cells []int, lo, hi int) int {
 	for _, at := range cells {
 		sum += 2*at - lo - hi
 	}
-	return max(sum, -sum)
+	return abs(sum)
 }
 
 // packEnds moves the ends along a side, in order at cells, no further

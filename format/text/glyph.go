@@ -61,6 +61,21 @@ func sign(v int) int {
 	return 1
 }
 
+// abs returns the absolute value of v
+func abs(v int) int { return max(v, -v) }
+
+// between reports whether v lies from a to b, either way, both included
+func between(v, a, b int) bool { return min(a, b) <= v && v <= max(a, b) }
+
+// rowDir returns the direction along a row of a step: left for a negative
+// one, right otherwise
+func rowDir(step int) uint8 {
+	if step < 0 {
+		return left
+	}
+	return right
+}
+
 // corner returns the line character with the arms in lines, with rounded
 // corners as edges are drawn
 func corner(lines uint8) rune {

@@ -29,9 +29,9 @@ func (c *canvas) marker(style layout.Arrow, dir uint8, end point) (point, bool) 
 
 	// a node without outline has a blank frame where the end can go, see
 	// drawNode
-	if at := c.at(end.X, end.Y); at != nil && !at.solid {
-	} else if before := c.at(end.X-dx(dir), end.Y-dy(dir)); before != nil && before.lines == dir|opposite(dir) {
-		end = end.step(opposite(dir))
+	before := end.step(opposite(dir))
+	if at, q := c.at(end.X, end.Y), c.at(before.X, before.Y); (at == nil || at.solid) && q != nil && q.lines == dir|opposite(dir) {
+		end = before
 	}
 	c.set(end.X, end.Y, r)
 	if p := c.at(end.X, end.Y); p != nil {
@@ -111,7 +111,7 @@ func (c *canvas) centerLoop(cells []point, path layout.Path, node *layout.Node) 
 
 		// the span nearest the layout's that splits evenly about the middle
 		sum := b.Min.at(along) + b.Max.at(along)
-		odd := (sum%2 + 2) % 2
+		odd := sum & 1
 		n := 2*int(math.Round((math.Abs(span)-float64(odd))/2)) + odd
 		n = max(n, 2-odd)
 		if n > b.Max.at(along)-b.Min.at(along)-2 {
@@ -212,7 +212,7 @@ func (c *canvas) atDot(cells []point, i, j, k int, node *layout.Node) {
 		before := cells[l]
 		for axis := range 2 {
 			line, b, n, t := next.at(1-axis), before.at(axis), next.at(axis), turn.at(axis)
-			if before.at(1-axis) == line && turn.at(1-axis) == line && (n-b)*(t-n) < 0 {
+			if before.at(1-axis) == line && turn.at(1-axis) == line && !between(n, b, t) {
 				return
 			}
 		}
@@ -308,10 +308,11 @@ func (c *canvas) join(end point, node *layout.Node) {
 		return // pinned nodes can lie outside the canvas
 	}
 
-	// whether the cell at dx, dy from the end has an arm toward it
-	arm := func(dx, dy int, dir uint8) bool {
-		q := c.at(end.X+dx, end.Y+dy)
-		return q != nil && q.lines&dir != 0
+	// whether the cell next to the end toward side has an arm toward it
+	arm := func(side uint8) bool {
+		next := end.step(side)
+		q := c.at(next.X, next.Y)
+		return q != nil && q.lines&opposite(side) != 0
 	}
 	b := c.boxes[node]
 
@@ -321,15 +322,15 @@ func (c *canvas) join(end point, node *layout.Node) {
 		joins = []rune("╢╟╨╥")
 	}
 	switch side := b.insideY(end.Y); {
-	case side && end.X == b.Min.X && arm(-1, 0, right):
+	case side && end.X == b.Min.X && arm(left):
 		p.r = joins[0]
-	case side && end.X == b.Max.X && arm(1, 0, left):
+	case side && end.X == b.Max.X && arm(right):
 		p.r = joins[1]
 	case !b.insideX(end.X):
 		// corners and outside the box
-	case end.Y == b.Min.Y && arm(0, -1, down):
+	case end.Y == b.Min.Y && arm(up):
 		p.r = joins[2]
-	case end.Y == b.Max.Y && arm(0, 1, up):
+	case end.Y == b.Max.Y && arm(down):
 		p.r = joins[3]
 	}
 }

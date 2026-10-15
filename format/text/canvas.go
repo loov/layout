@@ -418,6 +418,9 @@ func (p point) add(q point) point { return point{p.X + q.X, p.Y + q.Y} }
 func (p point) sub(q point) point { return point{p.X - q.X, p.Y - q.Y} }
 func (p point) isZero() bool      { return p == point{} }
 
+// dist returns the steps along rows and columns from p to q
+func (p point) dist(q point) int { d := p.sub(q); return abs(d.X) + abs(d.Y) }
+
 // step returns the cell next to p toward dir
 func (p point) step(dir uint8) point { return point{p.X + dx(dir), p.Y + dy(dir)} }
 
@@ -455,6 +458,14 @@ func inLine(a, b, c point) bool {
 
 // cellBox is the cells from Min to Max, both included
 type cellBox struct{ Min, Max point }
+
+// sizedBox returns the box of w by h cells from x, y
+func sizedBox(x, y, w, h int) cellBox { return cellBox{point{x, y}, point{x + w - 1, y + h - 1}} }
+
+// grow returns b with n more cells on every side
+func (b cellBox) grow(n int) cellBox {
+	return cellBox{b.Min.sub(point{n, n}), b.Max.add(point{n, n})}
+}
 
 // contains reports whether p is in b, on its frame or inside it
 func (b cellBox) contains(p point) bool {

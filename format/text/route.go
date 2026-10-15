@@ -2,6 +2,7 @@ package text
 
 import (
 	"container/heap"
+	"iter"
 	"math/bits"
 
 	"github.com/loov/layout"
@@ -38,26 +39,47 @@ func (c *canvas) route(edge *layout.Edge, cells []point) []point {
 // an edge can end on the box of node, see sideCells, or off the box, where
 // it stays
 func (c *canvas) onSide(end, next point, node *layout.Node) bool {
-	b, ok := c.boxes[node]
-	if !ok || c.l.Node(node).Shape == layout.PointShape {
+	if _, ok := c.boxes[node]; !ok || c.l.Node(node).Shape == layout.PointShape {
 		return true
 	}
 	out := c.side(end, next, node)
 	if out == 0 {
 		return true // off the box
 	}
-	along, at := 0, b.Min.Y
-	switch out {
-	case down:
-		at = b.Max.Y
-	case left:
-		along, at = 1, b.Min.X
-	case right:
-		along, at = 1, b.Max.X
+	for p := range c.sideSpots(node, out) {
+		if p == end {
+			return true
+		}
 	}
+	return false
+}
 
-	lo, hi := c.sideCells(node, along)
-	return end.at(1-along) == at && end.at(along) >= lo && end.at(along) <= hi
+// sideSpots yields the cells on side of the box of node where an edge can
+// end, see sideCells, in order along the side
+func (c *canvas) sideSpots(node *layout.Node, side uint8) iter.Seq[point] {
+	return func(yield func(point) bool) {
+		b := c.boxes[node]
+		along, at := 0, b.Min.Y
+		switch side {
+		case down:
+			at = b.Max.Y
+		case left:
+			along, at = 1, b.Min.X
+		case right:
+			along, at = 1, b.Max.X
+		}
+
+		lo, hi := c.sideCells(node, along)
+		for i := lo; i <= hi; i++ {
+			p := point{i, at}
+			if along == 1 {
+				p = point{at, i}
+			}
+			if !yield(p) {
+				return
+			}
+		}
+	}
 }
 
 // side returns the side of the box of node that end is on, heading to
@@ -82,9 +104,9 @@ func (c *canvas) side(end, next point, node *layout.Node) uint8 {
 		}
 	}
 	switch d := next.sub(end); {
-	case max(d.X, -d.X) >= max(d.Y, -d.Y) && d.X > 0:
+	case abs(d.X) >= abs(d.Y) && d.X > 0:
 		return right
-	case max(d.X, -d.X) >= max(d.Y, -d.Y) && d.X < 0:
+	case abs(d.X) >= abs(d.Y) && d.X < 0:
 		return left
 	case d.Y < 0:
 		return up
@@ -107,7 +129,7 @@ type endCell struct {
 // edge can end instead of at end, toward next along the edge, the side it
 // is on first; only end itself for dots and fields
 func (c *canvas) endCells(end, next point, node *layout.Node, field string) []endCell {
-	b, ok := c.boxes[node]
+	_, ok := c.boxes[node]
 	out := uint8(0)
 	if ok {
 		out = c.side(end, next, node)
@@ -130,23 +152,9 @@ func (c *canvas) endCells(end, next point, node *layout.Node, field string) []en
 		if out != 0 && side != out {
 			cost = 50
 		}
-		along, at := 0, b.Min.Y
-		switch side {
-		case down:
-			at = b.Max.Y
-		case left:
-			along, at = 1, b.Min.X
-		case right:
-			along, at = 1, b.Max.X
-		}
-
-		lo, hi := c.sideCells(node, along)
-		for i := lo; i <= hi; i++ {
-			cell := point{i, at}
-			if along == 1 {
-				cell = point{at, i}
-			}
-			cells = append(cells, endCell{cell, side, cost + 2*max(cell.X-end.X, end.X-cell.X, cell.Y-end.Y, end.Y-cell.Y)})
+		for cell := range c.sideSpots(node, side) {
+			d := cell.sub(end)
+			cells = append(cells, endCell{cell, side, cost + 2*max(abs(d.X), abs(d.Y))})
 		}
 	}
 
@@ -416,8 +424,9 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
 			// and the two cells out from it, where its line leaves straight
 			// and a marker goes, see search
 			if out := c.side(end, next, node); out != 0 {
-				for step := 1; step <= 2; step++ {
-					cell := point{end.X + step*dx(out), end.Y + step*dy(out)}
+				cell := end
+				for range 2 {
+					cell = cell.step(out)
 					if _, ok := c.reserved[cell]; !ok {
 						c.reserved[cell] = own
 					}

@@ -54,11 +54,9 @@ func (c *canvas) edgeText(edge *layout.Edge, lines []draw.Line, x, y, w int) {
 
 	// the blanks around the label keep lines from running into it, see
 	// free
-	for row := y - 1; row <= y+len(lines); row++ {
-		for col := x - 1; col <= x+w; col++ {
-			if p := c.at(col, row); p != nil && p.r == ' ' && !p.solid {
-				p.glue = true
-			}
+	for p := range sizedBox(x, y, w, len(lines)).grow(1).cells() {
+		if q := c.at(p.X, p.Y); q != nil && q.r == ' ' && !q.solid {
+			q.glue = true
 		}
 	}
 }
@@ -83,22 +81,21 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 	id := c.drawn[edge]
 	ring := true
 	blank := func(x, y int) bool {
-		for row := y - 1; row <= y+h; row++ {
-			for col := x - 1; col <= x+w; col++ {
-				p := c.at(col, row)
-				inside := row >= y && row < y+h && col >= x && col < x+w
-				switch {
-				case p == nil:
+		text := sizedBox(x, y, w, h)
+		for at := range text.grow(1).cells() {
+			p := c.at(at.X, at.Y)
+			inside := text.contains(at)
+			switch {
+			case p == nil:
+				return false
+			case inside && (p.r != ' ' || p.solid || p.glue || p.lines != 0):
+				return false
+			case !inside && ring && (p.solid || p.text != 0):
+				return false
+			}
+			for arm := range 4 {
+				if !inside && ring && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
 					return false
-				case inside && (p.r != ' ' || p.solid || p.glue || p.lines != 0):
-					return false
-				case !inside && ring && (p.solid || p.text != 0):
-					return false
-				}
-				for arm := range 4 {
-					if !inside && ring && p.lines&(1<<arm) != 0 && p.owner[arm] != id {
-						return false
-					}
 				}
 			}
 		}
@@ -130,21 +127,20 @@ func (c *canvas) endLabel(edge *layout.Edge, label string, center layout.Vector,
 // whether it found one
 func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want point, cells []point, blank func(x, y int) bool) bool {
 	for k, p := range cells {
-		if k+1 < len(cells) && k > 0 && cells[k-1].X != cells[k+1].X && cells[k-1].Y != cells[k+1].Y {
-			continue // a turn
+		if turnsAt(cells, k) {
+			continue
 		}
 
 		// beside the line: on either side of a column, above or below
 		// a row, the side nearer where the layout put it first
 		var spots []point
-		if k+1 < len(cells) && cells[k+1].X == p.X || k > 0 && cells[k-1].X == p.X {
+		if alongColAt(cells, k) {
 			spots = []point{{p.X + 1, p.Y - h/2}, {p.X - w, p.Y - h/2}}
 		} else {
 			spots = []point{{p.X - w/2, p.Y - h}, {p.X - w/2, p.Y + 1}}
 		}
-		dist := func(s point) int {
-			return max(s.X+w/2-want.X, want.X-s.X-w/2) + max(s.Y+h/2-want.Y, want.Y-s.Y-h/2)
-		}
+		// from the middle of the text
+		dist := func(s point) int { return s.add(point{w / 2, h / 2}).dist(want) }
 		if dist(spots[1]) < dist(spots[0]) {
 			spots[0], spots[1] = spots[1], spots[0]
 		}
@@ -157,6 +153,18 @@ func (c *canvas) endText(edge *layout.Edge, lines []draw.Line, w, h int, want po
 	}
 
 	return false
+}
+
+// turnsAt reports whether the line along cells turns at cells[k]: the
+// cells before and after it are on neither one row nor one column
+func turnsAt(cells []point, k int) bool {
+	return k > 0 && k+1 < len(cells) && !straight(cells[k-1], cells[k+1])
+}
+
+// alongColAt reports whether the line along cells runs along a column at
+// cells[k], to the cell after it or from the one before
+func alongColAt(cells []point, k int) bool {
+	return k+1 < len(cells) && sameCol(cells[k+1], cells[k]) || k > 0 && sameCol(cells[k-1], cells[k])
 }
 
 // reversed returns the cells of a path from its last to its first
@@ -312,11 +320,10 @@ func (c *canvas) freeBeside(x, y, w, h int, path []point) (int, int) {
 	type spot struct{ x, y, dist int }
 	var spots []spot
 	add := func(sx, sy int) {
-		spots = append(spots, spot{sx, sy, max(sx-x, x-sx) + max(sy-y, y-sy)})
+		spots = append(spots, spot{sx, sy, point{sx, sy}.dist(point{x, y})})
 	}
 	for k, p := range cells {
-		vertical := k+1 < len(cells) && cells[k+1].X == p.X || k > 0 && cells[k-1].X == p.X
-		if vertical {
+		if alongColAt(cells, k) {
 			for dy := range h {
 				add(p.X+1, p.Y-dy)
 				add(p.X-w, p.Y-dy)
@@ -345,7 +352,7 @@ func (c *canvas) freeBeside(x, y, w, h int, path []point) (int, int) {
 func (c *canvas) nearestBlank(x, y, w, h int) (int, int) {
 	for d := 0; d < c.w+c.h; d++ {
 		for dy := -d; dy <= d; dy++ {
-			for _, dx := range []int{d - max(dy, -dy), max(dy, -dy) - d} {
+			for _, dx := range []int{d - abs(dy), abs(dy) - d} {
 				if c.blank(x+dx, y+dy, w, h) {
 					return x + dx, y + dy
 				}
@@ -359,20 +366,20 @@ func (c *canvas) nearestBlank(x, y, w, h int) (int, int) {
 // apart returns how many blank cells at least separate a label w cells
 // wide and h tall at x, y from the lines of edges other than id, up to 3
 func (c *canvas) apart(x, y, w, h int, id edgeID) int {
+	text := sizedBox(x, y, w, h)
 	for d := range 3 {
-		for row := y - d - 1; row <= y+h+d; row++ {
-			for col := x - d - 1; col <= x+w+d; col++ {
-				if row >= y-d && row < y+h+d && col >= x-d && col < x+w+d {
-					continue // nearer, see the rings before
-				}
-				p := c.at(col, row)
-				if p == nil || p.lines == 0 || p.frame {
-					continue
-				}
-				for arm := range 4 {
-					if p.lines&(1<<arm) != 0 && p.owner[arm] != id {
-						return d
-					}
+		nearer := text.grow(d) // see the rings before
+		for at := range text.grow(d + 1).cells() {
+			if nearer.contains(at) {
+				continue
+			}
+			p := c.at(at.X, at.Y)
+			if p == nil || p.lines == 0 || p.frame {
+				continue
+			}
+			for arm := range 4 {
+				if p.lines&(1<<arm) != 0 && p.owner[arm] != id {
+					return d
 				}
 			}
 		}
@@ -395,7 +402,7 @@ func (c *canvas) nearEdge(x, y, w, h int, path []point, side point) (int, int, b
 	for range c.h + c.w {
 		// the nearest cell of the edge above or below the label, or
 		// beside it on its rows, in blank cells between
-		label := cellBox{point{x, y}, point{x + w - 1, y + h - 1}}
+		label := sizedBox(x, y, w, h)
 		dir, gap := point{}, math.MaxInt
 		for _, p := range cells {
 			d, n := label.sideOf(p)
@@ -418,11 +425,9 @@ func (c *canvas) nearEdge(x, y, w, h int, path []point, side point) (int, int, b
 
 // blank reports whether the w by h cells from x, y are empty
 func (c *canvas) blank(x, y, w, h int) bool {
-	for row := y; row < y+h; row++ {
-		for col := x; col < x+w; col++ {
-			if p := c.at(col, row); p == nil || p.r != ' ' || p.solid {
-				return false
-			}
+	for at := range sizedBox(x, y, w, h).cells() {
+		if p := c.at(at.X, at.Y); p == nil || p.r != ' ' || p.solid {
+			return false
 		}
 	}
 

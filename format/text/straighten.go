@@ -573,10 +573,8 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 		// a line leaving a junction along the row and a step after
 		// it: one, on the row of the junction, which stays
 		for _, dir := range []int{-1, 1} {
-			side, back := uint8(right), uint8(left)
-			if dir < 0 {
-				side, back = left, right
-			}
+			side := rowDir(dir)
+			back := opposite(side)
 			first := point{c + dir, r}
 			b, ok := u.g.run(top, dir)
 			if arms(q.r)&side == 0 || !ok || u.at(first).solid {
@@ -607,7 +605,7 @@ func (u *unjogger) jog(r, c int) (moved bool) {
 		// a second that runs into something ends before it
 		end, out := point{c2, mid.Y}, uint8(down)
 		if !turns {
-			end, out = point{c2 - dir, mid.Y}, map[int]uint8{-1: left, 1: right}[dir]
+			end, out = point{c2 - dir, mid.Y}, rowDir(dir)
 		}
 		u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, out, top, point{b, r}, mid, end)
 		vias := []point{{c, mid.Y}, {c2, r}}
@@ -683,8 +681,6 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 	return moved
 }
 
-// pos is the row and column of a cell
-
 // runeAt returns the character of the cell at p, 0 off the grid
 func (g grid) runeAt(p point) rune {
 	if q := g.at(p.Y, p.X); q != nil {
@@ -739,8 +735,7 @@ func (g grid) bottom(p point) int {
 func route(path []point, dirs []uint8, in, out uint8, points ...point) ([]point, []uint8) {
 	n := 1
 	for i := 1; i < len(points); i++ {
-		dr, dc := points[i].Y-points[i-1].Y, points[i].X-points[i-1].X
-		n += max(dr, -dr) + max(dc, -dc)
+		n += points[i].dist(points[i-1])
 	}
 	path = slices.Grow(path[:0], n)
 	for i, p := range points {

@@ -107,7 +107,7 @@ func (c *canvas) nodeBox(node *layout.Node) cellBox {
 	// the box must hold the label and have distinct edges
 	if box.Shape != layout.Record {
 		x1 = max(x1, x0+w)
-		if spare := x1 - x0 - 1 - draw.TextColumns(label); spare >= 3 && spare%2 == 1 {
+		if unevenSpare(x0, x1, label) {
 			x0, x1 = c.evenLabel(node, x0, y0, x1, y1)
 		}
 	}
@@ -118,7 +118,7 @@ func (c *canvas) nodeBox(node *layout.Node) cellBox {
 			cols, rows = 4*k+2, 2*k+2
 		}
 		x0, y0 = (x0+x1+1-cols)/2, (y0+y1+1-rows)/2
-		return cellBox{point{x0, y0}, point{x0 + cols - 1, y0 + rows - 1}}
+		return sizedBox(x0, y0, cols, rows)
 	}
 	if box.Shape == layout.Diamond {
 		// pointed when every point has at most one end, see diamond,
@@ -128,11 +128,11 @@ func (c *canvas) nodeBox(node *layout.Node) cellBox {
 		if c.pointed[node] {
 			k := draw.DiamondSteps(label)
 			x0, y0 = (x0+x1)/2-(2*k-1), (y0+y1)/2-k
-			return cellBox{point{x0, y0}, point{x0 + 4*k - 2, y0 + 2*k}}
+			return sizedBox(x0, y0, 4*k-1, 2*k+1)
 		}
 		k := draw.CornerDiamondSteps(label)
 		x0, y0 = (x0+x1+1)/2-2*k, (y0+y1+1)/2-k
-		return cellBox{point{x0, y0}, point{x0 + 4*k - 1, y0 + 2*k - 1}}
+		return sizedBox(x0, y0, 4*k, 2*k)
 	}
 	x1 = max(x1, x0+2)
 	y1 = max(y1, y0+2)
@@ -199,6 +199,14 @@ func (c *canvas) sideEnds(node *layout.Node, y0, y1 int) (top, bottom []sideEnd)
 	return top, bottom
 }
 
+// unevenSpare reports whether text between the borders at columns x0 and
+// x1 leaves an odd number of spare columns around it, which can't be
+// split evenly, of at least 3
+func unevenSpare(x0, x1 int, text string) bool {
+	spare := x1 - x0 - 1 - draw.TextColumns(text)
+	return spare >= 3 && spare%2 == 1
+}
+
 // evenLabel gives back one of an odd number of spare cells, which can't be
 // split evenly around the label of node, on a side that no edge ends next
 // to on the top or bottom, where spreadSides puts them; ends on the sides
@@ -260,18 +268,16 @@ func (c *canvas) drawNode(node *layout.Node) {
 	if !node.Invisible {
 		c.fill(x0, y0, x1, y1, c.color(rgb(node.FillColor)))
 	}
-	for y := y0; y <= y1; y++ {
-		for x := x0; x <= x1; x++ {
-			c.set(x, y, ' ')
-			// the blank frame of a node without outline is where its
-			// edges end, drawn up to its text
-			frame := x == x0 || x == x1 || y == y0 || y == y1
-			if p := c.at(x, y); p != nil && !(frame && box.Shape == layout.None && !node.Invisible) {
-				p.solid, p.node = true, c.nodes[node]
-			}
-			if x > x0 && x < x1 && y > y0 && y < y1 {
-				c.hold(x, y) // blanks inside a box are part of it
-			}
+	for p := range b.cells() {
+		c.set(p.X, p.Y, ' ')
+		// the blank frame of a node without outline is where its
+		// edges end, drawn up to its text
+		frame := !b.inside(p)
+		if q := c.at(p.X, p.Y); q != nil && !(frame && box.Shape == layout.None && !node.Invisible) {
+			q.solid, q.node = true, c.nodes[node]
+		}
+		if !frame {
+			c.hold(p.X, p.Y) // blanks inside a box are part of it
 		}
 	}
 
@@ -375,7 +381,7 @@ func (c *canvas) evenRecord(rec *draw.Record, origin layout.Vector) {
 	for i, field := range rec.Fields {
 		if !rec.Vertical && i+1 < len(rec.Fields) && len(field.Fields) == 0 {
 			x0, x1 := c.col(origin.X+layout.Length(field.X0)), c.col(origin.X+layout.Length(field.X1))
-			if spare := x1 - x0 - 1 - draw.TextColumns(field.Text); spare >= 3 && spare%2 == 1 {
+			if unevenSpare(x0, x1, field.Text) {
 				x := field.X1 - float64(c.cellW)
 				field.X1 = x
 				setLeft(rec.Fields[i+1], x)
