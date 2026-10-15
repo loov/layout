@@ -86,9 +86,9 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 
 	// the drawing can reach before the origin, with labels nudged there
 	// or pinned and force layouts; keep the usual margin otherwise
-	topLeft, size := l.Bounds()
-	c.origin = layout.Vector{X: min(topLeft.X, 0), Y: min(topLeft.Y, 0)}
-	c.w, c.h = c.col(size.X)+2, c.row(size.Y)+2
+	var bottomRight layout.Vector
+	c.origin, bottomRight = l.Extent()
+	c.w, c.h = c.col(bottomRight.X)+2, c.row(bottomRight.Y)+2
 	for i := range graph.Edges {
 		label, x, _ := c.edgeLabel(i)
 		c.w = max(c.w, x+draw.TextColumns(label)+1)

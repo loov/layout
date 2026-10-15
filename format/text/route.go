@@ -410,12 +410,7 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
 		id++ // see drawEdge
 		path, last := paths[i], len(paths[i])-1
 		ends := []bool{c.hasField(edge.From, edge.FromField), c.hasField(edge.To, edge.ToField)}
-		head := edge.ArrowHead
-		if head == layout.ArrowDefault && edge.Directed {
-			head = layout.ArrowNormal
-		}
-		markers := []bool{edge.ArrowTail != layout.ArrowDefault && edge.ArrowTail != layout.ArrowNone,
-			head != layout.ArrowDefault && head != layout.ArrowNone}
+		markers := []bool{edge.ArrowTail.Drawn(), edge.HeadMarker().Drawn()}
 		for k, end := range []point{path[0], path[last]} {
 			next, node := path[1], edge.From
 			if k == 1 {

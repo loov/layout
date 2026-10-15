@@ -13,7 +13,7 @@ import (
 // sibling fields; row maps the top and bottom of fields to the rows of the
 // borders and dividers around them
 func (c *canvas) record(rec *draw.Record, origin layout.Vector, col, row func(layout.Length) int) {
-	if len(rec.Fields) == 0 {
+	if rec.Leaf() {
 		x0, y0 := col(origin.X+layout.Length(rec.X0)), row(origin.Y+layout.Length(rec.Y0))
 		x1, y1 := col(origin.X+layout.Length(rec.X1)), row(origin.Y+layout.Length(rec.Y1))
 		lines := draw.Lines(rec.Text)
@@ -379,7 +379,7 @@ func fitRows(rec *draw.Record, y0, y1 int) {
 // that the text is centered; the field after takes the column.
 func (c *canvas) evenRecord(rec *draw.Record, origin layout.Vector) {
 	for i, field := range rec.Fields {
-		if !rec.Vertical && i+1 < len(rec.Fields) && len(field.Fields) == 0 {
+		if !rec.Vertical && i+1 < len(rec.Fields) && field.Leaf() {
 			x0, x1 := c.col(origin.X+layout.Length(field.X0)), c.col(origin.X+layout.Length(field.X1))
 			if unevenSpare(x0, x1, field.Text) {
 				x := field.X1 - float64(c.cellW)

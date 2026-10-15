@@ -14,7 +14,7 @@ import (
 // and whether style has a marker; styles without a marker of their own
 // draw a normal arrowhead.
 func (c *canvas) marker(style layout.Arrow, dir uint8, end point) (point, bool) {
-	if style == layout.ArrowDefault || style == layout.ArrowNone {
+	if !style.Drawn() {
 		return end, false
 	}
 	r := arrow[dir]
@@ -237,10 +237,7 @@ func (c *canvas) drawEdge(edge *layout.Edge, path layout.Path, cells []point) {
 		edge:   id,
 	}
 	c.pathSteps(cells, c.drawStep)
-	head := edge.ArrowHead
-	if head == layout.ArrowDefault && edge.Directed {
-		head = layout.ArrowNormal
-	}
+	head := edge.HeadMarker()
 
 	// merged edges share their ends, which get one marker; an end at a
 	// field stays across from it, see pinned
