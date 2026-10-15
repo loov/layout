@@ -206,10 +206,7 @@ func onOutlines(l *Layout) {
 		if len(path) < 2 || edge.From == edge.To {
 			continue
 		}
-		for _, end := range [2]struct {
-			at, next int
-			node     *Node
-		}{{0, 1, edge.From}, {len(path) - 1, len(path) - 2, edge.To}} {
+		for _, end := range edgeEnds(edge, len(path)) {
 			box := l.Nodes[l.nodeIndex[end.node]]
 			switch box.Shape {
 			case Box, Square, Record, None, PointShape:
@@ -222,6 +219,20 @@ func onOutlines(l *Layout) {
 			}
 		}
 	}
+}
+
+// edgeEnd is an end of an edge with a path of n points: the point at
+// it, the point next to it, its node, and whether a marker is drawn there
+type edgeEnd struct {
+	at, next int
+	node     *Node
+	marked   bool
+}
+
+// edgeEnds returns the start and the end of edge, whose path has n
+// points
+func edgeEnds(edge *Edge, n int) [2]edgeEnd {
+	return [2]edgeEnd{{0, 1, edge.From, edge.ArrowTail.Drawn()}, {n - 1, n - 2, edge.To, edge.HeadMarker().Drawn()}}
 }
 
 // crowded returns the edges that end where another edge ends, or run
@@ -300,7 +311,10 @@ func (a rigid) meets(b rigid) bool { return a.c1 == b.c0 || b.c1 == a.c0 }
 func (a rigid) apart(b rigid) bool { return a.c0 > b.c1 || b.c0 > a.c1 }
 
 // spans reports whether a covers row across
-func (a rigid) spans(row int) bool { return a.c0 <= row && row <= a.c1 }
+func (a rigid) spans(row int) bool { return a.rows().has(row) }
+
+// rows returns the rows a covers across
+func (a rigid) rows() rowSpan { return rowSpan{a.c0, a.c1} }
 
 // nextRun reports whether a and b are runs of one edge, one after the other
 func (a rigid) nextRun(b rigid) bool {
@@ -316,12 +330,28 @@ const (
 	borderKind // a side of a cluster
 )
 
-// labelRef is a label of an edge (which: 0 its label, 1 head, 2 tail)
-// beside the run of anchor: side -1 before it, 1 after it, dist cells
-// off; 0 along it, moving with it. With side 2 it is along the elastic
-// run from anchor to end, its middle dist cells past the start and
-// endDist before the end. at is the cell text measures it from.
+// labelRef is a label of an edge (which of mainLabel, headLabel and
+// tailLabel) beside the run of anchor: side beforeRun or afterRun it,
+// dist cells off; withRun along it, moving with it. With side alongRun
+// it is along the elastic run from anchor to end, its middle dist cells
+// past the start and endDist before the end. at is the cell text
+// measures it from.
 type labelRef struct{ edge, which, item, anchor, end, side, dist, endDist, at, obj int }
+
+// the labels of an edge, see labelRef
+const (
+	mainLabel = iota
+	headLabel
+	tailLabel
+)
+
+// where a label lies from its run, see labelRef
+const (
+	beforeRun = -1
+	withRun   = 0
+	afterRun  = 1
+	alongRun  = 2
+)
 
 // compactPass compacts a layout along x
 type compactPass struct {
@@ -342,22 +372,38 @@ type compactPass struct {
 	sides     [][2]int // the objects of the sides of every cluster
 	// jogs are where a run splits in two, at the point of a path that
 	// starts the second half: true when that half stays at or before the
-	// first, see jogAxis; jogGroup are the runs that start them
-	jogs     map[[2]int]bool
-	jogGroup map[[2]int]bool
+	// first, see jogAxis; jogGroup are the runs that start them, by the
+	// edge and the group
+	jogs     map[edgeAt]bool
+	jogGroup map[edgeAt]bool
 	// the rows of what the two sides of every constraint hold, see
 	// critical
 	rows [][2]rowSpan
 }
 
+// edgeAt is a point or a run of an edge, by its index
+type edgeAt struct{ edge, at int }
+
 // rowSpan are the rows c0 to c1
 type rowSpan struct{ c0, c1 int }
+
+// noRows holds no rows
+var noRows = rowSpan{math.MaxInt, math.MinInt}
+
+// oneRow returns the span of row r alone
+func oneRow(r int) rowSpan { return rowSpan{r, r} }
+
+// has reports whether s holds row
+func (s rowSpan) has(row int) bool { return s.c0 <= row && row <= s.c1 }
+
+// empty reports whether s holds no rows
+func (s rowSpan) empty() bool { return s.c0 > s.c1 }
 
 // compactAxis pushes the objects of l together along x, with the nodes
 // of a rank in line when tie is set (ranks are columns), and reports
 // whether anything moved; l is transposed when flip is set. A cluster i
 // stays at least span[i] cells wide.
-func compactAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool, jogs map[[2]int]bool) bool {
+func compactAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool, jogs map[edgeAt]bool) bool {
 	p, n, cons, lower, reach := newPass(l, cell, grid, tie, flip, span, crowd, jogs)
 	d := leastSolution(n, cons, lower)
 	d = shortenRuns(n, cons, lower, reach, d)
@@ -366,8 +412,8 @@ func compactAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span 
 
 // newPass returns a pass along x, its variables, their constraints and
 // how far they reach, see compactAxis
-func newPass(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool, jogs map[[2]int]bool) (p *compactPass, n int, cons []constraint, lower, reach []int) {
-	p = &compactPass{l: l, cell: cell, grid: grid, flip: flip, crowded: crowd, jogs: jogs, jogGroup: map[[2]int]bool{}}
+func newPass(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []int, crowd []bool, jogs map[edgeAt]bool) (p *compactPass, n int, cons []constraint, lower, reach []int) {
+	p = &compactPass{l: l, cell: cell, grid: grid, flip: flip, crowded: crowd, jogs: jogs, jogGroup: map[edgeAt]bool{}}
 	p.addNodes(tie)
 	p.addEdges()
 	p.addClusters(span)
@@ -402,14 +448,14 @@ func jogAxis(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []in
 		return false
 	}
 	slices.SortFunc(splits, func(a, b jogSplit) int { return cmp.Or(a.edge-b.edge, a.at-b.at) })
-	jogs := map[[2]int]bool{}
+	jogs := map[edgeAt]bool{}
 	shift := map[int]int{}
 	for _, s := range splits {
 		path := l.Edges[s.edge].Path
 		at := s.at + shift[s.edge]
 		pt := Vector{X: path[at].X, Y: Length(s.row) * cell.Y}
 		l.Edges[s.edge].Path = slices.Insert(path, at+1, pt, pt)
-		jogs[[2]int{s.edge, at + 2}] = s.afterLeft
+		jogs[edgeAt{s.edge, at + 2}] = s.afterLeft
 		shift[s.edge] += 2
 	}
 
@@ -441,7 +487,7 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 	// constraints, hold no rows: what holds the label holds the run too
 	tight := func(k int) bool {
 		c := cons[k]
-		return d[c.b] == d[c.a]+c.min && p.rows[k][0].c0 <= p.rows[k][0].c1
+		return d[c.b] == d[c.a]+c.min && !p.rows[k][0].empty()
 	}
 	in := make([][]int, n)
 	for k, c := range cons {
@@ -489,7 +535,7 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 	// row and -1 when above; by the rows of the other side, other, when
 	// own lies across row; 0 when that lies around row too
 	side := func(own, other rowSpan, row int) int {
-		across := own.c0 <= row && row <= own.c1
+		across := own.has(row)
 		switch {
 		case own.c1 < row || across && other.c1+space < row:
 			return -1
@@ -498,6 +544,20 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 		}
 
 		return 0
+	}
+
+	// oneSide returns the side of row that the constraints ks all hold
+	// v on, by the rows of their own side own, 2 when there is none
+	oneSide := func(ks []int, own, row int) int {
+		s := 0
+		for _, k := range ks {
+			t := side(p.rows[k][own], p.rows[k][1-own], row)
+			if t == 0 || s != 0 && t != s {
+				return 2
+			}
+			s = t
+		}
+		return s
 	}
 
 	var splits []jogSplit
@@ -522,23 +582,7 @@ func (p *compactPass) critical(cons []constraint, d, lower, reach []int, beside 
 			for row := o.c1 - bottom; row >= o.c0+top; row-- {
 				// what holds v from before on one side, what v holds on the
 				// other
-				ins, outs := 0, 0
-				for _, k := range in[v] {
-					s := side(p.rows[k][1], p.rows[k][0], row)
-					if s == 0 || ins != 0 && s != ins {
-						ins = 2
-						break
-					}
-					ins = s
-				}
-				for _, k := range out[v] {
-					s := side(p.rows[k][0], p.rows[k][1], row)
-					if s == 0 || outs != 0 && s != outs {
-						outs = 2
-						break
-					}
-					outs = s
-				}
+				ins, outs := oneSide(in[v], 1, row), oneSide(out[v], 0, row)
 				if ins == 2 || outs == 2 || ins == outs {
 					continue
 				}
@@ -579,21 +623,11 @@ func (p *compactPass) endRoom(o rigid) (top, bottom int) {
 	space := p.grid.lineSpace
 	top, bottom = 2*space, 2*space
 	path, items, edge := p.l.Edges[o.index].Path, p.pointItem[o.index], p.l.Graph.Edges[o.index]
-	for _, end := range [2]struct {
-		at     int
-		node   *Node
-		marked bool
-	}{{0, edge.From, edge.ArrowTail.Drawn()}, {len(path) - 1, edge.To, edge.HeadMarker().Drawn()}} {
+	for _, end := range edgeEnds(edge, len(path)) {
 		if items[end.at] != o.item {
 			continue
 		}
-		keep := 0
-		if end.marked {
-			keep += space
-		}
-		if p.l.Nodes[p.l.nodeIndex[end.node]].Shape != None {
-			keep += space
-		}
+		keep := p.endKeep(end.node, end.marked)
 		switch p.row(path[end.at].Y) {
 		case o.c0:
 			top = max(keep, space)
@@ -716,11 +750,11 @@ func (p *compactPass) addEdges() {
 		pointGroup := make([]int, len(path.Path))
 		for i, pt := range path.Path {
 			c, r := p.col(pt.X), p.row(pt.Y)
-			_, jog := p.jogs[[2]int{e, i}]
-			if i == 0 || r == p.row(path.Path[i-1].Y) && c != p.col(path.Path[i-1].X) || jog {
+			_, jog := p.jogs[edgeAt{e, i}]
+			if i == 0 || p.alongAxis(pt, path.Path[i-1]) || jog {
 				group++
 				if jog {
-					p.jogGroup[[2]int{e, group}] = true
+					p.jogGroup[edgeAt{e, group}] = true
 				}
 				pointGroup[i] = group
 				items[i] = p.newItem()
@@ -740,10 +774,7 @@ func (p *compactPass) addEdges() {
 		// the ends stay where they leave their nodes; a run that leaves
 		// the top or bottom in the column of a corner must not line up
 		// with the next, or text can't tell it from the corner
-		for _, end := range [2]struct {
-			at   int
-			node *Node
-		}{{0, edge.From}, {len(items) - 1, edge.To}} {
+		for _, end := range edgeEnds(edge, len(items)) {
 			node := p.l.nodeIndex[end.node]
 			p.union(items[end.at], node)
 			run, box := &p.objs[groups[pointGroup[end.at]]], p.objs[node]
@@ -780,19 +811,15 @@ func (p *compactPass) addEdges() {
 		// an arrowhead at a box takes the cell before its border: a line
 		// that ran through that cell would leave text no room for it but
 		// on the border. A run across the axis covers it already.
-		for _, end := range [2]struct {
-			at, next int
-			node     *Node
-			marked   bool
-		}{{0, 1, edge.From, edge.ArrowTail.Drawn()}, {len(items) - 1, len(items) - 2, edge.To, edge.HeadMarker().Drawn()}} {
-			if !end.marked || len(items) < 2 || p.l.Nodes[p.l.nodeIndex[end.node]].Shape == None {
+		for _, end := range edgeEnds(edge, len(items)) {
+			if !end.marked || len(items) < 2 || !p.outlined(end.node) {
 				continue
 			}
 			at, next := path.Path[end.at], path.Path[end.next]
-			c, r := p.col(next.X), p.row(at.Y)
-			if p.row(next.Y) != r || c == p.col(at.X) {
+			if !p.alongAxis(at, next) {
 				continue
 			}
+			c, r := p.col(next.X), p.row(at.Y)
 
 			// the cell past the side the run leaves from, also when the
 			// end is on that side already
@@ -815,6 +842,7 @@ func (p *compactPass) addEdges() {
 		p.pointItem[e] = items
 		p.lastGroup[e] = group
 
+		// in the order of mainLabel, headLabel and tailLabel
 		for which, label := range []struct {
 			text         string
 			center, size Vector
@@ -873,17 +901,17 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 		i, j, ci, cj = j, i, cj, ci
 	}
 	switch anchor := run(i); {
-	case items[i] != items[j] && o.lo <= cj && o.hi >= ci && which != 0:
+	case items[i] != items[j] && o.lo <= cj && o.hi >= ci && which != mainLabel:
 		// a head or tail label along a run keeps its distance from the
 		// end it labels, or it could slide to the other
 		k := max(i, j)
-		if which == 2 {
+		if which == tailLabel {
 			k = min(i, j)
 		}
 		ref.anchor = items[k]
 		p.union(o.item, items[k])
 	case items[i] != items[j] && o.lo <= cj && o.hi >= ci:
-		ref.side, ref.anchor, ref.end = 2, items[i], items[j]
+		ref.side, ref.anchor, ref.end = alongRun, items[i], items[j]
 		ref.dist, ref.endDist = (o.lo+o.hi)/2-ci, cj-(o.lo+o.hi)/2
 	case items[i] != items[j] && o.lo > cj:
 		// past the end of an elastic run
@@ -893,9 +921,9 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 		ref.anchor = anchor.item
 		switch {
 		case o.hi < anchor.lo:
-			ref.side, ref.dist = -1, anchor.lo-o.hi
+			ref.side, ref.dist = beforeRun, anchor.lo-o.hi
 		case o.lo > anchor.hi:
-			ref.side, ref.dist = 1, o.lo-anchor.hi
+			ref.side, ref.dist = afterRun, o.lo-anchor.hi
 		default:
 			p.union(o.item, anchor.item)
 		}
@@ -966,18 +994,36 @@ func (p *compactPass) own(a, b rigid) bool {
 	// keeps for its marker and its border, see constraints, across: else
 	// text may have drawn the end on the border, and has no room left
 	on := func(pt Vector, far *Node, marked bool) bool {
-		keep := 0
-		if marked {
-			keep += p.grid.lineSpace
-		}
-		if p.l.Nodes[p.l.nodeIndex[far]].Shape != None {
-			keep += p.grid.lineSpace
-		}
+		keep := p.endKeep(far, marked)
 		return p.row(pt.Y) == side && a.lo < p.col(pt.X) && p.col(pt.X) < a.hi && b.c1-b.c0 >= keep
 	}
 
 	return edge.From == node && b.group == 1 && on(path[0], edge.To, edge.HeadMarker().Drawn()) ||
 		edge.To == node && b.group == 0 && on(path[len(path)-1], edge.From, edge.ArrowTail.Drawn())
+}
+
+// outlined reports whether text draws an outline around node
+func (p *compactPass) outlined(node *Node) bool {
+	return p.l.Nodes[p.l.nodeIndex[node]].Shape != None
+}
+
+// endKeep returns the cells a run keeps at its end at node: one for a
+// marker there, and one more past the outline of the node
+func (p *compactPass) endKeep(node *Node, marked bool) int {
+	keep := 0
+	if marked {
+		keep += p.grid.lineSpace
+	}
+	if p.outlined(node) {
+		keep += p.grid.lineSpace
+	}
+	return keep
+}
+
+// alongAxis reports whether a and b are in one row and different
+// columns
+func (p *compactPass) alongAxis(a, b Vector) bool {
+	return p.row(a.Y) == p.row(b.Y) && p.col(a.X) != p.col(b.X)
 }
 
 // plain reports whether o is a node without outline, which text draws
@@ -1037,14 +1083,14 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 			if va == vb {
 				continue
 			}
-			if after, ok := p.jogs[[2]int{e, i}]; ok {
+			if after, ok := p.jogs[edgeAt{e, i}]; ok {
 				// a jog turns the way it narrows, see jogAxis
 				if after {
 					va, vb = vb, va
 				}
 				cons = append(cons, constraint{va, vb, 0, true})
 				r := p.row(path[i].Y)
-				mark(rowSpan{r, r}, rowSpan{r, r})
+				mark(oneRow(r), oneRow(r))
 				continue
 			}
 			ca, cb := p.col(path[i-1].X), p.col(path[i].X)
@@ -1052,11 +1098,8 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 			// (a node without outline takes its marker in its blank frame)
 			keep := 0
 			end := func(node *Node, marked bool, at *int, toward int) {
-				if marked {
-					keep += grid.lineSpace
-				}
-				if p.l.Nodes[p.l.nodeIndex[node]].Shape != None {
-					keep += grid.lineSpace
+				keep += p.endKeep(node, marked)
+				if p.outlined(node) {
 					*at = p.border(node, toward, *at)
 				}
 			}
@@ -1071,7 +1114,7 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 			}
 			cons = append(cons, constraint{va, vb, min(keep, b-a) - (b - a), true})
 			r := p.row(path[i].Y)
-			mark(rowSpan{r, r}, rowSpan{r, r})
+			mark(oneRow(r), oneRow(r))
 		}
 	}
 
@@ -1081,17 +1124,17 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 	for _, lb := range p.labels {
 		label, anchor := varOf[lb.item], varOf[lb.anchor]
 		o := objs[lb.obj]
-		rows, none := rowSpan{o.c0, o.c1}, rowSpan{math.MaxInt, math.MinInt}
+		rows := o.rows()
 		switch lb.side {
-		case -1:
+		case beforeRun:
 			cons = append(cons, constraint{anchor, label, 0, false})
-			mark(none, none) // keeps the label from falling behind
+			mark(noRows, noRows) // keeps the label from falling behind
 			cons = append(cons, constraint{label, anchor, min(grid.lineSpace, lb.dist) - lb.dist, true})
-		case 1:
+		case afterRun:
 			cons = append(cons, constraint{label, anchor, 0, false})
-			mark(none, none)
+			mark(noRows, noRows)
 			cons = append(cons, constraint{anchor, label, min(grid.lineSpace, lb.dist) - lb.dist, true})
-		case 2:
+		case alongRun:
 			end := varOf[lb.end]
 			cons = append(cons, constraint{anchor, label, min(0, lb.dist) - lb.dist, false}, constraint{label, end, min(0, lb.endDist) - lb.endDist, false})
 		}
@@ -1103,7 +1146,7 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 		a, b := objs[s[0]], objs[s[1]]
 		dist := b.lo - a.hi
 		cons = append(cons, constraint{varOf[a.item], varOf[b.item], min(span[i], dist) - dist, false})
-		mark(rowSpan{a.c0, a.c1}, rowSpan{b.c0, b.c1})
+		mark(a.rows(), b.rows())
 	}
 
 	return cons
@@ -1156,7 +1199,7 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 		}
 
 		// the halves of a run split by a jog, see jogAxis
-		if a.nextRun(b) && p.jogGroup[[2]int{a.index, max(a.group, b.group)}] {
+		if a.nextRun(b) && p.jogGroup[edgeAt{a.index, max(a.group, b.group)}] {
 			return free
 		}
 		if grid.text && p.plain(a) && p.plain(b) {
@@ -1253,7 +1296,7 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 				x, y := pos[a], pos[c]
 				key := uint64(min(x, y))<<32 | uint64(max(x, y))
 				con := constraint{varOf[objs[a].item], varOf[o.item], gap(a, c) - (o.lo - objs[a].hi), false}
-				rows := [2]rowSpan{{objs[a].c0, objs[a].c1}, {o.c0, o.c1}}
+				rows := [2]rowSpan{objs[a].rows(), o.rows()}
 				pairs = append(pairs, pair{key, con, rows})
 			}
 		}
@@ -1415,6 +1458,7 @@ func (p *compactPass) apply(d []int) bool {
 	// row centered on its cell
 	for _, lb := range p.labels {
 		at := &l.Edges[lb.edge]
+		// by mainLabel, headLabel and tailLabel
 		center := []*Vector{&at.LabelCenter, &at.HeadLabelCenter, &at.TailLabelCenter}[lb.which]
 		size := []Vector{at.LabelSize, at.HeadLabelSize, at.TailLabelSize}[lb.which]
 		k := lb.at + d[p.varOf[lb.item]]
