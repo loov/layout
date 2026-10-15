@@ -52,29 +52,32 @@ func (c *canvas) onSide(end, next point, node *layout.Node) bool {
 	if out == 0 {
 		return true // off the box
 	}
-	for p := range c.sideSpots(node, out) {
-		if p == end {
-			return true
-		}
+	along, at := c.sideLine(node, out)
+	lo, hi := c.sideCells(node, along)
+	i := end.at(along)
+	return end.at(1-along) == at && lo <= i && i <= hi
+}
+
+// sideLine returns the axis that side of the box of node runs along and
+// the coordinate of the side on the other axis
+func (c *canvas) sideLine(node *layout.Node, side uint8) (along, at int) {
+	b := c.boxes[node]
+	switch side {
+	case down:
+		return 0, b.Max.Y
+	case left:
+		return 1, b.Min.X
+	case right:
+		return 1, b.Max.X
 	}
-	return false
+	return 0, b.Min.Y
 }
 
 // sideSpots yields the cells on side of the box of node where an edge can
 // end, see sideCells, in order along the side
 func (c *canvas) sideSpots(node *layout.Node, side uint8) iter.Seq[point] {
 	return func(yield func(point) bool) {
-		b := c.boxes[node]
-		along, at := 0, b.Min.Y
-		switch side {
-		case down:
-			at = b.Max.Y
-		case left:
-			along, at = 1, b.Min.X
-		case right:
-			along, at = 1, b.Max.X
-		}
-
+		along, at := c.sideLine(node, side)
 		lo, hi := c.sideCells(node, along)
 		for i := lo; i <= hi; i++ {
 			p := point{i, at}
