@@ -15,5 +15,8 @@ func tableRecord(graph *lgraph, node *lnode) {
 // text, see draw.PlainLabel, with room around it for the padding of cells
 func (graph *Graph) htmlLabelRadius(label, fontName string, fontSize Length) Vector {
 	r := graph.textRadius(draw.PlainLabel(label), fontName, fontSize)
-	return r.Add(Vector{fontSize * 0.5, fontSize * 0.25})
+	return r.Add(labelPad(fontSize))
 }
+
+// labelPad returns the room around the text of a label in fontSize
+func labelPad(fontSize Length) Vector { return Vector{fontSize * 0.5, fontSize * 0.25} }

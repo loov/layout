@@ -843,16 +843,9 @@ func (p *compactPass) addEdges() {
 		p.lastGroup[e] = group
 
 		// in the order of mainLabel, headLabel and tailLabel
-		for which, label := range []struct {
-			text         string
-			center, size Vector
-		}{
-			{edge.Label, path.LabelCenter, path.LabelSize},
-			{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
-			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
-		} {
-			if label.text != "" {
-				p.addLabel(e, which, label.center, label.size, items, func(i int) rigid { return p.objs[groups[pointGroup[i]]] })
+		for which, label := range path.Labels(edge) {
+			if label.Text != "" {
+				p.addLabel(e, which, label.Center, label.Size, items, func(i int) rigid { return p.objs[groups[pointGroup[i]]] })
 			}
 		}
 	}

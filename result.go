@@ -58,6 +58,23 @@ type MergeGroups struct{ Start, End int }
 // IsZero reports whether the edge merges with none at either end.
 func (m MergeGroups) IsZero() bool { return m == MergeGroups{} }
 
+// EdgeLabel is a label of an edge as laid out; Text is "" for a label
+// the edge doesn't have.
+type EdgeLabel struct {
+	Text         string
+	Center, Size Vector
+}
+
+// Labels returns the label, the head label and the tail label of edge,
+// the edge the path is of.
+func (path EdgePath) Labels(edge *Edge) [3]EdgeLabel {
+	return [3]EdgeLabel{
+		{edge.Label, path.LabelCenter, path.LabelSize},
+		{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
+		{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
+	}
+}
+
 // ClusterBox is the computed box of a cluster.
 type ClusterBox struct {
 	TopLeft, BottomRight Vector
@@ -120,17 +137,9 @@ func (l *Layout) Bounds() (min, max Vector) {
 			b.point(p)
 		}
 		edge := l.Graph.Edges[i]
-		for _, label := range []struct {
-			text         string
-			center, size Vector
-		}{
-			{edge.Label, path.LabelCenter, path.LabelSize},
-			{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
-			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
-		} {
-			if label.text != "" {
-				half := Vector{label.size.X / 2, label.size.Y / 2}
-				b.add(centeredRect(label.center, half))
+		for _, label := range path.Labels(edge) {
+			if label.Text != "" {
+				b.add(centeredRect(label.Center, label.Size.Scale(0.5)))
 			}
 		}
 	}
@@ -201,5 +210,5 @@ func (box NodeBox) Outline(inset Length) []Vector {
 
 // node returns the working node with the box's geometry
 func (box NodeBox) node() *lnode {
-	return &lnode{Node: Node{Shape: box.Shape}, Center: box.Center, Radius: Vector{box.Size.X / 2, box.Size.Y / 2}}
+	return &lnode{Node: Node{Shape: box.Shape}, Center: box.Center, Radius: box.Size.Scale(0.5)}
 }

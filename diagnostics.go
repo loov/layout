@@ -269,11 +269,11 @@ func (d *diagnosis) segmentPairs() {
 				d.diag.EdgeCrossings++
 				// angle between the segments
 				u, v := p.dir(), q.dir()
-				angle := math.Abs(math.Atan2(float64(u.Cross(v)), float64(u.Dot(v))))
+				angle := math.Abs(turn(u, v))
 				angle = math.Min(angle, math.Pi-angle)
-				if angle < 30*math.Pi/180 {
+				if angle < 30*degree {
 					d.diag.ShallowCrossings++
-					d.detail("edges %v and %v cross at %.0f degrees", p.edge, q.edge, angle*180/math.Pi)
+					d.detail("edges %v and %v cross at %.0f degrees", p.edge, q.edge, degrees(angle))
 				}
 			}
 			if collinear && !overlaps[edgePair{p.edge, q.edge}] {
@@ -356,20 +356,20 @@ func (d *diagnosis) paths() {
 		if edge.loop() {
 			continue
 		}
-		if v := edge.To.Center.Sub(edge.From.Center); v.X*flow.X+v.Y*flow.Y < 0 {
+		if v := edge.To.Center.Sub(edge.From.Center); v.Dot(flow) < 0 {
 			d.diag.BackEdges++
 			d.detail("edge %v points against the rank direction", edge)
 		}
-		turn, bends, flips, last := 0.0, 0, 0, 0.0
+		winds, bends, flips, last := 0.0, 0, 0, 0.0
 		path := edge.Path
 		for i := 1; i+1 < len(path); i++ {
 			a, b := path[i].Sub(path[i-1]), path[i+1].Sub(path[i])
 			if a.IsZero() || b.IsZero() {
 				continue
 			}
-			angle := math.Atan2(float64(a.Cross(b)), float64(a.Dot(b)))
-			turn += angle
-			if math.Abs(angle) > 5*math.Pi/180 {
+			angle := turn(a, b)
+			winds += angle
+			if math.Abs(angle) > 5*degree {
 				bends++
 				if last != 0 && (angle > 0) != (last > 0) {
 					flips++
@@ -382,9 +382,9 @@ func (d *diagnosis) paths() {
 			d.diag.WavyEdges++
 			d.detail("edge %v changes turn direction %d times", edge, flips)
 		}
-		if math.Abs(turn) > math.Pi/2 {
+		if math.Abs(winds) > 90*degree {
 			d.diag.JaggedEdges++
-			d.detail("edge %v winds %.0f degrees", edge, math.Abs(turn)*180/math.Pi)
+			d.detail("edge %v winds %.0f degrees", edge, degrees(math.Abs(winds)))
 		}
 		d.diag.Corners += bends
 		if bends > 3 {
@@ -548,11 +548,7 @@ func (r rect) distance(a, b Vector) float64 {
 		return 0
 	}
 	pointSegment := func(p, a, b Vector) float64 {
-		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
-		t := 0.0
-		if l := dx*dx + dy*dy; l > 0 {
-			t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
-		}
+		t, dx, dy := projection(p, a, b)
 		return math.Hypot(float64(p.X-a.X)-t*dx, float64(p.Y-a.Y)-t*dy)
 	}
 
@@ -567,3 +563,12 @@ func (r rect) distance(a, b Vector) float64 {
 	}
 	return best
 }
+
+// degree is an angle of one degree in radians
+const degree = math.Pi / 180
+
+// turn returns the signed angle in radians from a to b, from -Pi to Pi
+func turn(a, b Vector) float64 { return math.Atan2(float64(a.Cross(b)), float64(a.Dot(b))) }
+
+// degrees returns rad in degrees
+func degrees(rad float64) float64 { return rad * 180 / math.Pi }

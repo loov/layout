@@ -545,6 +545,11 @@ func (c *hierComponent) hends(edge *ledge) (from, to *hier.Node) {
 	return c.hnode(edge.From), c.hnode(edge.To)
 }
 
+// besideOnRank reports whether a and b are next to each other on a rank
+func besideOnRank(a, b *hier.Node) bool {
+	return a.Rank == b.Rank && max(a.Pos-b.Pos, b.Pos-a.Pos) == 1
+}
+
 // hierEdge returns the hierarchical edge that edge runs as, and whether
 // it runs backward, see hier.Graph.EdgeBetween
 func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
@@ -621,8 +626,13 @@ func (c *hierComponent) reserveEnds() {
 				return
 			}
 			counted[k] = true
+			// above, or before, at 0 and below, or after, at 1
 			e := ends[node]
-			e[map[bool]int{false: 0, true: 1}[below]]++
+			if below {
+				e[1]++
+			} else {
+				e[0]++
+			}
 			ends[node] = e
 		}
 
@@ -679,10 +689,7 @@ func (c *hierComponent) reserveEnds() {
 			}
 
 			// a line each across the frame, a column sideways
-			if grow := Length(max(e[0], e[1])+1)*c.graphdef.cell().Y/2 - node.Radius.Y; grow > 0 {
-				node.Radius.Y += grow
-				node.pad.Y += grow
-			}
+			node.reserveHalfHeight(Length(max(e[0], e[1])+1) * c.graphdef.cell().Y / 2)
 		}
 
 		for node, e := range ends {
@@ -729,10 +736,7 @@ func (c *hierComponent) reserveEnds() {
 					need += spacing // past the slanted corners on the top and bottom
 				}
 			}
-			if grow := need - node.Radius.Y; grow > 0 {
-				node.Radius.Y += grow
-				node.pad.Y += grow
-			}
+			node.reserveHalfHeight(need)
 		}
 	}
 }
@@ -753,7 +757,7 @@ func (c *hierComponent) laneSpacing() Length {
 func (c *hierComponent) reserveFlatLabels() {
 	for _, edge := range c.graphdef.Edges {
 		from, to := c.hends(edge)
-		if edge.Label == "" || edge.loop() || from.Rank != to.Rank || max(from.Pos-to.Pos, to.Pos-from.Pos) != 1 {
+		if edge.Label == "" || edge.loop() || !besideOnRank(from, to) {
 			continue
 		}
 		left := edge.From
@@ -1188,16 +1192,15 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*l
 		if edge.loop() {
 			edge.Path = loopPath(edge, c.loopWidth, c.loopHeight, loops.next(edge), loops.count[edge.From])
 			// beside the far side of the loop
-			loopMid := (edge.Path[0].Y + edge.Path[len(edge.Path)-1].Y) / 2
+			loopMid := midpoint(edge.Path[0], edge.Path[len(edge.Path)-1]).Y
 			edge.LabelPos = Vector{X: edge.From.Right() + c.loopWidth + c.graphdef.EdgePadding + edge.LabelRadius.X, Y: loopMid}
 			if edge.ported() {
 				// ported loops can sit on any side; label the middle of the loop
-				p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
-				mid := midpoint(p, q)
+				mid := edge.Path.middle()
 				d := mid.Sub(edge.From.Center)
 				if !d.IsZero() {
 					d = d.Unit()
-					gap := c.graphdef.EdgePadding + d.X.Abs()*edge.LabelRadius.X + d.Y.Abs()*edge.LabelRadius.Y
+					gap := c.graphdef.EdgePadding + reach(d, edge.LabelRadius)
 					edge.LabelPos = mid.Add(d.Scale(gap))
 				}
 			}
@@ -1355,13 +1358,13 @@ func (c *hierComponent) placeFlatLabels() {
 		if edge.Label == "" || edge.loop() || from.Rank != to.Rank || len(edge.Path) < 2 {
 			continue
 		}
-		if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {
+		if besideOnRank(from, to) {
 			a, b := edge.Path[0], edge.Path[len(edge.Path)-1]
 			y := max(a.Y, b.Y)
 			if flat < 0 {
 				y = min(a.Y, b.Y)
 			}
-			edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: y + flat*(c.graphdef.EdgePadding+edge.LabelRadius.Y)}
+			edge.LabelPos = Vector{X: midpoint(a, b).X, Y: y + flat*(c.graphdef.EdgePadding+edge.LabelRadius.Y)}
 			continue
 		}
 		top := 0
@@ -1371,6 +1374,6 @@ func (c *hierComponent) placeFlatLabels() {
 			}
 		}
 		a, b := edge.Path[top], edge.Path[top+1]
-		edge.LabelPos = Vector{X: (a.X + b.X) / 2, Y: min(a.Y, b.Y) - c.graphdef.EdgePadding - edge.LabelRadius.Y}
+		edge.LabelPos = Vector{X: midpoint(a, b).X, Y: min(a.Y, b.Y) - c.graphdef.EdgePadding - edge.LabelRadius.Y}
 	}
 }

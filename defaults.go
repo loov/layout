@@ -49,8 +49,7 @@ func (graph *lgraph) assignDefaults() {
 			case draw.IsHTMLLabel(node.DefaultLabel()):
 				labelRadius = graph.htmlLabelRadius(node.DefaultLabel(), node.FontName, node.FontSize)
 			}
-			labelRadius.X += node.FontSize * 0.5
-			labelRadius.Y += node.FontSize * 0.25
+			labelRadius = labelRadius.Add(labelPad(node.FontSize))
 			if node.Shape == Record {
 				w, h := draw.RecordSize(node.DefaultLabel(), graph.RankDir.Sideways(), float64(graph.LineHeight), float64(node.FontSize), graph.lineWidth(node.FontName, node.FontSize))
 				labelRadius = Vector{Length(w) / 2, Length(h) / 2}
@@ -62,13 +61,13 @@ func (graph *lgraph) assignDefaults() {
 				labelRadius = Vector{Length(cols-1) / 2 * graph.cellWidth(), Length(rows-1) / 2 * graph.LineHeight}
 			case node.Shape == Diamond:
 				// the text's corners on the slanted sides, padded after
-				pad := Vector{node.FontSize * 0.5, node.FontSize * 0.25}
+				pad := labelPad(node.FontSize)
 				labelRadius = labelRadius.Sub(pad)
 				labelRadius = Vector{2*labelRadius.X + pad.X, 2*labelRadius.Y + pad.Y}
 			case node.Shape == Octagon && !graph.ForText:
 				// the text's corners on the slanted sides, see octagonCut
 				const s = 2 / (1 + octagonCut)
-				pad := Vector{node.FontSize * 0.5, node.FontSize * 0.25}
+				pad := labelPad(node.FontSize)
 				labelRadius = labelRadius.Sub(pad)
 				labelRadius = Vector{s*labelRadius.X + pad.X, s*labelRadius.Y + pad.Y}
 			}
@@ -102,21 +101,15 @@ func (graph *lgraph) assignDefaults() {
 		if edge.FontSize <= 0 {
 			edge.FontSize = graph.FontSize
 		}
-		if draw.IsHTMLLabel(edge.Label) && graph.ForText {
-			edge.LabelRadius = graph.textRadius(draw.PlainLabel(edge.Label), edge.FontName, edge.FontSize)
-		} else if draw.IsHTMLLabel(edge.Label) {
-			edge.LabelRadius = graph.htmlLabelRadius(edge.Label, edge.FontName, edge.FontSize)
-		} else if edge.Label != "" {
-			edge.LabelRadius = graph.textRadius(edge.Label, edge.FontName, edge.FontSize)
-		}
-		edge.head.radius = graph.endLabelRadius(edge.HeadLabel, edge.FontName, edge.FontSize)
-		edge.tail.radius = graph.endLabelRadius(edge.TailLabel, edge.FontName, edge.FontSize)
+		edge.LabelRadius = graph.labelRadius(edge.Label, edge.FontName, edge.FontSize)
+		edge.head.radius = graph.labelRadius(edge.HeadLabel, edge.FontName, edge.FontSize)
+		edge.tail.radius = graph.labelRadius(edge.TailLabel, edge.FontName, edge.FontSize)
 	}
 }
 
-// endLabelRadius returns the half size of a head or tail label, measured
-// as edge labels are; zero when there is none
-func (graph *lgraph) endLabelRadius(label, fontName string, fontSize Length) Vector {
+// labelRadius returns the half size of a label of an edge, zero when
+// there is none
+func (graph *lgraph) labelRadius(label, fontName string, fontSize Length) Vector {
 	switch {
 	case label == "":
 		return Vector{}

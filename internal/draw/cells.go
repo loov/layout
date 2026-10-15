@@ -51,7 +51,7 @@ func PlainBox(text string) (w, h int) {
 // box: a row per line of text, and one per divider between fields
 // stacked vertically
 func RecordRows(rec *Record) int {
-	if len(rec.Fields) == 0 {
+	if rec.Leaf() {
 		return strings.Count(rec.Text, "\n") + 1
 	}
 	rows := 0

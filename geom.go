@@ -221,6 +221,10 @@ func (r rect) grow(pad Length) rect {
 // from their middle
 func centeredOffset(i, n int, spacing Length) Length { return (Length(i) - Length(n-1)/2) * spacing }
 
+// reach returns how far a box of radius around a point reaches from it
+// along the unit vector dir
+func reach(dir, radius Vector) Length { return dir.X.Abs()*radius.X + dir.Y.Abs()*radius.Y }
+
 // centeredRect returns the rect of radius around at
 func centeredRect(at, radius Vector) rect { return rect{at.Sub(radius), at.Add(radius)} }
 

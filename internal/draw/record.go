@@ -14,6 +14,15 @@ type Record struct {
 	X0, Y0, X1, Y1 float64
 }
 
+// Leaf reports whether the field has no sub-fields.
+func (rec *Record) Leaf() bool { return len(rec.Fields) == 0 }
+
+// Width returns the width of the field's box.
+func (rec *Record) Width() float64 { return rec.X1 - rec.X0 }
+
+// Center returns the center of the field's box.
+func (rec *Record) Center() (x, y float64) { return (rec.X0 + rec.X1) / 2, (rec.Y0 + rec.Y1) / 2 }
+
 // ParseRecord parses a record label such as "a|{b|c}|<p> d": fields are
 // separated by |, braces flip the stacking direction, <port> prefixes are
 // dropped and \l \r \n line breaks become newlines. The fields stack top
@@ -130,7 +139,7 @@ func RecordSize(label string, vertical bool, lineHeight, fontSize float64, lineW
 // X1, Y1 (relative to a zero X0, Y0), and returns the total.
 func measureRecord(rec *Record, lineHeight, fontSize float64, lineWidth func(line string) float64) (w, h float64) {
 	pad := fontSize * 0.5
-	if len(rec.Fields) == 0 {
+	if rec.Leaf() {
 		w, h := TextSize(rec.Text, lineHeight, fontSize, lineWidth)
 		rec.X1, rec.Y1 = w+2*pad, h+pad
 		return rec.X1, rec.Y1
@@ -152,7 +161,7 @@ func measureRecord(rec *Record, lineHeight, fontSize float64, lineWidth func(lin
 func placeRecord(rec *Record, x, y, width, height float64) {
 	rec.X0, rec.Y0 = x, y
 	rec.X1, rec.Y1 = x+width, y+height
-	if len(rec.Fields) == 0 {
+	if rec.Leaf() {
 		return
 	}
 	var natural float64

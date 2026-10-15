@@ -121,10 +121,10 @@ func (graph *lgraph) reserveRecord(node *lnode, cellW Length) {
 	grow := Length(0)
 	var walk func(rec *draw.Record, share Length)
 	walk = func(rec *draw.Record, share Length) {
-		if len(rec.Fields) == 0 {
+		if rec.Leaf() {
 			w, _ := draw.LabelBox(rec.Text)
 			need := Length(w) * cellW
-			grow = max(grow, (need-Length(rec.X1-rec.X0))*share)
+			grow = max(grow, (need-Length(rec.Width()))*share)
 			return
 		}
 		if !rec.Vertical {

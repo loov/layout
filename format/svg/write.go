@@ -171,12 +171,10 @@ func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *d
 // writeRecord draws record fields: separators between sub-fields and
 // centered text in leaf fields
 func (svg *writer) writeRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox, rec *draw.Record, origin layout.Vector) {
-	if len(rec.Fields) == 0 {
-		center := layout.Vector{
-			X: origin.X + layout.Length(rec.X0+rec.X1)/2,
-			Y: origin.Y + layout.Length(rec.Y0+rec.Y1)/2,
-		}
-		half := layout.Length(rec.X1-rec.X0) / 2
+	if rec.Leaf() {
+		x, y := rec.Center()
+		center := origin.Add(layout.Vector{X: layout.Length(x), Y: layout.Length(y)})
+		half := layout.Length(rec.Width()) / 2
 		svg.writeText(graph, rec.Text, center, half, box.FontSize, node.FontName, node.FontColor)
 		return
 	}
@@ -351,17 +349,9 @@ func Write(w io.Writer, l *layout.Layout) error {
 
 		svg.write("</path>")
 
-		for _, label := range []struct {
-			text         string
-			center, size layout.Vector
-		}{
-			{edge.Label, path.LabelCenter, path.LabelSize},
-			{edge.HeadLabel, path.HeadLabelCenter, path.HeadLabelSize},
-			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
-		} {
-			if label.text != "" {
-				radius := label.size.Scale(0.5)
-				svg.writeLabel(graph, label.text, label.center, radius, path.FontSize, edge.FontName, edge.FontColor)
+		for _, label := range path.Labels(edge) {
+			if label.Text != "" {
+				svg.writeLabel(graph, label.Text, label.Center, label.Size.Scale(0.5), path.FontSize, edge.FontName, edge.FontColor)
 			}
 		}
 	}

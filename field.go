@@ -30,7 +30,7 @@ func (graph *lgraph) resolveFields() {
 // graph out in, ranks top to bottom; false when it has no such field
 func (graph *lgraph) fieldOffset(node *lnode, field string) (Vector, bool) {
 	// the record as it is drawn, in the frame of the drawing
-	size := Vector{2 * node.Radius.X, 2 * node.Radius.Y}
+	size := node.Radius.Scale(2)
 	side := graph.RankDir.Sideways()
 	if side {
 		size.X, size.Y = size.Y, size.X
@@ -41,7 +41,8 @@ func (graph *lgraph) fieldOffset(node *lnode, field string) (Vector, bool) {
 	if f == nil {
 		return Vector{}, false
 	}
-	d := Vector{Length(f.X0+f.X1)/2 - size.X/2, Length(f.Y0+f.Y1)/2 - size.Y/2}
+	x, y := f.Center()
+	d := Vector{Length(x) - size.X/2, Length(y) - size.Y/2}
 
 	// into the frame, see the transform back in hierarchical
 	switch graph.RankDir {

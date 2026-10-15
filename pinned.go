@@ -35,12 +35,7 @@ func layoutPinned(graph *lgraph) {
 			}
 		}
 		if edge.Label != "" && edge.LabelPos.IsZero() {
-			mid := edge.Path[len(edge.Path)/2]
-			if len(edge.Path)%2 == 0 {
-				a, b := edge.Path[len(edge.Path)/2-1], edge.Path[len(edge.Path)/2]
-				mid = midpoint(a, b)
-			}
-			edge.LabelPos = mid.Add(Vector{edge.LabelRadius.X + graph.EdgePadding, 0})
+			edge.LabelPos = edge.Path.middle().Add(Vector{edge.LabelRadius.X + graph.EdgePadding, 0})
 		}
 	}
 }

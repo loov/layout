@@ -107,15 +107,25 @@ func (path Path) Length() (length Length) {
 	return length
 }
 
+// middle returns the middle point of path, or the midpoint of the two
+// middle points of a path with an even number of them
+func (path Path) middle() Vector { return midpoint(path[(len(path)-1)/2], path[len(path)/2]) }
+
+// projection returns how far along the segment from a to b the point
+// of it nearest p is, from 0 to 1, and the segment's dx and dy
+func projection(p, a, b Vector) (t, dx, dy float64) {
+	dx, dy = float64(b.X-a.X), float64(b.Y-a.Y)
+	if l := dx*dx + dy*dy; l > 0 {
+		t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
+	}
+	return t, dx, dy
+}
+
 // nearest returns the point of path closest to p
 func (path Path) nearest(p Vector) (Vector, bool) {
 	best, bestDist := Vector{}, math.Inf(1)
 	for a, b := range path.Segments() {
-		dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
-		t := 0.0
-		if l := dx*dx + dy*dy; l > 0 {
-			t = math.Max(0, math.Min(1, (float64(p.X-a.X)*dx+float64(p.Y-a.Y)*dy)/l))
-		}
+		t, dx, dy := projection(p, a, b)
 		q := Vector{a.X + Length(t*dx), a.Y + Length(t*dy)}
 		if d := float64(p.Sub(q).Len()); d < bestDist {
 			best, bestDist = q, d

@@ -2,7 +2,6 @@ package layout
 
 import (
 	"cmp"
-	"math"
 	"slices"
 )
 
@@ -53,7 +52,6 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		// a hair inside the padding, so that a line at exactly pad
 		// distance (the label's own edge) does not count as a hit
 		box := centeredRect(at, Vector{edge.LabelRadius.X + pad - 0.01, edge.LabelRadius.Y})
-		tl, br := box.Min, box.Max
 		for _, path := range paths {
 			if lines && box.hitByPath(path) {
 				return false
@@ -61,8 +59,9 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		}
 
 		// nodes only need to stay clear of the text itself
+		text := rect{box.Min.Add(Vector{pad, 0}), box.Max.Sub(Vector{pad, 0})}
 		for _, node := range nodes {
-			if node.Left() < br.X-pad && tl.X+pad < node.Right() && node.Top() < br.Y && tl.Y < node.Bottom() {
+			if node.rect().overlaps(text, 0) {
 				return false
 			}
 		}
@@ -90,7 +89,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			d := edge.LabelPos.Sub(p)
 			if !d.IsZero() {
 				u := d.Unit()
-				dist := pad + u.X.Abs()*edge.LabelRadius.X + u.Y.Abs()*edge.LabelRadius.Y
+				dist := pad + reach(u, edge.LabelRadius)
 				// this side, or the other side of the line when only that
 				// one is free (parallel edges of a pair)
 				same := p.Add(u.Scale(dist))
@@ -118,20 +117,18 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		if !clear(edge, edge.LabelPos) {
 			base, _ := own.nearest(edge.LabelPos)
 			for a, b := range own.Segments() {
-				dx, dy := float64(b.X-a.X), float64(b.Y-a.Y)
-				l := math.Hypot(dx, dy)
+				d := b.Sub(a)
+				l := d.Len()
 				if l == 0 {
 					continue
 				}
-				nx, ny := -dy/l, dx/l
-				support := math.Abs(nx)*float64(edge.LabelRadius.X) + math.Abs(ny)*float64(edge.LabelRadius.Y)
-				off := float64(pad) + support
-				for t := 0.0; t <= l; t += float64(pad) {
-					p := Vector{a.X + Length(t*dx/l), a.Y + Length(t*dy/l)}
-					d := float64(p.Sub(base).Len())
-					spots = append(spots,
-						spot{p.Add(Vector{Length(nx * off), Length(ny * off)}), d},
-						spot{p.Add(Vector{Length(-nx * off), Length(-ny * off)}), d})
+				u := d.Unit()
+				n := Vector{-u.Y, u.X}
+				off := pad + reach(n, edge.LabelRadius)
+				for t := Length(0); t <= l; t += pad {
+					p := a.Add(u.Scale(t))
+					dist := float64(p.Sub(base).Len())
+					spots = append(spots, spot{p.Add(n.Scale(off)), dist}, spot{p.Add(n.Scale(-off)), dist})
 				}
 			}
 			slices.SortStableFunc(spots, func(a, b spot) int { return cmp.Compare(a.dist, b.dist) })
@@ -226,13 +223,12 @@ func (g *lgraph) placeEndLabels() {
 			r := end.label.radius
 
 			// along the edge away from the node, and across it
-			ux, uy := 0.0, 1.0
+			u := Vector{0, 1}
 			if d := end.next.Sub(end.at); !d.IsZero() {
-				u := d.Unit()
-				ux, uy = float64(u.X), float64(u.Y)
+				u = d.Unit()
 			}
-			along := Length(math.Abs(ux))*r.X + Length(math.Abs(uy))*r.Y
-			across := Length(math.Abs(uy))*r.X + Length(math.Abs(ux))*r.Y
+			along := reach(u, r)
+			across := reach(Vector{u.Y, u.X}, r)
 
 			// no further than the middle of the edge, so that the label
 			// stays nearer its own end
@@ -246,7 +242,7 @@ func (g *lgraph) placeEndLabels() {
 				a = min(a, length/3) // a short edge has its label over it
 				for _, side := range []Length{1, -1} {
 					c := side * (pad/2 + across)
-					spots = append(spots, end.at.Add(Vector{Length(ux)*a - Length(uy)*c, Length(uy)*a + Length(ux)*c}))
+					spots = append(spots, end.at.Add(Vector{u.X*a - u.Y*c, u.Y*a + u.X*c}))
 				}
 			}
 

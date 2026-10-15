@@ -44,6 +44,15 @@ type lnode struct {
 	pad Vector
 }
 
+// reserveHalfHeight grows the node to a half height of at least h, as
+// padding
+func (node *lnode) reserveHalfHeight(h Length) {
+	if grow := h - node.Radius.Y; grow > 0 {
+		node.Radius.Y += grow
+		node.pad.Y += grow
+	}
+}
+
 // ledge is the working copy of an Edge, between working nodes.
 type ledge struct {
 	Edge
@@ -123,7 +132,7 @@ func newWorkGraph(def *Graph) *lgraph {
 	node := func(n *Node) *lnode {
 		w := nodes[n]
 		if w == nil {
-			w = &lnode{Node: *n, def: n, Radius: Vector{n.MinSize.X / 2, n.MinSize.Y / 2}}
+			w = &lnode{Node: *n, def: n, Radius: n.MinSize.Scale(0.5)}
 			if n.Pos != nil {
 				w.Center = *n.Pos
 			}
@@ -207,7 +216,7 @@ func (g *lgraph) result() *Layout {
 	for _, n := range g.Nodes {
 		l.Nodes = append(l.Nodes, NodeBox{
 			Center:   n.Center,
-			Size:     Vector{2 * n.Radius.X, 2 * n.Radius.Y},
+			Size:     n.Radius.Scale(2),
 			Shape:    n.Shape,
 			FontSize: n.FontSize,
 			Label:    n.DefaultLabel(),
@@ -218,13 +227,13 @@ func (g *lgraph) result() *Layout {
 		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: MergeGroups{Start: g.merged[e][0], End: g.merged[e][1]}}
 		if e.Label != "" {
 			path.LabelCenter = e.LabelPos
-			path.LabelSize = Vector{2 * e.LabelRadius.X, 2 * e.LabelRadius.Y}
+			path.LabelSize = e.LabelRadius.Scale(2)
 		}
 		if e.HeadLabel != "" {
-			path.HeadLabelCenter, path.HeadLabelSize = e.head.pos, Vector{2 * e.head.radius.X, 2 * e.head.radius.Y}
+			path.HeadLabelCenter, path.HeadLabelSize = e.head.pos, e.head.radius.Scale(2)
 		}
 		if e.TailLabel != "" {
-			path.TailLabelCenter, path.TailLabelSize = e.tail.pos, Vector{2 * e.tail.radius.X, 2 * e.tail.radius.Y}
+			path.TailLabelCenter, path.TailLabelSize = e.tail.pos, e.tail.radius.Scale(2)
 		}
 		l.Edges = append(l.Edges, path)
 	}
@@ -241,7 +250,7 @@ func (l *Layout) work() *lgraph {
 	for i, n := range g.Nodes {
 		box := l.Nodes[i]
 		n.Center = box.Center
-		n.Radius = Vector{box.Size.X / 2, box.Size.Y / 2}
+		n.Radius = box.Size.Scale(0.5)
 		n.Shape, n.FontSize = box.Shape, box.FontSize
 	}
 
@@ -249,9 +258,9 @@ func (l *Layout) work() *lgraph {
 		path := l.Edges[i]
 		e.Path = path.Path
 		e.LabelPos = path.LabelCenter
-		e.LabelRadius = Vector{path.LabelSize.X / 2, path.LabelSize.Y / 2}
-		e.head = endLabel{path.HeadLabelCenter, Vector{path.HeadLabelSize.X / 2, path.HeadLabelSize.Y / 2}}
-		e.tail = endLabel{path.TailLabelCenter, Vector{path.TailLabelSize.X / 2, path.TailLabelSize.Y / 2}}
+		e.LabelRadius = path.LabelSize.Scale(0.5)
+		e.head = endLabel{path.HeadLabelCenter, path.HeadLabelSize.Scale(0.5)}
+		e.tail = endLabel{path.TailLabelCenter, path.TailLabelSize.Scale(0.5)}
 		e.FontSize = path.FontSize
 	}
 
