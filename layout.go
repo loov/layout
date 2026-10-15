@@ -547,7 +547,12 @@ func (c *hierComponent) hends(edge *ledge) (from, to *hier.Node) {
 
 // besideOnRank reports whether a and b are next to each other on a rank
 func besideOnRank(a, b *hier.Node) bool {
-	return a.Rank == b.Rank && max(a.Pos-b.Pos, b.Pos-a.Pos) == 1
+	return a.Rank == b.Rank && posApart(a, b) == 1
+}
+
+// posApart returns how many places apart a and b are on their ranks
+func posApart(a, b *hier.Node) int {
+	return max(a.Pos-b.Pos, b.Pos-a.Pos)
 }
 
 // hierEdge returns the hierarchical edge that edge runs as, and whether
@@ -1141,7 +1146,7 @@ func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lno
 			continue
 		}
 		sourcedef, targetdef := c.reverse[flat.From.ID], c.reverse[flat.To.ID]
-		if max(flat.To.Pos-flat.From.Pos, flat.From.Pos-flat.To.Pos) <= 1 {
+		if posApart(flat.From, flat.To) <= 1 {
 			path := []Vector{sourcedef.Boundary(targetdef.Center), targetdef.Boundary(sourcedef.Center)}
 			edgePaths[flat] = path
 			continue

@@ -61,6 +61,26 @@ func (e spreadEnd) end() point { return e.path[e.i] }
 // bend returns the cell of the bend before the end
 func (e spreadEnd) bend() point { return e.path[e.j] }
 
+// aim heads the end for the point past its bend, if any, which may have
+// moved along the axis along
+func (e *spreadEnd) aim(along int) {
+	if e.k < 0 {
+		return
+	}
+	e.fixed = e.path[e.k].at(along) == e.bend().at(along)
+	e.toward = e.path[e.k].at(along)
+}
+
+// moveTo moves the end, its bend and the edges that follow it to at
+// along the axis along
+func (e spreadEnd) moveTo(along, at int) {
+	e.path[e.i].set(along, at)
+	e.path[e.j].set(along, at)
+	for _, f := range e.also {
+		f.moveTo(along, at)
+	}
+}
+
 // boxSide is a side of the box of node
 type boxSide struct {
 	node  *layout.Node
@@ -171,10 +191,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 	// the other end of an edge may have moved its bend along already,
 	// see below: head for where it is now
 	for n := range ends {
-		if e := &ends[n]; e.k >= 0 {
-			e.fixed = e.path[e.k].at(key.along) == e.bend().at(key.along)
-			e.toward = e.path[e.k].at(key.along)
-		}
+		ends[n].aim(key.along)
 	}
 
 	if len(ends) > hi-lo+1 {
@@ -231,12 +248,7 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 	for n, at := range rows {
 		e := ends[n]
 		delete(alone, &e.path[e.i])
-		e.path[e.i].set(key.along, at)
-		e.path[e.j].set(key.along, at)
-		for _, f := range e.also {
-			f.path[f.i].set(key.along, at)
-			f.path[f.j].set(key.along, at)
-		}
+		e.moveTo(key.along, at)
 	}
 }
 

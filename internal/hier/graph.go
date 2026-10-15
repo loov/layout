@@ -251,6 +251,13 @@ func (graph *Graph) srcPort(src, dst *Node) float32 { return graph.Ports[[2]ID{s
 // dstPort returns where on dst the edge src -> dst ends, see Ports
 func (graph *Graph) dstPort(src, dst *Node) float32 { return graph.Ports[[2]ID{src.ID, dst.ID}][1] }
 
+// ports returns where on src and on dst the edge src -> dst ends, see
+// Ports
+func (graph *Graph) ports(src, dst *Node) (from, to float32) {
+	p := graph.Ports[[2]ID{src.ID, dst.ID}]
+	return p[0], p[1]
+}
+
 // MinLen returns the minimum number of ranks edge src -> dst must span
 func (graph *Graph) MinLen(src, dst *Node) int32 {
 	if len(graph.minlens) == 0 {

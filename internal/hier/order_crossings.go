@@ -103,14 +103,7 @@ func (layer Nodes) assignPos() {
 // and the nodes flat edges pass over
 func (graph *Graph) TotalCrossings() float32 {
 	graph.assignPos()
-	total := graph.layerCrossings(0, len(graph.ByRank)-1)
-
-	// a flat edge crosses every node it passes over; unweighted, so with
-	// heavy edges elsewhere it hardly counts
-	for _, edge := range graph.Flat {
-		total += flatPassOver(edge)
-	}
-	return total
+	return graph.rangeCrossings(0, len(graph.ByRank)-1)
 }
 
 // layerCrossings counts the crossings between the ranks lo to hi
@@ -168,8 +161,8 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 		var ends []end
 		for _, u := range upper {
 			for _, v := range u.Out {
-				p := graph.Ports[[2]ID{u.ID, v.ID}]
-				ends = append(ends, end{float32(u.Pos) + p[0], float32(v.Pos) + p[1], graph.Weight(u, v)})
+				from, to := graph.ports(u, v)
+				ends = append(ends, end{float32(u.Pos) + from, float32(v.Pos) + to, graph.Weight(u, v)})
 			}
 		}
 

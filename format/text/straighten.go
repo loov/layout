@@ -110,11 +110,11 @@ type move struct {
 }
 
 // slide returns the cells, in moves' storage, that move the line leaving the turn at r, x
-// toward dir dx cells over, along with the runs it turns from at both
+// toward dir shift cells over, along with the runs it turns from at both
 // ends, or into an arrowhead or a port on a box at the far end, which
 // moves along the box. The line moves only through blanks, of one edge, and its runs
 // only grow over blanks and shrink over themselves.
-func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
+func slide(moves []move, g grid, r, x int, dir uint8, shift int) ([]move, bool) {
 	blank := func(r, x int) bool { c := g.at(r, x); return c != nil && free(*c) }
 	solid := func(r, x int) bool { c := g.at(r, x); return c != nil && c.solid }
 	turn := g.at(r, x)
@@ -147,20 +147,14 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 	moves = moves[:0]
 
 	// turns moves the turn at row y from x along its run, which grows or
-	// shrinks to meet it at x+dx
+	// shrinks to meet it at x+shift
 	turns := func(y int, dirs uint8) bool {
 		run := dirs & (left | right)
-		side := 0
-		switch run {
-		case left:
-			side = -1
-		case right:
-			side = 1
-		}
+		side := dx(run)
 
 		// toward the run it shrinks, away from it it grows
-		toward, away := dx*side > 0, dx*side < 0
-		lo, hi := min(x, x+dx), max(x, x+dx)
+		toward, away := shift*side > 0, shift*side < 0
+		lo, hi := min(x, x+shift), max(x, x+shift)
 		for c := lo; c <= hi; c++ {
 			if c == x {
 				continue
@@ -170,7 +164,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 			// its far end where the line goes on straight; away from it,
 			// it grows over blanks
 			back := opposite(run)
-			end := c == x+dx && p.drawnBy(id, back) && p.lines == back|opposite(dirs&(up|down))
+			end := c == x+shift && p.drawnBy(id, back) && p.lines == back|opposite(dirs&(up|down))
 			ownRun := p.drawnBy(id, left) && p.lines == left|right
 			if toward && !end && !ownRun || away && !blank(y, c) {
 				return false
@@ -183,7 +177,7 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		line := lineCell(left | right)
 		for c := lo; c <= hi; c++ {
 			switch {
-			case c == x+dx:
+			case c == x+shift:
 				moves = append(moves, move{y, c, lineCell(dirs)})
 			case toward:
 				moves = append(moves, move{y, c, cell{r: ' '}})
@@ -207,13 +201,13 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 		case p.drawnBy(id, up|down) && !p.solid:
 			// a line it crosses it crosses where it goes too, and leaves
 			// whole where it was; a cell off nodes, as unjog keeps
-			q := g.at(y, x+dx)
+			q := g.at(y, x+shift)
 			movable := q != nil && !q.solid && !q.keep && !q.glue && q.need == 0
 			other := movable && q.lines == left|right && q.ownerOn(left) != id
 			across := p.lines != up|down && other
 			upright := p.lines == up|down || p.lines == up|down|left|right
-			besideBox := solid(y, x+dx-1) || solid(y, x+dx+1)
-			if !upright || !blank(y, x+dx) && !across || besideBox {
+			besideBox := solid(y, x+shift-1) || solid(y, x+shift+1)
+			if !upright || !blank(y, x+shift) && !across || besideBox {
 				return moves, false
 			}
 			was := cell{r: ' '}
@@ -228,28 +222,28 @@ func slide(moves []move, g grid, r, x int, dir uint8, dx int) ([]move, bool) {
 				to.r, to.lines = '╂', up|down|left|right
 				to.setOwner(up|down, id)
 			}
-			moves = append(moves, move{y, x, was}, move{y, x + dx, to})
+			moves = append(moves, move{y, x, was}, move{y, x + shift, to})
 			continue
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
-			below, to := g.at(y+1, x), g.at(y+1, x+dx)
+			below, to := g.at(y+1, x), g.at(y+1, x+shift)
 			sameBox := below != nil && to != nil && below.node != 0 && to.node == below.node && to.r == below.r
-			if p.style&pinned != 0 || !blank(y, x+dx) || !sameBox {
+			if p.style&pinned != 0 || !blank(y, x+shift) || !sameBox {
 				return moves, false
 			}
-			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + dx, *p})
+			moves = append(moves, move{y, x, cell{r: ' '}}, move{y, x + shift, *p})
 			return moves, true
 		case p.lines&opposite(dir) != 0 && isTurn(p.lines) && p.ownerOn(opposite(dir)) == id:
 			return moves, turns(y, p.lines)
 		case p.solid && p.node != 0 && arms(p.r)&opposite(dir) != 0:
 			// a port on the side of a box moves along its straight side
-			to := g.at(y, x+dx)
+			to := g.at(y, x+shift)
 			if p.style&pinned != 0 || to == nil || to.node != p.node || arms(to.r) != left|right {
 				return moves, false
 			}
 			port, side := *p, *to
 			port.r, side.r = p.r, to.r
-			moves = append(moves, move{y, x, side}, move{y, x + dx, port})
+			moves = append(moves, move{y, x, side}, move{y, x + shift, port})
 			return moves, true
 		default:
 			return moves, false
