@@ -75,17 +75,10 @@ func Convert(graph *layout.Graph) *Graph {
 // make it undirected. Arrows at the tail cannot be told apart in GraphML
 // and keep Edge.Directed.
 func edgeDirected(edge *layout.Edge) bool {
-	if edge.ArrowTail != layout.ArrowDefault && edge.ArrowTail != layout.ArrowNone {
+	if edge.ArrowTail.Drawn() {
 		return edge.Directed
 	}
-	switch edge.ArrowHead {
-	case layout.ArrowDefault:
-		return edge.Directed
-	case layout.ArrowNone:
-		return false
-	}
-
-	return true
+	return edge.HeadMarker().Drawn()
 }
 
 func addAttr(attrs *[]Attr, key, value string) {

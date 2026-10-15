@@ -37,8 +37,7 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 	}
 
 	// the drawing starts at the origin unless it reaches before it
-	lo, hi := l.Bounds()
-	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
+	lo, hi := l.Extent()
 
 	// mirroring within the bounding box keeps coordinates in place
 	flipY := func(v layout.Vector) layout.Vector { return layout.Vector{X: v.X, Y: lo.Y + hi.Y - v.Y} }
@@ -88,12 +87,8 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 	for i, edge := range graph.Edges {
 		at := l.Edges[i]
 		var attrs []string
-		head, tail := edge.ArrowHead, edge.ArrowTail
-		if head == layout.ArrowDefault && edge.Directed {
-			head = layout.ArrowNormal
-		}
-		hasHead := head != layout.ArrowDefault && head != layout.ArrowNone
-		hasTail := tail != layout.ArrowDefault && tail != layout.ArrowNone
+		head, tail := edge.HeadMarker(), edge.ArrowTail
+		hasHead, hasTail := head.Drawn(), tail.Drawn()
 		if len(at.Path) >= 2 {
 			// Graphviz ends the spline at the arrow base and gives the tip
 			// separately with "s," and "e,".

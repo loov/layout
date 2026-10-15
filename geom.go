@@ -131,6 +131,10 @@ const (
 	ArrowVee     Arrow = "vee"
 )
 
+// Drawn reports whether the arrow draws a marker, that is, whether it is
+// neither ArrowDefault nor ArrowNone.
+func (a Arrow) Drawn() bool { return a != ArrowDefault && a != ArrowNone }
+
 // Vector is a point or size in the plane.
 type Vector struct{ X, Y Length }
 

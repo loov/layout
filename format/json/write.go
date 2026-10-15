@@ -79,8 +79,7 @@ type Cluster struct {
 // Convert builds the JSON shape of a laid out graph.
 func Convert(l *layout.Layout) Graph {
 	graph := l.Graph
-	lo, hi := l.Bounds()
-	lo = layout.Vector{X: min(lo.X, 0), Y: min(lo.Y, 0)}
+	lo, hi := l.Extent()
 	out := Graph{ID: graph.ID, Directed: graph.Directed,
 		X: float64(lo.X), Y: float64(lo.Y),
 		Width:  float64(hi.X + graph.NodePadding - lo.X),
@@ -120,8 +119,8 @@ func Convert(l *layout.Layout) Graph {
 		box := l.Clusters[i]
 		c := Cluster{ID: cluster.ID, Label: cluster.Label, Nodes: []string{}, Invisible: cluster.Invisible,
 			X: float64(box.TopLeft.X), Y: float64(box.TopLeft.Y),
-			Width:  float64(box.BottomRight.X - box.TopLeft.X),
-			Height: float64(box.BottomRight.Y - box.TopLeft.Y)}
+			Width:  float64(box.Size().X),
+			Height: float64(box.Size().Y)}
 		if cluster.Parent != nil {
 			c.Parent = cluster.Parent.ID
 		}

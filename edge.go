@@ -55,6 +55,15 @@ func NewEdge(from, to *Node) *Edge {
 	return edge
 }
 
+// HeadMarker returns the marker at the head of the edge: ArrowHead, or
+// ArrowNormal for a directed edge that leaves it unset.
+func (edge *Edge) HeadMarker() Arrow {
+	if edge.ArrowHead == ArrowDefault && edge.Directed {
+		return ArrowNormal
+	}
+	return edge.ArrowHead
+}
+
 // String returns the edge as "from->to".
 func (edge *Edge) String() string {
 	return edge.From.String() + "->" + edge.To.String()

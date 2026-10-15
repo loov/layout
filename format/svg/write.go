@@ -143,9 +143,10 @@ func roundedPath(path layout.Path, radius, maxDeviation layout.Length) string {
 // markerID returns the marker definition for an arrow style, or "" for
 // none; styles without a marker of their own draw a normal arrowhead
 func markerID(arrow layout.Arrow) string {
-	switch arrow {
-	case layout.ArrowDefault, layout.ArrowNone:
+	if !arrow.Drawn() {
 		return ""
+	}
+	switch arrow {
 	case layout.ArrowVee, layout.ArrowDot, layout.ArrowODot:
 		return string(arrow)
 	}
@@ -261,6 +262,12 @@ func (svg *writer) writeSpan(span draw.Span) {
 	svg.write("<tspan alignment-baseline='middle' %v>%v</tspan>", strings.Join(attrs, " "), escapeString(span.Text))
 }
 
+// boxAttrs returns the x, y, width and height attributes of the box of
+// radius around center
+func boxAttrs(center, radius layout.Vector) string {
+	return fmt.Sprintf("x='%v' y='%v' width='%v' height='%v'", center.X-radius.X, center.Y-radius.Y, 2*radius.X, 2*radius.Y)
+}
+
 // writeLabel writes plain text centered at center, or an HTML-like label
 // as a foreignObject filling the box of the given half size.
 func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius layout.Vector, fontSize layout.Length, fontName string, color layout.Color) {
@@ -268,7 +275,7 @@ func (svg *writer) writeLabel(graph *layout.Graph, label string, center, radius 
 		svg.writeText(graph, label, center, radius.X, fontSize, fontName, color)
 		return
 	}
-	svg.write("<foreignObject x='%v' y='%v' width='%v' height='%v'", center.X-radius.X, center.Y-radius.Y, 2*radius.X, 2*radius.Y)
+	svg.write("<foreignObject %s", boxAttrs(center, radius))
 	if fontSize != 0 {
 		svg.write(" font-size='%v'", fontSize)
 	}
@@ -290,8 +297,8 @@ func Write(w io.Writer, l *layout.Layout) error {
 	svg.w = w
 	graph := l.Graph
 
-	topLeft, bottomRight := l.Bounds()
-	svg.start(min(topLeft.X, 0), min(topLeft.Y, 0), bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
+	topLeft, bottomRight := l.Extent()
+	svg.start(topLeft.X, topLeft.Y, bottomRight.X+graph.NodePadding, bottomRight.Y+graph.RowPadding)
 	svg.writeStyle()
 	svg.writeDefs()
 
@@ -301,16 +308,14 @@ func Write(w io.Writer, l *layout.Layout) error {
 			continue
 		}
 		box := l.Clusters[i]
-		svg.write("<rect class='cluster' x='%v' y='%v' width='%v' height='%v'",
-			box.TopLeft.X, box.TopLeft.Y,
-			box.BottomRight.X-box.TopLeft.X, box.BottomRight.Y-box.TopLeft.Y)
+		radius := box.Size().Scale(0.5)
+		svg.write("<rect class='cluster' %s", boxAttrs(box.TopLeft.Add(radius), radius))
 		svg.write(" fill='%v'", ltcolor(cluster.FillColor))
 		svg.write(" stroke='%v'", dkcolor(cluster.LineColor))
 		svg.write("></rect>")
 		if cluster.Label != "" {
 			center := layout.Vector{X: (box.TopLeft.X + box.BottomRight.X) / 2, Y: box.TopLeft.Y + graph.LineHeight/2}
-			radius := layout.Vector{X: (box.BottomRight.X - box.TopLeft.X) / 2, Y: graph.LineHeight / 2}
-			svg.writeLabel(graph, cluster.Label, center, radius, graph.FontSize, "", nil)
+			svg.writeLabel(graph, cluster.Label, center, layout.Vector{X: radius.X, Y: graph.LineHeight / 2}, graph.FontSize, "", nil)
 		}
 	}
 
@@ -325,14 +330,10 @@ func Write(w io.Writer, l *layout.Layout) error {
 		}
 
 		svg.write("<path class='edge'")
-		head, tail := edge.ArrowHead, edge.ArrowTail
-		if head == layout.ArrowDefault && edge.Directed {
-			head = layout.ArrowNormal
-		}
-		if marker := markerID(head); marker != "" {
+		if marker := markerID(edge.HeadMarker()); marker != "" {
 			svg.write(" marker-end='url(#%v)'", marker)
 		}
-		if marker := markerID(tail); marker != "" {
+		if marker := markerID(edge.ArrowTail); marker != "" {
 			svg.write(" marker-start='url(#%v)'", marker)
 		}
 
@@ -359,7 +360,7 @@ func Write(w io.Writer, l *layout.Layout) error {
 			{edge.TailLabel, path.TailLabelCenter, path.TailLabelSize},
 		} {
 			if label.text != "" {
-				radius := layout.Vector{X: label.size.X / 2, Y: label.size.Y / 2}
+				radius := label.size.Scale(0.5)
 				svg.writeLabel(graph, label.text, label.center, radius, path.FontSize, edge.FontName, edge.FontColor)
 			}
 		}
@@ -370,7 +371,7 @@ func Write(w io.Writer, l *layout.Layout) error {
 			continue
 		}
 		box := l.Nodes[i]
-		radius := layout.Vector{X: box.Size.X / 2, Y: box.Size.Y / 2}
+		radius := box.Size.Scale(0.5)
 		svgtag := svg.writeShape(box, radius)
 		svg.write(" class='node'")
 
@@ -399,8 +400,7 @@ func Write(w io.Writer, l *layout.Layout) error {
 		}
 
 		if node.Image != "" {
-			svg.write("<image href='%v' x='%v' y='%v' width='%v' height='%v' preserveAspectRatio='xMidYMid meet'/>",
-				escapeString(node.Image), box.Left(), box.Top(), box.Size.X, box.Size.Y)
+			svg.write("<image href='%v' %s preserveAspectRatio='xMidYMid meet'/>", escapeString(node.Image), boxAttrs(box.Center, radius))
 		}
 
 		if box.Shape == layout.Record {
@@ -430,14 +430,14 @@ func (svg *writer) writeShape(box layout.NodeBox, radius layout.Vector) string {
 		svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'", c.X, c.Y, radius.X, radius.Y)
 		return "ellipse"
 	case layout.Box, layout.Record:
-		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
+		svg.write("<rect %s", boxAttrs(c, radius))
 		return "rect"
 	case layout.Square:
 		r := max(radius.X, radius.Y)
-		svg.write("<rect x='%v' y='%v' width='%v' height='%v'", c.X-r, c.Y-r, 2*r, 2*r)
+		svg.write("<rect %s", boxAttrs(c, layout.Vector{X: r, Y: r}))
 		return "rect"
 	case layout.None:
-		svg.write("<g x='%v' y='%v' width='%v' height='%v'", c.X-radius.X, c.Y-radius.Y, 2*radius.X, 2*radius.Y)
+		svg.write("<g %s", boxAttrs(c, radius))
 		return "g"
 	case layout.Diamond, layout.Octagon:
 		svg.write("<polygon points='")

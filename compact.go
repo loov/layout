@@ -277,14 +277,6 @@ func crowded(l *Layout, cell Vector) []bool {
 	return out
 }
 
-// headMarked and tailMarked report whether text draws an arrowhead or
-// another marker at the head or the tail of edge
-func headMarked(edge *Edge) bool {
-	return (edge.ArrowHead != "" || edge.Directed) && edge.ArrowHead != ArrowNone
-}
-
-func tailMarked(edge *Edge) bool { return edge.ArrowTail != "" && edge.ArrowTail != ArrowNone }
-
 // rigid is something rigid along the axis of a pass: it moves with item,
 // and covers the cells lo to hi along the axis and c0 to c1 across it
 type rigid struct {
@@ -591,7 +583,7 @@ func (p *compactPass) endRoom(o rigid) (top, bottom int) {
 		at     int
 		node   *Node
 		marked bool
-	}{{0, edge.From, tailMarked(edge)}, {len(path) - 1, edge.To, headMarked(edge)}} {
+	}{{0, edge.From, edge.ArrowTail.Drawn()}, {len(path) - 1, edge.To, edge.HeadMarker().Drawn()}} {
 		if items[end.at] != o.item {
 			continue
 		}
@@ -792,7 +784,7 @@ func (p *compactPass) addEdges() {
 			at, next int
 			node     *Node
 			marked   bool
-		}{{0, 1, edge.From, tailMarked(edge)}, {len(items) - 1, len(items) - 2, edge.To, headMarked(edge)}} {
+		}{{0, 1, edge.From, edge.ArrowTail.Drawn()}, {len(items) - 1, len(items) - 2, edge.To, edge.HeadMarker().Drawn()}} {
 			if !end.marked || len(items) < 2 || p.l.Nodes[p.l.nodeIndex[end.node]].Shape == None {
 				continue
 			}
@@ -984,8 +976,8 @@ func (p *compactPass) own(a, b rigid) bool {
 		return p.row(pt.Y) == side && a.lo < p.col(pt.X) && p.col(pt.X) < a.hi && b.c1-b.c0 >= keep
 	}
 
-	return edge.From == node && b.group == 1 && on(path[0], edge.To, headMarked(edge)) ||
-		edge.To == node && b.group == 0 && on(path[len(path)-1], edge.From, tailMarked(edge))
+	return edge.From == node && b.group == 1 && on(path[0], edge.To, edge.HeadMarker().Drawn()) ||
+		edge.To == node && b.group == 0 && on(path[len(path)-1], edge.From, edge.ArrowTail.Drawn())
 }
 
 // plain reports whether o is a node without outline, which text draws
@@ -1069,10 +1061,10 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 				}
 			}
 			if i == len(items)-1 {
-				end(edge.To, headMarked(edge), &b, ca)
+				end(edge.To, edge.HeadMarker().Drawn(), &b, ca)
 			}
 			if i == 1 {
-				end(edge.From, tailMarked(edge), &a, cb)
+				end(edge.From, edge.ArrowTail.Drawn(), &a, cb)
 			}
 			if a > b {
 				a, b, va, vb = b, a, vb, va

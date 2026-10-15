@@ -63,6 +63,9 @@ type ClusterBox struct {
 	TopLeft, BottomRight Vector
 }
 
+// Size returns the width and height of the box.
+func (box ClusterBox) Size() Vector { return box.BottomRight.Sub(box.TopLeft) }
+
 // Node returns the box of a node of the graph.
 func (l *Layout) Node(node *Node) NodeBox {
 	return l.Nodes[find(l.nodeIndex, l.Graph.Nodes, node, "node "+node.String())]
@@ -135,6 +138,19 @@ func (l *Layout) Bounds() (min, max Vector) {
 	min, max = b.Min, b.Max
 	if b.empty() { // nothing to bound
 		return Vector{}, Vector{}
+	}
+	return min, max
+}
+
+// Extent returns the bounding box of the drawing, see Bounds, with the
+// top left moved to the origin unless the drawing reaches before it.
+func (l *Layout) Extent() (min, max Vector) {
+	min, max = l.Bounds()
+	if min.X > 0 {
+		min.X = 0
+	}
+	if min.Y > 0 {
+		min.Y = 0
 	}
 	return min, max
 }
