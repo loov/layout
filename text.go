@@ -95,7 +95,7 @@ func (graph *lgraph) prepareText() {
 	// them a row above and below its middle
 	loops := map[*lnode]int{}
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To {
+		if edge.loop() {
 			loops[edge.From]++
 		}
 	}

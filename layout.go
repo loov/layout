@@ -387,13 +387,13 @@ func newHierComponent(graphdef *lgraph, opts Options) *hierComponent {
 	c.loopWidth = max(graphdef.NodePadding, 2*graphdef.EdgePadding)
 	c.loopHeight = min(c.loopWidth, graphdef.RowPadding)
 	for _, edge := range graphdef.Edges {
-		if edge.From == edge.To {
+		if edge.loop() {
 			extra := c.loopWidth
 			if edge.Label != "" {
 				extra += graphdef.EdgePadding + 2*edge.LabelRadius.X
 			}
 			c.loopExtra[edge.From] = max(c.loopExtra[edge.From], extra)
-			if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
+			if edge.ported() {
 				c.loopLeft[edge.From] = max(c.loopLeft[edge.From], extra)
 			}
 		}
@@ -472,7 +472,7 @@ func (c *hierComponent) build() {
 	seen := map[ends]bool{}
 	drawn := map[[2]hier.ID]bool{}
 	for _, edge := range c.graphdef.Edges {
-		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+		from, to := c.hends(edge)
 		if pair := [2]hier.ID{from.ID, to.ID}; edge.Invisible && !drawn[pair] {
 			if c.graph.Unseen == nil {
 				c.graph.Unseen = map[[2]hier.ID]bool{}
@@ -498,15 +498,15 @@ func (c *hierComponent) build() {
 	}
 
 	for _, nodedef := range c.graphdef.MinRank {
-		c.graph.MinRank.Append(c.graph.Nodes[c.nodes[nodedef]])
+		c.graph.MinRank.Append(c.hnode(nodedef))
 	}
 	for _, nodedef := range c.graphdef.MaxRank {
-		c.graph.MaxRank.Append(c.graph.Nodes[c.nodes[nodedef]])
+		c.graph.MaxRank.Append(c.hnode(nodedef))
 	}
 	for _, group := range c.graphdef.SameRank {
 		var members hier.Nodes
 		for _, nodedef := range group {
-			members = append(members, c.graph.Nodes[c.nodes[nodedef]])
+			members = append(members, c.hnode(nodedef))
 		}
 		c.graph.SameRank = append(c.graph.SameRank, members)
 	}
@@ -523,12 +523,12 @@ func (c *hierComponent) rank() {
 
 	// labeled edges need a virtual node to hang the label on; doubling the
 	// ranks guarantees every edge has one in the middle
-	if slices.ContainsFunc(c.graphdef.Edges, func(edge *ledge) bool { return edge.Label != "" && edge.From != edge.To }) {
+	if slices.ContainsFunc(c.graphdef.Edges, func(edge *ledge) bool { return edge.Label != "" && !edge.loop() }) {
 		hier.DoubleRanks(c.graph)
 	}
 
 	for _, edge := range c.graphdef.Edges {
-		edge.flat = c.graph.Nodes[c.nodes[edge.From]].Rank == c.graph.Nodes[c.nodes[edge.To]].Rank
+		edge.flat = c.hnode(edge.From).Rank == c.hnode(edge.To).Rank
 	}
 
 	// create virtual nodes
@@ -537,10 +537,18 @@ func (c *hierComponent) rank() {
 
 }
 
+// hnode returns the hierarchical node of node
+func (c *hierComponent) hnode(node *lnode) *hier.Node { return c.graph.Nodes[c.nodes[node]] }
+
+// hends returns the hierarchical nodes at the ends of edge
+func (c *hierComponent) hends(edge *ledge) (from, to *hier.Node) {
+	return c.hnode(edge.From), c.hnode(edge.To)
+}
+
 // hierEdge returns the hierarchical edge that edge runs as, and whether
 // it runs backward, see hier.Graph.EdgeBetween
 func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
-	return c.graph.EdgeBetween(c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]])
+	return c.graph.EdgeBetween(c.hends(edge))
 }
 
 // addClusters adds the borders of the clusters
@@ -554,7 +562,7 @@ func (c *hierComponent) addClusters() {
 			cluster.MinWidth = float32(c.labelSpan(clusterdef) + c.graphdef.EdgePadding)
 		}
 		for _, nodedef := range clusterdef.Nodes {
-			cluster.Members.Append(c.graph.Nodes[c.nodes[nodedef]])
+			cluster.Members.Append(c.hnode(nodedef))
 		}
 		c.clusters[clusterdef] = cluster
 		c.graph.Clusters = append(c.graph.Clusters, cluster)
@@ -574,10 +582,10 @@ func (c *hierComponent) order() {
 	// the middle virtual node of every labeled edge carries the labels,
 	// of every edge between the same nodes
 	for _, edge := range c.graphdef.Edges {
-		if edge.Label == "" || edge.From == edge.To {
+		if edge.Label == "" || edge.loop() {
 			continue
 		}
-		for _, e := range c.graph.EdgesBetween(c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]) {
+		for _, e := range c.graph.EdgesBetween(c.hends(edge)) {
 			if len(e.Chain) > 0 {
 				mid := e.Chain[len(e.Chain)/2]
 				c.labelNode[mid] = append(c.labelNode[mid], edge)
@@ -586,7 +594,7 @@ func (c *hierComponent) order() {
 	}
 
 	if c.graphdef.MergeEdges && c.graphdef.Splines == SplinesOrtho {
-		mergeEdges(c.graphdef.merged, c.graphdef.Edges, func(node *lnode) int { return c.graph.Nodes[c.nodes[node]].Rank })
+		mergeEdges(c.graphdef.merged, c.graphdef.Edges, func(node *lnode) int { return c.hnode(node).Rank })
 	}
 }
 
@@ -623,7 +631,7 @@ func (c *hierComponent) reserveEnds() {
 		// cell each across the frame, as ends between ranks do along it
 		flat := map[*lnode][2]int{} // before and after along the rank
 		for _, edge := range c.graphdef.Edges {
-			from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+			from, to := c.hends(edge)
 			// in text, ends at ports, and of loops, need a cell each on
 			// their side too
 			for i, end := range []struct {
@@ -634,7 +642,7 @@ func (c *hierComponent) reserveEnds() {
 					break
 				}
 				port := end.port // in the rank frame already, see hierarchical
-				if edge.From == edge.To && port == CompassAuto {
+				if edge.loop() && port == CompassAuto {
 					port = East // see loopPath
 				}
 				group := c.graphdef.merged[edge][i]
@@ -650,7 +658,7 @@ func (c *hierComponent) reserveEnds() {
 				}
 			}
 			if from.Rank == to.Rank {
-				if c.graphdef.ForText && c.pack && edge.From != edge.To {
+				if c.graphdef.ForText && c.pack && !edge.loop() {
 					count(flat, edge.From, from.Pos < to.Pos, c.graphdef.merged[edge][0])
 					count(flat, edge.To, to.Pos < from.Pos, c.graphdef.merged[edge][1])
 				}
@@ -698,8 +706,8 @@ func (c *hierComponent) reserveEnds() {
 	// assignPaths, so their nodes need room across the rank for them all
 	lanes := map[[2]hier.ID]int{}
 	for _, edge := range c.graphdef.Edges {
-		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
-		if edge.From != edge.To && from.Rank == to.Rank {
+		from, to := c.hends(edge)
+		if !edge.loop() && from.Rank == to.Rank {
 			lanes[unorderedPair(from.ID, to.ID)]++
 		}
 	}
@@ -744,8 +752,8 @@ func (c *hierComponent) laneSpacing() Length {
 // placeFlatLabels
 func (c *hierComponent) reserveFlatLabels() {
 	for _, edge := range c.graphdef.Edges {
-		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
-		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || max(from.Pos-to.Pos, to.Pos-from.Pos) != 1 {
+		from, to := c.hends(edge)
+		if edge.Label == "" || edge.loop() || from.Rank != to.Rank || max(from.Pos-to.Pos, to.Pos-from.Pos) != 1 {
 			continue
 		}
 		left := edge.From
@@ -805,7 +813,7 @@ func (c *hierComponent) sizeNodes() {
 func (c *hierComponent) widenParallel() {
 	pairs := map[[2]hier.ID]int{}
 	for _, edge := range c.graphdef.Edges {
-		if edge.From != edge.To {
+		if !edge.loop() {
 			pairs[unorderedPair(c.nodes[edge.From], c.nodes[edge.To])]++
 		}
 	}
@@ -816,7 +824,10 @@ func (c *hierComponent) widenParallel() {
 		for _, out := range source.Out {
 			target := out.ChainEnd()
 			n := pairs[unorderedPair(source.ID, target.ID)]
-			for v := out; n > 1 && v.Virtual && len(v.Out) > 0; v = v.Out[0] {
+			if n <= 1 {
+				continue
+			}
+			for v := range out.Chain() {
 				v.Radius.X += float32(Length(n-1) * c.graphdef.EdgePadding)
 			}
 		}
@@ -854,7 +865,7 @@ func (c *hierComponent) reserveClusterLabels() {
 		}
 		top, bottom := float32(math.Inf(1)), float32(math.Inf(-1))
 		for _, nodedef := range clusterdef.Nodes {
-			rank := c.graph.Nodes[c.nodes[nodedef]].Rank
+			rank := c.hnode(nodedef).Rank
 			top = min(top, center[rank]-float32(nodedef.Radius.Y))
 			bottom = max(bottom, center[rank]+float32(nodedef.Radius.Y))
 		}
@@ -900,10 +911,10 @@ func (c *hierComponent) position() {
 		// the node, on a side positioning decides, see aroundNode.
 		ends := map[hier.ID][2]int{}
 		for _, edge := range c.graphdef.Edges {
-			if edge.From == edge.To {
+			if edge.loop() {
 				continue // loops have room of their own, see loopShift
 			}
-			from, to := c.graph.Nodes[c.nodes[edge.From]].Rank, c.graph.Nodes[c.nodes[edge.To]].Rank
+			from, to := c.hnode(edge.From).Rank, c.hnode(edge.To).Rank
 			for _, end := range []struct {
 				node  *lnode
 				port  Compass
@@ -1174,15 +1185,12 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*l
 	loops := countLoops(c.graphdef.Edges)
 
 	for _, edge := range c.graphdef.Edges {
-		sourceid := c.nodes[edge.From]
-		targetid := c.nodes[edge.To]
-
-		if sourceid == targetid {
+		if edge.loop() {
 			edge.Path = loopPath(edge, c.loopWidth, c.loopHeight, loops.next(edge), loops.count[edge.From])
 			// beside the far side of the loop
 			loopMid := (edge.Path[0].Y + edge.Path[len(edge.Path)-1].Y) / 2
 			edge.LabelPos = Vector{X: edge.From.Right() + c.loopWidth + c.graphdef.EdgePadding + edge.LabelRadius.X, Y: loopMid}
-			if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
+			if edge.ported() {
 				// ported loops can sit on any side; label the middle of the loop
 				p, q := edge.Path[(len(edge.Path)-1)/2], edge.Path[len(edge.Path)/2]
 				mid := midpoint(p, q)
@@ -1318,7 +1326,7 @@ func (c *hierComponent) shapePaths() {
 	}
 	if c.graphdef.Splines == SplinesLine {
 		for _, edge := range c.graphdef.Edges {
-			if edge.From != edge.To && len(edge.Path) > 2 {
+			if !edge.loop() && len(edge.Path) > 2 {
 				from, to := edge.Path[0], edge.Path[len(edge.Path)-1]
 				if edge.freeStart() {
 					from = edge.From.Boundary(edge.To.Center)
@@ -1343,8 +1351,8 @@ func (c *hierComponent) placeFlatLabels() {
 		flat = -1
 	}
 	for _, edge := range c.graphdef.Edges {
-		from, to := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
-		if edge.Label == "" || edge.From == edge.To || from.Rank != to.Rank || len(edge.Path) < 2 {
+		from, to := c.hends(edge)
+		if edge.Label == "" || edge.loop() || from.Rank != to.Rank || len(edge.Path) < 2 {
 			continue
 		}
 		if max(from.Pos-to.Pos, to.Pos-from.Pos) == 1 {

@@ -192,9 +192,8 @@ func (d *diagnosis) throughNodes() {
 			own := node == s.edge.From || node == s.edge.To
 			// an edge leaves and reaches its own ends, and a loop runs
 			// beside its node all along
-			loop := s.edge.From == s.edge.To
 			atEnd := node == s.edge.From && s.first || node == s.edge.To && s.last
-			if own && (loop || atEnd) {
+			if own && (s.edge.loop() || atEnd) {
 				continue
 			}
 			key := edgeNode{s.edge, node}
@@ -295,7 +294,7 @@ func (d *diagnosis) shafts() {
 	}
 	inside := func(p Vector, node *lnode) bool { return segmentHitsNode(p, p, node, -0.5) }
 	for _, edge := range d.edges {
-		if edge.From == edge.To {
+		if edge.loop() {
 			continue
 		}
 		path := d.drawn(edge)
@@ -354,7 +353,7 @@ func (d *diagnosis) paths() {
 		for a, b := range edge.Path.Segments() {
 			d.diag.EdgeLength += b.Sub(a).Len()
 		}
-		if edge.From == edge.To {
+		if edge.loop() {
 			continue
 		}
 		if v := edge.To.Center.Sub(edge.From.Center); v.X*flow.X+v.Y*flow.Y < 0 {

@@ -67,7 +67,7 @@ func spreadEnds(graph *lgraph, minSep Length) {
 		angle := func(node *lnode, p Vector) float64 {
 			return math.Atan2(float64(p.Y-node.Center.Y), float64(p.X-node.Center.X))
 		}
-		if edge.From == edge.To {
+		if edge.loop() {
 			byNode[edge.From] = append(byNode[edge.From],
 				end{edge, angle(edge.From, edge.Path[0]), true, true},
 				end{edge, angle(edge.From, edge.Path[len(edge.Path)-1]), false, true})
@@ -227,7 +227,7 @@ func newPairs(graph *lgraph) *pairs {
 		p.order[node] = i
 	}
 	for _, edge := range graph.Edges {
-		if edge.From != edge.To {
+		if !edge.loop() {
 			p.count[p.key(edge)]++
 		}
 	}

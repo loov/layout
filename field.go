@@ -16,10 +16,10 @@ func (graph *lgraph) resolveFields() {
 	}
 
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || !has(edge.From, edge.FromField) {
+		if edge.loop() || !has(edge.From, edge.FromField) {
 			edge.FromField = ""
 		}
-		if edge.From == edge.To || !has(edge.To, edge.ToField) {
+		if edge.loop() || !has(edge.To, edge.ToField) {
 			edge.ToField = ""
 		}
 	}
@@ -88,7 +88,7 @@ func (c *hierComponent) fieldPorts() {
 		if edge.FromField == "" && edge.ToField == "" {
 			continue
 		}
-		top, bottom := c.graph.Nodes[c.nodes[edge.From]], c.graph.Nodes[c.nodes[edge.To]]
+		top, bottom := c.hends(edge)
 		atTop, atBottom := along(edge.From, edge.FromField), along(edge.To, edge.ToField)
 		if top.Rank > bottom.Rank {
 			top, bottom, atTop, atBottom = bottom, top, atBottom, atTop
@@ -104,7 +104,7 @@ func (c *hierComponent) fieldPorts() {
 				continue
 			}
 			last := top
-			for n := first; n != bottom; n = n.Out[0] {
+			for n := range first.Chain() {
 				last = n
 			}
 			if c.graph.Ports == nil {

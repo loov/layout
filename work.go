@@ -65,6 +65,12 @@ func (edge *ledge) labelRect() rect {
 	return centeredRect(edge.LabelPos, edge.LabelRadius)
 }
 
+// loop reports whether the edge leaves and reaches the same node
+func (edge *ledge) loop() bool { return edge.From == edge.To }
+
+// ported reports whether either end of the edge has a compass port
+func (edge *ledge) ported() bool { return edge.FromPort != CompassAuto || edge.ToPort != CompassAuto }
+
 // endLabel is a label at an end of an edge: its center and half size
 type endLabel struct{ pos, radius Vector }
 

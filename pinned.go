@@ -17,7 +17,7 @@ func layoutPinned(graph *lgraph) {
 	pairs := newPairs(graph)
 	for _, edge := range graph.Edges {
 		if len(edge.Path) < 2 {
-			if edge.From == edge.To {
+			if edge.loop() {
 				edge.Path = loopPath(edge, edge.From.Radius.X, edge.From.Radius.X, loops.next(edge), loops.count[edge.From])
 			} else {
 				// edges between the same nodes run side by side,

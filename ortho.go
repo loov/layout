@@ -37,7 +37,7 @@ func orthoEdges(graph *lgraph, rows [][2]Length, pad Length, pack bool) {
 
 	// whatever is still diagonal (ports, offsets) gets a jog at mid height
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || len(edge.Path) < 2 || edge.Path[0].Y == edge.Path[len(edge.Path)-1].Y {
+		if edge.loop() || len(edge.Path) < 2 || edge.Path[0].Y == edge.Path[len(edge.Path)-1].Y {
 			continue
 		}
 		for i := 0; i+1 < len(edge.Path); i++ {
@@ -147,7 +147,7 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 	// ends of other edges
 	arc := func(edge *ledge) bool {
 		p := edge.Path
-		if edge.From == edge.To || !edge.flat || len(p) != 4 {
+		if edge.loop() || !edge.flat || len(p) != 4 {
 			return false
 		}
 		rises := vertical(p[0], p[1]) && p[1].Y < p[0].Y // straight up from the first node
@@ -419,7 +419,7 @@ func arcRoom(graph *lgraph, rows [][2]Length) []Length {
 	arcs := make([]Length, len(rows))
 	over := make([][]*ledge, len(rows)) // the arcs in each channel
 	for _, edge := range graph.Edges {
-		if edge.From == edge.To || !edge.flat || len(edge.Path) != 4 {
+		if edge.loop() || !edge.flat || len(edge.Path) != 4 {
 			continue
 		}
 

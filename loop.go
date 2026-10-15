@@ -15,7 +15,7 @@ type loopCount struct {
 func countLoops(edges []*ledge) *loopCount {
 	loops := &loopCount{count: map[*lnode]int{}, index: map[*lnode]int{}}
 	for _, edge := range edges {
-		if edge.From == edge.To && edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
+		if edge.loop() && !edge.ported() {
 			loops.count[edge.From]++
 		}
 	}
@@ -24,7 +24,7 @@ func countLoops(edges []*ledge) *loopCount {
 
 // next returns the place of the self-loop edge among its node's loops
 func (loops *loopCount) next(edge *ledge) int {
-	if edge.FromPort != CompassAuto || edge.ToPort != CompassAuto {
+	if edge.ported() {
 		return 0
 	}
 	k := loops.index[edge.From]
@@ -42,7 +42,7 @@ func loopPath(edge *ledge, width, height Length, k, n int) Path {
 	top := node.Center.Y - node.Radius.Y + Length(k)*share
 	up := Vector{X: node.Right(), Y: top + share/4}
 	down := Vector{X: node.Right(), Y: top + 3*share/4}
-	if edge.FromPort == CompassAuto && edge.ToPort == CompassAuto {
+	if !edge.ported() {
 		// leave and return horizontally from where the outline is
 		from, to := node.Boundary(up), node.Boundary(down)
 		return []Vector{from, {X: right, Y: from.Y}, {X: right, Y: to.Y}, to}
