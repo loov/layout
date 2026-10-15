@@ -30,7 +30,7 @@ func OrderRanksBlocks(graph *Graph) (moves int) {
 // to right, without alignments crossing each other, and returns the
 // blocks of more than one node, top to bottom
 func alignBlocks(graph *Graph, flat map[*Node]Nodes) []Nodes {
-	free := func(n *Node) bool { return !n.BorderLeft && !n.BorderRight && len(flat[n]) == 0 }
+	free := func(n *Node) bool { return !n.IsBorder() && len(flat[n]) == 0 }
 	below := make([]*Node, len(graph.Nodes))
 	above := make([]bool, len(graph.Nodes))
 	var ins Nodes
@@ -42,7 +42,8 @@ func alignBlocks(graph *Graph, flat map[*Node]Nodes) []Nodes {
 			}
 			ins = append(ins[:0], v.In...)
 			slices.SortFunc(ins, func(a, b *Node) int { return a.Pos - b.Pos })
-			for _, m := range [2]int{(len(ins) - 1) / 2, len(ins) / 2} {
+			lo, hi := medians(len(ins))
+			for _, m := range [2]int{lo, hi} {
 				u := ins[m]
 				if below[u.ID] == nil && u.Pos > last && free(u) && u.Rank+1 == v.Rank {
 					below[u.ID], above[v.ID] = v, true
@@ -217,12 +218,8 @@ func (m *blockMover) slotCosts(b *Node, costs []float32) []float32 {
 	m.left, m.right = resize(m.left, others), resize(m.right, others)
 	clear(m.left)
 	clear(m.right)
-	for _, side := range [2]bool{false, true} {
-		edges := b.In
-		if side {
-			edges = b.Out
-		}
-		for _, w := range edges {
+	for _, above := range [2]bool{true, false} {
+		for _, w := range b.Adjacent(above) {
 			if slices.Contains(m.block, w) {
 				continue
 			}
@@ -231,11 +228,7 @@ func (m *blockMover) slotCosts(b *Node, costs []float32) []float32 {
 				if k >= b.Pos {
 					u = layer[k+1]
 				}
-				adj := u.In
-				if side {
-					adj = u.Out
-				}
-				for _, z := range adj {
+				for _, z := range u.Adjacent(above) {
 					// left[k]: crossings with u left of b; right[k]: with
 					// b left of u
 					weight := graph.edgeWeight(b, w) * graph.edgeWeight(u, z)

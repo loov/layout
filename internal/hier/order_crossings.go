@@ -17,8 +17,8 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 	}
 
 	// where the edges end on the neighbors, see Ports
-	in := func(w, u *Node) float32 { return float32(w.Pos) + graph.Ports[[2]ID{w.ID, u.ID}][0] }
-	out := func(u, w *Node) float32 { return float32(w.Pos) + graph.Ports[[2]ID{u.ID, w.ID}][1] }
+	in := func(w, u *Node) float32 { return float32(w.Pos) + graph.srcPort(w, u) }
+	out := func(u, w *Node) float32 { return float32(w.Pos) + graph.dstPort(u, w) }
 	for _, w := range u.In {
 		for _, z := range v.In {
 			if zx, wx := in(z, v), in(w, u); zx < wx {

@@ -83,7 +83,7 @@ func orderTies(graph *Graph) {
 	// every swap puts a pair in order, so this ends
 	graph.swapNeighbors(math.MaxInt, func(i int, left, right *Node) bool {
 		if right.ID > left.ID || left.Cluster != right.Cluster ||
-			left.BorderLeft || left.BorderRight || right.BorderLeft || right.BorderRight ||
+			left.IsBorder() || right.IsBorder() ||
 			slices.Contains(flat[left], right) {
 			return false
 		}
@@ -159,11 +159,7 @@ func OrderRanksByMedian(graph *Graph, down bool) {
 	for _, r := range order {
 		layer := graph.ByRank[r]
 		for _, node := range layer {
-			adj := node.In
-			if !down {
-				adj = node.Out
-			}
-			node.Coef = medianGridX(graph.portGridX(node, adj, down), node.GridX)
+			node.Coef = medianGridX(graph.portGridX(node, node.Adjacent(down), down), node.GridX)
 		}
 
 		clusterCoef(layer)
@@ -200,9 +196,9 @@ func (graph *Graph) portGridX(node *Node, adj Nodes, down bool) []float32 {
 	for i, n := range adj {
 		xs[i] = n.GridX
 		if down {
-			xs[i] += graph.Ports[[2]ID{n.ID, node.ID}][0]
+			xs[i] += graph.srcPort(n, node)
 		} else {
-			xs[i] += graph.Ports[[2]ID{node.ID, n.ID}][1]
+			xs[i] += graph.dstPort(node, n)
 		}
 	}
 
@@ -410,7 +406,7 @@ func orderRanksBreadthFirst(graph *Graph, down bool) {
 	seen := NewNodeSet(graph.NodeCount())
 	ranking := make([]Nodes, len(graph.ByRank))
 	for _, root := range graph.Nodes {
-		if (down && root.InDegree() > 0) || (!down && root.OutDegree() > 0) || !seen.Include(root) {
+		if len(root.Adjacent(down)) > 0 || !seen.Include(root) {
 			continue
 		}
 		queue := Nodes{root}
@@ -418,11 +414,7 @@ func orderRanksBreadthFirst(graph *Graph, down bool) {
 			node := queue[0]
 			queue = queue[1:]
 			ranking[node.Rank].Append(node)
-			next := node.Out
-			if !down {
-				next = node.In
-			}
-			for _, dst := range next {
+			for _, dst := range node.Adjacent(!down) {
 				if seen.Include(dst) {
 					queue = append(queue, dst)
 				}

@@ -162,6 +162,28 @@ func (node *Node) ChainEnd() *Node {
 	return node
 }
 
+// Adjacent returns the nodes above node, In, when above is set, otherwise
+// the nodes below it, Out
+func (node *Node) Adjacent(above bool) Nodes {
+	if above {
+		return node.In
+	}
+	return node.Out
+}
+
+// IsBorder reports whether node is a left or right border of a cluster
+func (node *Node) IsBorder() bool { return node.BorderLeft || node.BorderRight }
+
+// IsChainLink reports whether node is a virtual node with one edge in and
+// one edge out
+func (node *Node) IsChainLink() bool {
+	return node.Virtual && len(node.In) == 1 && len(node.Out) == 1
+}
+
+// medians returns the indexes of the lower and upper median of n sorted
+// values; they are the same when n is odd
+func medians(n int) (lo, hi int) { return (n - 1) / 2, n / 2 }
+
 // Vector represents a 2D vector
 type Vector struct {
 	X, Y float32
@@ -222,6 +244,12 @@ func (graph *Graph) SetWeight(src, dst *Node, weight float32) {
 	}
 	graph.weights[[2]ID{src.ID, dst.ID}] = weight
 }
+
+// srcPort returns where on src the edge src -> dst ends, see Ports
+func (graph *Graph) srcPort(src, dst *Node) float32 { return graph.Ports[[2]ID{src.ID, dst.ID}][0] }
+
+// dstPort returns where on dst the edge src -> dst ends, see Ports
+func (graph *Graph) dstPort(src, dst *Node) float32 { return graph.Ports[[2]ID{src.ID, dst.ID}][1] }
 
 // MinLen returns the minimum number of ranks edge src -> dst must span
 func (graph *Graph) MinLen(src, dst *Node) int32 {

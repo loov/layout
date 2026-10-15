@@ -15,7 +15,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 		for _, next := range src.Out {
 			var chain Nodes
 			for v := range next.Chain() {
-				if v.BorderLeft || v.BorderRight {
+				if v.IsBorder() {
 					break
 				}
 				chain.Append(v)
@@ -55,7 +55,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 				return false
 			}
 			u := layer[k]
-			if u.BorderLeft || u.BorderRight || u.Cluster != v.Cluster {
+			if u.IsBorder() || u.Cluster != v.Cluster {
 				return false
 			}
 		}

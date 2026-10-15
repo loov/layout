@@ -185,7 +185,7 @@ func orderClusters(graph *Graph) {
 			for c := node.Cluster; c != nil; c = c.Parent {
 				sum[c] += float64(node.Pos)
 				count[c]++
-				if borderSide(node) == 0 {
+				if !node.IsBorder() {
 					near[c] += bary(node)
 					nearCount[c]++
 				}

@@ -59,7 +59,7 @@ func StraightenChains(graph *Graph) {
 		moved := false
 		for _, layer := range graph.ByRank {
 			for i, node := range layer {
-				if !node.Virtual || node.BorderLeft || node.BorderRight || len(node.In) != 1 || len(node.Out) != 1 {
+				if !node.IsChainLink() || node.IsBorder() {
 					continue
 				}
 
@@ -411,11 +411,12 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 				at = append(at, s.rank[nb.ID])
 			}
 			slices.Sort(at)
-			total += abs(float32(x) - float32(at[(len(at)-1)/2]+at[len(at)/2])/2)
+			lo, hi := medians(len(at))
+			total += abs(float32(x) - float32(at[lo]+at[hi])/2)
 		}
 
 		if straighten {
-			if node.Virtual && len(node.In) == 1 && len(node.Out) == 1 {
+			if node.IsChainLink() {
 				total += chainWeight * abs(float32(2*x-s.rank[node.In[0].ID]-s.rank[node.Out[0].ID]))
 			}
 		} else {
