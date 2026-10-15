@@ -48,7 +48,7 @@ func (nodes *Nodes) Contains(node *Node) bool { return nodes.IndexOf(node) >= 0 
 // Append adds node to the list without checking for duplicates
 func (nodes *Nodes) Append(node *Node) { *nodes = append(*nodes, node) }
 
-// Includes adds node to the list if it already doesn't contain it
+// Include adds node to the list if it doesn't contain it already
 func (nodes *Nodes) Include(node *Node) {
 	if !nodes.Contains(node) {
 		nodes.Append(node)

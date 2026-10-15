@@ -269,12 +269,12 @@ func collectDirs(oldDir, newDir string, all bool) ([]Change, error) {
 // compare returns the change of the drawing at path from old to new, with
 // the diagnostics of its graph by kind and name; ok is false when path is
 // no drawing, or it did not change and all is not set
-func compare(path, old, new string, oldStats, newStats map[string]map[string]map[string]float64, all bool) (change Change, ok bool) {
+func compare(path, before, after string, oldStats, newStats map[string]map[string]map[string]float64, all bool) (change Change, ok bool) {
 	kind := strings.TrimPrefix(filepath.Ext(path), ".")
 	if kind != "svg" && kind != "txt" && kind != "ans" || strings.HasPrefix(filepath.Base(path), "diagnostics") {
 		return Change{}, false // diagnostics are no drawing
 	}
-	if !(all && (old != "" || new != "") || old != new) {
+	if !(all && (before != "" || after != "") || before != after) {
 		return Change{}, false
 	}
 
@@ -295,14 +295,14 @@ func compare(path, old, new string, oldStats, newStats map[string]map[string]map
 	}
 
 	change = Change{
-		Path: path, Kind: kind, Old: old, New: new,
-		OldSize: size(kind, old), NewSize: size(kind, new),
+		Path: path, Kind: kind, Old: before, New: after,
+		OldSize: size(kind, before), NewSize: size(kind, after),
 		OldStats: lookup(oldStats), NewStats: lookup(newStats),
 	}
 	if kind != "svg" {
 		// text is counted as drawn, see draw.TextStats
-		change.OldStats = withText(change.OldStats, old)
-		change.NewStats = withText(change.NewStats, new)
+		change.OldStats = withText(change.OldStats, before)
+		change.NewStats = withText(change.NewStats, after)
 	}
 	return change, true
 }

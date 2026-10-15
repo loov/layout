@@ -73,7 +73,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		return true
 	}
 
-	clear := func(edge *ledge, at Vector) bool { return clearOf(edge, at, true) }
+	free := func(edge *ledge, at Vector) bool { return clearOf(edge, at, true) }
 	for _, edge := range edges {
 		if edge.Label == "" || len(edge.Path) < 2 || keep[edge] {
 			continue
@@ -95,7 +95,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 				same := p.Add(u.Scale(dist))
 				other := p.Add(u.Scale(-dist))
 				edge.LabelPos = same
-				if !clear(edge, same) && clear(edge, other) {
+				if !free(edge, same) && free(edge, other) {
 					edge.LabelPos = other
 				}
 			}
@@ -114,7 +114,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			dist float64
 		}
 		var spots []spot
-		if !clear(edge, edge.LabelPos) {
+		if !free(edge, edge.LabelPos) {
 			base, _ := own.nearest(edge.LabelPos)
 			for a, b := range own.Segments() {
 				d := b.Sub(a)
@@ -133,7 +133,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 			}
 			slices.SortStableFunc(spots, func(a, b spot) int { return cmp.Compare(a.dist, b.dist) })
 			for _, s := range spots {
-				if clear(edge, s.at) {
+				if free(edge, s.at) {
 					edge.LabelPos, found = s.at, true
 					break
 				}
@@ -145,7 +145,7 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 		for ring := 1; ring <= 4 && !found; ring++ {
 			d := Length(ring) * 2 * pad
 			for _, dir := range []Vector{{-1, 0}, {1, 0}, {0, 1}, {0, -1}, {-1, 1}, {1, 1}, {-1, -1}, {1, -1}} {
-				if at := edge.LabelPos.Add(dir.Scale(d)); near(at) && clear(edge, at) {
+				if at := edge.LabelPos.Add(dir.Scale(d)); near(at) && free(edge, at) {
 					edge.LabelPos, found = at, true
 					break
 				}
@@ -172,17 +172,17 @@ func nudgeLabels(edges []*ledge, nodes []*lnode, clusters []*lcluster, pad, radi
 // placed before it, or else where it covers no node or label, crossing
 // lines, or else right past the end. Layouts keep no room for them, so in
 // tight ones they can cover what is there.
-func (g *lgraph) placeEndLabels() {
-	pad := g.EdgePadding
+func (graph *lgraph) placeEndLabels() {
+	pad := graph.EdgePadding
 	var placed []rect
-	for _, edge := range g.Edges {
+	for _, edge := range graph.Edges {
 		if edge.Label != "" {
 			placed = append(placed, edge.labelRect())
 		}
 	}
 
 	covers := func(r rect) bool {
-		for _, node := range g.Nodes {
+		for _, node := range graph.Nodes {
 			if node.rect().overlaps(r, 0) {
 				return true
 			}
@@ -196,7 +196,7 @@ func (g *lgraph) placeEndLabels() {
 	}
 
 	crosses := func(r rect) bool {
-		for _, edge := range g.Edges {
+		for _, edge := range graph.Edges {
 			if r.hitByPath(edge.Path) {
 				return true
 			}
@@ -204,7 +204,7 @@ func (g *lgraph) placeEndLabels() {
 		return false
 	}
 
-	for _, edge := range g.Edges {
+	for _, edge := range graph.Edges {
 		n := len(edge.Path)
 		if n < 2 || edge.Invisible {
 			continue

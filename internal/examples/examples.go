@@ -8,6 +8,7 @@ import (
 	"github.com/loov/layout"
 )
 
+// Graphs builds the example graphs by name, which the tests and tools draw
 var Graphs = map[string]func() *layout.Graph{
 	// flat_labels has labeled edges between nodes of a rank, next to each
 	// other and arcing over one between, see FlatLabels

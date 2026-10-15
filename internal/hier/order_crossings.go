@@ -93,8 +93,8 @@ func (graph *Graph) assignPos() {
 }
 
 // assignPos records each node's index within the layer
-func (layer Nodes) assignPos() {
-	for i, node := range layer {
+func (nodes Nodes) assignPos() {
+	for i, node := range nodes {
 		node.Pos = i
 	}
 }

@@ -64,10 +64,10 @@ func (hsl HSLA) RGBA8() (r, g, b, a uint8) {
 
 func hue(v1, v2, h float32) float32 {
 	if h < 0 {
-		h += 1
+		h++
 	}
 	if h > 1 {
-		h -= 1
+		h--
 	}
 	if 6*h < 1 {
 		return v1 + (v2-v1)*6*h
@@ -88,7 +88,7 @@ func hsla(h, s, l, a float32) (r, g, b, ra float32) {
 	// degrees to a fraction of the full turn, in [0, 1)
 	h = float32(math.Mod(float64(h), 360) / 360)
 	if h < 0 {
-		h += 1
+		h++
 	}
 
 	var v2 float32

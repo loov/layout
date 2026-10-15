@@ -279,9 +279,9 @@ func components(graphdef *lgraph) []*lgraph {
 		root := find(node)
 		graph := byRoot[root]
 		if graph == nil {
-			copy := *graphdef
-			copy.Nodes, copy.Edges, copy.SameRank, copy.MinRank, copy.MaxRank, copy.Clusters = nil, nil, nil, nil, nil, nil
-			graph = &copy
+			part := *graphdef
+			part.Nodes, part.Edges, part.SameRank, part.MinRank, part.MaxRank, part.Clusters = nil, nil, nil, nil, nil, nil
+			graph = &part
 			byRoot[root] = graph
 			result = append(result, graph)
 		}

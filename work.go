@@ -200,9 +200,9 @@ func pinned(graph *Graph) bool {
 
 // result returns the computed layout, index-aligned with the caller's
 // graph.
-func (g *lgraph) result() *Layout {
-	settings := g.Graph
-	def := g.def
+func (graph *lgraph) result() *Layout {
+	settings := graph.Graph
+	def := graph.def
 	settings.NodeByID = def.NodeByID
 	settings.Nodes, settings.Edges, settings.Clusters = def.Nodes, def.Edges, def.Clusters
 	settings.SameRank, settings.MinRank, settings.MaxRank = def.SameRank, def.MinRank, def.MaxRank
@@ -213,7 +213,7 @@ func (g *lgraph) result() *Layout {
 		edgeIndex:    indexOf(def.Edges),
 		clusterIndex: indexOf(def.Clusters),
 	}
-	for _, n := range g.Nodes {
+	for _, n := range graph.Nodes {
 		l.Nodes = append(l.Nodes, NodeBox{
 			Center:   n.Center,
 			Size:     n.Radius.Scale(2),
@@ -223,8 +223,8 @@ func (g *lgraph) result() *Layout {
 		})
 	}
 
-	for _, e := range g.Edges {
-		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: MergeGroups{Start: g.merged[e][0], End: g.merged[e][1]}}
+	for _, e := range graph.Edges {
+		path := EdgePath{Path: e.Path, FontSize: e.FontSize, Merged: MergeGroups{Start: graph.merged[e][0], End: graph.merged[e][1]}}
 		if e.Label != "" {
 			path.LabelCenter = e.LabelPos
 			path.LabelSize = e.LabelRadius.Scale(2)
@@ -238,7 +238,7 @@ func (g *lgraph) result() *Layout {
 		l.Edges = append(l.Edges, path)
 	}
 
-	for _, c := range g.Clusters {
+	for _, c := range graph.Clusters {
 		l.Clusters = append(l.Clusters, ClusterBox{TopLeft: c.TopLeft, BottomRight: c.BottomRight})
 	}
 	return l
@@ -271,15 +271,15 @@ func (l *Layout) work() *lgraph {
 }
 
 // Bounds returns the bounding box of all nodes and edge paths.
-func (g *lgraph) Bounds() (min, max Vector) {
+func (graph *lgraph) Bounds() (min, max Vector) {
 	b := emptyRect()
-	for _, node := range g.Nodes {
+	for _, node := range graph.Nodes {
 		b.add(node.rect())
 	}
-	for _, cluster := range g.Clusters {
+	for _, cluster := range graph.Clusters {
 		b.add(cluster.rect())
 	}
-	for _, edge := range g.Edges {
+	for _, edge := range graph.Edges {
 		for _, p := range edge.Path {
 			b.point(p)
 		}

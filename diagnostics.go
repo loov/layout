@@ -125,10 +125,10 @@ type segment struct {
 func (s segment) dir() Vector { return s.b.Sub(s.a) }
 
 // overlap returns how far q runs along p, with both projected onto p's line
-func (p segment) overlap(q segment) float64 {
-	d := p.dir()
+func (s segment) overlap(q segment) float64 {
+	d := s.dir()
 	length := float64(d.Len())
-	proj := func(v Vector) float64 { return float64(v.Sub(p.a).Dot(d)) / length }
+	proj := func(v Vector) float64 { return float64(v.Sub(s.a).Dot(d)) / length }
 	lo, hi := math.Min(proj(q.a), proj(q.b)), math.Max(proj(q.a), proj(q.b))
 	return math.Min(hi, length) - math.Max(lo, 0)
 }

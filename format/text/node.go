@@ -312,7 +312,7 @@ func (c *canvas) drawNode(node *layout.Node) {
 		case c.pointed[node]:
 			c.diamond(x0, y0, x1, y1)
 		default:
-			c.cornerDiamond(x0, y0, x1, y1)
+			c.cornerDiamond(x0, y0, y1)
 			top = y0 + (y1-y0+1)/2 - (len(lines)+1)/2
 		}
 
@@ -514,7 +514,7 @@ func (c *canvas) smallDiamond(x0, y0 int) {
 //	🯒🯓       🯐🯑
 //	 🯒🯓    🯐🯑
 //	   🯒🯓🯐🯑
-func (c *canvas) cornerDiamond(x0, y0, x1, y1 int) {
+func (c *canvas) cornerDiamond(x0, y0, y1 int) {
 	k := (y1 - y0 + 1) / 2
 	mid := x0 + 2*k // the column right of the top and bottom points
 	for r := range k {

@@ -482,13 +482,13 @@ func balanceTies(graph *Graph, s *simplex, straighten bool) {
 // ranks of labels only run on in line with the node they end at, so that
 // forks fork right below their node.
 func centerFans(graph *Graph, x []float32, lo, hi float32) {
-	real := make([]bool, len(graph.ByRank))
+	hasReal := make([]bool, len(graph.ByRank))
 	for r, layer := range graph.ByRank {
-		real[r] = slices.ContainsFunc(layer, func(node *Node) bool { return !node.Virtual })
+		hasReal[r] = slices.ContainsFunc(layer, func(node *Node) bool { return !node.Virtual })
 	}
 	child := func(c *Node) *Node {
 		for c.Virtual && len(c.Out) == 1 {
-			if real[c.Rank] || c.Carrier {
+			if hasReal[c.Rank] || c.Carrier {
 				return nil
 			}
 			c = c.Out[0]
@@ -521,7 +521,7 @@ func centerFans(graph *Graph, x []float32, lo, hi float32) {
 	}
 
 	for r, layer := range graph.ByRank {
-		if real[r] {
+		if hasReal[r] {
 			continue
 		}
 		for i, node := range layer {
