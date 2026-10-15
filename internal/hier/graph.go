@@ -277,6 +277,12 @@ func (graph *Graph) SetMinLen(src, dst *Node, minlen int32) {
 	graph.minlens[[2]ID{src.ID, dst.ID}] = minlen
 }
 
+// forgetEdge drops the weight and minimum length of edge src -> dst
+func (graph *Graph) forgetEdge(src, dst *Node) {
+	delete(graph.weights, [2]ID{src.ID, dst.ID})
+	delete(graph.minlens, [2]ID{src.ID, dst.ID})
+}
+
 // InWeight returns the total weight of incoming edges
 func (graph *Graph) InWeight(node *Node) float32 {
 	total := float32(0)

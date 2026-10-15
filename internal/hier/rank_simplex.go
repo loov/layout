@@ -352,10 +352,22 @@ func (s *simplex) run() {
 // tree edge leave, and whether that side contains the edge's tail.
 func (s *simplex) smallerSide(leave int32) (side []int32, sideIsTail bool) {
 	child, childIsTail := s.subtreeSide(leave)
-	if 2*(s.lim[child]-s.low[child]+1) <= s.n {
+	if 2*s.subtreeSize(child) <= s.n {
 		return s.subtree(child, leave), childIsTail
 	}
 	return s.subtree(s.other(leave, child), leave), !childIsTail
+}
+
+// subtreeSize returns the number of vertices in the subtree of v
+func (s *simplex) subtreeSize(v int32) int32 { return s.lim[v] - s.low[v] + 1 }
+
+// shiftToTighten returns how far to shift the ranks of the side of a cut
+// so that the non-tree edge enter becomes tight, see smallerSide
+func (s *simplex) shiftToTighten(enter int32, sideIsTail bool) int32 {
+	if sideIsTail {
+		return -s.slack(enter)
+	}
+	return s.slack(enter)
 }
 
 // exchange replaces tree edge leave with non-tree edge enter, updating
@@ -365,10 +377,7 @@ func (s *simplex) exchange(leave, enter int32, side []int32, sideIsTail bool) {
 	// shift the smaller side so that enter becomes tight: enter goes from
 	// the head side to the tail side, so the tail side moves up (lower
 	// ranks) or equivalently the head side moves down
-	delta := s.slack(enter)
-	if sideIsTail {
-		delta = -delta
-	}
+	delta := s.shiftToTighten(enter, sideIsTail)
 	if delta != 0 {
 		for _, v := range side {
 			s.rank[v] += delta
@@ -399,7 +408,7 @@ func (s *simplex) exchange(leave, enter int32, side []int32, sideIsTail bool) {
 // parent. Postorder numbers of a component are contiguous, and other
 // components are only shifted, so they stay consistent.
 func (s *simplex) moveSubtree(child, enter int32) {
-	a, k := s.low[child], s.lim[child]-s.low[child]+1
+	a, k := s.low[child], s.subtreeSize(child)
 	last := a + k - 1
 	inside, outside := s.tail[enter], s.head[enter]
 	if !s.inSubtree(inside, child) {
@@ -411,7 +420,7 @@ func (s *simplex) moveSubtree(child, enter int32) {
 	for s.parent[root] >= 0 {
 		root = s.other(s.parent[root], root)
 	}
-	compSize := s.lim[root] - s.low[root] + 1
+	compSize := s.subtreeSize(root)
 
 	if 2*k <= compSize {
 		// move the child subtree under outside; everything else keeps its
@@ -877,10 +886,7 @@ func (s *simplex) balance(gain func(side []int32, delta int32) float32) {
 		if enter < 0 {
 			continue
 		}
-		slack := s.slack(enter)
-		if sideIsTail {
-			slack = -slack
-		}
+		slack := s.shiftToTighten(enter, sideIsTail)
 		best, bestGain := int32(0), float32(1e-3)
 		for _, delta := range [...]int32{slack / 2, slack} {
 			if g := gain(side, delta); delta != 0 && g > bestGain {

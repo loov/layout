@@ -26,8 +26,7 @@ func AddVirtuals(graph *Graph) {
 			weight := graph.Weight(src, dst)
 			// parallel edges share the weight, keep it for the next one
 			if !slices.Contains(src.Out[di+1:], dst) {
-				delete(graph.weights, [2]ID{src.ID, dst.ID})
-				delete(graph.minlens, [2]ID{src.ID, dst.ID})
+				graph.forgetEdge(src, dst)
 			}
 
 			for rank := dst.Rank - 1; rank > src.Rank; rank-- {
