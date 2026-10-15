@@ -74,8 +74,8 @@ graphviz/fig6 nodes=0 through=0 near=30 crossings=52 shallow=0 overlaps=0 parall
 graphviz/fig6_merged nodes=0 through=0 near=34 crossings=63 shallow=0 overlaps=52 parallel=48 ends=52 shafts=0 jagged=0 bends=13 corners=150 wavy=13 back=0 labels=0 far=0 length=19700 area=605608 unbalance=1248
 graphviz/fsm nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=4 corners=26 wavy=4 back=3 labels=0 far=0 length=2164 area=175462 unbalance=278
 graphviz/fsm_merged nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=20 wavy=2 back=3 labels=0 far=0 length=2131 area=176880 unbalance=138
-graphviz/git nodes=0 through=0 near=2 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=3 corners=18 wavy=3 back=1 labels=0 far=0 length=1469 area=294093 unbalance=260
-graphviz/git_merged nodes=0 through=0 near=2 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=18 wavy=2 back=1 labels=0 far=0 length=1517 area=323820 unbalance=276
+graphviz/git nodes=0 through=0 near=3 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=14 wavy=2 back=1 labels=0 far=0 length=1299 area=282266 unbalance=244
+graphviz/git_merged nodes=0 through=0 near=3 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=1 labels=0 far=0 length=1346 area=310884 unbalance=260
 graphviz/go-package nodes=0 through=0 near=16 crossings=44 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=15 corners=122 wavy=15 back=0 labels=0 far=0 length=19070 area=775728 unbalance=2235
 graphviz/go-package_merged nodes=0 through=0 near=15 crossings=53 shallow=0 overlaps=6 parallel=6 ends=6 shafts=0 jagged=0 bends=14 corners=126 wavy=14 back=0 labels=0 far=0 length=19185 area=770068 unbalance=2330
 graphviz/grammar nodes=0 through=0 near=8 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=46 wavy=0 back=0 labels=0 far=0 length=3818 area=457660 unbalance=0

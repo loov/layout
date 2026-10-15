@@ -51,7 +51,7 @@ graphviz/ctext nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 paralle
 graphviz/dfa nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=16 wavy=0 back=10 labels=0 far=0 length=1654 area=122833 unbalance=94
 graphviz/fig6 nodes=0 through=0 near=1 crossings=52 shallow=3 overlaps=0 parallel=1 ends=7 shafts=0 jagged=1 bends=2 corners=46 wavy=1 back=0 labels=0 far=0 length=9389 area=386880 unbalance=1645
 graphviz/fsm nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=1 bends=0 corners=6 wavy=0 back=3 labels=0 far=0 length=1961 area=239094 unbalance=323
-graphviz/git nodes=0 through=0 near=0 crossings=2 shallow=2 overlaps=0 parallel=1 ends=0 shafts=2 jagged=1 bends=0 corners=11 wavy=0 back=0 labels=0 far=0 length=1357 area=209465 unbalance=185
+graphviz/git nodes=0 through=0 near=0 crossings=1 shallow=1 overlaps=0 parallel=0 ends=0 shafts=2 jagged=0 bends=0 corners=10 wavy=0 back=0 labels=0 far=0 length=1174 area=200401 unbalance=185
 graphviz/go-package nodes=0 through=0 near=0 crossings=40 shallow=1 overlaps=0 parallel=5 ends=2 shafts=0 jagged=5 bends=3 corners=47 wavy=1 back=0 labels=0 far=0 length=7501 area=310619 unbalance=1945
 graphviz/grammar nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=2 shafts=0 jagged=0 bends=0 corners=3 wavy=0 back=0 labels=0 far=0 length=2265 area=377057 unbalance=0
 graphviz/hashtable nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 labels=0 far=0 length=254 area=54096 unbalance=0

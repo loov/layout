@@ -339,6 +339,7 @@ type hierComponent struct {
 
 	clusters  map[*lcluster]*hier.Cluster
 	labelNode map[*hier.Node][]*ledge // the labels the middle virtual node of an edge carries
+	parallel  map[*ledge]int          // which of the parallel hierarchical edges an edge runs as, see build
 	flatBelow map[*lnode]Length       // room below a node for the labels of edges along its rank
 	align     hier.Align
 
@@ -382,6 +383,7 @@ func newHierComponent(graphdef *lgraph, opts Options) *hierComponent {
 		pack:      graphdef.PackEdgeEnds && graphdef.Splines == SplinesOrtho,
 		clusters:  map[*lcluster]*hier.Cluster{},
 		labelNode: map[*hier.Node][]*ledge{},
+		parallel:  map[*ledge]int{},
 		flatBelow: map[*lnode]Length{},
 	}
 	c.loopWidth = max(graphdef.NodePadding, 2*graphdef.EdgePadding)
@@ -469,7 +471,8 @@ func (c *hierComponent) build() {
 		fromField, toField string
 		fromPort, toPort   Compass
 	}
-	seen := map[ends]bool{}
+	seen := map[ends]int{} // the parallel edge of the first with those ends
+	added := map[[2]hier.ID]int{}
 	drawn := map[[2]hier.ID]bool{}
 	for _, edge := range c.graphdef.Edges {
 		from, to := c.hends(edge)
@@ -483,12 +486,15 @@ func (c *hierComponent) build() {
 			delete(c.graph.Unseen, pair)
 		}
 		k := ends{edge.From, edge.To, edge.FromField, edge.ToField, edge.FromPort, edge.ToPort}
-		if seen[k] {
+		if n, ok := seen[k]; ok {
+			c.parallel[edge] = n
 			c.graph.SetWeight(from, to, c.graph.Weight(from, to)+float32(edge.Weight))
 			c.graph.SetMinLen(from, to, max(int32(edge.MinLen), c.graph.MinLen(from, to)))
 			continue
 		}
-		seen[k] = true
+		pair := [2]hier.ID{from.ID, to.ID}
+		seen[k], c.parallel[edge] = added[pair], added[pair]
+		added[pair]++
 		if slices.Contains(from.Out, to) {
 			c.graph.AddEdge(from, to) // weighs as the first
 		} else {
@@ -558,7 +564,8 @@ func posApart(a, b *hier.Node) int {
 // hierEdge returns the hierarchical edge that edge runs as, and whether
 // it runs backward, see hier.Graph.EdgeBetween
 func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
-	return c.graph.EdgeBetween(c.hends(edge))
+	from, to := c.hends(edge)
+	return c.graph.EdgeBetween(from, to, c.parallel[edge])
 }
 
 // addClusters adds the borders of the clusters
@@ -589,17 +596,14 @@ func (c *hierComponent) addClusters() {
 func (c *hierComponent) order() {
 	hier.OrderRanksN(c.graph, c.opts.OrderIterations)
 
-	// the middle virtual node of every labeled edge carries the labels,
-	// of every edge between the same nodes
+	// the middle virtual node of every labeled edge carries its labels
 	for _, edge := range c.graphdef.Edges {
 		if edge.Label == "" || edge.loop() {
 			continue
 		}
-		for _, e := range c.graph.EdgesBetween(c.hends(edge)) {
-			if len(e.Chain) > 0 {
-				mid := e.Chain[len(e.Chain)/2]
-				c.labelNode[mid] = append(c.labelNode[mid], edge)
-			}
+		if e, _ := c.hierEdge(edge); e != nil && len(e.Chain) > 0 {
+			mid := e.Chain[len(e.Chain)/2]
+			c.labelNode[mid] = append(c.labelNode[mid], edge)
 		}
 	}
 

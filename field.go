@@ -89,38 +89,32 @@ func (c *hierComponent) fieldPorts() {
 		if edge.FromField == "" && edge.ToField == "" {
 			continue
 		}
-		top, bottom := c.hends(edge)
-		atTop, atBottom := along(edge.From, edge.FromField), along(edge.To, edge.ToField)
-		if top.Rank > bottom.Rank {
-			top, bottom, atTop, atBottom = bottom, top, atBottom, atTop
-		}
-		if top.Rank == bottom.Rank {
+		e, reversed := c.hierEdge(edge)
+		if e == nil || e.Flat {
 			continue
+		}
+		atTop, atBottom := along(edge.From, edge.FromField), along(edge.To, edge.ToField)
+		if reversed {
+			atTop, atBottom = atBottom, atTop
 		}
 
 		// the first and last steps of the chain of the edge down the
 		// ranks, through its virtual nodes
-		for _, first := range top.Out {
-			if first.ChainEnd() != bottom {
-				continue
-			}
-			last := top
-			for n := range first.Chain() {
-				last = n
-			}
-			if c.graph.Ports == nil {
-				c.graph.Ports = map[[2]hier.ID][2]float32{}
-			}
-			k := [2]hier.ID{top.ID, first.ID}
-			p := c.graph.Ports[k]
-			p[0] = atTop
-			c.graph.Ports[k] = p
-			k = [2]hier.ID{last.ID, bottom.ID}
-			p = c.graph.Ports[k]
-			p[1] = atBottom
-			c.graph.Ports[k] = p
-			break
+		first, last := e.To, e.From
+		if len(e.Chain) > 0 {
+			first, last = e.Chain[0], e.Chain[len(e.Chain)-1]
 		}
+		if c.graph.Ports == nil {
+			c.graph.Ports = map[[2]hier.ID][2]float32{}
+		}
+		k := [2]hier.ID{e.From.ID, first.ID}
+		p := c.graph.Ports[k]
+		p[0] = atTop
+		c.graph.Ports[k] = p
+		k = [2]hier.ID{last.ID, e.To.ID}
+		p = c.graph.Ports[k]
+		p[1] = atBottom
+		c.graph.Ports[k] = p
 	}
 }
 
