@@ -207,10 +207,14 @@ func junction(r rune) bool {
 	return false
 }
 
+// isCrossing reports whether r is where two lines cross, see
+// canvas.crossing
+func isCrossing(r rune) bool { return r == '╂' || r == '┿' }
+
 // verticalOrCrossing reports whether r is a vertical line, or one that a
 // horizontal line crosses
-func verticalOrCrossing(r rune) bool { return r == '│' || r == '╂' }
+func verticalOrCrossing(r rune) bool { return r == '│' || isCrossing(r) }
 
 // horizontalOrCrossing reports whether r is a horizontal line, or where it
 // crosses a vertical line
-func horizontalOrCrossing(r rune) bool { return r == '─' || r == '╂' }
+func horizontalOrCrossing(r rune) bool { return r == '─' || isCrossing(r) }

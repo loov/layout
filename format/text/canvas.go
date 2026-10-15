@@ -180,7 +180,7 @@ func (c *canvas) line(x, y int, mask uint8) {
 	p.r = glyph(p.lines, p.heavy)
 	p.fg = c.pen.ink
 	if p.crossed() && p.heavy == 0 {
-		p.r = '╂' // two edges crossing, not joining
+		p.r = c.crossing(mask, p) // two lines crossing, not joining
 	} else if r, ok := rounded[p.r]; ok && !c.pen.dashed {
 		p.r = r // bends of edges, unlike cluster frames, are round
 	}
@@ -196,6 +196,30 @@ func (c *canvas) line(x, y int, mask uint8) {
 			p.r = dashes[1]
 		}
 	}
+}
+
+// crossing returns the glyph where the line in mask crosses p, with the
+// line on top heavy: the edge across a cluster frame, else the vertical one
+func (c *canvas) crossing(mask uint8, p *cell) rune {
+	across := uint8(up | down) // the axis of the line on top
+	switch {
+	case c.pen.frame:
+		across = (up | down | left | right) &^ axisOf(mask)
+	case p.frame:
+		across = axisOf(mask)
+	}
+	if across == left|right {
+		return '┿'
+	}
+	return '╂'
+}
+
+// axisOf returns the arms along the axis of the arms in mask
+func axisOf(mask uint8) uint8 {
+	if mask&(left|right) != 0 {
+		return left | right
+	}
+	return up | down
 }
 
 // frame draws a rectangle outline through the line merge, so that edges

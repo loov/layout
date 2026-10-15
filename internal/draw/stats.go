@@ -39,8 +39,8 @@ func TextStats(content string) map[string]float64 {
 		topRight    = "╮┐╗┓"
 		bottomLeft  = "╰└╚┗"
 		bottomRight = "╯┘╝┛"
-		vertical    = "│┃║┊┋┆┇├┤┼╂┝┥┠┨┣┫╟╢╫╬"
-		horizontal  = "─━═┈┉┄┅┬┴┼╂┯┷┰┸┳┻╤╧╥╨╪╬"
+		vertical    = "│┃║┊┋┆┇├┤┼╂┿┝┥┠┨┣┫╟╢╫╬"
+		horizontal  = "─━═┈┉┄┅┬┴┼╂┿┯┷┰┸┳┻╤╧╥╨╪╬"
 		dashed      = "┊┋┆┇┈┉┄┅"
 		marks       = "▲▼◀▶↑↓←→●○"
 	)
@@ -111,7 +111,7 @@ func TextStats(content string) map[string]float64 {
 			if in(topLeft+topRight+bottomLeft+bottomRight, r) {
 				bends++
 			}
-			if r == '╂' {
+			if r == '╂' || r == '┿' {
 				crossings++
 			}
 		}

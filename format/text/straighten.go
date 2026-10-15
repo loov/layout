@@ -460,7 +460,7 @@ func (u *unjogger) markOld(in uint8, old []point) {
 				label = true
 			}
 		}
-		u.labeled, u.crossed = append(u.labeled, label), append(u.crossed, u.at(p).r == '╂')
+		u.labeled, u.crossed = append(u.labeled, label), append(u.crossed, isCrossing(u.at(p).r))
 	}
 }
 
@@ -490,7 +490,7 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 		}
 		if u.isOld(p) {
 			// a crossing on the old line stays one on the new
-			if q.r == '╂' && !isStraight(dirs[i]) {
+			if isCrossing(q.r) && !isStraight(dirs[i]) {
 				return false
 			}
 			continue
@@ -533,7 +533,7 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 		if u.isNew(p) {
 			continue
 		}
-		if q := u.at(p); q.r == '╂' {
+		if q := u.at(p); isCrossing(q.r) {
 			// the line it crossed goes on
 			q.lines = (up | down | left | right) &^ a
 			q.r = corner(q.lines)
@@ -547,7 +547,7 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 		switch {
 		case i == len(path)-1 && head != nil:
 			*q = *head
-		case q.r == '╂' || q.r != ' ' && u.oldArms(p) == 0:
+		case isCrossing(q.r) || q.r != ' ' && u.oldArms(p) == 0:
 			q.r, q.lines = '╂', up|down|left|right
 			q.setOwner(dirs[i], id)
 		default:
@@ -652,7 +652,7 @@ func (u *unjogger) slide(r, c int) (moved bool) {
 	u.oldPath, u.oldDirs = route(u.oldPath, u.oldDirs, up, down, point{c, first}, top, point{b, r}, point{b, last})
 
 	// a line that crosses none can't cross fewer
-	if !slices.ContainsFunc(u.oldPath, func(p point) bool { q := u.at(p); return q != nil && q.r == '╂' }) {
+	if !slices.ContainsFunc(u.oldPath, func(p point) bool { q := u.at(p); return q != nil && isCrossing(q.r) }) {
 		return false
 	}
 	again := false
