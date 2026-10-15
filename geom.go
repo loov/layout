@@ -213,8 +213,6 @@ func (r rect) grow(pad Length) rect {
 	return rect{r.Min.Sub(Vector{pad, pad}), r.Max.Add(Vector{pad, pad})}
 }
 
-// overlaps reports whether r and o share more than their borders, by
-// more than eps
 // centeredRect returns the rect of radius around at
 func centeredRect(at, radius Vector) rect { return rect{at.Sub(radius), at.Add(radius)} }
 
@@ -243,6 +241,8 @@ func (r rect) pathDistance(path Path) float64 {
 	return best
 }
 
+// overlaps reports whether r and o share more than their borders, by
+// more than eps
 func (r rect) overlaps(o rect, eps Length) bool {
 	return r.Min.X < o.Max.X-eps && o.Min.X < r.Max.X-eps && r.Min.Y < o.Max.Y-eps && o.Min.Y < r.Max.Y-eps
 }

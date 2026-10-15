@@ -49,7 +49,7 @@ var (
 func infof(format string, args ...any) {
 	if *verbose {
 		fmt.Fprintf(os.Stderr, format, args...)
-		if !strings.HasSuffix("\n", format) {
+		if !strings.HasSuffix(format, "\n") {
 			fmt.Fprint(os.Stderr, "\n")
 		}
 	}
@@ -57,7 +57,7 @@ func infof(format string, args ...any) {
 
 func errorf(format string, args ...any) {
 	fmt.Fprintf(os.Stderr, format, args...)
-	if !strings.HasSuffix("\n", format) {
+	if !strings.HasSuffix(format, "\n") {
 		fmt.Fprint(os.Stderr, "\n")
 	}
 }
