@@ -274,15 +274,15 @@ const DASHED = {
 const ROUND = { "╭": ["d", "r"], "╮": ["d", "l"], "╰": ["u", "r"], "╯": ["u", "l"] };
 
 // cellPaths returns the svg path data of the line character ch in the
-// cell at column x and row y, with its stroke width, or null when it is
-// not one; a cell is 1 unit wide and tall
+// cell at column x and row y, as pairs of path data and stroke width, or
+// null when it is not one; a cell is 1 unit wide and tall
 function cellPaths(ch, x, y) {
 	const line = (x0, y0, x1, y1) => `M${x + x0} ${y + y0}L${x + x1} ${y + y1}`;
-	if (STROKES[ch]) return [STROKES[ch].map(p => "M" + p.map((v, i) => i % 2 ? y + v : x + v).join(" ").replace(/(\S+ \S+) /g, "$1L")).join(""), 1];
+	if (STROKES[ch]) return [[STROKES[ch].map(p => "M" + p.map((v, i) => i % 2 ? y + v : x + v).join(" ").replace(/(\S+ \S+) /g, "$1L")).join(""), 1]];
 	if (ROUND[ch]) {
 		const [v, h] = ROUND[ch];
 		const vy = v === "u" ? 0 : 1, hx = h === "l" ? 0 : 1;
-		return [`M${x + 0.5} ${y + vy}Q${x + 0.5} ${y + 0.5} ${x + hx} ${y + 0.5}`, 1];
+		return [[`M${x + 0.5} ${y + vy}Q${x + 0.5} ${y + 0.5} ${x + hx} ${y + 0.5}`, 1]];
 	}
 	if (DASHED[ch]) {
 		const [vertical, heavy] = DASHED[ch];
@@ -291,7 +291,7 @@ function cellPaths(ch, x, y) {
 			const a = i / 4 + 0.05, b = i / 4 + 0.2;
 			d += vertical ? line(0.5, a, 0.5, b) : line(a, 0.5, b, 0.5);
 		}
-		return [d, heavy ? 2 : 1];
+		return [[d, heavy ? 2 : 1]];
 	}
 	let arms = DOUBLE[ch];
 	const i = ARMS.indexOf(ch);
@@ -299,20 +299,22 @@ function cellPaths(ch, x, y) {
 	if (!arms) return null;
 	// a lone arm draws across the cell, as text does, see glyph
 	const ends = [[0.5, 0], [0.5, 1], [0, 0.5], [1, 0.5]];
-	let d = "", heavy = false;
+	// light and double arms draw 1 wide, heavy ones 2, as in ╂ and ┿
+	let light = "", heavy = "";
 	arms.forEach((w, k) => {
 		if (!w) return;
 		const [ex, ey] = ends[k];
 		if (w === 3) {
 			// two lines either side of the middle
 			const o = 0.15, along = k < 2;
-			d += along ? line(0.5 - o, 0.5, 0.5 - o, ey) + line(0.5 + o, 0.5, 0.5 + o, ey) : line(0.5, 0.5 - o, ex, 0.5 - o) + line(0.5, 0.5 + o, ex, 0.5 + o);
-			return;
+			light += along ? line(0.5 - o, 0.5, 0.5 - o, ey) + line(0.5 + o, 0.5, 0.5 + o, ey) : line(0.5, 0.5 - o, ex, 0.5 - o) + line(0.5, 0.5 + o, ex, 0.5 + o);
+		} else if (w === 2) {
+			heavy += line(0.5, 0.5, ex, ey);
+		} else {
+			light += line(0.5, 0.5, ex, ey);
 		}
-		heavy = heavy || w === 2;
-		d += line(0.5, 0.5, ex, ey);
 	});
-	return [d, heavy ? 2 : 1];
+	return [[light, 1], [heavy, 2]].filter(([d]) => d);
 }
 
 // lines draws the line characters of a text drawing itself, as terminals
@@ -365,9 +367,10 @@ function lines(pre) {
 	const rows = (pre.textContent.match(/\n/g) || []).length + (pre.textContent.endsWith("\n") ? 0 : 1);
 	const groups = new Map(); // by color and stroke width
 	for (const [cx, cy, ch, color] of cells) {
-		const [d, width] = cellPaths(ch, cx, cy);
-		const key = color + "|" + width;
-		groups.set(key, (groups.get(key) || "") + d);
+		for (const [d, width] of cellPaths(ch, cx, cy)) {
+			const key = color + "|" + width;
+			groups.set(key, (groups.get(key) || "") + d);
+		}
 	}
 	const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 	svg.setAttribute("class", "lines");
@@ -940,8 +943,8 @@ function textStats(text) {
 	const at = (y, x) => grid[y]?.[x] ?? " ";
 	const has = (set, ch) => ch !== "" && set.includes(ch);
 	const topLeft = "╭┌╔┏", topRight = "╮┐╗┓", bottomLeft = "╰└╚┗", bottomRight = "╯┘╝┛";
-	const vertical = "│┃║┊┋┆┇├┤┼╂┝┥┠┨┣┫╟╢╫╬";
-	const horizontal = "─━═┈┉┄┅┬┴┼╂┯┷┰┸┳┻╤╧╥╨╪╬";
+	const vertical = "│┃║┊┋┆┇├┤┼╂┿┝┥┠┨┣┫╟╢╫╬";
+	const horizontal = "─━═┈┉┄┅┬┴┼╂┿┯┷┰┸┳┻╤╧╥╨╪╬";
 	const dashed = "┊┋┆┇┈┉┄┅", marks = "▲▼◀▶↑↓←→●○";
 	const box = new Set();
 	grid.forEach((row, y) => row.forEach((ch, x) => {
@@ -968,7 +971,7 @@ function textStats(text) {
 		if (!line && !has(marks, ch)) return;
 		length++;
 		if (has(topLeft + topRight + bottomLeft + bottomRight, ch)) corners++;
-		if (ch === "╂") crossings++;
+		if (ch === "╂" || ch === "┿") crossings++;
 	}));
 	return { corners, length, crossings };
 }
@@ -1196,7 +1199,7 @@ function textEditor(change) {
 	const [U, D, L, R] = [1, 2, 4, 8];
 	const lineArms = {
 		"─": L | R, "│": U | D, "╭": D | R, "╮": D | L, "╰": U | R, "╯": U | L, "┌": D | R, "┐": D | L, "└": U | R, "┘": U | L,
-		"├": U | D | R, "┤": U | D | L, "┬": D | L | R, "┴": U | L | R, "┼": U | D | L | R, "╂": U | D | L | R,
+		"├": U | D | R, "┤": U | D | L, "┬": D | L | R, "┴": U | L | R, "┼": U | D | L | R, "╂": U | D | L | R, "┿": U | D | L | R,
 		"▲": D, "▼": U, "◀": R, "▶": L, "↑": D, "↓": U, "←": R, "→": L, "┈": L | R, "┊": U | D,
 	};
 	const lineGlyph = {
@@ -1272,7 +1275,7 @@ function textEditor(change) {
 		let prev = j.from, q = j.to;
 		for (let n = 0; n < 1000; n++) {
 			const ch = grid[q.r]?.[q.c], back = toward(q, prev), port = "●○".includes(ch);
-			const arms = "┼╂".includes(ch) || port ? U | D | L | R : lineArms[ch] || 0;
+			const arms = "┼╂┿".includes(ch) || port ? U | D | L | R : lineArms[ch] || 0;
 			if (!(arms & back)) break;
 			const plain = lineGlyph[arms] === ch && [U | D, L | R, D | R, D | L, U | R, U | L].includes(arms);
 			if (!inside(q, b)) {
