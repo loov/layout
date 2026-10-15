@@ -27,14 +27,7 @@ func OrderRanksChains(graph *Graph) (moves int) {
 	}
 
 	// crossings between the ranks around the chain
-	crossings := func(chain Nodes) float32 {
-		lo, hi := max(chain[0].Rank-1, 0), min(chain[len(chain)-1].Rank+1, len(graph.ByRank)-1)
-		total := float32(0)
-		for r := lo + 1; r <= hi; r++ {
-			total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
-		}
-		return total
-	}
+	crossings := func(chain Nodes) float32 { return graph.layerCrossings(graph.ranksAround(chain)) }
 
 	// swap exchanges every chain node with its neighbor dir away
 	swap := func(chain Nodes, dir int) {

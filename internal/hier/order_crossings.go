@@ -103,17 +103,36 @@ func (layer Nodes) assignPos() {
 // and the nodes flat edges pass over
 func (graph *Graph) TotalCrossings() float32 {
 	graph.assignPos()
-	total := float32(0)
-	for r := 1; r < len(graph.ByRank); r++ {
-		total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
-	}
+	total := graph.layerCrossings(0, len(graph.ByRank)-1)
 
 	// a flat edge crosses every node it passes over; unweighted, so with
 	// heavy edges elsewhere it hardly counts
 	for _, edge := range graph.Flat {
-		total += float32(max(edge[0].Pos, edge[1].Pos) - min(edge[0].Pos, edge[1].Pos) - 1)
+		total += flatPassOver(edge)
 	}
 	return total
+}
+
+// layerCrossings counts the crossings between the ranks lo to hi
+func (graph *Graph) layerCrossings(lo, hi int) float32 {
+	total := float32(0)
+	for r := lo + 1; r <= hi; r++ {
+		total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
+	}
+	return total
+}
+
+// ranksAround returns the ranks of column, a run of nodes one per rank top
+// down, and the ranks next to it
+func (graph *Graph) ranksAround(column Nodes) (lo, hi int) {
+	return max(column[0].Rank-1, 0), min(column[len(column)-1].Rank+1, len(graph.ByRank)-1)
+}
+
+// flatPassOver returns how many nodes the flat edge passes over; it
+// crosses each of them, unweighted, so with heavy edges elsewhere it
+// hardly counts
+func flatPassOver(edge [2]*Node) float32 {
+	return float32(max(edge[0].Pos, edge[1].Pos) - min(edge[0].Pos, edge[1].Pos) - 1)
 }
 
 // bilayerCrossings counts weighted crossings between two adjacent layers in
@@ -202,11 +221,7 @@ func (graph *Graph) TotalEdgeLength() float32 {
 	total := float32(0)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
-			d := float32(src.Pos - dst.Pos)
-			if d < 0 {
-				d = -d
-			}
-			total += graph.Weight(src, dst) * d
+			total += graph.Weight(src, dst) * abs(float32(src.Pos-dst.Pos))
 		}
 	}
 
@@ -217,19 +232,11 @@ func (graph *Graph) TotalEdgeLength() float32 {
 func (graph *Graph) edgeLength(node *Node, pos int) float32 {
 	total := float32(0)
 	for _, src := range node.In {
-		d := float32(src.Pos - pos)
-		if d < 0 {
-			d = -d
-		}
-		total += graph.Weight(src, node) * d
+		total += graph.Weight(src, node) * abs(float32(src.Pos-pos))
 	}
 
 	for _, dst := range node.Out {
-		d := float32(dst.Pos - pos)
-		if d < 0 {
-			d = -d
-		}
-		total += graph.Weight(node, dst) * d
+		total += graph.Weight(node, dst) * abs(float32(dst.Pos-pos))
 	}
 
 	return total

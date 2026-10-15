@@ -180,20 +180,13 @@ func (m *blockMover) move(block Nodes) bool {
 		k = m.from[i][k]
 	}
 
-	lo, hi := max(block[0].Rank-1, 0), min(block[last].Rank+1, len(graph.ByRank)-1)
+	lo, hi := graph.ranksAround(block)
 	before := graph.rangeCrossings(lo, hi)
 	m.before = resize(m.before, n)
 	for i, b := range block {
 		layer := graph.ByRank[b.Rank]
 		m.before[i] = append(m.before[i][:0], layer...)
-		// slide the nodes between b and its slot over by one
-		at, to := b.Pos, m.slot[i]
-		if to < at {
-			copy(layer[to+1:at+1], layer[to:at])
-		} else {
-			copy(layer[at:to], layer[at+1:to+1])
-		}
-		layer[to] = b
+		move(layer, b.Pos, m.slot[i])
 		layer.assignPos()
 	}
 
@@ -333,13 +326,10 @@ func (graph *Graph) blockEdgeCrossings(b, c *Node) float32 {
 // rangeCrossings counts the crossings between the ranks lo to hi, and the
 // nodes the flat edges in them pass over
 func (graph *Graph) rangeCrossings(lo, hi int) float32 {
-	total := float32(0)
-	for r := lo + 1; r <= hi; r++ {
-		total += graph.bilayerCrossings(graph.ByRank[r-1], graph.ByRank[r])
-	}
+	total := graph.layerCrossings(lo, hi)
 	for _, edge := range graph.Flat {
 		if edge[0].Rank >= lo && edge[0].Rank <= hi {
-			total += float32(max(edge[0].Pos, edge[1].Pos) - min(edge[0].Pos, edge[1].Pos) - 1)
+			total += flatPassOver(edge)
 		}
 	}
 	return total

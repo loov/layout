@@ -50,7 +50,7 @@ func OrderRanksSift(graph *Graph) (moves int) {
 					}
 				}
 				if best != i {
-					Nodes(nil).moveInt(order, i, best)
+					move(order, i, best)
 					moves++
 					improved = true
 				}
@@ -71,13 +71,14 @@ func OrderRanksSift(graph *Graph) (moves int) {
 	return moves
 }
 
-// moveInt moves order[from] to index to, shifting the others
-func (Nodes) moveInt(order []int, from, to int) {
-	v := order[from]
+// move moves s[from] to index to, shifting the elements between them over
+// by one
+func move[T any](s []T, from, to int) {
+	v := s[from]
 	if from < to {
-		copy(order[from:to], order[from+1:to+1])
+		copy(s[from:to], s[from+1:to+1])
 	} else {
-		copy(order[to+1:from+1], order[to:from])
+		copy(s[to+1:from+1], s[to:from])
 	}
-	order[to] = v
+	s[to] = v
 }
