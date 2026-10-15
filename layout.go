@@ -280,7 +280,12 @@ func components(graphdef *lgraph) []*lgraph {
 		graph := byRoot[root]
 		if graph == nil {
 			part := *graphdef
-			part.Nodes, part.Edges, part.SameRank, part.MinRank, part.MaxRank, part.Clusters = nil, nil, nil, nil, nil, nil
+			part.Nodes = nil
+			part.Edges = nil
+			part.SameRank = nil
+			part.MinRank = nil
+			part.MaxRank = nil
+			part.Clusters = nil
 			graph = &part
 			byRoot[root] = graph
 			result = append(result, graph)
@@ -493,7 +498,8 @@ func (c *hierComponent) build() {
 			continue
 		}
 		pair := [2]hier.ID{from.ID, to.ID}
-		seen[k], c.parallel[edge] = added[pair], added[pair]
+		seen[k] = added[pair]
+		c.parallel[edge] = added[pair]
 		added[pair]++
 		if slices.Contains(from.Out, to) {
 			c.graph.AddEdge(from, to) // weighs as the first

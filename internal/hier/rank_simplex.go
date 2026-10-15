@@ -62,7 +62,8 @@ func RankNetworkSimplex(graph *Graph) {
 		edges               []rankEdge
 	)
 	contract := func() {
-		verts, index = 0, make([]int, graph.NodeCount())
+		verts = 0
+		index = make([]int, graph.NodeCount())
 		for i := range index {
 			index[i] = -1
 		}
@@ -162,7 +163,8 @@ func flatComponents(n int, edges []rankEdge) (comp []int32, count int) {
 	var visit func(v int32)
 	visit = func(v int32) {
 		next++
-		order[v], low[v] = next, next
+		order[v] = next
+		low[v] = next
 		stack = append(stack, v)
 		for _, w := range out[v] {
 			if order[w] == 0 {
@@ -408,7 +410,8 @@ func (s *simplex) exchange(leave, enter int32, side []int32, sideIsTail bool) {
 // parent. Postorder numbers of a component are contiguous, and other
 // components are only shifted, so they stay consistent.
 func (s *simplex) moveSubtree(child, enter int32) {
-	a, k := s.low[child], s.subtreeSize(child)
+	a := s.low[child]
+	k := s.subtreeSize(child)
 	last := a + k - 1
 	inside, outside := s.tail[enter], s.head[enter]
 	if !s.inSubtree(inside, child) {

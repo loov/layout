@@ -162,7 +162,8 @@ func TestNonFiniteNumbersAreIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 	g := graphs[0]
-	a, e := g.Node("a"), g.Edges[0]
+	a := g.Node("a")
+	e := g.Edges[0]
 	for name, v := range map[string]layout.Length{
 		"nodesep": g.NodePadding, "ranksep": g.RowPadding,
 		"width": a.MinSize.X, "height": a.MinSize.Y,

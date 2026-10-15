@@ -39,7 +39,10 @@ func TestLayoutLeavesGraphUnchanged(t *testing.T) {
 			clusters = append(clusters, *cluster)
 		}
 		settings := *graph
-		settings.Nodes, settings.Edges, settings.Clusters, settings.NodeByID = nil, nil, nil, nil
+		settings.Nodes = nil
+		settings.Edges = nil
+		settings.Clusters = nil
+		settings.NodeByID = nil
 		return []any{settings, nodes, edges, clusters}
 	}
 

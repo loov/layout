@@ -66,9 +66,11 @@ func checkAttached(t *testing.T, drawing string) {
 			case '▲':
 				from = at(y+1, x)
 			case '▶':
-				from, across = at(y, x-1), "│║┃"
+				from = at(y, x-1)
+				across = "│║┃"
 			case '◀':
-				from, across = at(y, x+1), "│║┃"
+				from = at(y, x+1)
+				across = "│║┃"
 			}
 			if from != 0 && strings.ContainsRune(across, from) {
 				t.Errorf("%d:%d: arrowhead out of %q:\n%s", y+1, x+1, from, drawing)

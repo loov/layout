@@ -93,7 +93,9 @@ func newCanvas(l *layout.Layout, safe bool) *canvas {
 		label, x, _ := c.edgeLabel(i)
 		c.w = max(c.w, x+draw.TextColumns(label)+1)
 	}
-	c.drawn, c.nodes, c.loops = map[*layout.Edge]edgeID{}, map[*layout.Node]nodeID{}, map[*layout.Node]int{}
+	c.drawn = map[*layout.Edge]edgeID{}
+	c.nodes = map[*layout.Node]nodeID{}
+	c.loops = map[*layout.Node]int{}
 	c.owners = []edgeID{0}
 	for i, node := range graph.Nodes {
 		c.nodes[node] = nodeID(i + 1)
@@ -154,7 +156,11 @@ func (c *canvas) set(x, y int, r rune) { c.put(x, y, r, c.pen.ink) }
 func (c *canvas) put(x, y int, r rune, fg colorID) {
 	if p := c.at(x, y); p != nil {
 		c.unpair(x, y, r != covered)
-		p.r, p.fg, p.lines, p.heavy, p.style = r, fg, 0, 0, 0
+		p.r = r
+		p.fg = fg
+		p.lines = 0
+		p.heavy = 0
+		p.style = 0
 	}
 }
 

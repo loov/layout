@@ -27,7 +27,8 @@ func OrderRanksN(graph *Graph, iterations int) {
 	var best []Nodes
 	var bestCrossings, bestLength float32
 	improves := func(first bool) bool {
-		crossings, length := graph.TotalCrossings(), graph.TotalEdgeLength()
+		crossings := graph.TotalCrossings()
+		length := graph.TotalEdgeLength()
 		if first || crossings < bestCrossings || (crossings == bestCrossings && length < bestLength) {
 			best, bestCrossings, bestLength = saveOrder(graph), crossings, length
 			return true
@@ -312,7 +313,8 @@ func (flat *flatOrder) fix(layer Nodes) {
 	// ranks with flat edges get slow
 	for len(sorted) < len(layer) {
 		// on a cycle of flat edges no node is ready; take the leftmost
-		pick, fallback := -1, -1
+		pick := -1
+		fallback := -1
 		for i, node := range layer {
 			if placed[i] {
 				continue

@@ -211,7 +211,10 @@ func (c *canvas) atDot(cells []point, i, j, k int, node *layout.Node) {
 	if l := k + k - j; l >= 0 && l < len(cells) {
 		before := cells[l]
 		for axis := range 2 {
-			line, b, n, t := next.at(1-axis), before.at(axis), next.at(axis), turn.at(axis)
+			line := next.at(1 - axis)
+			b := before.at(axis)
+			n := next.at(axis)
+			t := turn.at(axis)
 			if before.at(1-axis) == line && turn.at(1-axis) == line && !between(n, b, t) {
 				return
 			}

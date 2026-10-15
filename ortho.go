@@ -259,12 +259,14 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	want := make([]Length, len(list))
 	weight := make([]float64, len(list))
 	for i, e := range list {
-		want[i], weight[i] = slot(i), 1
+		want[i] = slot(i)
+		weight[i] = 1
 		if graph.ForText && parallel[unorderedNodes(e.edge)] > 1 {
 			continue
 		}
 		if (e.towards-e.x).Abs() < 0.01 && e.towards >= lo && e.towards <= hi && len(followers[e.edge]) == 0 {
-			want[i], weight[i] = e.towards, 1e9
+			want[i] = e.towards
+			weight[i] = 1e9
 		}
 	}
 
@@ -288,7 +290,8 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 				best = j
 			}
 		}
-		at[i], taken[best] = best, true
+		at[i] = best
+		taken[best] = true
 	}
 
 	j := 0
@@ -297,7 +300,8 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 			for taken[j] {
 				j++
 			}
-			at[i], taken[j] = j, true
+			at[i] = j
+			taken[j] = true
 			if weight[i] == 1 {
 				want[i] = slot(j)
 			}
@@ -309,8 +313,12 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 		order[at[i]] = i
 	}
 	o := &graph.ortho
-	o.list, o.want, o.weight = permute(o.list, list, order), permute(o.want, want, order), permute(o.weight, weight, order)
-	list, want, weight = o.list, o.want, o.weight
+	o.list = permute(o.list, list, order)
+	o.want = permute(o.want, want, order)
+	o.weight = permute(o.weight, weight, order)
+	list = o.list
+	want = o.want
+	weight = o.weight
 	o.slots = separate(o.slots, want, weight, spacing, lo, hi)
 	xs := o.slots
 	for i, e := range list {
@@ -398,7 +406,8 @@ func channelJogs(graph *lgraph, rows rowSpans) [][]*jog {
 
 	block := slices.Grow(graph.ortho.block[:0], segments)
 	xs := slices.Grow(graph.ortho.xs[:0], 2*segments)
-	graph.ortho.block, graph.ortho.xs = block, xs
+	graph.ortho.block = block
+	graph.ortho.xs = xs
 	for _, edge := range graph.Edges {
 		if !routed(edge) {
 			continue
@@ -531,7 +540,8 @@ func splitOpposite(jogs []*jog) []*jog {
 					edge: r.edge, index: r.index, x0: mid, x1: r.x1, xin: mid, split: true,
 					ins: []Length{mid}, outs: r.outs,
 				}
-				r.x1, r.outs = mid, []Length{mid}
+				r.x1 = mid
+				r.outs = []Length{mid}
 				jogs = append(jogs, r.next)
 				break
 			}
@@ -614,7 +624,8 @@ func (o *jogOrder) near(xs, ys []Length) bool {
 // unless they have a second step. The exits are sorted, so that a jog
 // looks only at those around where it enters.
 func (o *jogOrder) findAbove() {
-	jogs, pad := o.jogs, o.pad
+	jogs := o.jogs
+	pad := o.pad
 	n := len(jogs)
 	over := slices.Grow((*o.buf)[:0], n*n)[:n*n]
 	*o.buf = over
@@ -700,7 +711,8 @@ func (o *jogOrder) splitCycles() {
 		second := &jog{edge: widest.edge, index: widest.index, xin: mid, split: true, ins: []Length{mid}, outs: widest.outs}
 		second.x0, second.x1 = span(widest.outs)
 		widest.x0, widest.x1 = span(widest.ins)
-		widest.next, widest.outs = second, []Length{mid}
+		widest.next = second
+		widest.outs = []Length{mid}
 		o.jogs = append(o.jogs, second)
 		o.findAbove()
 	}
@@ -921,7 +933,8 @@ func siftOrder[J any](order []J, cost func(above, below J) int, fixed func(above
 				}
 			}
 			if best != i {
-				order, moved = slices.Insert(rest, best, j), true
+				order = slices.Insert(rest, best, j)
+				moved = true
 			}
 		}
 
@@ -944,7 +957,8 @@ func jogCycle[J comparable](jogs []J, above func(i, k int) bool) []J {
 
 	// by index in jogs, which holds each jog once
 	state := make([]uint8, len(jogs))
-	stack, cycle := make([]J, 0, len(jogs)), []J(nil)
+	stack := make([]J, 0, len(jogs))
+	cycle := []J(nil)
 	var visit func(i int) bool
 	visit = func(i int) bool {
 		j := jogs[i]
@@ -1156,9 +1170,11 @@ func offFrames(graph *lgraph, crossed func(x0, x1 Length) bool, top, bottom Leng
 			switch {
 			case frame <= top || bottom <= frame:
 			case frame > mid:
-				bottom, lower = min(bottom, frame), true
+				bottom = min(bottom, frame)
+				lower = true
 			default:
-				top, upper = max(top, frame), true
+				top = max(top, frame)
+				upper = true
 			}
 		}
 	}

@@ -66,9 +66,12 @@ func TestStraightLineRoutingPreservesExplicitPorts(t *testing.T) {
 	for _, dir := range []layout.RankDir{layout.TopToBottom, layout.LeftToRight, layout.BottomToTop, layout.RightToLeft} {
 		t.Run(string(dir), func(t *testing.T) {
 			g := layout.NewDigraph()
-			g.RankDir, g.Splines = dir, layout.SplinesLine
+			g.RankDir = dir
+			g.Splines = layout.SplinesLine
 			e := g.Edge("a", "b")
-			e.MinLen, e.FromPort, e.ToPort = 2, layout.West, layout.East
+			e.MinLen = 2
+			e.FromPort = layout.West
+			e.ToPort = layout.East
 			l, err := layout.Hierarchical(g, layout.Options{})
 			if err != nil {
 				t.Fatal(err)
@@ -116,7 +119,8 @@ func TestSelfLoopsHonorPortsAndAvoidTheNode(t *testing.T) {
 					t.Fatal(err)
 				}
 				name := string(dir) + "/" + string(from) + "-" + string(to)
-				n, path := l.Node(e.From), l.Edge(e).Path
+				n := l.Node(e.From)
+				path := l.Edge(e).Path
 				if want := n.CompassPoint(from); from != layout.CompassAuto && path[0] != want {
 					t.Errorf("%s: start %v, want %v", name, path[0], want)
 				}
@@ -148,7 +152,8 @@ func TestSelfLoopLabelFollowsPortedLoop(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	path, node := l.Edge(e), l.Node(e.From)
+	path := l.Edge(e)
+	node := l.Node(e.From)
 	if path.LabelCenter.X+path.LabelSize.X/2 > node.Left() {
 		t.Fatalf("label at %v is not left of the node at %v", path.LabelCenter, node.Center)
 	}

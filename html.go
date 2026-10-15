@@ -7,7 +7,8 @@ import "github.com/loov/layout/internal/draw"
 // draw.TableRecord; the writers draw other HTML-like labels as they are
 func tableRecord(graph *lgraph, node *lnode) {
 	if rec, ok := draw.TableRecord(node.DefaultLabel(), graph.RankDir.Sideways()); ok {
-		node.Label, node.Shape = rec, Record
+		node.Label = rec
+		node.Shape = Record
 	}
 }
 

@@ -67,7 +67,10 @@ func shortenRuns(n int, cons []constraint, lower, reach, d []int) []int {
 	var tail, head, minlen []int32
 	var weight []float32
 	add := func(a, b int32, min int, w float32) {
-		tail, head, minlen, weight = append(tail, a), append(head, b), append(minlen, int32(min)), append(weight, w)
+		tail = append(tail, a)
+		head = append(head, b)
+		minlen = append(minlen, int32(min))
+		weight = append(weight, w)
 	}
 	for _, c := range cons {
 		w := float32(0)

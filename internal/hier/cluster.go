@@ -161,7 +161,8 @@ func orderClusters(graph *Graph) {
 	// and below, which decides on which side of a cluster a node at the
 	// cluster's mean position goes
 	bary := func(node *Node) float64 {
-		sum, n := 0.0, 0
+		sum := 0.0
+		n := 0
 		for _, adj := range [2]Nodes{node.In, node.Out} {
 			for _, other := range adj {
 				sum += float64(other.Pos)
@@ -179,8 +180,10 @@ func orderClusters(graph *Graph) {
 		// cluster key: mean position and neighbor position of its nodes in
 		// this layer, for the cluster and each enclosing cluster; borders
 		// only count for the position
-		sum, near := map[*Cluster]float64{}, map[*Cluster]float64{}
-		count, nearCount := map[*Cluster]int{}, map[*Cluster]int{}
+		sum := map[*Cluster]float64{}
+		near := map[*Cluster]float64{}
+		count := map[*Cluster]int{}
+		nearCount := map[*Cluster]int{}
 		for _, node := range layer {
 			for c := node.Cluster; c != nil; c = c.Parent {
 				sum[c] += float64(node.Pos)
@@ -259,7 +262,8 @@ func AlignClusterBorders(graph *Graph) {
 	stuck := map[*Cluster]bool{}
 	for {
 		for _, node := range graph.Nodes {
-			class[node.ID], target[node.ID] = node.ID, node.Center.X
+			class[node.ID] = node.ID
+			target[node.ID] = node.Center.X
 		}
 		gaps := make([][]gap, n)
 		for _, cluster := range graph.Clusters {
@@ -314,7 +318,8 @@ func AlignClusterBorders(graph *Graph) {
 		cyclic := false
 		for _, cluster := range graph.Clusters {
 			if !stuck[cluster] && len(cluster.Left) > 0 && (indeg[cluster.Left[0].ID] > 0 || indeg[cluster.Right[0].ID] > 0) {
-				stuck[cluster], cyclic = true, true
+				stuck[cluster] = true
+				cyclic = true
 			}
 		}
 		if cyclic {

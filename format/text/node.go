@@ -59,7 +59,8 @@ func layoutRecord(graph *layout.Graph, node *layout.Node, box layout.NodeBox) *d
 
 // clusterBox returns the cells of the frame of the cluster at index i
 func (c *canvas) clusterBox(i int) cellBox {
-	cluster, box := c.l.Graph.Clusters[i], c.l.Clusters[i]
+	cluster := c.l.Graph.Clusters[i]
+	box := c.l.Clusters[i]
 	x0, y0 := c.col(box.TopLeft.X), c.row(box.TopLeft.Y)
 	x1, y1 := c.col(box.BottomRight.X), c.row(box.BottomRight.Y)
 	if cluster.Label != "" {
@@ -220,9 +221,12 @@ func (c *canvas) evenLabel(node *layout.Node, x0, y0, x1, y1 int) (int, int) {
 	for _, ends := range [][]sideEnd{top, bottom} {
 		slices.SortFunc(ends, func(a, b sideEnd) int { return cmp.Compare(a.exact, b.exact) })
 		cells := make([]int, len(ends))
-		exact, fixed := make([]float64, len(ends)), make([]bool, len(ends))
+		exact := make([]float64, len(ends))
+		fixed := make([]bool, len(ends))
 		for n, e := range ends {
-			cells[n], exact[n], fixed[n] = int(e.exact+0.5), e.exact, e.straight
+			cells[n] = int(e.exact + 0.5)
+			exact[n] = e.exact
+			fixed[n] = e.straight
 		}
 		packEnds(cells, exact, fixed)
 		for _, x := range cells {
@@ -259,7 +263,8 @@ func (c *canvas) drawNode(node *layout.Node) {
 			c.set(x0, y0, '●')
 		}
 		if p := c.at(x0, y0); p != nil {
-			p.solid, p.node = true, c.nodes[node]
+			p.solid = true
+			p.node = c.nodes[node]
 		}
 		c.hold(x0, y0) // no line through the blank frame
 		return
@@ -274,7 +279,8 @@ func (c *canvas) drawNode(node *layout.Node) {
 		// edges end, drawn up to its text
 		frame := !b.inside(p)
 		if q := c.at(p.X, p.Y); q != nil && !(frame && box.Shape == layout.None && !node.Invisible) {
-			q.solid, q.node = true, c.nodes[node]
+			q.solid = true
+			q.node = c.nodes[node]
 		}
 		if !frame {
 			c.hold(p.X, p.Y) // blanks inside a box are part of it

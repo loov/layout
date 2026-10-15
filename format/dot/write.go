@@ -50,7 +50,8 @@ func writeGraph(w io.Writer, l *layout.Layout) error {
 	kind := "graph"
 	arrow := "--"
 	if graph.Directed {
-		kind, arrow = "digraph", "->"
+		kind = "digraph"
+		arrow = "->"
 	}
 	if graph.ID != "" {
 		write("%s %s {\n", kind, quote(graph.ID))

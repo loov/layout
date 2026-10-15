@@ -55,7 +55,9 @@ func TestRankDirDuplicateEdge(t *testing.T) {
 			return p.X > node.Left()-tolerance && p.X < node.Right()+tolerance &&
 				p.Y > node.Top()-tolerance && p.Y < node.Bottom()+tolerance
 		}
-		from, to, path := l.Node(edge.From), l.Node(edge.To), l.Edge(edge)
+		from := l.Node(edge.From)
+		to := l.Node(edge.To)
+		path := l.Edge(edge)
 		if !inside(from, path.Path[0]) || !inside(to, path.Path[len(path.Path)-1]) {
 			t.Errorf("%v: path %v does not connect %v at %v and %v at %v", dir, path.Path, edge.From, from.Center, edge.To, to.Center)
 		}

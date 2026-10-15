@@ -169,7 +169,8 @@ func pairCrossings(a, b []segment) float32 {
 func TestCrossingsBruteForce(t *testing.T) {
 	rng := rand.New(rand.NewPCG(3, 4))
 	for iter := range 2000 {
-		weights, ports := iter%2 == 1, iter%4 >= 2
+		weights := iter%2 == 1
+		ports := iter%4 >= 2
 		graph := randomLayers(rng, weights, ports)
 		port := func(src, dst *Node) [2]float32 { return graph.Ports[[2]ID{src.ID, dst.ID}] }
 
@@ -220,16 +221,20 @@ func TestCrossingsBruteForce(t *testing.T) {
 		// the edges of node to the rank above and below, with node at x
 		ends := func(node *Node, x float32, plain bool) (in, out []segment) {
 			for _, src := range node.In {
-				p, w := port(src, node), graph.Weight(src, node)
+				p := port(src, node)
+				w := graph.Weight(src, node)
 				if plain {
-					p, w = [2]float32{}, 1
+					p = [2]float32{}
+					w = 1
 				}
 				in = append(in, segment{float32(src.Pos) + p[0], x + p[1], w})
 			}
 			for _, dst := range node.Out {
-				p, w := port(node, dst), graph.Weight(node, dst)
+				p := port(node, dst)
+				w := graph.Weight(node, dst)
 				if plain {
-					p, w = [2]float32{}, 1
+					p = [2]float32{}
+					w = 1
 				}
 				out = append(out, segment{x + p[0], float32(dst.Pos) + p[1], w})
 			}

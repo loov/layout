@@ -23,7 +23,8 @@ func TestEmptyNodeLabel(t *testing.T) {
 		t.Fatal(err)
 	}
 	graph := graphs[0]
-	blank, plain := graph.Node("blank_node"), graph.Node("plain_node")
+	blank := graph.Node("blank_node")
+	plain := graph.Node("plain_node")
 	if got := blank.DefaultLabel(); got != "" {
 		t.Errorf("label=\"\" gives label %q", got)
 	}

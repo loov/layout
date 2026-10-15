@@ -123,7 +123,8 @@ func compact(l *Layout, grid compactGrid) {
 		lo, hi := l.Bounds()
 		return (hi.X - lo.X) * (hi.Y - lo.Y)
 	}
-	best, base := area(), defectsOf(l)
+	best := area()
+	base := defectsOf(l)
 
 	// try reports whether jogging along x, or y with flip, at the runs
 	// that hold the width pays
@@ -142,8 +143,11 @@ func compact(l *Layout, grid compactGrid) {
 		}
 		simplify()
 		settle()
-		if a, d := area(), defectsOf(l); a < best && !d.worse(base) {
-			best, base = a, d
+		a := area()
+		d := defectsOf(l)
+		if a < best && !d.worse(base) {
+			best = a
+			base = d
 			return true
 		}
 		restoreLayout(l, saved)
@@ -429,7 +433,8 @@ func newPass(l *Layout, cell Vector, grid compactGrid, tie, flip bool, span []in
 	start = max(min(start, grid.lineSpace), 1)
 	lower, reach = make([]int, n), make([]int, n)
 	for i := range lower {
-		lower[i], reach[i] = math.MinInt32, math.MinInt32
+		lower[i] = math.MinInt32
+		reach[i] = math.MinInt32
 	}
 	for _, o := range p.objs {
 		v := p.varOf[o.item]
@@ -622,7 +627,9 @@ func (p *compactPass) labelled(e, row int) bool {
 func (p *compactPass) endRoom(o rigid) (top, bottom int) {
 	space := p.grid.lineSpace
 	top, bottom = 2*space, 2*space
-	path, items, edge := p.l.Edges[o.index].Path, p.pointItem[o.index], p.l.Graph.Edges[o.index]
+	path := p.l.Edges[o.index].Path
+	items := p.pointItem[o.index]
+	edge := p.l.Graph.Edges[o.index]
 	for _, end := range edgeEnds(edge, len(path)) {
 		if items[end.at] != o.item {
 			continue
@@ -642,7 +649,8 @@ func (p *compactPass) endRoom(o rigid) (top, bottom int) {
 // split returns where to split run o at row, so that the half below row
 // moves before the other, or the half above when below is not set
 func (p *compactPass) split(o rigid, row int, below bool) (jogSplit, bool) {
-	path, items := p.l.Edges[o.index].Path, p.pointItem[o.index]
+	path := p.l.Edges[o.index].Path
+	items := p.pointItem[o.index]
 	for i := 0; i+1 < len(path); i++ {
 		r0, r1 := p.row(path[i].Y), p.row(path[i+1].Y)
 		if items[i] != o.item || items[i+1] != o.item || p.col(path[i].X) != p.col(path[i+1].X) || row <= min(r0, r1) || row >= max(r0, r1) {
@@ -777,7 +785,8 @@ func (p *compactPass) addEdges() {
 		for _, end := range edgeEnds(edge, len(items)) {
 			node := p.l.nodeIndex[end.node]
 			p.union(items[end.at], node)
-			run, box := &p.objs[groups[pointGroup[end.at]]], p.objs[node]
+			run := &p.objs[groups[pointGroup[end.at]]]
+			box := p.objs[node]
 			run.corner = run.c0 != run.c1 && (run.lo == box.lo || run.lo == box.hi)
 			// a run along the side of its node, as from a field to a
 			// port past it, text draws out of the side instead, straight
@@ -904,7 +913,9 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 		ref.anchor = items[k]
 		p.union(o.item, items[k])
 	case items[i] != items[j] && o.lo <= cj && o.hi >= ci:
-		ref.side, ref.anchor, ref.end = alongRun, items[i], items[j]
+		ref.side = alongRun
+		ref.anchor = items[i]
+		ref.end = items[j]
 		ref.dist, ref.endDist = (o.lo+o.hi)/2-ci, cj-(o.lo+o.hi)/2
 	case items[i] != items[j] && o.lo > cj:
 		// past the end of an elastic run
@@ -973,7 +984,8 @@ func (p *compactPass) own(a, b rigid) bool {
 	if a.kind != nodeKind || b.kind != runKind {
 		return false
 	}
-	edge, path := p.l.Graph.Edges[b.index], p.l.Edges[b.index].Path
+	edge := p.l.Graph.Edges[b.index]
+	path := p.l.Edges[b.index].Path
 	side := a.c1
 	if b.c1 < a.c0 {
 		side = a.c0
@@ -1053,7 +1065,9 @@ func (p *compactPass) need(a, b rigid) int {
 
 // constraints returns the constraints on how far the variables move
 func (p *compactPass) constraints(span []int) (cons []constraint) {
-	objs, varOf, grid := p.objs, p.varOf, p.grid
+	objs := p.objs
+	varOf := p.varOf
+	grid := p.grid
 
 	// the constraints added since hold rows a and b
 	mark := func(a, b rowSpan) {
@@ -1070,7 +1084,8 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 	// next to the border, or the line between two boxes, which text
 	// would otherwise draw as a bare arrowhead between borders
 	for e, items := range p.pointItem {
-		path, edge := p.l.Edges[e].Path, p.l.Graph.Edges[e]
+		path := p.l.Edges[e].Path
+		edge := p.l.Graph.Edges[e]
 		for i := 1; i < len(items); i++ {
 			va, vb := varOf[items[i-1]], varOf[items[i]]
 			if va == vb {
@@ -1115,7 +1130,8 @@ func (p *compactPass) constraints(span []int) (cons []constraint) {
 	// the runs it shares no row with don't keep it off; shortenRuns pulls
 	// it in as it does the runs of edges
 	for _, lb := range p.labels {
-		label, anchor := varOf[lb.item], varOf[lb.anchor]
+		label := varOf[lb.item]
+		anchor := varOf[lb.anchor]
 		o := objs[lb.obj]
 		rows := o.rows()
 		switch lb.side {
@@ -1163,7 +1179,9 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 	// a gap that keeps nothing apart, low enough that no sum of gaps
 	// through it implies a pair is kept apart
 	const free = -1 << 40
-	objs, varOf, grid := p.objs, p.varOf, p.grid
+	objs := p.objs
+	varOf := p.varOf
+	grid := p.grid
 
 	// the most cells two objects need, see need
 	most := max(grid.space, grid.lineSpace) + grid.lineSpace
@@ -1273,7 +1291,8 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 						continue
 					}
 					if seen[a] != c+1 {
-						seen[a], implied[a] = c+1, false
+						seen[a] = c + 1
+						implied[a] = false
 						found = append(found, a)
 					}
 					if i < pc-1 && !implied[a] && q[pc]-q[i]-(o.hi-o.lo) >= gap(a, c) {
@@ -1299,7 +1318,8 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 	cons := make([]constraint, len(pairs))
 	spans := make([][2]rowSpan, len(pairs))
 	for i, pr := range pairs {
-		cons[i], spans[i] = pr.c, pr.rows
+		cons[i] = pr.c
+		spans[i] = pr.rows
 	}
 	return cons, spans
 }
@@ -1374,7 +1394,8 @@ func (p *compactPass) rowsOf(byRank, starts []int, span func(rigid) (lo, hi int,
 
 // apply moves everything by d cells, and reports whether anything moved
 func (p *compactPass) apply(d []int) bool {
-	l, cell := p.l, p.cell
+	l := p.l
+	cell := p.cell
 	moved := false
 	shift := func(item int) Length {
 		k := d[p.varOf[item]]

@@ -727,7 +727,8 @@ func applyNodeAttrs(graphID string, node *layout.Node, attrs []*ast.Attr, outlin
 			node.FixedSize = attr.Val == "true" || attr.Val == "shape"
 		case "peripheries":
 			if n, err := strconv.Atoi(attr.Val); err == nil {
-				node.Peripheries, outlines.set = n, true
+				node.Peripheries = n
+				outlines.set = true
 			}
 		case "image":
 			setString(&node.Image, attr.Val)

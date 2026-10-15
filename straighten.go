@@ -47,7 +47,8 @@ func straightenNodes(graph *hier.Graph, graphdef *lgraph, route func()) {
 				route()
 				if b := st.countBends(); b < bends {
 					if c, o := st.measure(); c <= crossings && o <= overlaps {
-						bends, crossings, overlaps, improved = b, c, o, true
+						bends, crossings, overlaps = b, c, o
+						improved = true
 						last = idx
 						break
 					}

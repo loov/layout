@@ -201,10 +201,12 @@ func plainText(out *strings.Builder, n *html.Node, cell string, style Style) {
 		out.WriteByte(' ')
 		cell = alignMark(n, "")
 	case n.Data == "tr":
-		row, first := "", true
+		row := ""
+		first := true
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
 			if c.Type == html.ElementNode && (c.Data == "td" || c.Data == "th") && first {
-				row, first = alignMark(c, ""), false
+				row = alignMark(c, "")
+				first = false
 			}
 			plainText(out, c, cell, style)
 		}

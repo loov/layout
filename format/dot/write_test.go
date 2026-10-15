@@ -66,7 +66,8 @@ func TestWritePathsAreAcceptedByGraphviz(t *testing.T) {
 			t.Fatal(err)
 		}
 		cmd := exec.Command(neato, "-n2", "-Tsvg")
-		cmd.Stdin, cmd.Stderr = &out, &diagnostics
+		cmd.Stdin = &out
+		cmd.Stderr = &diagnostics
 		if err := cmd.Run(); err != nil {
 			t.Fatalf("neato: %v: %s", err, &diagnostics)
 		}
@@ -91,7 +92,9 @@ func TestWriteArrowsRoundTripAndRenderInGraphviz(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := layout.NewDigraph()
 			e := g.Edge("a", "b")
-			e.Directed, e.ArrowHead, e.ArrowTail = tc.directed, tc.head, tc.tail
+			e.Directed = tc.directed
+			e.ArrowHead = tc.head
+			e.ArrowTail = tc.tail
 			e.From.Pos, e.To.Pos = &layout.Vector{X: 50, Y: 50}, &layout.Vector{X: 150, Y: 150}
 			e.From.MinSize, e.To.MinSize = layout.Vector{X: 20, Y: 20}, layout.Vector{X: 20, Y: 20}
 			e.From.FixedSize, e.To.FixedSize = true, true
@@ -114,7 +117,9 @@ func TestWriteArrowsRoundTripAndRenderInGraphviz(t *testing.T) {
 			}
 			var svg, diagnostics bytes.Buffer
 			cmd := exec.Command(neato, "-n2", "-Tsvg")
-			cmd.Stdin, cmd.Stdout, cmd.Stderr = &out, &svg, &diagnostics
+			cmd.Stdin = &out
+			cmd.Stdout = &svg
+			cmd.Stderr = &diagnostics
 			if err := cmd.Run(); err != nil || diagnostics.Len() != 0 {
 				t.Fatalf("neato: %v: %s", err, &diagnostics)
 			}
@@ -191,12 +196,18 @@ func TestWriteParseRoundTrip(t *testing.T) {
 	g := layout.NewDigraph()
 	a, b := g.Node("a"), g.Node("b")
 	a.Label = "<<b>bold</b>>"
-	a.LineColor, a.FillColor, a.FontColor = layout.RGB{R: 0xFF}, layout.RGBA{G: 0xFF, A: 0x80}, layout.RGB{B: 0xFF}
-	a.LineStyle, a.LineWidth = layout.Dashed, 2
+	a.LineColor = layout.RGB{R: 0xFF}
+	a.FillColor = layout.RGBA{G: 0xFF, A: 0x80}
+	a.FontColor = layout.RGB{B: 0xFF}
+	a.LineStyle = layout.Dashed
+	a.LineWidth = 2
 	b.Label = "<a>]; evil [label=<x>"
 	e := g.Edge("a", "b")
 	e.Label = "<<i>e</i>>"
-	e.LineColor, e.FontColor, e.LineStyle, e.LineWidth = layout.RGB{R: 1, G: 2, B: 3}, layout.RGB{R: 4}, layout.Dotted, 3
+	e.LineColor = layout.RGB{R: 1, G: 2, B: 3}
+	e.FontColor = layout.RGB{R: 4}
+	e.LineStyle = layout.Dotted
+	e.LineWidth = 3
 	e.FromPort, e.ToPort = layout.East, layout.North
 	outer := &layout.Cluster{ID: "cluster_outer", Label: "<<u>outer</u>>", Nodes: []*layout.Node{a, b}, LineColor: layout.RGB{R: 9}, FillColor: layout.RGB{G: 9}}
 	inner := &layout.Cluster{ID: "inner", Label: "in", Nodes: []*layout.Node{b}, Parent: outer}
@@ -213,7 +224,9 @@ func TestWriteParseRoundTrip(t *testing.T) {
 	if len(got.Nodes) != 2 {
 		t.Fatalf("got %d nodes\n%s", len(got.Nodes), &out)
 	}
-	ga, gb, ge := got.Node("a"), got.Node("b"), got.Edges[0]
+	ga := got.Node("a")
+	gb := got.Node("b")
+	ge := got.Edges[0]
 	colors := func(cs ...layout.Color) (s []string) {
 		for _, c := range cs {
 			s = append(s, rgba(c))
@@ -241,7 +254,8 @@ func TestWriteParseRoundTrip(t *testing.T) {
 	}
 
 	if len(got.Clusters) == 2 {
-		o, i := got.Clusters[0], got.Clusters[1]
+		o := got.Clusters[0]
+		i := got.Clusters[1]
 		if o.Label != outer.Label || rgba(o.LineColor) != rgba(outer.LineColor) || rgba(o.FillColor) != rgba(outer.FillColor) || len(o.Nodes) != 2 {
 			t.Errorf("outer cluster = %+v", o)
 		}

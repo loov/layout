@@ -269,7 +269,8 @@ func (c *canvas) frameLabels(g grid) {
 			for _, r := range cellRunes(" " + clusterLabel(c.l.Graph.Clusters[id-1]) + " ") {
 				if row[x].lines&(up|down) == 0 {
 					// a line that crosses the frame, on a space, stays
-					row[x].r, row[x].fg = r, 0
+					row[x].r = r
+					row[x].fg = 0
 				}
 				x++
 			}
@@ -293,7 +294,8 @@ func (c *canvas) besideEdge(x, y, w, h int, path []point, id edgeID) (int, int) 
 		}
 		if sx, sy, ok := c.nearEdge(x, y, w, h, path, side); ok {
 			if d := c.apart(sx, sy, w, h, id); d > best {
-				bx, by, best = sx, sy, d
+				bx, by = sx, sy
+				best = d
 			}
 		}
 	}
@@ -531,7 +533,8 @@ func hug(g grid, owners []edgeID) {
 	}
 
 	for _, id := range ids {
-		b, edge := boxes[id], owners[id]
+		b := boxes[id]
+		edge := owners[id]
 		if v, ok := inked[id]; ok {
 			near := false
 			for _, dir := range []uint8{up, down, left, right} {

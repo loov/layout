@@ -73,7 +73,8 @@ func Decycle(graph *Graph) {
 	}
 
 	// rebuild adjacency, weights and minimum lengths from the edge list
-	graph.weights, graph.minlens = nil, nil
+	graph.weights = nil
+	graph.minlens = nil
 	for _, node := range graph.Nodes {
 		node.In.Clear()
 		node.Out.Clear()

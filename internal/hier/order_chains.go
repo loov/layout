@@ -43,7 +43,8 @@ func OrderRanksChains(graph *Graph) (moves int) {
 	// in its cluster to swap with
 	movable := func(chain Nodes, dir int) bool {
 		for _, v := range chain {
-			layer, k := graph.ByRank[v.Rank], v.Pos+dir
+			layer := graph.ByRank[v.Rank]
+			k := v.Pos + dir
 			if k < 0 || k >= len(layer) {
 				return false
 			}

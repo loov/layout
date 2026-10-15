@@ -53,7 +53,9 @@ func TestAlignFanIn(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if d, p := l.Node(graph.Node("d")).Center.X, l.Node(graph.Node(over)).Center.X; d != p {
+		d := l.Node(graph.Node("d")).Center.X
+		p := l.Node(graph.Node(over)).Center.X
+		if d != p {
 			t.Errorf("align %v: d at x %v, want under %s at %v", align, d, over, p)
 		}
 	}

@@ -215,7 +215,8 @@ func (node *lnode) halfHeightAt(x Length) Length {
 	case Box, Square, Record:
 	case Diamond, Octagon:
 		// the lowest of the sides above at x
-		u, top := float64(x-node.Center.X)/float64(node.Radius.X), 1.0
+		u := float64(x-node.Center.X) / float64(node.Radius.X)
+		top := 1.0
 		sides(node.Shape.polygon(), func(nx, ny, h float64) {
 			if ny < 0 {
 				top = min(top, (h-nx*u)/-ny)
@@ -241,7 +242,8 @@ func (node *lnode) sideAt(y, x Length) Vector {
 	case Box, Square, Record:
 	case Diamond, Octagon:
 		// the nearest of the sides to the right at y
-		v, right := float64(y-node.Center.Y)/float64(node.Radius.Y), 1.0
+		v := float64(y-node.Center.Y) / float64(node.Radius.Y)
+		right := 1.0
 		sides(node.Shape.polygon(), func(nx, ny, h float64) {
 			if nx > 0 {
 				right = min(right, (h-ny*v)/nx)

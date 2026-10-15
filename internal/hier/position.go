@@ -175,7 +175,8 @@ func brandesKoepf(graph *Graph, left bool) []float32 {
 	root := make([]*Node, n)
 	align := make([]*Node, n)
 	for _, node := range graph.Nodes {
-		root[node.ID], align[node.ID] = node, node
+		root[node.ID] = node
+		align[node.ID] = node
 	}
 	for i := 1; i < len(layers); i++ {
 		r := -1
@@ -503,7 +504,8 @@ func centerFans(graph *Graph, x []float32, lo, hi float32) {
 			if node.Virtual {
 				continue
 			}
-			first, last, children := float32(math.Inf(1)), float32(math.Inf(-1)), 0
+			first, last := float32(math.Inf(1)), float32(math.Inf(-1))
+			children := 0
 			for _, out := range node.Out {
 				if c := child(out); c != nil && !c.Virtual {
 					first, last = min(first, x[c.ID]), max(last, x[c.ID])

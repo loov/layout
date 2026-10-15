@@ -38,7 +38,9 @@ func TestLoopNodeLinesUp(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		a, b, c := l.Node(graph.Node("a")).Center.X, l.Node(graph.Node("b")).Center.X, l.Node(graph.Node("c")).Center.X
+		a := l.Node(graph.Node("a")).Center.X
+		b := l.Node(graph.Node("b")).Center.X
+		c := l.Node(graph.Node("c")).Center.X
 		if a != b || b != c {
 			t.Errorf("align %v: a, b, c at x %v, %v, %v, want one line", align, a, b, c)
 		}

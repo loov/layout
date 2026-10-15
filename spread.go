@@ -189,9 +189,11 @@ func spreadSides(graph *lgraph, minSep Length) {
 		node := k.node
 		slices.SortStableFunc(ends, func(a, b end) int { return cmp.Compare(a.want, b.want) })
 		gap := min(minSep, 2*node.Radius.X/Length(len(ends)+1))
-		want, weight := make([]Length, len(ends)), make([]float64, len(ends))
+		want := make([]Length, len(ends))
+		weight := make([]float64, len(ends))
 		for i, e := range ends {
-			want[i], weight[i] = e.want, 1
+			want[i] = e.want
+			weight[i] = 1
 		}
 		reach := node.Radius.X - gap/2
 		xs := separate(nil, want, weight, gap, node.Center.X-reach, node.Center.X+reach)

@@ -197,15 +197,18 @@ func encode(g grid, palette []uint32, opts *Options) string {
 				end = i + 1
 			}
 		}
-		f, b, st := "39", "49", uint8(0)
+		f, b := "39", "49"
+		st := uint8(0)
 		for _, x := range line[:end] {
 			want, bg := code(x)
 			style := x.style &^ pinned
 			if opts == nil {
 				style = 0
 			}
+			// blanks show only the background
 			if x.r == ' ' && style&(underline|strike) == 0 {
-				want, style = f, st // blanks show only the background
+				want = f
+				style = st
 			}
 			if want != f || bg != b || style != st {
 				var codes strings.Builder
@@ -221,7 +224,8 @@ func encode(g grid, palette []uint32, opts *Options) string {
 						}
 					}
 				}
-				f, b, st = want, bg, style
+				f, b = want, bg
+				st = style
 				out.WriteString("\x1b[" + codes.String() + f + ";" + b + "m")
 			}
 			if x.r != covered {

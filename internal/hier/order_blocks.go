@@ -108,8 +108,10 @@ func (m *blockMover) move(block Nodes) bool {
 	graph := m.graph
 	m.block = block
 	n := len(block)
-	m.unary, m.cands = resize(m.unary, n), resize(m.cands, n)
-	m.best, m.from = resize(m.best, n), resize(m.from, n)
+	m.unary = resize(m.unary, n)
+	m.cands = resize(m.cands, n)
+	m.best = resize(m.best, n)
+	m.from = resize(m.from, n)
 
 	// the crossings the block has where it is; wherever it goes, every
 	// node of it has at least the least crossings of its own edges
@@ -140,14 +142,16 @@ func (m *blockMover) move(block Nodes) bool {
 		}
 	}
 
-	m.best[0], m.from[0] = m.best[0][:0], m.from[0][:0]
+	m.best[0] = m.best[0][:0]
+	m.from[0] = m.from[0][:0]
 	for _, p := range m.cands[0] {
 		m.best[0] = append(m.best[0], m.unary[0][p])
 		m.from[0] = append(m.from[0], -1)
 	}
 	for i := 1; i < n; i++ {
 		m.blockEdges(block[i-1], block[i])
-		m.best[i], m.from[i] = m.best[i][:0], m.from[i][:0]
+		m.best[i] = m.best[i][:0]
+		m.from[i] = m.from[i][:0]
 		for _, q := range m.cands[i] {
 			// the crossings of the edge into block[i] at q, for every slot
 			// of block[i-1]

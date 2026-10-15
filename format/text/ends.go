@@ -132,7 +132,8 @@ func (c *canvas) endsOnSides(edges []*layout.Edge, paths [][]point) map[boxSide]
 			for along := range 2 {
 				across := 1 - along
 				after := bend.at(across) > b.Max.at(across)
-				lo, hi, x := b.Min.at(along), b.Max.at(along), at.at(along)
+				lo, hi := b.Min.at(along), b.Max.at(along)
+				x := at.at(along)
 				if hi-lo < 2 || x != bend.at(along) || !between(x, lo, hi) ||
 					!after && bend.at(across) >= b.Min.at(across) {
 					continue // not straight into the side from beyond it
@@ -204,7 +205,9 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 	exact := make([]float64, len(ends))
 	fixed := make([]bool, len(ends))
 	for n, e := range ends {
-		want[n], exact[n], fixed[n] = e.end().at(key.along), e.exact, e.fixed || c.boxBeside(e.end(), e.bend(), key.along)
+		want[n] = e.end().at(key.along)
+		exact[n] = e.exact
+		fixed[n] = e.fixed || c.boxBeside(e.end(), e.bend(), key.along)
 	}
 	packEnds(want, exact, fixed)
 
@@ -229,7 +232,8 @@ func (c *canvas) spreadSide(key boxSide, ends []spreadEnd, alone map[*point]bool
 		if len(e.path) == 4 && alone[&e.path[3-e.i]] && unbalance(want, lo, hi) == 0 && unbalance(moved, lo, hi) > 0 {
 			continue
 		}
-		want[n], fixed[n] = e.toward, true
+		want[n] = e.toward
+		fixed[n] = true
 	}
 
 	// with spread, a cell between ends where the side has room, as

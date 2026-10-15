@@ -221,7 +221,8 @@ func (c *canvas) pathCells(cells []point, path []point) []point {
 	first := true
 	c.pathSteps(path, func(from, to point, _ uint8) {
 		if first {
-			cells, first = append(cells, from), false
+			cells = append(cells, from)
+			first = false
 		}
 		cells = append(cells, to)
 	})
@@ -299,7 +300,8 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 		d := bits.TrailingZeros8(s.out)
 		k := state(s.at, d)
 		if old, ok := cost[k]; !ok || s.cost < old {
-			cost[k], prev[k] = s.cost, -1
+			cost[k] = s.cost
+			prev[k] = -1
 			heap.Push(&queue, costItem{k, s.cost})
 		}
 	}
@@ -350,7 +352,8 @@ func (c *canvas) search(starts, goals []endCell, id edgeID) []point {
 			if old, ok := cost[nk]; ok && old <= next {
 				continue
 			}
-			cost[nk], prev[nk] = next, item.state
+			cost[nk] = next
+			prev[nk] = item.state
 			heap.Push(&queue, costItem{nk, next})
 		}
 	}
@@ -411,13 +414,16 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
 			continue
 		}
 		id++ // see drawEdge
-		path, last := paths[i], len(paths[i])-1
+		path := paths[i]
+		last := len(paths[i]) - 1
 		ends := []bool{c.hasField(edge.From, edge.FromField), c.hasField(edge.To, edge.ToField)}
 		markers := []bool{edge.ArrowTail.Drawn(), edge.HeadMarker().Drawn()}
 		for k, end := range []point{path[0], path[last]} {
-			next, node := path[1], edge.From
+			next := path[1]
+			node := edge.From
 			if k == 1 {
-				next, node = path[last-1], edge.To
+				next = path[last-1]
+				node = edge.To
 			}
 			own, _ := c.edgeOwner(edge, id)
 			if !ends[k] {
@@ -428,7 +434,8 @@ func (c *canvas) reserve(edges []*layout.Edge, paths [][]point) {
 				c.merged[by[end]], c.merged[edge] = other, other
 				continue
 			}
-			c.reserved[end], by[end] = own, edge
+			c.reserved[end] = own
+			by[end] = edge
 			// and the two cells out from it, where its line leaves straight
 			// and a marker goes, see search
 			if out := c.side(end, next, node); out != 0 {

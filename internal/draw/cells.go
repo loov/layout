@@ -147,7 +147,8 @@ func StepDiamondSteps(label string) int {
 // StepDiamondSteps fits in the cells of CornerDiamondSteps: a step less,
 // with as much room inside on the rows of the label.
 func DiamondSize(label string) (cols, rows int) {
-	k, c := DiamondSteps(label), CornerDiamondSteps(label)
+	k := DiamondSteps(label)
+	c := CornerDiamondSteps(label)
 	if label == "" {
 		return 4 * c, 2 * c // no pointed one without a label
 	}

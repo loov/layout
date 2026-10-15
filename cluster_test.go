@@ -42,7 +42,9 @@ func TestClusterFitsLabel(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	label, cluster, a := graph.Clusters[0].Label, l.Cluster(graph.Clusters[0]), l.Node(graph.Node("a"))
+	label := graph.Clusters[0].Label
+	cluster := l.Cluster(graph.Clusters[0])
+	a := l.Node(graph.Node("a"))
 
 	// most characters are about half an em wide, spaces and narrow
 	// letters less

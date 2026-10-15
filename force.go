@@ -90,7 +90,8 @@ func force(graph *lgraph) {
 				dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
 				d := hypot(dx, dy)
 				if d < 1e-3 {
-					dx, dy, d = 1e-3*float64(i-j), 1e-3, 1e-3
+					dx, dy = 1e-3*float64(i-j), 1e-3
+					d = 1e-3
 				}
 				f := k * k / d / d // repulsion k²/d, normalized by d
 				disp[i][0] += float64(dx * f)
@@ -149,7 +150,8 @@ func force(graph *lgraph) {
 		}
 		sort.Float64s(gaps)
 		limit := math.Max(2*gaps[len(gaps)/2], k)
-		shift, prev := 0.0, pos[order[0]][axis]
+		shift := 0.0
+		prev := pos[order[0]][axis]
 		for i := 1; i < n; i++ {
 			gap := pos[order[i]][axis] - prev
 			prev = pos[order[i]][axis]
@@ -174,7 +176,8 @@ func force(graph *lgraph) {
 	}
 
 	for _, edge := range graph.Edges {
-		edge.Path, edge.LabelPos = nil, Vector{}
+		edge.Path = nil
+		edge.LabelPos = Vector{}
 	}
 	layoutPinned(graph)
 }

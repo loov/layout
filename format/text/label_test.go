@@ -100,7 +100,8 @@ func TestClusterLabel(t *testing.T) {
 func TestBlanksInLabels(t *testing.T) {
 	graph := layout.NewDigraph()
 	wide := graph.Node("a")
-	wide.Label, wide.MinSize.X = "x            y", 216
+	wide.Label = "x            y"
+	wide.MinSize.X = 216
 	graph.Node("b").Label = "top\n\n\n\nbottom"
 	graph.Edge("c", "d").Label = "p      q"
 	got := render(t, graph)
@@ -150,7 +151,8 @@ func TestFitsLayout(t *testing.T) {
 				graph.RankDir = dir
 				for i := range 8 {
 					node := graph.Node(string(rune('a' + i)))
-					node.Shape, node.Peripheries = shape, peripheries
+					node.Shape = shape
+					node.Peripheries = peripheries
 					node.Label = labels[(i+peripheries)%len(labels)]
 					if shape == layout.Record {
 						node.Label = records[i%len(records)]
@@ -298,9 +300,11 @@ func runes(row []cell) []rune {
 func TestHugLabelsApart(t *testing.T) {
 	graph := layout.NewDigraph()
 	long := graph.Edge("n3", "n4")
-	long.Label, long.TailLabel = "a long one", "ab"
+	long.Label = "a long one"
+	long.TailLabel = "ab"
 	other := graph.Edge("n3", "n2")
-	other.Label, other.HeadLabel = "head", "yes"
+	other.Label = "head"
+	other.HeadLabel = "yes"
 	l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
 	if err != nil {
 		t.Fatal(err)
@@ -342,7 +346,8 @@ func TestLabelsDrawn(t *testing.T) {
 	check := func(t *testing.T, build func() *layout.Graph, opts layout.Options) {
 		for _, compact := range []bool{false, true} {
 			opts := opts
-			opts.ForText, opts.NoCompact = true, !compact
+			opts.ForText = true
+			opts.NoCompact = !compact
 			l, err := layout.Hierarchical(build(), opts)
 			if err != nil {
 				t.Fatal(err)

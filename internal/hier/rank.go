@@ -44,7 +44,8 @@ func flipBackwardEdges(graph *Graph) {
 
 	for _, edge := range backward {
 		src, dst := edge[0], edge[1]
-		weight, minlen := graph.Weight(src, dst), graph.MinLen(src, dst)
+		weight := graph.Weight(src, dst)
+		minlen := graph.MinLen(src, dst)
 		src.Out.Remove(dst)
 		dst.In.Remove(src)
 		graph.forgetEdge(src, dst)

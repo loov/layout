@@ -360,7 +360,10 @@ func (d *diagnosis) paths() {
 			d.diag.BackEdges++
 			d.detail("edge %v points against the rank direction", edge)
 		}
-		winds, bends, flips, last := 0.0, 0, 0, 0.0
+		winds := 0.0
+		bends := 0
+		flips := 0
+		last := 0.0
 		path := edge.Path
 		for i := 1; i+1 < len(path); i++ {
 			a, b := path[i].Sub(path[i-1]), path[i+1].Sub(path[i])
@@ -505,7 +508,8 @@ func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 		}
 		ax, ay := float64(a.X-node.Center.X)/rx, float64(a.Y-node.Center.Y)/ry
 		dx, dy := float64(b.X-a.X)/rx, float64(b.Y-a.Y)/ry
-		t0, t1, hit := 0.0, 1.0, true
+		t0, t1 := 0.0, 1.0
+		hit := true
 		sides(node.Shape.polygon(), func(nx, ny, h float64) {
 			num, den := h-(nx*ax+ny*ay), nx*dx+ny*dy
 			switch {

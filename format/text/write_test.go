@@ -325,7 +325,8 @@ func TestLabelsFitBoxes(t *testing.T) {
 	} {
 		graph := layout.NewDigraph()
 		node := graph.Node("a")
-		node.Shape, node.Label = layout.Record, tc.label
+		node.Shape = layout.Record
+		node.Label = tc.label
 		got := render(t, graph)
 		if !regexp.MustCompile(tc.want).MatchString(got) {
 			t.Errorf("%q: fields overflow:\n%s", tc.label, got)
@@ -447,7 +448,8 @@ func TestCorners(t *testing.T) {
 	} {
 		graph := layout.NewDigraph()
 		node := graph.Node("a")
-		node.Shape, node.Peripheries = tc.shape, tc.peripheries
+		node.Shape = tc.shape
+		node.Peripheries = tc.peripheries
 		l, err := layout.Hierarchical(graph, layout.Options{ForText: true})
 		if err != nil {
 			t.Fatal(err)

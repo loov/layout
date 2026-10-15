@@ -86,7 +86,8 @@ func drawn(l *layout.Layout, safe bool) (*canvas, grid) {
 	for _, spread := range []bool{true, false} {
 		d := drawGraph(l, spread, safe)
 		if c == nil || better(d.rows, g) {
-			c, g = d, d.rows
+			c = d
+			g = d.rows
 		}
 	}
 

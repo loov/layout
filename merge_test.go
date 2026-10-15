@@ -20,7 +20,8 @@ func TestMergeEdges(t *testing.T) {
 	ae.Label = "label"
 
 	// b -> f would merge with a's start and f's end: it merges at neither
-	bf, cf := graph.Edge("b", "f"), graph.Edge("c", "f")
+	bf := graph.Edge("b", "f")
+	cf := graph.Edge("c", "f")
 	bg, bh := graph.Edge("b", "g"), graph.Edge("b", "h")
 	gf := graph.Edge("g", "f")
 	l, err := layout.Hierarchical(graph, layout.Options{})

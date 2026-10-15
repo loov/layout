@@ -213,20 +213,23 @@ func slide(moves []move, g grid, r, x int, dir uint8, shift int) ([]move, bool) 
 			was := cell{r: ' '}
 			if p.lines != up|down {
 				was = *p
-				was.r, was.lines = '─', left|right
+				was.r = '─'
+				was.lines = left | right
 				was.setOwner(up|down, 0)
 			}
 			to := vertical
 			if across {
 				to = *q
-				to.r, to.lines = '╂', up|down|left|right
+				to.r = '╂'
+				to.lines = up | down | left | right
 				to.setOwner(up|down, id)
 			}
 			moves = append(moves, move{y, x, was}, move{y, x + shift, to})
 			continue
 		case p.solid && p.node == 0 && dir == down:
 			// an arrowhead onto the straight top of a box
-			below, to := g.at(y+1, x), g.at(y+1, x+shift)
+			below := g.at(y+1, x)
+			to := g.at(y+1, x+shift)
 			sameBox := below != nil && to != nil && below.node != 0 && to.node == below.node && to.r == below.r
 			if p.style&pinned != 0 || !blank(y, x+shift) || !sameBox {
 				return moves, false
@@ -241,7 +244,8 @@ func slide(moves []move, g grid, r, x int, dir uint8, shift int) ([]move, bool) 
 			if p.style&pinned != 0 || to == nil || to.node != p.node || arms(to.r) != left|right {
 				return moves, false
 			}
-			port, side := *p, *to
+			port := *p
+			side := *to
 			port.r, side.r = p.r, to.r
 			moves = append(moves, move{y, x, side}, move{y, x + shift, port})
 			return moves, true
@@ -291,16 +295,19 @@ func mergeRow(out, a, b []cell) ([]cell, int, bool) {
 			case bit == up || p.lines&bit != 0:
 				c.owner[arm] = p.owner[arm]
 			default:
-				c.owner[arm], c.fg = q.owner[arm], q.fg
+				c.owner[arm] = q.owner[arm]
+				c.fg = q.fg
 			}
 		}
 
 		switch {
 		case lines == 0:
 		case lines == p.lines:
-			c.r, c.fg = p.r, p.fg
+			c.r = p.r
+			c.fg = p.fg
 		case lines == q.lines:
-			c.r, c.fg = q.r, q.fg
+			c.r = q.r
+			c.fg = q.fg
 		case lines == up|down|left|right && c.ownerOn(up) != c.ownerOn(left):
 			c.r = '╂' // a line across another
 		default:
@@ -382,7 +389,8 @@ type unjogger struct {
 func (u *unjogger) at(p point) *cell { return u.g.at(p.Y, p.X) }
 
 func (u *unjogger) markAt(p point) *rerouteMark {
-	g, mk := u.g, u.mk
+	g := u.g
+	mk := u.mk
 	if p.Y < 0 || p.Y >= len(g) || p.X < 0 || p.X >= len(g[p.Y]) {
 		return nil
 	}
@@ -452,7 +460,8 @@ func (u *unjogger) markOld(in uint8, old []point) {
 		}
 	}
 
-	u.labeled, u.crossed = u.labeled[:0], u.crossed[:0]
+	u.labeled = u.labeled[:0]
+	u.crossed = u.crossed[:0]
 	for _, p := range u.olds {
 		label := false
 		for _, d := range []point{{0, -1}, {0, 1}, {-1, 0}, {1, 0}} {
@@ -460,7 +469,8 @@ func (u *unjogger) markOld(in uint8, old []point) {
 				label = true
 			}
 		}
-		u.labeled, u.crossed = append(u.labeled, label), append(u.crossed, isCrossing(u.at(p).r))
+		u.labeled = append(u.labeled, label)
+		u.crossed = append(u.crossed, isCrossing(u.at(p).r))
 	}
 }
 
@@ -518,7 +528,8 @@ func (u *unjogger) accepts(path []point, dirs []uint8) bool {
 // new, ending in head when it is set
 func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 	// the edge of the line, by the arms it draws, not of lines it crosses
-	fg, id := u.at(old[0]).fg, edgeID(0)
+	fg := u.at(old[0]).fg
+	id := edgeID(0)
 	for _, p := range u.olds {
 		a := u.oldArms(p)
 		for arm := range 4 {
@@ -548,7 +559,8 @@ func (u *unjogger) draw(old []point, path []point, dirs []uint8, head *cell) {
 		case i == len(path)-1 && head != nil:
 			*q = *head
 		case isCrossing(q.r) || q.r != ' ' && u.oldArms(p) == 0:
-			q.r, q.lines = '╂', up|down|left|right
+			q.r = '╂'
+			q.lines = up | down | left | right
 			q.setOwner(dirs[i], id)
 		default:
 			*q = cell{r: corner(dirs[i]), fg: fg, lines: dirs[i], owner: [4]edgeID{id, id, id, id}}

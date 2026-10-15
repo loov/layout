@@ -125,8 +125,12 @@ func (cluster *lcluster) rect() rect { return rect{cluster.TopLeft, cluster.Bott
 func newWorkGraph(def *Graph) *lgraph {
 	g := &lgraph{Graph: *def, def: def}
 	g.Graph.NodeByID = nil
-	g.Graph.Nodes, g.Graph.Edges, g.Graph.Clusters = nil, nil, nil
-	g.Graph.SameRank, g.Graph.MinRank, g.Graph.MaxRank = nil, nil, nil
+	g.Graph.Nodes = nil
+	g.Graph.Edges = nil
+	g.Graph.Clusters = nil
+	g.Graph.SameRank = nil
+	g.Graph.MinRank = nil
+	g.Graph.MaxRank = nil
 
 	nodes := make(map[*Node]*lnode, len(def.Nodes))
 	node := func(n *Node) *lnode {
@@ -204,8 +208,12 @@ func (graph *lgraph) result() *Layout {
 	settings := graph.Graph
 	def := graph.def
 	settings.NodeByID = def.NodeByID
-	settings.Nodes, settings.Edges, settings.Clusters = def.Nodes, def.Edges, def.Clusters
-	settings.SameRank, settings.MinRank, settings.MaxRank = def.SameRank, def.MinRank, def.MaxRank
+	settings.Nodes = def.Nodes
+	settings.Edges = def.Edges
+	settings.Clusters = def.Clusters
+	settings.SameRank = def.SameRank
+	settings.MinRank = def.MinRank
+	settings.MaxRank = def.MaxRank
 
 	l := &Layout{
 		Graph:        &settings,
@@ -251,7 +259,8 @@ func (l *Layout) work() *lgraph {
 		box := l.Nodes[i]
 		n.Center = box.Center
 		n.Radius = box.Size.Scale(0.5)
-		n.Shape, n.FontSize = box.Shape, box.FontSize
+		n.Shape = box.Shape
+		n.FontSize = box.FontSize
 	}
 
 	for i, e := range g.Edges {
