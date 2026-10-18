@@ -128,6 +128,16 @@ func flatPassOver(edge [2]*Node) float32 {
 	return float32(max(edge[0].Pos, edge[1].Pos) - min(edge[0].Pos, edge[1].Pos) - 1)
 }
 
+// crossEdge is the leaf of the tree of bilayerCrossings an edge reaches,
+// and its weight
+type crossEdge struct {
+	at     int
+	weight float32
+}
+
+// crossEnd is where an edge leaves and reaches its ranks, with ports
+type crossEnd struct{ from, to, weight float32 }
+
 // bilayerCrossings counts weighted crossings between two adjacent layers in
 // O(E log V) with an accumulator tree over where the edges reach the
 // lower layer: in the order they leave upper, the crossings are the pairs
@@ -138,41 +148,35 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 		return 0
 	}
 
-	// the leaf of the tree an edge reaches, in the order the edges leave
-	type edge struct {
-		at     int
-		weight float32
-	}
-	var edges []edge
+	edges := graph.crossEdges[:0]
 	leaves := len(lower)
 	if len(graph.Ports) == 0 {
 		// the leaves are the positions in lower
 		for _, u := range upper {
 			start := len(edges)
 			for _, v := range u.Out {
-				edges = append(edges, edge{v.Pos, graph.Weight(u, v)})
+				edges = append(edges, crossEdge{v.Pos, graph.Weight(u, v)})
 			}
-			slices.SortFunc(edges[start:], func(a, b edge) int { return a.at - b.at })
+			slices.SortFunc(edges[start:], func(a, b crossEdge) int { return a.at - b.at })
 		}
 	} else {
 		// ends of different nodes can meet, so sort them all, and the
 		// leaves are the places edges reach, in order
-		type end struct{ from, to, weight float32 }
-		var ends []end
+		ends := graph.crossEnds[:0]
 		for _, u := range upper {
 			for _, v := range u.Out {
 				from, to := graph.ports(u, v)
-				ends = append(ends, end{float32(u.Pos) + from, float32(v.Pos) + to, graph.Weight(u, v)})
+				ends = append(ends, crossEnd{float32(u.Pos) + from, float32(v.Pos) + to, graph.Weight(u, v)})
 			}
 		}
 
-		slices.SortFunc(ends, func(a, b end) int {
+		slices.SortFunc(ends, func(a, b crossEnd) int {
 			if a.from != b.from {
 				return cmp.Compare(a.from, b.from)
 			}
 			return cmp.Compare(a.to, b.to)
 		})
-		tos := make([]float32, len(ends))
+		tos := resize(graph.crossTos, len(ends))
 		for i, e := range ends {
 			tos[i] = e.to
 		}
@@ -180,9 +184,10 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 		tos = slices.Compact(tos)
 		for _, e := range ends {
 			at, _ := slices.BinarySearch(tos, e.to)
-			edges = append(edges, edge{at, e.weight})
+			edges = append(edges, crossEdge{at, e.weight})
 		}
 		leaves = len(tos)
+		graph.crossEnds, graph.crossTos = ends, tos
 	}
 
 	// inner nodes of the tree hold summed weights
@@ -190,7 +195,10 @@ func (graph *Graph) bilayerCrossings(upper, lower Nodes) float32 {
 	for first < leaves {
 		first *= 2
 	}
-	tree := make([]float32, 2*first)
+	graph.crossEdges = edges
+	tree := resize(graph.crossTree, 2*first)
+	clear(tree)
+	graph.crossTree = tree
 	total := float32(0)
 	for _, e := range edges {
 		i := first + e.at

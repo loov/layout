@@ -11,11 +11,13 @@ import (
 const DefaultOrderIterations = 24
 
 // OrderRanks tries to minimize crossing edges
-func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations) }
+func OrderRanks(graph *Graph) { OrderRanksN(graph, DefaultOrderIterations, false) }
 
 // OrderRanksN tries to minimize crossing edges with the given number of
-// median sweeps; more sweeps can find better orders on large graphs.
-func OrderRanksN(graph *Graph, iterations int) {
+// median sweeps; more sweeps can find better orders on large graphs. With
+// groups, every sweep also moves whole subtrees, see OrderRanksGroups,
+// which finds fewer crossings in about twice the time.
+func OrderRanksN(graph *Graph, iterations int, groups bool) {
 	// like Graphviz, sweep from more than one starting order: a sweep
 	// moves nodes one at a time, and can't move a whole column of them
 	// out of the way of the edges crossing it
@@ -46,6 +48,10 @@ func OrderRanksN(graph *Graph, iterations int) {
 		for i := 0; i < iterations && stale < 4; i++ {
 			OrderRanksByMedian(graph, i%2 == 0)
 			OrderRanksSift(graph)
+			OrderRanksBlocks(graph)
+			if groups {
+				OrderRanksGroups(graph)
+			}
 			OrderRanksTranspose(graph)
 			orderFlatEdges(graph)
 			orderClusters(graph)

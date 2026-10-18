@@ -46,6 +46,10 @@ type Options struct {
 	// OrderIterations is the number of crossing reduction sweeps;
 	// 0 uses the default of 24. More sweeps can help on large graphs.
 	OrderIterations int
+	// OrderGroups moves whole subtrees while ordering: mirrored, or
+	// swapped with the one beside them, across all their ranks. It finds
+	// fewer crossings than sweeps alone, in about twice the time.
+	OrderGroups bool
 	// NoRankBalance keeps nodes that could go on several ranks at the
 	// topmost one instead of spreading them over the least crowded ranks.
 	NoRankBalance bool
@@ -85,10 +89,10 @@ const (
 )
 
 // Presets for Options: Fast trades crossings for speed on large graphs,
-// Quality spends more sweeps looking for a better order.
+// Quality spends more sweeps and moves subtrees looking for a better order.
 var (
 	Fast    = Options{OrderIterations: 4}
-	Quality = Options{OrderIterations: 96}
+	Quality = Options{OrderIterations: 96, OrderGroups: true}
 )
 
 // labelSide is the side of an edge, in the top to bottom frame, that its
@@ -599,7 +603,7 @@ func (c *hierComponent) addClusters() {
 // order orders the nodes in ranks, finds the middle virtual node of every
 // labeled edge, which carries the labels, and merges edges
 func (c *hierComponent) order() {
-	hier.OrderRanksN(c.graph, c.opts.OrderIterations)
+	hier.OrderRanksN(c.graph, c.opts.OrderIterations, c.opts.OrderGroups)
 
 	// the middle virtual node of every labeled edge carries its labels
 	for _, edge := range c.graphdef.Edges {

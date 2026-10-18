@@ -53,6 +53,12 @@ type Graph struct {
 	// is the middle. The median ordering puts the neighbors of a node in
 	// the order of their ends on it, see OrderRanksByMedian.
 	Ports map[[2]ID][2]float32
+
+	// scratch buffers of bilayerCrossings
+	crossEdges []crossEdge
+	crossEnds  []crossEnd
+	crossTos   []float32
+	crossTree  []float32
 }
 
 // Apart returns how much further apart than their halves neighbors a and
