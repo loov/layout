@@ -782,10 +782,10 @@ func (o *jogOrder) topological() []int {
 // leastCrossings moves the jogs of order to where they cross least: a
 // jog above another crosses the other's track with its line down where it
 // leaves inside the other's span, and the other's line in where it enters
-// inside its own. Merged jogs keep their place, as they join their lines
-// there.
+// inside its own. The jog of merged edges spans them all and holds all
+// their lines, see shareJogs, so it moves as the group it draws.
 func (o *jogOrder) leastCrossings(order []int) []int {
-	jogs, pad, n := o.jogs, o.pad, len(o.jogs)
+	jogs, pad := o.jogs, o.pad
 	inside := func(xs []Length, j *jog) (n int) {
 		for _, x := range xs {
 			if x > j.x0+pad/2 && x < j.x1-pad/2 {
@@ -795,15 +795,8 @@ func (o *jogOrder) leastCrossings(order []int) []int {
 		return n
 	}
 
-	pos := make([]int, n)
-	for i, p := range order {
-		pos[p] = i
-	}
-	merged := func(i int) bool { return len(o.shared[jogs[i]]) > 0 }
 	return siftOrder(order, func(i, k int) int { return inside(jogs[i].outs, jogs[k]) + inside(jogs[k].ins, jogs[i]) },
-		func(i, k int) bool {
-			return i != k && (o.goesAbove(i, k) || (merged(i) || merged(k)) && pos[i] < pos[k])
-		})
+		func(i, k int) bool { return i != k && o.goesAbove(i, k) })
 }
 
 // placeTracks puts the ordered jogs of channel k on tracks, arc being how
