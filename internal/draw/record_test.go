@@ -24,3 +24,14 @@ func TestParseRecordEscapedBackslash(t *testing.T) {
 		t.Errorf("got %+v, want C:\\new first", rec.Fields[0])
 	}
 }
+
+// TestTableRecordPorts checks that cells without a border between them
+// share a field, unless the lower one names a port, which a field can
+// only have at its start.
+func TestTableRecordPorts(t *testing.T) {
+	label := `<<table cellborder="1"><tr><td port="a" sides="ltr">one</td></tr><tr><td sides="lbr">two</td></tr><tr><td port="c" sides="ltr">three</td></tr><tr><td port="d" sides="lbr">four</td></tr></table>>`
+	got, ok := TableRecord(label, true)
+	if want := "<a>one\ntwo|<c>three|<d>four"; !ok || got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

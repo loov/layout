@@ -103,9 +103,10 @@ func tableFields(table *html.Node) string {
 		case len(cells) != 1:
 			rows = append(rows, "{"+strings.Join(cells, "|")+"}")
 			only = nil
-		case open && !side(only, 't'):
+		case open && !side(only, 't') && attr(only, "port") == "":
 			// no border between the cells of this row and the last:
-			// one field
+			// one field; a cell with a port stays a field of its own, as
+			// a field names its port at its start
 			rows[len(rows)-1] += "\n" + cells[0]
 		default:
 			rows = append(rows, cells[0])

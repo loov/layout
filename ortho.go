@@ -28,7 +28,8 @@ func orthoEdges(graph *lgraph, rows rowSpans, pad Length, pack bool) {
 			continue
 		}
 		jogs, shared := shareJogs(graph, jogs)
-		jogs = orderJogs(splitOpposite(jogs), shared, pad, &graph.ortho.over)
+		through := func() []Length { return throughRuns(graph, rows, k) }
+		jogs = orderJogs(splitOpposite(jogs), shared, through, pad, &graph.ortho.over)
 		channels[k] = append(jogs, placeTracks(graph, rows, arcs[k], k, jogs, shared, pad, pack)...)
 
 	}
@@ -444,6 +445,21 @@ func channelJogs(graph *lgraph, rows rowSpans) [][]*jog {
 	return channels
 }
 
+// throughRuns returns the x of the vertical runs of edges that pass
+// channel k without turning in it
+func throughRuns(graph *lgraph, rows rowSpans, k int) []Length {
+	top, bottom := rows.channel(k)
+	var xs []Length
+	for _, edge := range graph.Edges {
+		for i := 0; routed(edge) && i+1 < len(edge.Path); i++ {
+			if a, b := edge.Path[i], edge.Path[i+1]; vertical(a, b) && min(a.Y, b.Y) <= top && max(a.Y, b.Y) >= bottom {
+				xs = append(xs, a.X)
+			}
+		}
+	}
+	return xs
+}
+
 // arcRoom returns how far the arcs of edges along a rank reach up into
 // the bottom of each channel; tracks keep above them, see the flat edges
 // in layout.go. In text, the rank of the arcs and what is below moves
@@ -555,9 +571,9 @@ func splitOpposite(jogs []*jog) []*jog {
 // top to bottom: jogs heading right by entry x descending, then jogs
 // heading left by entry x ascending, so continuations don't cut through
 // the jogs below them
-func orderJogs(jogs []*jog, shared map[*jog][]*jog, pad Length, buf *[]bool) []*jog {
+func orderJogs(jogs []*jog, shared map[*jog][]*jog, through func() []Length, pad Length, buf *[]bool) []*jog {
 	sortByEntry(jogs)
-	o := &jogOrder{jogs: jogs, shared: shared, pad: pad, buf: buf}
+	o := &jogOrder{jogs: jogs, shared: shared, through: through, pad: pad, buf: buf}
 	o.findAbove()
 	o.splitCycles()
 	order := o.leastCrossings(o.topological())
@@ -589,8 +605,11 @@ func sortByEntry(jogs []*jog) {
 type jogOrder struct {
 	jogs   []*jog
 	shared map[*jog][]*jog
-	pad    Length
-	buf    *[]bool
+	// through returns the x of the edges that pass the channel without
+	// turning in it, see throughRuns
+	through func() []Length
+	pad     Length
+	buf     *[]bool
 	// whether jogs[i] goes above jogs[k], at i*n+k, see findAbove
 	above []bool
 	exits []jogExit
@@ -667,11 +686,12 @@ func (o *jogOrder) findAbove() {
 // splitCycles splits jogs that must go above each other around a cycle,
 // as longer chains and swaps over spans that differ can, and have no
 // order: the widest of a cycle splits into two steps, on two tracks, at a
-// point where no other jog enters or leaves. The first step enters as the
-// jog did and the second leaves as it did, so nothing needs to go above
-// the first, which breaks the cycle. The jog of merged edges stays whole,
-// as the others of its group take its track alone, see shareJogs, unless
-// the cycle has no other.
+// point where no other jog enters or leaves, nor an edge passes through
+// the channel, which the run between the steps would lie along. The
+// first step enters as the jog did and the second leaves as it did, so
+// nothing needs to go above the first, which breaks the cycle. The jog of
+// merged edges stays whole, as the others of its group take its track
+// alone, see shareJogs, unless the cycle has no other.
 func (o *jogOrder) splitCycles() {
 	for range len(o.jogs) {
 		cycle := jogCycle(o.jogs, o.goesAbove)
@@ -691,8 +711,9 @@ func (o *jogOrder) splitCycles() {
 		if widest == nil {
 			return
 		}
+		through := o.through()
 		apart := func(x Length) bool {
-			return !slices.ContainsFunc(o.jogs, func(j *jog) bool {
+			return !o.near(through, []Length{x}) && !slices.ContainsFunc(o.jogs, func(j *jog) bool {
 				return o.near(j.ins, []Length{x}) || o.near(j.outs, []Length{x})
 			})
 		}
