@@ -9,7 +9,8 @@ import (
 )
 
 // flattenPath approximates the rounded corners drawn by the writers
-// (quadratic curves of the given radius) with two extra points per corner.
+// (curves cut the given radius from the vertex) with two extra points per
+// corner, the middle one where the curve crosses the bisector.
 func flattenPath(path Path, radius, maxDeviation Length) Path {
 	return appendFlatPath(nil, path, radius, maxDeviation)
 }

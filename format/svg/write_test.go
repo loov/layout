@@ -171,3 +171,14 @@ func TestInvisible(t *testing.T) {
 		t.Errorf("drew an invisible cluster or label:\n%s", svg)
 	}
 }
+
+func TestRoundedPathCorner(t *testing.T) {
+	// the outer control points lie on the segments, the inner ones meet
+	// the midpoint along the chord
+	path := layout.Path{{X: 0, Y: 0}, {X: 0, Y: 100}, {X: 100, Y: 100}}
+	got := roundedPath(path, 8, 100)
+	want := "M0,0 L0,92 C0,94 0,96 2,98 C4,100 6,100 8,100 L100,100 "
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

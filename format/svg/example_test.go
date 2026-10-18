@@ -37,7 +37,7 @@ func ExampleWrite() {
 	// 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	// 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	// 	    </marker>
-	// 	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,48 L32,63 Q32,78 32,93 L32,108 '></path><text text-anchor='middle' alignment-baseline='middle' x='51.44' y='90' font-size='14' fill='#000000'>next</text>
+	// 	</defs><g><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M32,48 L32,78 L32,108 '></path><text text-anchor='middle' alignment-baseline='middle' x='51.44' y='90' font-size='14' fill='#000000'>next</text>
 	// <ellipse cx='32' cy='32' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='32' font-size='14' fill='#000000'>a</text>
 	// <ellipse cx='32' cy='124' rx='16' ry='16' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></ellipse><text text-anchor='middle' alignment-baseline='middle' x='32' y='124' font-size='14' fill='#000000'>b</text>
 	// </g></svg>

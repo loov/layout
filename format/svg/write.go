@@ -109,9 +109,13 @@ func vec(x, y layout.Length) string {
 		strconv.FormatFloat(float64(y), 'f', -1, 32) + " "
 }
 
-// roundedPath draws the path as straight segments with rounded corners.
-// Each corner is a quadratic curve with the vertex as control point, cut at
-// most radius away from the vertex (less if the adjacent segments are short).
+// roundedPath draws the path as straight segments with rounded corners,
+// cut at most radius away from the vertex (less if the adjacent segments
+// are short). Each corner is two cubic curves meeting on its bisector,
+// where a quadratic curve with the vertex as control point would pass.
+// Their outer control points lie on the segments, so the curvature ramps
+// up from zero instead of jumping where the straight line ends, as an
+// Euler spiral does (Levien, "From Spiral to Spline", 2009).
 func roundedPath(path layout.Path, radius, maxDeviation layout.Length) string {
 	var line strings.Builder
 	line.WriteString("M" + vec(path[0].X, path[0].Y))
@@ -132,9 +136,20 @@ func roundedPath(path layout.Path, radius, maxDeviation layout.Length) string {
 			continue
 		}
 		r := layout.Length(draw.CornerRadius(drawPoint(prev), drawPoint(p), drawPoint(next), float64(radius), float64(maxDeviation)))
+		if a, b := p.Sub(prev), next.Sub(p); r <= 0 || a.Cross(b).Abs() <= 1e-3*a.Len()*b.Len() {
+			line.WriteString("L" + vec(p.X, p.Y)) // no corner to round
+			continue
+		}
 		in, out := towards(p, prev, r), towards(p, next, r)
+		mid := layout.Vector{X: (in.X + 2*p.X + out.X) / 4, Y: (in.Y + 2*p.Y + out.Y) / 4}
+		// the inner control points at r/2 make both halves meet mid
+		// parallel to the chord from in to out, mirrored, so curvature
+		// is continuous there too
 		line.WriteString("L" + vec(in.X, in.Y))
-		line.WriteString("Q" + vec(p.X, p.Y) + vec(out.X, out.Y))
+		a1, a2 := towards(p, prev, 3*r/4), towards(p, prev, r/2)
+		b1, b2 := towards(p, next, r/2), towards(p, next, 3*r/4)
+		line.WriteString("C" + vec(a1.X, a1.Y) + vec(a2.X, a2.Y) + vec(mid.X, mid.Y))
+		line.WriteString("C" + vec(b1.X, b1.Y) + vec(b2.X, b2.Y) + vec(out.X, out.Y))
 	}
 
 	last := path[len(path)-1]

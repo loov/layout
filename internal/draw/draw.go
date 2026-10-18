@@ -22,7 +22,7 @@ func CornerRadius(prev, p, next Point, radius, maxDeviation float64) float64 {
 		return 0
 	}
 
-	// the quadratic curve's midpoint is r*cos(θ/2)/2 from the corner,
+	// the curve's midpoint is r*cos(θ/2)/2 from the corner,
 	// θ being the angle between the two segments
 	ux, uy := (prev.X-p.X)/l1, (prev.Y-p.Y)/l1
 	vx, vy := (next.X-p.X)/l2, (next.Y-p.Y)/l2
