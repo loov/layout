@@ -69,3 +69,19 @@ func TestOrthoTrackCycle(t *testing.T) {
 		}
 	}
 }
+
+func TestDetour(t *testing.T) {
+	for _, tc := range []struct {
+		path Path
+		want Length
+	}{
+		{Path{{0, 0}, {0, 50}, {100, 50}, {100, 100}}, 0},                   // jog towards the end
+		{Path{{0, 0}, {0, -20}, {100, -20}, {100, 0}}, 2},                   // arc over to a neighbor
+		{Path{{0, 0}, {0, 50}, {-30, 50}, {-30, 80}, {0, 80}, {0, 100}}, 8}, // out and back
+		{Path{{0, 0}, {0, 150}, {0, 100}}, 50},                              // past the end and back
+	} {
+		if got := detour(tc.path); got < tc.want-1 || got > tc.want+1 {
+			t.Errorf("detour(%v) = %v, want about %v", tc.path, got, tc.want)
+		}
+	}
+}

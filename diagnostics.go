@@ -49,6 +49,11 @@ type Diagnostics struct {
 	ShallowCrossings int
 	// BackEdges counts edges drawn against the rank direction.
 	BackEdges int
+	// Detours counts edges that head away from their end before turning
+	// to it, by more than two arrowhead lengths: readers expect an edge to
+	// go towards where it ends (Huang, Eades and Hong, "A graph reading
+	// behavior: geodesic-path tendency", 2009).
+	Detours int
 	// EdgeLength is the total length of all edge paths, in points.
 	EdgeLength Length
 	// Area is the width times height of the drawing, in points.
@@ -72,9 +77,9 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (diag Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f unbalance=%.0f score=%d",
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d detours=%d labels=%d far=%d length=%.0f area=%.0f unbalance=%.0f score=%d",
 		diag.NodeOverlaps, diag.EdgeThroughNode, diag.EdgeNearNode, diag.EdgeCrossings, diag.ShallowCrossings, diag.EdgeOverlaps, diag.ParallelEdges, diag.EndOverlaps, diag.Shafts,
-		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area, diag.Unbalance, diag.Score())
+		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.Detours, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area, diag.Unbalance, diag.Score())
 }
 
 // Score weighs the counted defects into one number, lower is better, for
@@ -84,7 +89,8 @@ func (diag Diagnostics) String() string {
 // human understanding?", 1997), more so when shallow (Huang, Eades and
 // Hong, "Larger crossing angles make graphs easier to read", 2014), then
 // what breaks following a path by eye (Ware et al., "Cognitive
-// measurements of graph aesthetics", 2002): hooks, wobbles and bends.
+// measurements of graph aesthetics", 2002): hooks, detours, wobbles and
+// bends.
 // Length, area and unbalance are left out, they are in points and
 // matter less.
 func (diag Diagnostics) Score() int {
@@ -93,6 +99,7 @@ func (diag Diagnostics) Score() int {
 		20*(diag.EdgeOverlaps+diag.LabelOverlaps) +
 		10*(diag.EdgeCrossings+diag.Shafts+diag.EndOverlaps) +
 		5*(diag.ShallowCrossings+diag.JaggedEdges+diag.BackEdges+diag.FarLabels) +
+		4*diag.Detours +
 		3*(diag.WavyEdges+diag.EdgeNearNode) +
 		2*(diag.BendyEdges+diag.ParallelEdges) +
 		diag.Corners
@@ -402,6 +409,10 @@ func (d *diagnosis) paths() {
 			}
 		}
 
+		if away := detour(path); away > 2*diagArrow {
+			d.diag.Detours++
+			d.detail("edge %v heads %.0f away from its end", edge, away)
+		}
 		if flips >= 2 {
 			d.diag.WavyEdges++
 			d.detail("edge %v changes turn direction %d times", edge, flips)
@@ -416,6 +427,22 @@ func (d *diagnosis) paths() {
 			d.detail("edge %v has %d bends", edge, bends)
 		}
 	}
+}
+
+// detour returns how far the path gets further from its end than it
+// has already been, at most
+func detour(path Path) Length {
+	end := path[len(path)-1]
+	closest, away := path[0].Sub(end).Len(), Length(0)
+	for a, b := range path.Segments() {
+		// along a segment, the distance falls to the nearest point and
+		// then rises to b
+		t, dx, dy := projection(end, a, b)
+		near := Vector{a.X + Length(t*dx), a.Y + Length(t*dy)}
+		closest = min(closest, near.Sub(end).Len())
+		away = max(away, b.Sub(end).Len()-closest)
+	}
+	return away
 }
 
 // unbalance adds up how far forks and joins are off the median of their
