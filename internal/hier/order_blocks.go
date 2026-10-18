@@ -88,6 +88,11 @@ type blockMover struct {
 	left, right []float32
 	edges       []blockEdge
 	column      []float32
+	// see pairCosts
+	upTo, starts []int
+	byY          []blockEdge
+	pair, diff   []float32
+	lower        int // the rank of c of blockEdges
 }
 
 // blockEdge is an edge between the ranks of the edge b->c of a block,
@@ -152,19 +157,18 @@ func (m *blockMover) move(block Nodes) bool {
 		m.blockEdges(block[i-1], block[i])
 		m.best[i] = m.best[i][:0]
 		m.from[i] = m.from[i][:0]
-		for _, q := range m.cands[i] {
-			// the crossings of the edge into block[i] at q, for every slot
-			// of block[i-1]
-			pair := m.blockEdgeCosts(q)
-			c, back := m.best[i-1][0]+pair[m.cands[i-1][0]], 0
-			for k, p := range m.cands[i-1] {
-				if d := m.best[i-1][k] + pair[p]; d < c {
+		m.pairCosts(m.cands[i-1], m.cands[i], func(q int, pair []float32) {
+			// pair[k]: the crossings of the edge into block[i] at q with
+			// block[i-1] at its k-th candidate
+			c, back := m.best[i-1][0]+pair[0], 0
+			for k := range pair {
+				if d := m.best[i-1][k] + pair[k]; d < c {
 					c, back = d, k
 				}
 			}
 			m.best[i] = append(m.best[i], c+m.unary[i][q])
 			m.from[i] = append(m.from[i], back)
-		}
+		})
 	}
 
 	last := n - 1
@@ -261,6 +265,7 @@ func (graph *Graph) edgeWeight(a, b *Node) float32 {
 // their upper ends
 func (m *blockMover) blockEdges(b, c *Node) {
 	graph, upper := m.graph, m.graph.ByRank[b.Rank]
+	m.lower = c.Rank
 	m.edges = m.edges[:0]
 	for x, u := range upper {
 		if u == b {
@@ -306,6 +311,70 @@ func (m *blockMover) blockEdgeCosts(q int) []float32 {
 		costs[p] += costs[p-1]
 	}
 	return costs
+}
+
+// pairCosts calls visit with every slot q of qs, in order, and the
+// crossings of the edge b->c of blockEdges with c at q, for b at every
+// slot of ps, both sorted. The first q counts every edge; from one q to
+// the next, only the edges that end between them change sides: they
+// crossed b->c from b's left, and now cross it from its right.
+func (m *blockMover) pairCosts(ps, qs []int, visit func(q int, pair []float32)) {
+	// by their lower ends, which are slots, counted into place
+	edges := resize(m.byY, len(m.edges))
+	m.byY = edges
+	starts := resize(m.starts, len(m.graph.ByRank[m.lower])+1)
+	m.starts = starts
+	clear(starts)
+	for _, e := range m.edges {
+		starts[e.y+1]++
+	}
+	for y := 1; y < len(starts); y++ {
+		starts[y] += starts[y-1]
+	}
+	for _, e := range m.edges {
+		edges[starts[e.y]] = e
+		starts[e.y]++
+	}
+
+	// the candidates of b at or before slot x, for every x
+	m.upTo = resize(m.upTo, len(m.column)+1)
+	k := 0
+	for x := range m.upTo {
+		for k < len(ps) && ps[k] <= x {
+			k++
+		}
+		m.upTo[x] = k
+	}
+
+	pair := resize(m.pair, len(ps))
+	diff := resize(m.diff, len(ps)+1)
+	m.pair, m.diff = pair, diff
+	e := 0
+	for j, q := range qs {
+		if j == 0 {
+			full := m.blockEdgeCosts(q)
+			for k, p := range ps {
+				pair[k] = full[p]
+			}
+			for e < len(edges) && edges[e].y < q {
+				e++
+			}
+		} else {
+			clear(diff)
+			for ; e < len(edges) && edges[e].y < q; e++ {
+				// +w where b is at or left of the edge's top, -w past it
+				w := edges[e].weight
+				diff[0] += w
+				diff[m.upTo[edges[e].x]] -= 2 * w
+			}
+			run := float32(0)
+			for k := range pair {
+				run += diff[k]
+				pair[k] += run
+			}
+		}
+		visit(q, pair)
+	}
 }
 
 // blockEdgeCrossings counts the crossings of the edge b->c with the edges

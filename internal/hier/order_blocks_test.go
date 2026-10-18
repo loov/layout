@@ -1,6 +1,7 @@
 package hier
 
 import (
+	"math/rand/v2"
 	"slices"
 	"testing"
 )
@@ -57,5 +58,45 @@ func TestOrderRanksBlocks(t *testing.T) {
 	}
 	if !slices.Equal(graph.ByRank[2], Nodes{link1, link2, link3}) {
 		t.Errorf("order = %v, want link2 right of link1", graph.ByRank)
+	}
+}
+
+// TestPairCosts checks that pairCosts, which moves c from one slot to the
+// next, counts the crossings of b->c as blockEdgeCosts does for each slot
+// alone, on random layered graphs with weights.
+func TestPairCosts(t *testing.T) {
+	rng := rand.New(rand.NewPCG(5, 6))
+	for range 500 {
+		graph := randomLayers(rng, true, false)
+		m := &blockMover{graph: graph}
+		for r := 1; r < len(graph.ByRank); r++ {
+			upper, lower := graph.ByRank[r-1], graph.ByRank[r]
+			b, c := upper[rng.IntN(len(upper))], lower[rng.IntN(len(lower))]
+			var ps, qs []int
+			for p := range len(upper) {
+				if rng.IntN(2) == 0 {
+					ps = append(ps, p)
+				}
+			}
+			for q := range len(lower) {
+				if rng.IntN(2) == 0 {
+					qs = append(qs, q)
+				}
+			}
+			if len(ps) == 0 || len(qs) == 0 {
+				continue
+			}
+			m.blockEdges(b, c)
+			got := map[int][]float32{}
+			m.pairCosts(ps, qs, func(q int, pair []float32) { got[q] = slices.Clone(pair) })
+			for _, q := range qs {
+				full := m.blockEdgeCosts(q)
+				for k, p := range ps {
+					if got[q][k] != full[p] {
+						t.Fatalf("%v->%v at %d, %d: %v, want %v", b, c, p, q, got[q][k], full[p])
+					}
+				}
+			}
+		}
 	}
 }
