@@ -45,32 +45,38 @@ func (graph *Graph) crossingsBothWays(u, v *Node) (uv, vu float32) {
 // crossingsByPos counts unweighted crossings of u left of v and v left of u
 // from the cached neighbor position arrays
 func crossingsByPos(u, v *Node) (uv, vu float32) {
-	var a, b int32
-	for _, w := range u.inPos {
-		for _, z := range v.inPos {
-			if z < w {
-				a++
-			} else if z > w {
-				b++
-			}
-		}
-	}
-
-	for _, w := range u.outPos {
-		for _, z := range v.outPos {
-			if z < w {
-				a++
-			} else if z > w {
-				b++
-			}
-		}
-	}
-
-	return float32(a), float32(b)
+	a, b := sidesCrossing(u.inPos, v.inPos)
+	c, d := sidesCrossing(u.outPos, v.outPos)
+	return float32(a + c), float32(b + d)
 }
 
-// cachePos caches the positions of the neighbors of the nodes for
-// crossingsByPos, so that its pair loops stream; they hold while the
+// sidesCrossing counts the pairs of the sorted positions ws and zs with z
+// before w, and with z after w: the crossings of edges to them from nodes
+// u and v, with u left of v and with v left of u. When they don't
+// overlap, every pair counts the one way.
+func sidesCrossing(ws, zs []int32) (before, after int32) {
+	switch {
+	case len(ws) == 0 || len(zs) == 0:
+		return 0, 0
+	case zs[len(zs)-1] < ws[0]:
+		return int32(len(ws) * len(zs)), 0
+	case zs[0] > ws[len(ws)-1]:
+		return 0, int32(len(ws) * len(zs))
+	}
+	for _, w := range ws {
+		for _, z := range zs {
+			if z < w {
+				before++
+			} else if z > w {
+				after++
+			}
+		}
+	}
+	return before, after
+}
+
+// cachePos caches the positions of the neighbors of the nodes, sorted,
+// for crossingsByPos, so that its pair loops stream; they hold while the
 // neighbor ranks keep their order
 func (nodes Nodes) cachePos() {
 	for _, node := range nodes {
@@ -82,6 +88,8 @@ func (nodes Nodes) cachePos() {
 		for _, dst := range node.Out {
 			node.outPos = append(node.outPos, int32(dst.Pos))
 		}
+		slices.Sort(node.inPos)
+		slices.Sort(node.outPos)
 	}
 }
 

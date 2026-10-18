@@ -10,43 +10,58 @@ const maxSiftLayer = 400
 // improves.
 func OrderRanksSift(graph *Graph) (moves int) {
 	graph.assignPos()
+	var buf struct {
+		d, left []float32
+		order   []int
+	}
 	for _, layer := range graph.ByRank {
 		n := len(layer)
 		if n < 3 || n > maxSiftLayer {
 			continue
 		}
 		layer.cachePos()
-		c := make([]float32, n*n)
+		// d[v*n+u] is how many fewer crossings v has right of u than left
+		// of it, by the crossings c either way: rows, which the scan
+		// below reads, stay in the cache where columns would not
+		d := resize(buf.d, n*n)
+		left := resize(buf.left, n) // the crossings of v left of all others
+		buf.d, buf.left = d, left
+		clear(left)
 		for i := range n {
+			d[i*n+i] = 0
 			for k := i + 1; k < n; k++ {
-				c[i*n+k], c[k*n+i] = graph.crossingsBothWays(layer[i], layer[k])
+				ik, ki := graph.crossingsBothWays(layer[i], layer[k])
+				d[i*n+k], d[k*n+i] = ki-ik, ik-ki
+				left[i] += ik
+				left[k] += ki
 			}
 		}
 
-		// order holds indices into layer; the matrix does not depend on
-		// positions inside the layer, so it is valid for the whole pass
-		order := make([]int, n)
+		// order holds indices into layer; the costs do not depend on
+		// positions inside the layer, so they hold for the whole pass
+		order := resize(buf.order, n)
+		buf.order = order
 		for i := range order {
 			order[i] = i
 		}
-		others := make([]int, 0, n)
 		for range 4 {
 			improved := false
 			for i := range n {
 				v := order[i]
-				others = append(others[:0], order[:i]...)
-				others = append(others, order[i+1:]...)
+				row := d[v*n : v*n+n]
 				// cost of v at the leftmost slot, then sliding right past
 				// each of the others; ties keep the current slot
-				cost := float32(0)
-				for _, u := range others {
-					cost += c[v*n+u]
-				}
+				cost := left[v]
 				best, bestCost := 0, cost
-				for k, u := range others {
-					cost += c[u*n+v] - c[v*n+u]
-					if cost < bestCost || (cost == bestCost && k+1 == i) {
-						best, bestCost = k+1, cost
+				slot := 0
+				for j, u := range order {
+					if j == i {
+						continue
+					}
+					slot++
+					cost += row[u]
+					if cost < bestCost || (cost == bestCost && slot == i) {
+						best, bestCost = slot, cost
 					}
 				}
 				if best != i {
