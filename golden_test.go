@@ -183,12 +183,15 @@ func TestDiagnostics(t *testing.T) {
 	}
 
 	var out, text bytes.Buffer
+	// the total score of each file, to compare experiments at a glance
+	totals := map[*bytes.Buffer]int{}
 	diagnose := func(out *bytes.Buffer, name string, graph *layout.Graph, opts layout.Options) {
 		l, err := layout.Hierarchical(graph, opts)
 		if err != nil {
 			t.Fatal(err)
 		}
 		d := layout.Diagnose(l)
+		totals[out] += d.Score()
 		fmt.Fprintf(out, "%-12s %v\n", name, d)
 		for _, line := range d.Details {
 			t.Logf("%s: %s", name, line)
@@ -204,6 +207,7 @@ func TestDiagnostics(t *testing.T) {
 	for _, file := range files {
 		diagnose(&out, fixture(file), parse(file), layout.Options{})
 	}
+	fmt.Fprintf(&out, "%-12s score=%d\n", "total", totals[&out])
 	compareGolden(t, filepath.Join("testdata", "diagnostics.txt"), out.Bytes())
 
 	// as the text drawings: see TestExamplesText and TestGraphviz
@@ -219,7 +223,7 @@ func TestDiagnostics(t *testing.T) {
 		merged.MergeEdges = true
 		diagnose(&text, name+"_merged", merged, layout.Options{ForText: true})
 	}
-
+	fmt.Fprintf(&text, "%-12s score=%d\n", "total", totals[&text])
 	compareGolden(t, filepath.Join("testdata", "diagnostics_text.txt"), text.Bytes())
 }
 

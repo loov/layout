@@ -72,9 +72,30 @@ type Diagnostics struct {
 
 // String formats the diagnostics as one line of key=value pairs.
 func (diag Diagnostics) String() string {
-	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f unbalance=%.0f",
+	return fmt.Sprintf("nodes=%d through=%d near=%d crossings=%d shallow=%d overlaps=%d parallel=%d ends=%d shafts=%d jagged=%d bends=%d corners=%d wavy=%d back=%d labels=%d far=%d length=%.0f area=%.0f unbalance=%.0f score=%d",
 		diag.NodeOverlaps, diag.EdgeThroughNode, diag.EdgeNearNode, diag.EdgeCrossings, diag.ShallowCrossings, diag.EdgeOverlaps, diag.ParallelEdges, diag.EndOverlaps, diag.Shafts,
-		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area, diag.Unbalance)
+		diag.JaggedEdges, diag.BendyEdges, diag.Corners, diag.WavyEdges, diag.BackEdges, diag.LabelOverlaps, diag.FarLabels, diag.EdgeLength, diag.Area, diag.Unbalance, diag.Score())
+}
+
+// Score weighs the counted defects into one number, lower is better, for
+// comparing layouts of the same graph. Broken drawings (overlaps, edges
+// through nodes) weigh most, then crossings, which user studies find hurt
+// reading the most (Purchase, "Which aesthetic has the greatest effect on
+// human understanding?", 1997), more so when shallow (Huang, Eades and
+// Hong, "Larger crossing angles make graphs easier to read", 2014), then
+// what breaks following a path by eye (Ware et al., "Cognitive
+// measurements of graph aesthetics", 2002): hooks, wobbles and bends.
+// Length, area and unbalance are left out, they are in points and
+// matter less.
+func (diag Diagnostics) Score() int {
+	return 100*diag.NodeOverlaps +
+		50*diag.EdgeThroughNode +
+		20*(diag.EdgeOverlaps+diag.LabelOverlaps) +
+		10*(diag.EdgeCrossings+diag.Shafts+diag.EndOverlaps) +
+		5*(diag.ShallowCrossings+diag.JaggedEdges+diag.BackEdges+diag.FarLabels) +
+		3*(diag.WavyEdges+diag.EdgeNearNode) +
+		2*(diag.BendyEdges+diag.ParallelEdges) +
+		diag.Corners
 }
 
 // Diagnose computes Diagnostics for a layout.
