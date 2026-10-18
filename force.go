@@ -2,16 +2,18 @@ package layout
 
 import (
 	"cmp"
+	"container/heap"
 	"math"
 	"math/rand"
 	"slices"
 	"sort"
 )
 
-// Force lays out the graph with a Fruchterman-Reingold force simulation:
-// nodes repel each other, edges pull their ends together. It suits
-// undirected and cyclic graphs where ranks make no sense. Edges are drawn
-// as straight segments between node boundaries.
+// Force lays out the graph by stress: every pair of nodes is placed about
+// as far apart as the shortest path between them, then nodes too close
+// for their size are pushed apart. It suits undirected and cyclic graphs
+// where ranks make no sense. Edges are drawn as straight segments between
+// node boundaries.
 //
 // The graph is not modified. It fails when an edge refers to a node that
 // is not part of the graph.
@@ -63,74 +65,143 @@ func force(graph *lgraph) {
 		pos[i] = [2]float64{rng.Float64() * side, rng.Float64() * side}
 	}
 
-	// edges between the same nodes pull as one, so that their labels
-	// have room; a labeled edge rests longer by its label
-	pairs := newPairs(graph)
-	rest := make([]float64, len(graph.Edges))
-	for i, edge := range graph.Edges {
-		rest[i] = k
-		if edge.Label != "" {
-			rest[i] += float64(2 * max(edge.LabelRadius.X, edge.LabelRadius.Y))
+	// edges between the same nodes pull as one, a labeled edge rests
+	// longer by its label so that the label has room
+	type link struct {
+		to             int
+		rest, strength float64
+	}
+	links := make([][]link, n)
+	join := func(i, j int, rest, weight float64) {
+		for l := range links[i] {
+			if links[i][l].to == j {
+				links[i][l].rest = math.Max(links[i][l].rest, rest)
+				links[i][l].strength = math.Max(links[i][l].strength, weight)
+				return
+			}
 		}
+		links[i] = append(links[i], link{j, rest, weight})
+	}
+	for _, edge := range graph.Edges {
+		i, j := index[edge.From], index[edge.To]
+		if i == j {
+			continue
+		}
+		rest := 2 * k // room between the nodes to see the edge
+		if edge.Label != "" {
+			rest += float64(2 * max(edge.LabelRadius.X, edge.LabelRadius.Y))
+		}
+		join(i, j, rest, edge.Weight)
+		join(j, i, rest, edge.Weight)
 	}
 
-	// float64 conversions below block FMA fusion, so the layout is
-	// identical across architectures (goldens are compared byte for byte)
-
-	// O(n²) repulsion; add a grid or Barnes-Hut past a few thousand nodes
-	const iterations = 300
-	disp := make([][2]float64, n)
-	temperature := side / 10
-	for range iterations {
-		for i := range disp {
-			disp[i] = [2]float64{}
+	// stress majorization by stochastic gradient descent (Zheng, Pawar and
+	// Goodman, "Graph drawing by stochastic gradient descent", 2018): every
+	// pair of nodes moves towards its distance along the graph, the nearer
+	// pairs more strongly
+	type pair struct {
+		i, j int32
+		d, w float64 // the distance to keep, how strongly
+	}
+	// O(n²) pairs in memory; sparse stress with pivots past a few
+	// thousand nodes
+	pairs := make([]pair, 0, n*(n-1)/2)
+	dist := make([]float64, n)
+	longest, shortest := 0.0, math.Inf(1)
+	for i := range n {
+		shortestPaths(i, dist, func(i int, visit func(j int, length float64)) {
+			for _, l := range links[i] {
+				visit(l.to, l.rest)
+			}
+		})
+		for j := i + 1; j < n; j++ {
+			if !math.IsInf(dist[j], 1) {
+				longest = math.Max(longest, dist[j])
+				shortest = math.Min(shortest, dist[j])
+			}
+			pairs = append(pairs, pair{i: int32(i), j: int32(j), d: dist[j]})
 		}
-		for i := range n {
-			for j := i + 1; j < n; j++ {
-				dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
-				d := hypot(dx, dy)
-				if d < 1e-3 {
-					dx, dy = 1e-3*float64(i-j), 1e-3
-					d = 1e-3
-				}
-				f := k * k / d / d // repulsion k²/d, normalized by d
-				disp[i][0] += float64(dx * f)
-				disp[i][1] += float64(dy * f)
-				disp[j][0] -= float64(dx * f)
-				disp[j][1] -= float64(dy * f)
+	}
+	if math.IsInf(shortest, 1) {
+		shortest, longest = k, k // no edges
+	}
+	strength := func(i, j int) float64 {
+		for _, l := range links[i] {
+			if l.to == j {
+				return l.strength
 			}
 		}
+		return 1
+	}
+	for p := range pairs {
+		pr := &pairs[p]
+		if math.IsInf(pr.d, 1) {
+			pr.d = longest + k // separate components keep apart
+		}
+		pr.w = strength(int(pr.i), int(pr.j)) / float64(pr.d*pr.d)
+	}
 
-		for e, edge := range graph.Edges {
-			i, j := index[edge.From], index[edge.To]
-			if i == j {
-				continue
-			}
+	// the step size falls geometrically from 1/min w to 0.1/max w; over
+	// 2⁶ steps, so that six square roots give the rate, which unlike
+	// math.Pow rounds the same on every architecture
+	const halvings, steps = 6, 1 << 6
+	step, end := longest*longest, 0.1*shortest*shortest
+	rate := end / step
+	for range halvings {
+		rate = math.Sqrt(rate)
+	}
+
+	for range steps + 1 {
+		rng.Shuffle(len(pairs), func(a, b int) { pairs[a], pairs[b] = pairs[b], pairs[a] })
+		for _, pr := range pairs {
+			i, j := pr.i, pr.j
 			dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
 			d := hypot(dx, dy)
 			if d < 1e-3 {
-				continue
+				dx, dy = 1e-3*float64(i-j), 1e-3
+				d = hypot(dx, dy)
 			}
-
-			// attraction d²/rest, normalized by d
-			f := d * edge.Weight / rest[e] / float64(pairs.count[pairs.key(edge)])
-			disp[i][0] -= float64(dx * f)
-			disp[i][1] -= float64(dy * f)
-			disp[j][0] += float64(dx * f)
-			disp[j][1] += float64(dy * f)
+			mu := math.Min(float64(pr.w*step), 1)
+			f := float64(float64(d-pr.d)/2*mu) / d
+			pos[i][0] -= float64(dx * f)
+			pos[i][1] -= float64(dy * f)
+			pos[j][0] += float64(dx * f)
+			pos[j][1] += float64(dy * f)
 		}
+		step *= rate
+	}
 
-		for i := range pos {
-			d := hypot(disp[i][0], disp[i][1])
-			if d > temperature {
-				disp[i][0] *= temperature / d
-				disp[i][1] *= temperature / d
+	// stress can't keep every neighbor of a hub an edge apart, so push
+	// apart the nodes that end up closer than their sizes allow; O(n²) a
+	// round, a sweep line past a few thousand nodes
+	reach := make([]float64, n)
+	for i, node := range graph.Nodes {
+		reach[i] = float64(max(node.Radius.X, node.Radius.Y) + graph.NodePadding/2)
+	}
+	for range 100 {
+		moved := false
+		for i := range n {
+			for j := i + 1; j < n; j++ {
+				dx, dy := pos[i][0]-pos[j][0], pos[i][1]-pos[j][1]
+				d, apart := hypot(dx, dy), reach[i]+reach[j]
+				if d >= apart-1e-3 {
+					continue
+				}
+				if d < 1e-3 {
+					dx, dy = 1e-3*float64(i-j), 1e-3
+					d = hypot(dx, dy)
+				}
+				f := float64(apart-d) / 2 / d
+				pos[i][0] += float64(dx * f)
+				pos[i][1] += float64(dy * f)
+				pos[j][0] -= float64(dx * f)
+				pos[j][1] -= float64(dy * f)
+				moved = true
 			}
-			pos[i][0] += disp[i][0]
-			pos[i][1] += disp[i][1]
 		}
-
-		temperature *= 0.98
+		if !moved {
+			break
+		}
 	}
 
 	// an outlier stretches the whole picture: shrink every gap between
@@ -180,6 +251,49 @@ func force(graph *lgraph) {
 		edge.LabelPos = Vector{}
 	}
 	layoutPinned(graph)
+}
+
+// shortestPaths sets dist to the length of the shortest path from source
+// to every node, +Inf where there is none, with Dijkstra's algorithm;
+// neighbors visits the nodes next to a node, with the length to them.
+func shortestPaths(source int, dist []float64, neighbors func(i int, visit func(j int, length float64))) {
+	for i := range dist {
+		dist[i] = math.Inf(1)
+	}
+	dist[source] = 0
+	queue := &nearest{{source, 0}}
+	for queue.Len() > 0 {
+		at := heap.Pop(queue).(reached)
+		if at.dist > dist[at.node] {
+			continue // reached sooner since
+		}
+		neighbors(at.node, func(j int, length float64) {
+			if d := at.dist + length; d < dist[j] {
+				dist[j] = d
+				heap.Push(queue, reached{j, d})
+			}
+		})
+	}
+}
+
+// reached is a node and the length of a path to it
+type reached struct {
+	node int
+	dist float64
+}
+
+// nearest is a heap of reached nodes, the nearest first
+type nearest []reached
+
+func (q nearest) Len() int           { return len(q) }
+func (q nearest) Less(a, b int) bool { return q[a].dist < q[b].dist }
+func (q nearest) Swap(a, b int)      { q[a], q[b] = q[b], q[a] }
+func (q *nearest) Push(x any)        { *q = append(*q, x.(reached)) }
+func (q *nearest) Pop() any {
+	old := *q
+	x := old[len(old)-1]
+	*q = old[:len(old)-1]
+	return x
 }
 
 // hypot is math.Hypot without its internal FMA fusion: the explicit

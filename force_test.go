@@ -50,6 +50,29 @@ func TestForce(t *testing.T) {
 	compareGolden(t, "testdata/force.svg", got.Bytes())
 }
 
+// TestForceWithoutEdges checks that nodes without edges get places of
+// their own.
+func TestForceWithoutEdges(t *testing.T) {
+	graph := layout.NewGraph()
+	for _, id := range []string{"a", "b", "c"} {
+		graph.Node(id)
+	}
+	l, err := layout.Force(graph, layout.ForceOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i, a := range l.Nodes {
+		if math.IsNaN(float64(a.Center.X)) || math.IsNaN(float64(a.Center.Y)) {
+			t.Fatalf("%v is at %v", graph.Nodes[i], a.Center)
+		}
+		for _, b := range l.Nodes[i+1:] {
+			if d := math.Hypot(float64(a.Center.X-b.Center.X), float64(a.Center.Y-b.Center.Y)); d < float64(a.Size.X+b.Size.X)/2 {
+				t.Errorf("nodes overlap at %v and %v", a.Center, b.Center)
+			}
+		}
+	}
+}
+
 func TestForcePreservesPinnedCentersAndPaths(t *testing.T) {
 	graph := layout.NewGraph()
 	existing := graph.Edge("a", "b")
