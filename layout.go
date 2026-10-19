@@ -1039,7 +1039,8 @@ func (c *hierComponent) steepenRanks() {
 			for _, u := range v.In {
 				gap := (v.Center.Y - half(v)) - (u.Center.Y + half(u))
 				dx := v.Center.X + v.Anchor - u.Center.X - u.Anchor
-				need = max(need, steepness*max(dx, -dx)-gap)
+				// float32 rounds the product, blocking FMA fusion on arm64
+				need = max(need, float32(steepness*max(dx, -dx))-gap)
 			}
 		}
 		need = min(need, most)
