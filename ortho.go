@@ -210,6 +210,10 @@ func slotEnds(graph *lgraph, pad Length, pack bool) (arcEnds []*ledge) {
 
 // slotSide moves the ends in list, on side k, to their slots
 func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]int, pad Length, pack bool) {
+	input := make(map[*ledge]int, len(list))
+	for i, e := range list {
+		input[e.edge] = i
+	}
 	slices.SortStableFunc(list, func(a, b slotEnd) int { return cmp.Compare(a.towards, b.towards) })
 
 	// merged ends take one slot a group, that of its middle end
@@ -234,6 +238,26 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	}
 
 	slices.SortStableFunc(list, func(a, b slotEnd) int { return cmp.Compare(a.towards, b.towards) })
+
+	// edges between the same nodes take the places they sorted to in
+	// the order of the edges, the same at both ends; sorted by where
+	// earlier routes left them, they could swap and cross between
+	pairs := map[[2]*lnode][]int{}
+	for i, e := range list {
+		if pair := unorderedNodes(e.edge); parallel[pair] > 1 {
+			pairs[pair] = append(pairs[pair], i)
+		}
+	}
+	for _, at := range pairs {
+		ends := make([]slotEnd, len(at))
+		for j, i := range at {
+			ends[j] = list[i]
+		}
+		slices.SortStableFunc(ends, func(a, b slotEnd) int { return cmp.Compare(input[a.edge], input[b.edge]) })
+		for j, i := range at {
+			list[i] = ends[j]
+		}
+	}
 
 	// slots evenly spread around the center, or packed from the left
 	// an edge padding apart
