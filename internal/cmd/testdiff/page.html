@@ -165,7 +165,7 @@ pre.editor.moving { cursor: grabbing; }
 		<button id="copy" class="edit-only" title="copy the drawing now and as edited, to paste to an assistant">copy</button>
 		<button class="theme" title="toggle the theme (t)">◐</button>
 		<button id="close" title="close (Esc)">close ✕</button>
-		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it (with ⌥, its lines stay joined), arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
+		<div class="hint edit-only">Text: drag to select cells, drag a selection to move it (with ⌥, its lines stay joined), arrows nudge it (or move the cursor), ⌥ + arrows or ⌥ + drag draw a line, type or click the toolbox to draw, Delete clears, ⌘Z undoes. SVG: drag clusters (their border resizes them), nodes, edge labels, the bends of edges and their ends, which show a circle when hovered; ends slide along their node; drag the middle of a segment, the hollow circle, to add a bend. Copy puts the drawing as it is and as edited on the clipboard. Esc or e leaves; edits stay while the page is open.</div>
 		<div class="hint view-only">Drag to pan all three; drag the onion skin to move it (shift-drag pans there), or nudge it with the arrow keys (shift for 10); text moves a cell at a time. Same parts fade; differences stand out: in text, red is only in old and green only in new. Holding p grays what stayed the same in text, but for a cell around each change, as lined up by the onion offset. j/k prev/next, +/- zoom, f fit, 0 reset, t theme, Esc close.</div>
 	</div>
 	<div class="panels">
@@ -1421,11 +1421,13 @@ function textEditor(change) {
 // labels, and the bends and ends of edges, which show as a circle when
 // hovered; ends slide along the outline of their node, and dragging the
 // middle of a segment adds a bend there. Edge ends at a node follow it, a
-// cluster carries what lies inside it, and an edge that changes is drawn
-// through its points without rounding.
+// cluster carries what lies inside it, dragging the border of a cluster
+// resizes it, and an edge that changes is drawn through its points
+// without rounding.
 function svgEditor(change) {
 	const original = change.new || change.old;
-	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map(), changed: new Set() };
+	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map(), changed: new Set(), sizes: new Map() };
+	state.sizes ||= new Map();
 	const wrap = document.createElement("div");
 	wrap.className = "svgedit";
 	const svg = inertSVG(state.svg);
@@ -1462,7 +1464,10 @@ function svgEditor(change) {
 		const t = /translate\(([-\d.e]+),? ?([-\d.e]+)\)/.exec(it.els[0].getAttribute("transform") || "");
 		it.t = t ? { x: +t[1], y: +t[2] } : { x: 0, y: 0 };
 	}
-	const place = it => { for (const el of it.els) el.setAttribute("transform", `translate(${it.t.x} ${it.t.y})`); };
+	// a cluster's label also keeps its own offset, as resizing moves it
+	const place = it => {
+		for (const el of it.els) el.setAttribute("transform", `translate(${it.t.x + +(el.dataset.dx || 0)} ${it.t.y + +(el.dataset.dy || 0)})`);
+	};
 	const bbox = it => {
 		let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
 		for (const el of it.els) {
@@ -1565,16 +1570,53 @@ function svgEditor(change) {
 		ring.classList.toggle("port", !!h.end);
 	};
 
+	// the frame of a cluster as drawn, and the sides of the innermost one
+	// whose border is under the pointer, which dragging there moves
+	const frame = it => {
+		const r = it.els[0], v = a => +r.getAttribute(a);
+		return { x0: v("x") + it.t.x, y0: v("y") + it.t.y, x1: v("x") + v("width") + it.t.x, y1: v("y") + v("height") + it.t.y };
+	};
+	const bordersAt = ev => {
+		const p = point(ev), grip = 5 * scale();
+		for (const it of items.toReversed()) {
+			if (!it.cluster) continue;
+			const f = frame(it);
+			if (p[0] < f.x0 - grip || p[0] > f.x1 + grip || p[1] < f.y0 - grip || p[1] > f.y1 + grip) continue;
+			const sides = {
+				left: Math.abs(p[0] - f.x0) <= grip, right: Math.abs(p[0] - f.x1) <= grip,
+				top: Math.abs(p[1] - f.y0) <= grip, bottom: Math.abs(p[1] - f.y1) <= grip,
+			};
+			if (Object.values(sides).some(Boolean)) return { it, sides };
+		}
+		return null;
+	};
+	let hovered = null;
+	const showBorder = r => {
+		if (hovered) hovered.style.cursor = "";
+		hovered = r?.it.els[0];
+		if (!hovered) return;
+		const { left, right, top, bottom } = r.sides;
+		const x = left || right, y = top || bottom;
+		hovered.style.cursor = x && y ? (left === top ? "nwse-resize" : "nesw-resize") : x ? "ew-resize" : "ns-resize";
+	};
+
 	let drag = null;
 	svg.addEventListener("pointerdown", e => {
 		if (e.button !== 0) return;
 		const h = handleAt(e);
+		const border = h ? null : bordersAt(e);
 		const it = items.find(it => it.els.some(el => el === e.target || el.contains(e.target)));
-		if (!h && !it) return;
+		if (!h && !border && !it) return;
 		e.stopPropagation();
 		e.preventDefault();
 		svg.setPointerCapture(e.pointerId);
-		const before = { svg: svg.outerHTML, moves: new Map(state.moves), changed: new Set(state.changed) };
+		const before = { svg: svg.outerHTML, moves: new Map(state.moves), changed: new Set(state.changed), sizes: new Map(state.sizes) };
+		if (border) {
+			const r = border.it.els[0], v = a => +r.getAttribute(a);
+			const labels = border.it.els.slice(1).map(el => ({ el, dx: +(el.dataset.dx || 0), dy: +(el.dataset.dy || 0) }));
+			drag = { resize: border, rect: { x: v("x"), y: v("y"), w: v("width"), h: v("height") }, labels, x: e.clientX, y: e.clientY, scale: scale(), before };
+			return;
+		}
 		if (h) {
 			if (h.insert) h.e.pts.splice(h.at, 0, [h.x, h.y]);
 			// an end slides along the outline of its node
@@ -1596,8 +1638,31 @@ function svgEditor(change) {
 		};
 	});
 	svg.addEventListener("pointermove", e => {
-		if (!drag) return showRing(handleAt(e));
+		if (!drag) {
+			const h = handleAt(e);
+			showBorder(h ? null : bordersAt(e));
+			return showRing(h);
+		}
 		const dx = (e.clientX - drag.x) * drag.scale, dy = (e.clientY - drag.y) * drag.scale;
+		if (drag.resize) {
+			// the sides dragged move, no closer than a few pixels apart
+			const { it, sides } = drag.resize, { x, y, w, h } = drag.rect, least = 4;
+			const left = sides.left ? Math.min(dx, w - least) : 0, right = sides.right ? Math.max(dx, least - w) : 0;
+			const top = sides.top ? Math.min(dy, h - least) : 0, bottom = sides.bottom ? Math.max(dy, least - h) : 0;
+			const r = it.els[0];
+			r.setAttribute("x", x + left);
+			r.setAttribute("y", y + top);
+			r.setAttribute("width", w - left + right);
+			r.setAttribute("height", h - top + bottom);
+			// the label stays centered at the top
+			for (const l of drag.labels) {
+				l.el.dataset.dx = l.dx + (left + right) / 2;
+				l.el.dataset.dy = l.dy + top;
+			}
+			place(it);
+			drag.moved = true;
+			return;
+		}
 		if (drag.bend) {
 			const { e: edge, at } = drag.bend;
 			const to = [drag.from[0] + dx, drag.from[1] + dy];
@@ -1616,11 +1681,20 @@ function svgEditor(change) {
 			redraw(f.edge);
 		}
 	});
-	svg.addEventListener("pointerleave", () => { if (!drag) showRing(null); });
+	svg.addEventListener("pointerleave", () => {
+		if (drag) return;
+		showRing(null);
+		showBorder(null);
+	});
 	const stop = e => {
 		if (!drag) return;
 		const moved = e && (e.clientX !== drag.x || e.clientY !== drag.y);
-		if (drag.bend && moved) {
+		if (drag.resize) {
+			if (drag.moved) {
+				state.undo.push(drag.before);
+				state.sizes.set(drag.resize.it.name, frame(drag.resize.it));
+			}
+		} else if (drag.bend && moved) {
 			state.undo.push(drag.before);
 		} else if (drag.bend) {
 			// a click adds no bend
@@ -1630,6 +1704,8 @@ function svgEditor(change) {
 			state.undo.push(drag.before);
 			const from = state.moves.get(it.name)?.from || { x: center.x + drag.t.x, y: center.y + drag.t.y };
 			state.moves.set(it.name, { from, to: { x: center.x + it.t.x, y: center.y + it.t.y }, kind: it.cluster ? "cluster" : it.label ? "label" : "node" });
+			// resized clusters carried along report where they are now
+			for (const g of drag.group) if (state.sizes.has(g.it.name)) state.sizes.set(g.it.name, frame(g.it));
 		}
 		ring.remove();
 		state.svg = svg.outerHTML;
@@ -1652,6 +1728,8 @@ function svgEditor(change) {
 			`- ${m.kind} "${name}": (${round(m.from.x)}, ${round(m.from.y)}) → (${round(m.to.x)}, ${round(m.to.y)})`);
 		const routes = [...state.changed].sort((a, b) => a - b).map(i =>
 			`- ${name(edges[i])}: ${edges[i].pts.map(p => `(${round(p[0])}, ${round(p[1])})`).join(" ")}`);
+		const sizes = [...state.sizes].map(([name, f]) =>
+			`- cluster "${name}": (${round(f.x0)}, ${round(f.y0)}) to (${round(f.x1)}, ${round(f.y1)})`);
 		const centers = nodes.map(it => {
 			const b = bbox(it);
 			return `- "${it.name}": (${round((b.x0 + b.x1) / 2)}, ${round((b.y0 + b.y1) / 2)})`;
@@ -1659,6 +1737,7 @@ function svgEditor(change) {
 		return `\`${change.path}\`: I dragged parts of the drawing to show how the layout could look nicer. ` +
 			`Coordinates are svg pixels, y down.\n\n` +
 			`Moved:\n${lines.join("\n") || "- nothing"}\n\n` +
+			(sizes.length ? `Clusters resized, from their top left to their bottom right:\n${sizes.join("\n")}\n\n` : "") +
 			`Edges as redrawn, through their points from start to end:\n${routes.join("\n") || "- none"}\n\n` +
 			`All node centers after the moves:\n${centers.join("\n")}\n`;
 	}
