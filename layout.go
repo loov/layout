@@ -1003,6 +1003,45 @@ func (c *hierComponent) position() {
 	}
 	hier.Position(c.graph, c.graphdef.Splines != SplinesOrtho, c.graphdef.MergeEdges, c.align)
 	c.clearClusterLabels()
+	if c.graphdef.Splines != SplinesOrtho && !c.graphdef.ForText {
+		c.steepenRanks()
+	}
+}
+
+// steepenRanks moves ranks apart where the edges between them run too
+// flat to tell apart where they fan out of a node, as a taller box would
+// space them: every edge between neighboring ranks rises at least tan 25°
+// over its run, but no rank moves more than two lines further, which
+// keeps wide fans from stretching the drawing (shallow angles between
+// edges are hard to tell apart, see Huang et al., "Effects of Crossing
+// Angles", 2008)
+func (c *hierComponent) steepenRanks() {
+	const steepness = 0.47
+	most := float32(2 * c.graphdef.LineHeight)
+	// hierarchical rows reach their padding; the gap is between boxes
+	half := func(node *hier.Node) float32 {
+		if node.Virtual {
+			return 0
+		}
+		return float32(c.reverse[node.ID].Radius.Y)
+	}
+	shift := float32(0)
+	for r := 1; r < len(c.graph.ByRank); r++ {
+		need := float32(0)
+		for _, v := range c.graph.ByRank[r] {
+			v.Center.Y += shift
+			for _, u := range v.In {
+				gap := (v.Center.Y - half(v)) - (u.Center.Y + half(u))
+				dx := v.Center.X + v.Anchor - u.Center.X - u.Anchor
+				need = max(need, steepness*max(dx, -dx)-gap)
+			}
+		}
+		need = min(need, most)
+		shift += need
+		for _, v := range c.graph.ByRank[r] {
+			v.Center.Y += need
+		}
+	}
 }
 
 // clearClusterLabels moves ranks apart where the box of a cluster, reaching
