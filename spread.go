@@ -187,26 +187,6 @@ func spreadSides(graph *lgraph, minSep Length) {
 
 	for k, ends := range sides {
 		node := k.node
-		// the ends of a merged group take one place, where they head on
-		// average, and so does the junction after it, see mergeHubs
-		members := map[int][]end{}
-		ends = slices.DeleteFunc(ends, func(e end) bool {
-			g := graph.mergeGroup(e.edge, e.start)
-			if g == 0 || graph.Splines != SplinesRounded {
-				return false
-			}
-			members[g] = append(members[g], e)
-			return len(members[g]) > 1
-		})
-		for i, e := range ends {
-			if group := members[graph.mergeGroup(e.edge, e.start)]; len(group) > 1 {
-				sum := Length(0)
-				for _, m := range group {
-					sum += m.want
-				}
-				ends[i].want = sum / Length(len(group))
-			}
-		}
 		slices.SortStableFunc(ends, func(a, b end) int { return cmp.Compare(a.want, b.want) })
 		gap := min(minSep, 2*node.Radius.X/Length(len(ends)+1))
 		want := make([]Length, len(ends))
@@ -222,15 +202,7 @@ func spreadSides(graph *lgraph, minSep Length) {
 			if !k.bottom {
 				p.Y = node.Center.Y - node.halfHeightAt(xs[i])
 			}
-			group := members[graph.mergeGroup(e.edge, e.start)]
-			if len(group) <= 1 {
-				e.edge.setEnd(e.start, p)
-				continue
-			}
-			for _, m := range group {
-				m.edge.setEnd(m.start, p)
-				m.edge.setJunction(m.start, p.X)
-			}
+			e.edge.setEnd(e.start, p)
 		}
 	}
 }

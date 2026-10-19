@@ -94,16 +94,6 @@ func (edge *ledge) setEnd(start bool, p Vector) {
 	}
 }
 
-// setJunction moves the point next to the start or the end of the edge,
-// where merged edges join, to x
-func (edge *ledge) setJunction(start bool, x Length) {
-	if start {
-		edge.Path[1].X = x
-	} else {
-		edge.Path[len(edge.Path)-2].X = x
-	}
-}
-
 // endLabel is a label at an end of an edge: its center and half size
 type endLabel struct{ pos, radius Vector }
 
