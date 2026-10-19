@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='128' height='192'>
+<svg xmlns='http://www.w3.org/2000/svg' width='136.5' height='192'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,8 +15,8 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><path class='edge' stroke='#000000' stroke-width='1' d='M25.6,48 L24,80 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M32,48 L32,80 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M38.4,48 L40,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M27.722221,112 L27.777779,144 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M35.77778,144 L36.72222,112 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M44.8,48 L84.5,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M84.5,112 L44,144 '></path><rect x='16' y='16' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32' y='32' font-size='14' fill='#000000'>A</text>
-<rect x='16' y='80' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32' y='96' font-size='14' fill='#000000'>B</text>
-<rect x='16' y='144' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32' y='160' font-size='14' fill='#000000'>C</text>
-<rect x='80' y='80' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='96' y='96' font-size='14' fill='#000000'>D</text>
+	</defs><g><path class='edge' stroke='#000000' stroke-width='1' d='M29.277779,48 L29.5,80 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M38.27778,48 L38.5,80 '></path><path class='edge' stroke='#000000' stroke-width='1' d='M47.27778,48 L47.5,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M34.22222,112 L33.77778,144 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M42.77778,144 L43.22222,112 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M56.27778,48 L93,80 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M93,112 L52,144 '></path><rect x='16' y='16' width='45' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='38.5' y='32' font-size='14' fill='#000000'>A</text>
+<rect x='20.5' y='80' width='36' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='38.5' y='96' font-size='14' fill='#000000'>B</text>
+<rect x='20.5' y='144' width='36' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='38.5' y='160' font-size='14' fill='#000000'>C</text>
+<rect x='88.5' y='80' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='104.5' y='96' font-size='14' fill='#000000'>D</text>
 </g></svg>

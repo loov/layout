@@ -459,6 +459,10 @@ func (c *hierComponent) labelRow(cluster *lcluster) Length {
 // outlines returns the room the extra outlines of a node take
 func outlines(node *lnode) Length { return Length(max(node.Peripheries-1, 0)) * peripheryGap }
 
+// endSpacing is the least distance between the ends of edges along a
+// node's side, see spreadEnds
+const endSpacing Length = 9 * Point
+
 // unorderedPair returns a and b in increasing order
 func unorderedPair(a, b hier.ID) [2]hier.ID {
 	if a > b {
@@ -627,13 +631,19 @@ func (c *hierComponent) order() {
 	}
 }
 
-// reserveEnds widens nodes for packed edge ends, which need room on each
-// side of a node for its ends an edge padding apart, from an edge padding
-// in; for text, ends spread across a node need a cell each
+// reserveEnds widens nodes for their edge ends, which need room on each
+// side of a node: packed ends an edge padding apart, from an edge padding
+// in; for text, a cell each; otherwise endSpacing apart, as spreadEnds
+// spreads them, so that a node with many edges has a side long enough
+// for them all (Rüegg et al., "Size- and Port-Aware Horizontal Node
+// Coordinate Assignment", 2015)
 func (c *hierComponent) reserveEnds() {
-	if c.pack || c.graphdef.ForText {
-		step := c.graphdef.EdgePadding / 2
-		if !c.pack {
+	{
+		step := endSpacing / 2
+		switch {
+		case c.pack:
+			step = c.graphdef.EdgePadding / 2
+		case c.graphdef.ForText:
 			step = c.graphdef.cellWidth() / 2
 		}
 		ends := map[*lnode][2]int{} // above and below, by rank
@@ -1494,7 +1504,7 @@ func (c *hierComponent) shapePaths() {
 	}
 	if c.graphdef.Splines != SplinesOrtho {
 		spreadWaypoints(c.graphdef.Edges, c.graphdef.EdgePadding)
-		spreadEnds(c.graphdef, 9*Point)
+		spreadEnds(c.graphdef, endSpacing)
 	}
 	if c.graphdef.Splines == SplinesLine {
 		for _, edge := range c.graphdef.Edges {
