@@ -868,16 +868,34 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 	path := p.l.Edges[e].Path
 	o := rigid{item: p.newItem(), kind: labelKind, index: e, hidden: p.l.Graph.Edges[e].Invisible}
 
+	// a head or tail label halfway between the rows of text takes the
+	// one toward its end, as the row past it can be that of a line it is
+	// beside; rows run along x when flipped
+	tie := 0
+	if which != mainLabel {
+		end := path[0]
+		if which == headLabel {
+			end = path[len(path)-1]
+		}
+		y, endY, cell := center.Y, end.Y, p.cell.Y
+		if p.flip {
+			y, endY, cell = center.X, end.X, p.cell.X
+		}
+		if v := float64(y / cell); endY < y && math.Abs(v-math.Floor(v)-0.5) < 1e-6 {
+			tie = -1
+		}
+	}
+
 	// as format/text puts a label: from its left, and around its middle
 	// row
 	n := max(1, int(math.Round(float64(size.X/p.cell.X))))
 	o.lo = p.col(center.X - size.X/2)
 	if p.flip {
-		o.lo = p.col(center.X) - (n-1)/2
+		o.lo = p.col(center.X) - (n-1)/2 + tie
 	}
 	o.hi = o.lo + n - 1
 	n = max(1, int(math.Round(float64(size.Y/p.cell.Y))))
-	o.c0 = p.row(center.Y) - (n-1)/2
+	o.c0 = p.row(center.Y) - (n-1)/2 + tie
 	if p.flip {
 		o.c0 = p.row(center.Y - size.Y/2)
 	}
@@ -895,7 +913,7 @@ func (p *compactPass) addLabel(e, which int, center, size Vector, items []int, r
 
 	ref := labelRef{edge: e, which: which, item: o.item, at: o.lo}
 	if p.flip {
-		ref.at = p.col(center.X)
+		ref.at = p.col(center.X) + tie
 	}
 	i, j := best, min(best+1, len(items)-1)
 	ci, cj := p.col(path[i].X), p.col(path[j].X)
