@@ -546,7 +546,7 @@ func (d *diagnosis) labelOverlaps() {
 // grown by pad (negative shrinks, so touching does not count).
 func segmentHitsNode(a, b Vector, node *lnode, pad Length) bool {
 	switch node.Shape {
-	case Box, Square, Record, None:
+	case Auto, Box, Square, Record, None:
 		return node.rect().grow(pad).hitBy(a, b)
 	case Diamond, Octagon:
 		// clip the segment, in parts of the grown half size, to every side

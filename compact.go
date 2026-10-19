@@ -213,7 +213,7 @@ func onOutlines(l *Layout) {
 		for _, end := range edgeEnds(edge, len(path)) {
 			box := l.Nodes[l.nodeIndex[end.node]]
 			switch box.Shape {
-			case Box, Square, Record, None, PointShape:
+			case Auto, Box, Square, Record, None, PointShape:
 				continue
 			}
 

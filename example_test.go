@@ -49,8 +49,8 @@ func ExampleHierarchical() {
 	// A at 64,32
 	// B at 32,96
 	// C at 96,96
-	// A->B through [{55.793797 45.73529} {39.29961 81.76218}]
-	// A->C through [{72.2062 45.73529} {88.70039 81.76218}]
+	// A->B through [{55.703705 48} {39.11111 80}]
+	// A->C through [{72.296295 48} {88.888885 80}]
 }
 
 // Fast spends fewer sweeps on reducing crossings, for large graphs;

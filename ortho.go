@@ -363,7 +363,7 @@ func (node *lnode) outlineAt(x Length, bottom bool) Vector {
 	dx := float64(x - node.Center.X)
 	dy := float64(node.Radius.Y)
 	switch node.Shape {
-	case Box, Square, Record, None:
+	case Auto, Box, Square, Record, None:
 	case Diamond, Octagon:
 		dy = float64(node.halfHeightAt(x))
 	default: // ellipse

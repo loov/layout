@@ -8,7 +8,8 @@ import (
 // Shape is the outline drawn for a node.
 type Shape string
 
-// Node shapes. Auto uses the graph default.
+// Node shapes. Auto uses the graph default, which is a box with
+// rounded corners when it is Auto too.
 const (
 	Auto    Shape = ""
 	None    Shape = "none"

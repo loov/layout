@@ -155,7 +155,7 @@ func (node *lnode) outlineAlong(start, p Vector) Vector {
 		dx, dy := float64(v.X-node.Center.X), float64(v.Y-node.Center.Y)
 		rx, ry := float64(node.Radius.X), float64(node.Radius.Y)
 		switch node.Shape {
-		case Box, Square, Record:
+		case Auto, Box, Square, Record:
 			return math.Abs(dx) <= rx && math.Abs(dy) <= ry
 		case Diamond, Octagon:
 			in := true
@@ -193,7 +193,7 @@ func (node *lnode) Boundary(p Vector) Vector {
 
 	var t float64
 	switch node.Shape {
-	case Box, Square, Record:
+	case Auto, Box, Square, Record:
 		t = math.Min(rx/math.Abs(dx), ry/math.Abs(dy)) // ray-rect; Inf for zero component is fine
 	case Diamond, Octagon:
 		// the side the ray reaches first
@@ -212,7 +212,7 @@ func (node *lnode) Boundary(p Vector) Vector {
 func (node *lnode) halfHeightAt(x Length) Length {
 	h := float64(node.Radius.Y)
 	switch node.Shape {
-	case Box, Square, Record:
+	case Auto, Box, Square, Record:
 	case Diamond, Octagon:
 		// the lowest of the sides above at x
 		u := float64(x-node.Center.X) / float64(node.Radius.X)
@@ -239,7 +239,7 @@ func (node *lnode) sideAt(y, x Length) Vector {
 	y = max(node.Center.Y-node.Radius.Y, min(node.Center.Y+node.Radius.Y, y))
 	w := float64(node.Radius.X)
 	switch node.Shape {
-	case Box, Square, Record:
+	case Auto, Box, Square, Record:
 	case Diamond, Octagon:
 		// the nearest of the sides to the right at y
 		v := float64(y-node.Center.Y) / float64(node.Radius.Y)

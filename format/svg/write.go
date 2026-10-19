@@ -438,7 +438,11 @@ const peripheryGap = 4 * layout.Point
 func (svg *writer) writeShape(box layout.NodeBox, radius layout.Vector) string {
 	c := box.Center
 	switch box.Shape {
-	case layout.Ellipse, layout.Auto:
+	case layout.Auto:
+		r := min(radius.X, radius.Y) / 4
+		svg.write("<rect %s rx='%v'", boxAttrs(c, radius), r)
+		return "rect"
+	case layout.Ellipse:
 		svg.write("<ellipse cx='%v' cy='%v' rx='%v' ry='%v'", c.X, c.Y, radius.X, radius.Y)
 		return "ellipse"
 	case layout.Box, layout.Record:

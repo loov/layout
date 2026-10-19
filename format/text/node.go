@@ -291,8 +291,8 @@ func (c *canvas) drawNode(node *layout.Node) {
 		return
 	}
 
-	// rounded corners for round shapes, Auto included as it is drawn as
-	// an ellipse; there are no rounded double corners
+	// rounded corners for round shapes and Auto, a rounded box; there
+	// are no rounded double corners
 	style := "┌┐└┘─│"
 	switch {
 	case box.Shape == layout.None:
