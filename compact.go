@@ -1226,6 +1226,13 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 		if a.apart(b) && p.own(a, b) {
 			return free
 		}
+		// the label on top of a cluster's frame only touches the side
+		// of a frame ending in the row above it: stacked frames move
+		// along each other freely
+		clusterLabel := func(o rigid) bool { return o.kind == labelKind && o.index < 0 }
+		if (a.kind == borderKind && clusterLabel(b) || b.kind == borderKind && clusterLabel(a)) && (a.c1 < b.c0 || b.c1 < a.c0) {
+			return free
+		}
 
 		// the halves of a run split by a jog, see jogAxis
 		if a.nextRun(b) && p.jogGroup[edgeAt{a.index, max(a.group, b.group)}] {
