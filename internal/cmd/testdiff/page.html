@@ -1417,11 +1417,12 @@ function textEditor(change) {
 	return { kind: "txt", el: pre, toolbox, key, keyup, undo, message, selected: () => !!sel };
 }
 
-// svgEditor edits an svg drawing by dragging its nodes, edge labels, and
-// the bends and ends of edges, which show as a circle when hovered; ends
-// slide along the outline of their node, and dragging the middle of a
-// segment adds a bend there. Edge ends at a node follow it, and an edge
-// that changes is drawn through its points without rounding.
+// svgEditor edits an svg drawing by dragging its clusters, nodes, edge
+// labels, and the bends and ends of edges, which show as a circle when
+// hovered; ends slide along the outline of their node, and dragging the
+// middle of a segment adds a bend there. Edge ends at a node follow it, a
+// cluster carries what lies inside it, and an edge that changes is drawn
+// through its points without rounding.
 function svgEditor(change) {
 	const original = change.new || change.old;
 	const state = edits.get(change.path) || { svg: original, undo: [], moves: new Map(), changed: new Set() };
@@ -1431,7 +1432,8 @@ function svgEditor(change) {
 	wrap.append(svg);
 	const root = svg.querySelector(":scope > g") || svg;
 
-	// items: nodes with what is drawn after them, and edge labels; edges
+	// items: clusters and nodes with what is drawn after them, and edge
+	// labels; edges
 	const items = [], edges = [];
 	let item = null, edge = null;
 	for (const el of root.children) {
@@ -1444,7 +1446,9 @@ function svgEditor(change) {
 			items.push(item);
 			edge = null;
 		} else if (el.matches(".cluster")) {
-			item = edge = null;
+			item = { els: [el], name: "", cluster: true };
+			items.push(item);
+			edge = null;
 		} else if (item) {
 			item.els.push(el);
 			if (el.tagName === "text") item.name += (item.name ? " " : "") + el.textContent;
@@ -1453,7 +1457,7 @@ function svgEditor(change) {
 		}
 	}
 	for (const it of items) {
-		it.name ||= "node " + items.indexOf(it);
+		it.name ||= (it.cluster ? "cluster " : "node ") + items.indexOf(it);
 		for (const el of it.els) el.dataset.drag = "";
 		const t = /translate\(([-\d.e]+),? ?([-\d.e]+)\)/.exec(it.els[0].getAttribute("transform") || "");
 		it.t = t ? { x: +t[1], y: +t[2] } : { x: 0, y: 0 };
@@ -1469,7 +1473,7 @@ function svgEditor(change) {
 		return { x0, y0, x1, y1 };
 	};
 	// edges are named by the nodes nearest their ends
-	const nodes = items.filter(it => !it.label);
+	const nodes = items.filter(it => !it.label && !it.cluster);
 	const nearest = p => {
 		let best = null, dist = Infinity;
 		for (const it of nodes) {
@@ -1578,11 +1582,16 @@ function svgEditor(change) {
 			drag = { bend: h, node, from: [h.x, h.y], x: e.clientX, y: e.clientY, scale: scale(), before };
 			return;
 		}
-		const b = bbox(it), pad = 10;
+		const b = bbox(it), pad = it.cluster ? 0 : 10;
 		const near = p => p[0] >= b.x0 - pad && p[0] <= b.x1 + pad && p[1] >= b.y0 - pad && p[1] <= b.y1 + pad;
-		const follow = it.label ? [] : edges.flatMap(edge => [edge.pts[0], edge.pts.at(-1)].filter(near).map(p => ({ edge, p, at: p.slice() })));
+		// a cluster carries the items inside it and every point of an edge
+		// there; a node only the ends of edges at it
+		const inside = o => { const c = bbox(o); return c.x0 >= b.x0 && c.x1 <= b.x1 && c.y0 >= b.y0 && c.y1 <= b.y1; };
+		const group = [it, ...(it.cluster ? items.filter(o => o !== it && inside(o)) : [])];
+		const points = edge => it.cluster ? edge.pts : [edge.pts[0], edge.pts.at(-1)];
+		const follow = it.label ? [] : edges.flatMap(edge => points(edge).filter(near).map(p => ({ edge, p, at: p.slice() })));
 		drag = {
-			it, x: e.clientX, y: e.clientY, t: { ...it.t }, follow, scale: scale(), before,
+			it, group: group.map(o => ({ it: o, t: { ...o.t } })), x: e.clientX, y: e.clientY, t: { ...it.t }, follow, scale: scale(), before,
 			center: { x: (b.x0 + b.x1) / 2 - it.t.x, y: (b.y0 + b.y1) / 2 - it.t.y },
 		};
 	});
@@ -1597,8 +1606,10 @@ function svgEditor(change) {
 			showRing({ x: edge.pts[at][0], y: edge.pts[at][1], insert: false, end: drag.bend.end });
 			return;
 		}
-		drag.it.t = { x: drag.t.x + dx, y: drag.t.y + dy };
-		place(drag.it);
+		for (const g of drag.group) {
+			g.it.t = { x: g.t.x + dx, y: g.t.y + dy };
+			place(g.it);
+		}
 		for (const f of drag.follow) {
 			f.p[0] = f.at[0] + dx;
 			f.p[1] = f.at[1] + dy;
@@ -1618,7 +1629,7 @@ function svgEditor(change) {
 			const { it, center } = drag;
 			state.undo.push(drag.before);
 			const from = state.moves.get(it.name)?.from || { x: center.x + drag.t.x, y: center.y + drag.t.y };
-			state.moves.set(it.name, { from, to: { x: center.x + it.t.x, y: center.y + it.t.y }, label: it.label });
+			state.moves.set(it.name, { from, to: { x: center.x + it.t.x, y: center.y + it.t.y }, kind: it.cluster ? "cluster" : it.label ? "label" : "node" });
 		}
 		ring.remove();
 		state.svg = svg.outerHTML;
@@ -1638,7 +1649,7 @@ function svgEditor(change) {
 	const round = v => Math.round(v);
 	function message() {
 		const lines = [...state.moves].map(([name, m]) =>
-			`- ${m.label ? "label" : "node"} "${name}": (${round(m.from.x)}, ${round(m.from.y)}) → (${round(m.to.x)}, ${round(m.to.y)})`);
+			`- ${m.kind} "${name}": (${round(m.from.x)}, ${round(m.from.y)}) → (${round(m.to.x)}, ${round(m.to.y)})`);
 		const routes = [...state.changed].sort((a, b) => a - b).map(i =>
 			`- ${name(edges[i])}: ${edges[i].pts.map(p => `(${round(p[0])}, ${round(p[1])})`).join(" ")}`);
 		const centers = nodes.map(it => {
@@ -1655,8 +1666,9 @@ function svgEditor(change) {
 }
 
 // polyline returns the points an edge path goes through: its ends and the
-// corners, which the svg writer rounds with a curve whose control point
-// is the corner
+// corners, which the svg writer rounds with a quadratic curve whose
+// control point is the corner, or with two cubics whose first has control
+// points 3/4 and 1/2 of the cut from the corner
 function polyline(cmds) {
 	const pts = [];
 	let rounding = false; // the last point starts the curve of a corner
@@ -1668,6 +1680,11 @@ function polyline(cmds) {
 			if (rounding && pts.length > 1) pts.pop();
 			pts.push(c.pts[0].slice());
 			if (i === cmds.length - 1) pts.push(c.pts[1].slice());
+			rounding = false;
+		} else if (c.c === "C" && c.pts.length === 3 && cmds[i - 1]?.c !== "C") {
+			if (rounding && pts.length > 1) pts.pop();
+			const [a1, a2] = c.pts;
+			pts.push([3 * a2[0] - 2 * a1[0], 3 * a2[1] - 2 * a1[1]]);
 			rounding = false;
 		}
 	}
