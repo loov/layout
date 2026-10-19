@@ -287,7 +287,9 @@ func (d *diagnosis) segmentPairs() {
 			if p.edge == q.edge {
 				continue
 			}
-			if pair := (edgePair{p.edge, q.edge}); !parallel[pair] && alongside(p, q, diagArrow+diagStroke, 4*diagArrow) {
+			// merged edges run together on purpose, as one line
+			together := d.mergedWith(p.edge, q.edge)
+			if pair := (edgePair{p.edge, q.edge}); !together && !parallel[pair] && alongside(p, q, diagArrow+diagStroke, 4*diagArrow) {
 				parallel[pair] = true
 				d.diag.ParallelEdges++
 				d.detail("edges %v and %v run alongside at %v-%v", p.edge, q.edge, p.a, p.b)
@@ -304,13 +306,25 @@ func (d *diagnosis) segmentPairs() {
 					d.detail("edges %v and %v cross at %.0f degrees", p.edge, q.edge, degrees(angle))
 				}
 			}
-			if collinear && !overlaps[edgePair{p.edge, q.edge}] {
+			if collinear && !together && !overlaps[edgePair{p.edge, q.edge}] {
 				overlaps[edgePair{p.edge, q.edge}] = true
 				d.diag.EdgeOverlaps++
 				d.detail("edges %v and %v overlap at %v-%v", p.edge, q.edge, p.a, p.b)
 			}
 		}
 	}
+}
+
+// mergedWith reports whether a and b merge at an end, see
+// Graph.MergeEdges
+func (d *diagnosis) mergedWith(a, b *ledge) bool {
+	ma, mb := d.graph.merged[a], d.graph.merged[b]
+	for _, x := range ma {
+		if x != 0 && (x == mb[0] || x == mb[1]) {
+			return true
+		}
+	}
+	return false
 }
 
 // shafts counts the ends whose shaft enters their own node before the
@@ -355,7 +369,7 @@ func (d *diagnosis) endOverlaps() {
 	}
 	for i, a := range ends {
 		for _, b := range ends[i+1:] {
-			if a.edge != b.edge && a.p.Sub(b.p).Len() < diagArrow {
+			if a.edge != b.edge && !d.mergedWith(a.edge, b.edge) && a.p.Sub(b.p).Len() < diagArrow {
 				d.diag.EndOverlaps++
 				d.detail("ends of %v and %v overlap at %v", a.edge, b.edge, a.p)
 			}

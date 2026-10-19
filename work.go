@@ -271,6 +271,12 @@ func (l *Layout) work() *lgraph {
 		e.head = endLabel{path.HeadLabelCenter, path.HeadLabelSize.Scale(0.5)}
 		e.tail = endLabel{path.TailLabelCenter, path.TailLabelSize.Scale(0.5)}
 		e.FontSize = path.FontSize
+		if !path.Merged.IsZero() {
+			if g.merged == nil {
+				g.merged = map[*ledge][2]int{}
+			}
+			g.merged[e] = [2]int{path.Merged.Start, path.Merged.End}
+		}
 	}
 
 	for i, c := range g.Clusters {
