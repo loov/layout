@@ -167,25 +167,3 @@ func (graph *Graph) nextBound(layer Nodes) float32 {
 	}
 	return total
 }
-
-// permute calls visit with nodes in every order, by Heap's algorithm, and
-// leaves them in an order of them
-func permute(nodes Nodes, visit func()) {
-	var heap func(k int)
-	heap = func(k int) {
-		if k <= 1 {
-			visit()
-			return
-		}
-		for i := range k - 1 {
-			heap(k - 1)
-			if k%2 == 0 {
-				nodes[i], nodes[k-1] = nodes[k-1], nodes[i]
-			} else {
-				nodes[0], nodes[k-1] = nodes[k-1], nodes[0]
-			}
-		}
-		heap(k - 1)
-	}
-	heap(len(nodes))
-}
