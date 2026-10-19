@@ -3,7 +3,7 @@ basic        nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=
 circles_lr   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=12 wavy=0 back=0 detours=0 labels=0 far=0 length=691 area=29938 unbalance=96 score=12
 cluster      nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=10 wavy=1 back=0 detours=0 labels=0 far=0 length=1341 area=96845 unbalance=130 score=18
 cluster_labels nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=12 wavy=2 back=1 detours=1 labels=0 far=0 length=2034 area=504275 unbalance=471 score=31
-cluster_lr   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 detours=0 labels=0 far=0 length=221 area=64709 unbalance=48 score=2
+cluster_lr   nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 detours=0 labels=0 far=0 length=186 area=62109 unbalance=48 score=2
 cluster_merged nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=2 parallel=1 ends=2 shafts=0 jagged=0 bends=1 corners=14 wavy=1 back=0 detours=0 labels=0 far=0 length=1427 area=100880 unbalance=130 score=84
 complex      nodes=0 through=0 near=2 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=8 wavy=1 back=1 detours=0 labels=0 far=0 length=451 area=31830 unbalance=0 score=24
 components   nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=6 wavy=0 back=1 detours=0 labels=0 far=0 length=374 area=44390 unbalance=37 score=14

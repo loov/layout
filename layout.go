@@ -346,7 +346,13 @@ type hierComponent struct {
 	// edges line up, see packed
 	pack bool
 
-	clusters  map[*lcluster]*hier.Cluster
+	clusters map[*lcluster]*hier.Cluster
+	// how far the box of a sideways cluster reaches past its first and
+	// last ranks for its label, see reserveClusterLabels
+	labelReach map[*hier.Cluster]float32
+	// the part of labelReach a box reaches past its first rank, the rest
+	// past its last; half when missing
+	labelUp   map[*hier.Cluster]float32
 	labelNode map[*hier.Node][]*ledge // the labels the middle virtual node of an edge carries
 	parallel  map[*ledge]int          // which of the parallel hierarchical edges an edge runs as, see build
 	flatBelow map[*lnode]Length       // room below a node for the labels of edges along its rank
@@ -900,10 +906,15 @@ func (c *hierComponent) reserveClusterLabels() {
 		top, bottom := pad, pad
 		top += float32(c.labelRow(clusterdef))
 		if clusterdef.Label != "" && c.graphdef.RankDir.Sideways() {
-			// the label runs along the ranks; make room for the box to
-			// reach as far on both sides
-			short := float32(max(0, c.labelSpan(clusterdef)-span(clusterdef, cluster))) / 2
-			top, bottom = top+short, bottom+short
+			// the label runs along the ranks: the box reaches as far on
+			// both sides, into the ranks next to it where they leave room,
+			// see clearClusterLabels
+			if short := float32(max(0, c.labelSpan(clusterdef)-span(clusterdef, cluster))) / 2; short > 0 {
+				if c.labelReach == nil {
+					c.labelReach = map[*hier.Cluster]float32{}
+				}
+				c.labelReach[cluster] = short
+			}
 		}
 		last := len(cluster.Left) - 1
 		grow([]*hier.Node{cluster.Left[0], cluster.Right[0]}, cluster.MinRank, top)
@@ -981,6 +992,143 @@ func (c *hierComponent) position() {
 		}
 	}
 	hier.Position(c.graph, c.graphdef.Splines != SplinesOrtho, c.graphdef.MergeEdges, c.align)
+	c.clearClusterLabels()
+}
+
+// clearClusterLabels moves ranks apart where the box of a cluster, reaching
+// past its first and last ranks for its label, would cover what lies in
+// the ranks beside it: nodes, edges not leading into it and other
+// clusters. Elsewhere the ranks stay as close as positioning put them.
+func (c *hierComponent) clearClusterLabels() {
+	if len(c.labelReach) == 0 {
+		return
+	}
+	pad := float32(c.graphdef.RowPadding / 2)
+
+	within := func(k, cluster *hier.Cluster) bool {
+		for ; k != nil; k = k.Parent {
+			if k == cluster {
+				return true
+			}
+		}
+		return false
+	}
+	// a box is an extent along the ranks and across them, and what it
+	// belongs to: a node, the chain of an edge, or a cluster
+	type box struct {
+		lo, hi   float32 // across the ranks
+		first    int     // the rank its top is relative to
+		last     int     // the rank its bottom is relative to
+		up, down float32 // reach above the center of first, below last
+		node     *hier.Node
+		cluster  *hier.Cluster
+	}
+	var boxes []box
+	for _, node := range c.graph.Nodes {
+		if node.IsBorder() {
+			continue
+		}
+		boxes = append(boxes, box{lo: node.Center.X - node.Radius.X, hi: node.Center.X + node.Radius.X,
+			first: node.Rank, last: node.Rank, up: node.Radius.Y, down: node.Radius.Y, node: node})
+	}
+	for _, cluster := range c.graph.Clusters {
+		b := box{lo: float32(math.Inf(1)), hi: float32(math.Inf(-1)), first: cluster.MinRank, last: cluster.MaxRank, cluster: cluster}
+		for i := range cluster.Left {
+			b.lo = min(b.lo, cluster.Left[i].Center.X-cluster.Left[i].Radius.X/2)
+			b.hi = max(b.hi, cluster.Right[i].Center.X+cluster.Right[i].Radius.X/2)
+		}
+		reach := c.labelReach[cluster]
+		b.up = cluster.Left[0].Radius.Y + reach
+		b.down = cluster.Left[len(cluster.Left)-1].Radius.Y + reach
+		boxes = append(boxes, b)
+	}
+	// related boxes may overlap: a cluster and what is inside it, or
+	// the edges leading into it
+	related := func(a, b box) bool {
+		if a.cluster == nil {
+			a, b = b, a
+		}
+		if b.cluster != nil {
+			return within(a.cluster, b.cluster) || within(b.cluster, a.cluster)
+		}
+		ends := []*hier.Node{b.node}
+		if b.node.Virtual {
+			first := b.node
+			for first.Virtual && len(first.In) > 0 {
+				first = first.In[0]
+			}
+			ends = []*hier.Node{first, b.node.ChainEnd()}
+		}
+		for _, end := range ends {
+			if within(end.Cluster, a.cluster) {
+				return true
+			}
+		}
+		return false
+	}
+
+	ys := make([]float32, len(c.graph.ByRank))
+	for r, nodes := range c.graph.ByRank {
+		if len(nodes) > 0 {
+			ys[r] = nodes[0].Center.Y
+		}
+	}
+	apart := func(a, b box) bool { return a.hi+pad <= b.lo || b.hi+pad <= a.lo || related(a, b) }
+
+	// a cluster reaches for its label to the side with room, rather than
+	// as far both ways: how far it reaches past its first rank, t of the
+	// whole 2*reach, costs what that moves the ranks apart
+	c.labelUp = map[*hier.Cluster]float32{}
+	for i, b := range boxes {
+		reach := c.labelReach[b.cluster]
+		if reach == 0 {
+			continue
+		}
+		above, below := float32(math.Inf(-1)), float32(math.Inf(-1))
+		edge0, edge1 := ys[b.first]-b.up+reach, ys[b.last]+b.down-reach // without the reach
+		for _, a := range boxes {
+			switch {
+			case apart(a, b):
+			case a.last < b.first:
+				above = max(above, ys[a.last]+a.down+pad-edge0)
+			case a.first > b.last:
+				below = max(below, edge1+pad-(ys[a.first]-a.up))
+			}
+		}
+		cost := func(t float32) float32 { return max(0, above+t) + max(0, below+2*reach-t) }
+		best := reach
+		for _, t := range []float32{0, 2 * reach, min(max(-above, 0), 2*reach), min(max(2*reach+below, 0), 2*reach)} {
+			if cost(t) < cost(best) {
+				best = t
+			}
+		}
+		boxes[i].up, boxes[i].down = b.up-reach+best, b.down+reach-best
+		c.labelUp[b.cluster] = best / (2 * reach)
+	}
+
+	// rank by rank, what starts there keeps below what ended before it,
+	// where either is a cluster that reaches out for its label
+	shift := float32(0)
+	for r := range ys {
+		ys[r] += shift
+		need := float32(0)
+		for _, b := range boxes {
+			if b.first != r {
+				continue
+			}
+			for _, a := range boxes {
+				if a.last >= r || c.labelReach[a.cluster] == 0 && c.labelReach[b.cluster] == 0 || apart(a, b) {
+					continue
+				}
+				need = max(need, ys[a.last]+a.down+pad-(ys[r]-b.up))
+			}
+		}
+		ys[r] += need
+		shift += need
+		for _, node := range c.graph.ByRank[r] {
+			node.Center.Y = ys[r]
+		}
+	}
 }
 
 // finish places the nodes, clusters, edges and labels where the
@@ -1046,7 +1194,11 @@ func (c *hierComponent) placeClusters() {
 		top -= c.labelRow(clusterdef)
 		if clusterdef.Label != "" && c.graphdef.RankDir.Sideways() {
 			if short := c.labelSpan(clusterdef) - (bottom - top); short > 0 {
-				top, bottom = top-short/2, bottom+short/2
+				up := Length(0.5)
+				if f, ok := c.labelUp[c.clusters[clusterdef]]; ok {
+					up = Length(f)
+				}
+				top, bottom = top-short*up, bottom+short*(1-up)
 			}
 		}
 		clusterdef.TopLeft = Vector{left, top}

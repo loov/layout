@@ -1,4 +1,4 @@
-<svg xmlns='http://www.w3.org/2000/svg' width='517.76' height='189'>
+<svg xmlns='http://www.w3.org/2000/svg' width='290.88' height='189'>
 	<style type="text/css"><![CDATA[
 		.edge { fill: none; }
 	]]></style>
@@ -15,10 +15,10 @@
 		<marker id="odot" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto-start-reverse" markerUnits="userSpaceOnUse">
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
-	</defs><g><rect class='cluster' x='161.44' y='91' width='178.88' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='99' font-size='14' fill='#000000'>a cluster label that is long</text>
-<rect class='cluster' x='226.88' y='3' width='274.88' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='364.32' y='11' font-size='14' fill='#000000'>second one</text>
-<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,92.5 L234.88,128.80363 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,83.5 L234.88,47.19637 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M266.88,44 L461.76,44 '></path><rect x='16' y='72' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32' y='88' font-size='14' fill='#000000'>a</text>
-<rect x='234.88' y='116' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='132' font-size='14' fill='#000000'>b</text>
-<rect x='234.88' y='28' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='250.88' y='44' font-size='14' fill='#000000'>c</text>
-<rect x='461.76' y='28' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='477.76' y='44' font-size='14' fill='#000000'>d</text>
+	</defs><g><rect class='cluster' x='96' y='91' width='178.88' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='185.44' y='99' font-size='14' fill='#000000'>a cluster label that is long</text>
+<rect class='cluster' x='96' y='3' width='144' height='82' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='168' y='11' font-size='14' fill='#000000'>second one</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,96.08779 L104,124.395065 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M48,79.91221 L104,51.60494 '></path><path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M136,44 L200,44 '></path><rect x='16' y='72' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='32' y='88' font-size='14' fill='#000000'>a</text>
+<rect x='104' y='116' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='120' y='132' font-size='14' fill='#000000'>b</text>
+<rect x='104' y='28' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='120' y='44' font-size='14' fill='#000000'>c</text>
+<rect x='200' y='28' width='32' height='32' rx='4' class='node' fill='#FFFFFF' stroke='#000000' stroke-width='1'></rect><text text-anchor='middle' alignment-baseline='middle' x='216' y='44' font-size='14' fill='#000000'>d</text>
 </g></svg>
