@@ -731,6 +731,12 @@ func (c *hierComponent) reserveEnds() {
 				continue // edges meet at the dot
 			}
 			grow := Length(max(e[0], e[1])+1)*step + outlines(node) - node.Radius.X
+			if !c.pack && !c.graphdef.ForText {
+				// at most twice as wide: past that ends crowd rather
+				// than the node dwarf its neighbors; packed ends and text
+				// need their room to draw
+				grow = min(grow, node.Radius.X)
+			}
 			if grow <= 0 {
 				continue
 			}
@@ -1201,6 +1207,95 @@ func (c *hierComponent) route() {
 	c.shapePaths()
 }
 
+// hubEnd is an end of an edge at a hub, see mergeHubs
+type hubEnd struct {
+	edge  *ledge
+	start bool
+	gap   Length // from the side to the next point
+}
+
+// mergeHubs runs the edges at a side of a node with more ends than fit
+// spacing apart together into one end, through a junction reach out from the middle of
+// the side, where they fan out: too many edges to tell apart at the node
+// are told apart where they spread, and the node takes one line (Newbery,
+// "Edge Concentration", 1989; Pupyrev et al., "Improving Layered Graph
+// Layouts with Edge Bundling", 2010). The junction is at most halfway to
+// the nearest next point. Edges whose next point is within two spacings
+// of the side, or with a label at that end, keep their own end, and so do
+// ends with different markers.
+func mergeHubs(graph *lgraph, spacing, reach Length) {
+	type side struct {
+		node   *lnode
+		bottom bool
+		marker Arrow
+	}
+	sides := map[side][]hubEnd{}
+	for _, edge := range graph.Edges {
+		if edge.flat || edge.loop() || len(edge.Path) < 2 {
+			continue
+		}
+		n := len(edge.Path)
+		for _, e := range []struct {
+			start  bool
+			free   bool
+			node   *lnode
+			at     Vector
+			next   Vector
+			label  string
+			marker Arrow
+		}{
+			{true, edge.freeStart(), edge.From, edge.Path[0], edge.Path[1], edge.TailLabel, edge.ArrowTail},
+			{false, edge.freeEnd(), edge.To, edge.Path[n-1], edge.Path[n-2], edge.HeadLabel, edge.HeadMarker()},
+		} {
+			// past the side to the next point, where the junction must go
+			gap := (e.next.Y - e.node.Center.Y).Abs() - e.node.Radius.Y
+			if !e.free || e.label != "" || gap <= 2*spacing {
+				continue
+			}
+			k := side{e.node, e.next.Y > e.node.Center.Y, e.marker}
+			sides[k] = append(sides[k], hubEnd{edge, e.start, gap})
+		}
+	}
+
+	group := 0
+	for _, m := range graph.merged {
+		group = max(group, m[0], m[1])
+	}
+	for k, ends := range sides {
+		if Length(len(ends)+1)*spacing <= 2*k.node.Radius.X {
+			continue
+		}
+		group++
+		dir := Length(-1)
+		if k.bottom {
+			dir = 1
+		}
+		// the middle of the side for now; spreadSides moves the group
+		// as one end, the junction with it
+		// halfway to the nearest next point at most, so that every end
+		// joins rather than be crossed by the fan next to the node
+		near := reach
+		for _, e := range ends {
+			near = min(near, e.gap/2)
+		}
+		at := Vector{k.node.Center.X, k.node.Center.Y + dir*k.node.Radius.Y}
+		junction := Vector{at.X, at.Y + dir*near}
+		for _, e := range ends {
+			m := graph.merged[e.edge]
+			if e.start {
+				e.edge.Path = slices.Insert(e.edge.Path, 1, junction)
+				e.edge.Path[0] = at
+				m[0] = group
+			} else {
+				n := len(e.edge.Path)
+				e.edge.Path = append(e.edge.Path[:n-1:n-1], junction, at)
+				m[1] = group
+			}
+			graph.merged[e.edge] = m
+		}
+	}
+}
+
 // placeNodes assigns final positions, off the center of nodes widened for
 // loops
 func (c *hierComponent) placeNodes() {
@@ -1543,6 +1638,9 @@ func (c *hierComponent) shapePaths() {
 	}
 	if c.graphdef.Splines != SplinesOrtho {
 		spreadWaypoints(c.graphdef.Edges, c.graphdef.EdgePadding)
+		if c.graphdef.Splines == SplinesRounded {
+			mergeHubs(c.graphdef, endSpacing, 2*c.graphdef.LineHeight)
+		}
 		spreadEnds(c.graphdef, endSpacing)
 	}
 	if c.graphdef.Splines == SplinesLine {

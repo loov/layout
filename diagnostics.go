@@ -295,7 +295,9 @@ func (d *diagnosis) segmentPairs() {
 				d.detail("edges %v and %v run alongside at %v-%v", p.edge, q.edge, p.a, p.b)
 			}
 			crosses, collinear := cross(p, q)
-			if crosses {
+			// merged edges turn into their trunk together, where their
+			// corners meet
+			if crosses && !together {
 				d.diag.EdgeCrossings++
 				// angle between the segments
 				u, v := p.dir(), q.dir()
