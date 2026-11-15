@@ -1,6 +1,8 @@
 package layout
 
 import (
+	"slices"
+
 	"github.com/loov/layout/internal/draw"
 	"github.com/loov/layout/internal/hier"
 )
@@ -122,3 +124,88 @@ func (c *hierComponent) fieldPorts() {
 // the end of the edge, which no compass port or field pins
 func (edge *ledge) freeStart() bool { return edge.FromPort == CompassAuto && edge.FromField == "" }
 func (edge *ledge) freeEnd() bool   { return edge.ToPort == CompassAuto && edge.ToField == "" }
+
+// slideFieldEnds takes out the jog an orthogonal edge makes right after
+// leaving a field of a record, when the run it jogs to still lies within
+// the field: the edge then leaves the field there, off its middle, and runs
+// straight. Compaction keeps ends where they leave their nodes, and an
+// edge that can't run straight from the middle, such as with another
+// edge's end below it, jogs less than a track aside, which reads as a
+// slip rather than a turn. Only jogs shorter than track are taken out,
+// so that ends stay in the middle of their fields otherwise.
+func slideFieldEnds(l *Layout, track Length) {
+	g := l.Graph
+	pad := g.EdgePadding
+	for e, edge := range g.Edges {
+		at := &l.Edges[e]
+		if !at.Merged.IsZero() || edge.Invisible {
+			continue
+		}
+		if edge.FromField != "" {
+			at.Path = slideFieldEnd(l, e, at.Path, edge.From, edge.FromField, track, pad)
+		}
+		if edge.ToField != "" {
+			at.Path = slices.Clone(at.Path)
+			slices.Reverse(at.Path)
+			at.Path = slideFieldEnd(l, e, at.Path, edge.To, edge.ToField, track, pad)
+			slices.Reverse(at.Path)
+		}
+	}
+}
+
+// slideFieldEnd returns path, which starts at the field of node, with the
+// jog after its first run taken out, see slideFieldEnds
+func slideFieldEnd(l *Layout, e int, path Path, node *Node, field string, track, pad Length) Path {
+	if len(path) < 4 {
+		return path
+	}
+	p0, p1, p2, p3 := path[0], path[1], path[2], path[3]
+	stub, jog, run := p1.Sub(p0), p2.Sub(p1), p3.Sub(p2)
+	// a stub and a run on one line across the side, the jog along it
+	if stub.Dot(jog) != 0 || stub.Cross(run) != 0 || stub.Dot(run) <= 0 || jog.IsZero() || jog.Len() >= track {
+		return path
+	}
+
+	// the new end within the field, not on its border
+	box := l.Node(node)
+	rec := layoutRecord(l.Graph, node, box)
+	f := rec.Field(field)
+	if f == nil {
+		return path
+	}
+	origin := box.Center.Sub(box.Size.Scale(0.5))
+	end := p0.Add(jog)
+	inset := min(pad, Length(f.X1-f.X0)/4, Length(f.Y1-f.Y0)/4)
+	if jog.Y == 0 && (end.X < origin.X+Length(f.X0)+inset || end.X > origin.X+Length(f.X1)-inset) ||
+		jog.X == 0 && (end.Y < origin.Y+Length(f.Y0)+inset || end.Y > origin.Y+Length(f.Y1)-inset) {
+		return path
+	}
+
+	// the run that grows past the jog keeps off everything else
+	lo, hi := end, p2
+	clear := rect{Min: Vector{min(lo.X, hi.X), min(lo.Y, hi.Y)}, Max: Vector{max(lo.X, hi.X), max(lo.Y, hi.Y)}}.grow(pad / 2)
+	for k := range l.Edges {
+		other := &l.Edges[k]
+		if k != e {
+			for a, b := range other.Path.Segments() {
+				if clear.hitBy(a, b) {
+					return path
+				}
+			}
+		}
+		for _, lb := range []struct{ c, s Vector }{{other.LabelCenter, other.LabelSize}, {other.HeadLabelCenter, other.HeadLabelSize}, {other.TailLabelCenter, other.TailLabelSize}} {
+			if !lb.s.IsZero() && clear.overlaps(rect{Min: lb.c.Sub(lb.s.Scale(0.5)), Max: lb.c.Add(lb.s.Scale(0.5))}, 0) {
+				return path
+			}
+		}
+	}
+
+	return append(Path{end}, path[3:]...)
+}
+
+// layoutRecord lays out the fields of a record node as drawn, in the
+// frame of the drawing, as format/svg does
+func layoutRecord(graph *Graph, node *Node, box NodeBox) *draw.Record {
+	return draw.LayoutRecord(box.Label, graph.RankDir.Sideways(), float64(box.Size.X), float64(box.Size.Y),
+		float64(graph.LineHeight), float64(box.FontSize), graph.lineWidth(node.FontName, box.FontSize))
+}

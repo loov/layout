@@ -37,6 +37,9 @@ func Hierarchical(graph *Graph, opts Options) (*Layout, error) {
 			grid = textGrid(l.Graph)
 		}
 		compact(l, grid)
+		if !work.ForText {
+			slideFieldEnds(l, work.trackSpace())
+		}
 	}
 	return l, nil
 }

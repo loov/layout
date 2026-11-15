@@ -16,7 +16,7 @@
 	      <circle cx="4" cy="4" r="3" fill="white" stroke="context-stroke" />
 	    </marker>
 	</defs><g><rect class='cluster' x='6.0199966' y='6' width='114.24999' height='102' fill='#FFFFFF' stroke='#000000'></rect><text text-anchor='middle' alignment-baseline='middle' x='63.144993' y='14' font-size='14' fill='#000000'>moss</text>
-<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M37.25,242.75 L37.25,276 L49.25,276 L49.25,288 '></path><text text-anchor='middle' alignment-baseline='middle' x='59.6475' y='262' font-size='14' fill='#000000'>video</text>
+<path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M37.25,242.75 L37.25,288 '></path><text text-anchor='middle' alignment-baseline='middle' x='59.6475' y='262' font-size='14' fill='#000000'>video</text>
 <path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M74.25,100 L74.25,145.75 L100,145.75 L100,157.75 '></path><text text-anchor='middle' alignment-baseline='middle' x='96.6475' y='131.75' font-size='14' fill='#000000'>video</text>
 <path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M162.75,84 L162.75,157.75 '></path><text text-anchor='middle' alignment-baseline='middle' x='185.1475' y='107.75' font-size='14' fill='#000000'>video</text>
 <path class='edge' marker-end='url(#normal)' stroke='#000000' stroke-width='1' d='M135.75,389 L135.75,430.75 '></path><text text-anchor='middle' alignment-baseline='middle' x='158.1475' y='412.75' font-size='14' fill='#000000'>video</text>
