@@ -346,3 +346,110 @@ func AlignClusterBorders(graph *Graph) {
 
 	flushLeft(graph)
 }
+
+// OrderRanksClusters moves every cluster as a whole, in all of its ranks
+// at once, past the nodes and sibling clusters beside it, and keeps the
+// shift that crosses least. Sweeps move a rank at a time, and the borders
+// of a cluster spanning many ranks cross heavily wherever one rank of it
+// moves alone, so without this a tall cluster stays on the side it
+// started on even when the edges around it want it on the other.
+func OrderRanksClusters(graph *Graph) (moves int) {
+	for _, cluster := range graph.Clusters {
+		if cluster.shift(graph) {
+			moves++
+		}
+	}
+	return moves
+}
+
+// shift moves cluster by the number of items, nodes or sibling clusters,
+// in each of its ranks that crosses least, see OrderRanksClusters, and
+// reports whether it moved
+func (cluster *Cluster) shift(graph *Graph) bool {
+	graph.assignPos()
+	lo, hi := max(cluster.MinRank-1, 0), min(cluster.MaxRank+1, len(graph.ByRank)-1)
+
+	// item is the sibling cluster node is in, or node itself
+	item := func(node *Node) any {
+		for c := node.Cluster; c != nil; c = c.Parent {
+			if c.Parent == cluster.Parent {
+				return c
+			}
+		}
+		return node
+	}
+
+	// per rank: the items before and after the cluster within its parent,
+	// each a run of nodes, and the parts of the rank outside the parent
+	type rank struct {
+		head, tail Nodes   // outside the parent, or its borders
+		before     []Nodes // items left of the cluster
+		members    Nodes
+		after      []Nodes
+	}
+	ranks := make([]rank, 0, cluster.MaxRank-cluster.MinRank+1)
+	maxBefore, maxAfter := 0, 0
+	for i := range cluster.MaxRank - cluster.MinRank + 1 {
+		// a copy, as place rebuilds the rank in place
+		layer := slices.Clone(graph.ByRank[cluster.MinRank+i])
+		left, right := cluster.Left[i].Pos, cluster.Right[i].Pos
+		from, to := 0, len(layer)
+		if p := cluster.Parent; p != nil {
+			from, to = p.Left[i+cluster.MinRank-p.MinRank].Pos+1, p.Right[i+cluster.MinRank-p.MinRank].Pos
+		}
+		runs := func(nodes Nodes) []Nodes {
+			var items []Nodes
+			for k, node := range nodes {
+				if k > 0 && item(node) == item(nodes[k-1]) {
+					items[len(items)-1] = append(items[len(items)-1], node)
+				} else {
+					items = append(items, Nodes{node})
+				}
+			}
+			return items
+		}
+		r := rank{
+			head:    layer[:from],
+			tail:    layer[to:],
+			before:  runs(layer[from:left]),
+			members: layer[left : right+1],
+			after:   runs(layer[right+1 : to]),
+		}
+		maxBefore, maxAfter = max(maxBefore, len(r.before)), max(maxAfter, len(r.after))
+		ranks = append(ranks, r)
+	}
+
+	// place puts the cluster k items to the right of where it is, or as
+	// far as there are items, in every rank
+	place := func(k int) {
+		for i, r := range ranks {
+			items := append(slices.Clone(r.before), r.after...)
+			at := min(max(len(r.before)+k, 0), len(items))
+			layer := graph.ByRank[cluster.MinRank+i][:0]
+			layer = append(layer, r.head...)
+			for _, it := range items[:at] {
+				layer = append(layer, it...)
+			}
+			layer = append(layer, r.members...)
+			for _, it := range items[at:] {
+				layer = append(layer, it...)
+			}
+			layer = append(layer, r.tail...)
+			graph.ByRank[cluster.MinRank+i] = layer
+			layer.assignPos()
+		}
+	}
+
+	best, bestCost := 0, graph.rangeCrossings(lo, hi)
+	for k := -maxBefore; k <= maxAfter; k++ {
+		if k == 0 {
+			continue
+		}
+		place(k)
+		if cost := graph.rangeCrossings(lo, hi); cost < bestCost {
+			best, bestCost = k, cost
+		}
+	}
+	place(best)
+	return best != 0
+}

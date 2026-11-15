@@ -53,6 +53,15 @@ type Graph struct {
 	// is the middle. The median ordering puts the neighbors of a node in
 	// the order of their ends on it, see OrderRanksByMedian.
 	Ports map[[2]ID][2]float32
+	// ShiftClusters makes ordering move whole clusters at the end, see
+	// OrderRanksClusters. It suits edges drawn diagonally, which cut
+	// across a cluster box in the way; orthogonal ones drew worse with it.
+	ShiftClusters bool
+	// AlignPorts makes positioning line up the ends Ports puts on the
+	// nodes, rather than the nodes, so that an edge between fields runs
+	// straight. It suits orthogonal edges, which otherwise jog where the
+	// fields don't line up; diagonal edges and text drew worse with it.
+	AlignPorts bool
 
 	// scratch buffers of bilayerCrossings
 	crossEdges []crossEdge

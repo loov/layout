@@ -1,0 +1,17 @@
+digraph {
+	splines=ortho;
+	node [shape=record];
+	"zephyr-3" [label="{zephyr-3\nunit 96|{<p0> vid0|<p1> vid1|<p2> vid2}|note 1: -------------------------}"];
+	"jade-6" [label="{jade-6|{<p0> vid0}}"];
+	"ember-9" [label="{ember-9|{<p0> vid0|<p1> vid1}|note 1: -------------\nnote 2: ----------------------\nnote 3: ---------------------}"];
+	"moss-9" [label="{moss-9\nunit 77\nunit 56|{<p0> vid0}}"];
+	"pebble-9" [label="{pebble-9|{<p0> vid0}}"];
+	"zephyr-3":p0 -> "ember-9":p0 [label="video"];
+	"moss-9":p0 -> "zephyr-3":p1 [label="video"];
+	"jade-6":p0 -> "zephyr-3":p2 [label="video"];
+	"ember-9":p1 -> "pebble-9":p0 [label="video"];
+	subgraph "cluster_0" {
+		label="moss";
+		"moss-9";
+	}
+}

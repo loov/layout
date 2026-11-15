@@ -102,3 +102,52 @@ func TestAlignClusterBorders(t *testing.T) {
 		}
 	}
 }
+
+// TestOrderRanksClusters checks on random clustered graphs that shifting
+// whole clusters never adds crossings and keeps every member of a cluster
+// between its borders.
+func TestOrderRanksClusters(t *testing.T) {
+	rng := rand.New(rand.NewSource(2))
+	moved := 0
+	for i := range 200 {
+		graph := GenerateRandomGraph(8+i%15, 0.2, rng)
+		perm := rng.Perm(len(graph.Nodes))
+		outer := &Cluster{}
+		for _, id := range perm[:4] {
+			outer.Members.Append(graph.Nodes[id])
+		}
+		inner := &Cluster{Parent: outer, Members: Nodes{graph.Nodes[perm[0]], graph.Nodes[perm[1]]}}
+		sibling := &Cluster{}
+		for _, id := range perm[4:6] {
+			sibling.Members.Append(graph.Nodes[id])
+		}
+
+		Decycle(graph)
+		Rank(graph)
+		AddVirtuals(graph)
+		graph.Clusters = []*Cluster{outer, inner, sibling}
+		AddClusterBorders(graph)
+		OrderRanks(graph)
+
+		before := graph.TotalCrossings()
+		moved += OrderRanksClusters(graph)
+		if after := graph.TotalCrossings(); after > before {
+			t.Fatalf("graph %d: crossings %v -> %v", i, before, after)
+		}
+		graph.assignPos()
+		for _, node := range graph.Nodes {
+			for c := node.Cluster; c != nil; c = c.Parent {
+				if node.IsBorder() && node.Cluster == c {
+					continue
+				}
+				r := node.Rank - c.MinRank
+				if node.Pos <= c.Left[r].Pos || node.Pos >= c.Right[r].Pos {
+					t.Fatalf("graph %d: %v at %d outside its cluster %d..%d", i, node, node.Pos, c.Left[r].Pos, c.Right[r].Pos)
+				}
+			}
+		}
+	}
+	if moved == 0 {
+		t.Error("no cluster moved")
+	}
+}

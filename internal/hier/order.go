@@ -66,10 +66,15 @@ func OrderRanksN(graph *Graph, iterations int, groups bool) {
 
 	// the best order can be one that no transpose has seen, such as a
 	// starting one, when every sweep from it ends up worse; blocks move
-	// columns that the sweeps move a node at a time
+	// columns, and cluster shifts whole clusters, that the sweeps move a
+	// node at a time; shifting clusters in every sweep as well counted
+	// fewer crossings but drew more
 	graph.ByRank = best
 	best = saveOrder(graph)
 	OrderRanksBlocks(graph)
+	if graph.ShiftClusters {
+		OrderRanksClusters(graph)
+	}
 	OrderRanksTranspose(graph)
 	orderFlatEdges(graph)
 	orderClusters(graph)

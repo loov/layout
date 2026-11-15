@@ -613,6 +613,7 @@ func (c *hierComponent) addClusters() {
 // order orders the nodes in ranks, finds the middle virtual node of every
 // labeled edge, which carries the labels, and merges edges
 func (c *hierComponent) order() {
+	c.graph.ShiftClusters = c.graphdef.Splines != SplinesOrtho
 	hier.OrderRanksN(c.graph, c.opts.OrderIterations, c.opts.OrderGroups)
 
 	// the middle virtual node of every labeled edge carries its labels
@@ -945,6 +946,7 @@ func (c *hierComponent) position() {
 		// see the slots of packed ends in orthoEdges; merged ends share one
 		c.graph.EndGap = float32(c.graphdef.EdgePadding)
 	}
+	c.graph.AlignPorts = c.graphdef.Splines == SplinesOrtho && !c.graphdef.ForText
 	if c.graphdef.ForText && c.graphdef.MergeEdges {
 		// a cell between the fans of different nodes, as merged edges
 		// center a node's children on it

@@ -361,6 +361,13 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 		spread(node, node.Out, from, func(dst *Node) [2]ID { return [2]ID{node.ID, dst.ID} })
 		spread(node, node.In, to, func(src *Node) [2]ID { return [2]ID{src.ID, node.ID} })
 	}
+	// with AlignPorts, an edge with Ports ends where they say, such as at
+	// a field of a record, rather than packed
+	if graph.AlignPorts {
+		for k, p := range graph.Ports {
+			from[k], to[k] = p[0]*2*graph.Nodes[k[0]].Radius.X, p[1]*2*graph.Nodes[k[1]].Radius.X
+		}
+	}
 	v := int32(n)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
