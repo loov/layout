@@ -260,18 +260,23 @@ func slotSide(graph *lgraph, k nodeSide, list []slotEnd, parallel map[[2]*lnode]
 	}
 
 	// slots evenly spread around the center, or packed from the left
-	// an edge padding apart
+	// an edge padding apart; outside text a track apart, as the edges
+	// keep that further on, which would jog them right off the node
 	n := Length(len(list))
-	spacing := min(2*pad, 2*k.node.Radius.X/(n+1))
+	step, packed := 2*pad, pad
+	if !graph.ForText {
+		step, packed = max(step, graph.trackSpace()), graph.trackSpace()
+	}
+	spacing := min(step, 2*k.node.Radius.X/(n+1))
 	center, reach := k.node.Center.X, k.node.Radius.X-spacing/2
 	lo, hi := center-reach, center+reach
 	slot := func(i int) Length { return center + centeredOffset(i, len(list), spacing) }
 	if pack {
 		inset := min(pad, k.node.Radius.X)
 		lo, hi = center-k.node.Radius.X+inset, center+k.node.Radius.X-inset
-		spacing = pad
+		spacing = packed
 		if n > 1 {
-			spacing = min(pad, (hi-lo)/(n-1))
+			spacing = min(packed, (hi-lo)/(n-1))
 		}
 		slot = func(i int) Length { return lo + Length(i)*spacing }
 	}
@@ -849,9 +854,9 @@ func placeTracks(graph *lgraph, rows rowSpans, arc Length, k int, jogs []*jog, s
 	top, bottom := rows.channel(k)
 	bottom -= arc
 
-	// tracks are a pad apart, or a cell apart in text, a line or a
+	// tracks are trackSpace apart, or a cell apart in text, a line or a
 	// column sideways, where the channel runs across the columns
-	step := pad
+	step := graph.trackSpace()
 	if graph.ForText {
 		step = graph.cell().Y
 	}
@@ -873,7 +878,11 @@ func placeTracks(graph *lgraph, rows rowSpans, arc Length, k int, jogs []*jog, s
 	if high || low {
 		margin = 1
 	}
-	if graph.ForText && tracks > 0 {
+	if !graph.ForText {
+		// a track apart from the nodes on both sides too
+		margin = 1
+	}
+	if tracks > 0 {
 		// text needs a row a track, and two rows between the outer
 		// tracks and the nodes for the bends and the arrows; what is
 		// below moves down to make the room
@@ -1253,4 +1262,10 @@ func aroundNode(node *lnode, port Compass, end, next, far Vector, pad Length) []
 		x = node.Left() - 2*pad
 	}
 	return []Vector{{end.X, y}, {x, y}, {x, past}}
+}
+
+// trackSpace is how far apart orthogonal edges running side by side keep:
+// an em, so that each can be told apart and followed
+func (graph *lgraph) trackSpace() Length {
+	return max(graph.EdgePadding, graph.FontSize)
 }

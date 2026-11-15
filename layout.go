@@ -820,6 +820,10 @@ func (c *hierComponent) sizeNodes() {
 	for id, node := range c.graph.Nodes {
 		if node.Virtual {
 			node.Radius.X = float32(c.graphdef.EdgePadding)
+			if c.graphdef.Splines == SplinesOrtho && !c.graphdef.ForText {
+				// edges running down side by side a track apart
+				node.Radius.X = float32(c.graphdef.trackSpace() / 2)
+			}
 			node.Radius.Y = float32(c.graphdef.EdgePadding)
 			if edges, ok := c.labelNode[node]; ok {
 				var width, height Length
@@ -945,6 +949,9 @@ func (c *hierComponent) position() {
 	if c.pack && !c.graphdef.MergeEdges {
 		// see the slots of packed ends in orthoEdges; merged ends share one
 		c.graph.EndGap = float32(c.graphdef.EdgePadding)
+		if c.graphdef.Splines == SplinesOrtho && !c.graphdef.ForText {
+			c.graph.EndGap = float32(c.graphdef.trackSpace())
+		}
 	}
 	c.graph.AlignPorts = c.graphdef.Splines == SplinesOrtho && !c.graphdef.ForText
 	if c.graphdef.ForText && c.graphdef.MergeEdges {

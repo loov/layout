@@ -26,11 +26,12 @@ import (
 // compactGrid is the grid compaction measures and moves objects on:
 // everything moves by whole cells, so a drawing on a grid rounds the
 // same. space is the cells from the end of an object to the start of the
-// next one that faces it, and lineSpace from a line to the next, to a
-// node, or to its own label; an arrowhead takes 2*lineSpace.
+// next one that faces it, lineSpace from a line to a node or to its own
+// label, and trackSpace from a line to the next; an arrowhead takes
+// 2*lineSpace.
 type compactGrid struct {
-	cell             Vector
-	space, lineSpace int
+	cell                         Vector
+	space, lineSpace, trackSpace int
 	// text: objects take the cells format/text draws them in, which
 	// can be fewer than the layout keeps for them
 	text bool
@@ -40,7 +41,7 @@ type compactGrid struct {
 // cells, with a blank cell between objects, and lines
 // in neighboring cells.
 func textGrid(graph *Graph) compactGrid {
-	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, text: true}
+	return compactGrid{cell: Vector{X: graph.FontSize * 0.55, Y: graph.LineHeight}, space: 2, lineSpace: 1, trackSpace: 1, text: true}
 }
 
 // pointGrid returns the grid for other layouts: finer than the strokes,
@@ -49,9 +50,10 @@ func textGrid(graph *Graph) compactGrid {
 func pointGrid(graph *Graph) compactGrid {
 	const perPoint = 4
 	return compactGrid{
-		cell:      Vector{X: 1.0 / perPoint, Y: 1.0 / perPoint},
-		space:     int(graph.NodePadding * perPoint),
-		lineSpace: int(graph.EdgePadding * perPoint),
+		cell:       Vector{X: 1.0 / perPoint, Y: 1.0 / perPoint},
+		space:      int(graph.NodePadding * perPoint),
+		lineSpace:  int(graph.EdgePadding * perPoint),
+		trackSpace: int(max(graph.EdgePadding, graph.FontSize) * perPoint), // see lgraph.trackSpace
 	}
 }
 
@@ -1071,7 +1073,12 @@ func (p *compactPass) need(a, b rigid) int {
 		if a.nextRun(b) && a.meets(b) && !a.corner && !b.corner {
 			return 0
 		}
-		return p.grid.lineSpace
+		if min(a.c1, b.c1) <= max(a.c0, b.c0) {
+			// they don't run alongside, but meet at most at a row, as
+			// where one turns into a node beside another's end
+			return p.grid.lineSpace
+		}
+		return p.grid.trackSpace
 	case a.kind == nodeKind && b.kind == runKind:
 		return p.grid.lineSpace
 	case a.kind == runKind && b.kind == labelKind && a.index == b.index:
@@ -1202,7 +1209,7 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 	grid := p.grid
 
 	// the most cells two objects need, see need
-	most := max(grid.space, grid.lineSpace) + grid.lineSpace
+	most := max(grid.space, grid.lineSpace, grid.trackSpace) + grid.lineSpace
 
 	// objects in the order their pairs are oriented: by middle, then index
 	byRank := make([]int, len(objs))

@@ -47,7 +47,7 @@ graphviz/clust3 nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parall
 graphviz/clust4 nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=3 wavy=0 back=1 detours=0 labels=0 far=0 length=1072 area=93120 unbalance=162 score=18
 graphviz/clust5 nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 detours=0 labels=0 far=0 length=1537 area=176816 unbalance=306 score=0
 graphviz/cluster_column nodes=0 through=2 near=12 crossings=201 shallow=37 overlaps=0 parallel=9 ends=0 shafts=0 jagged=11 bends=18 corners=169 wavy=11 back=9 detours=2 labels=0 far=0 length=46212 area=2971163 unbalance=6544 score=2695
-graphviz/cluster_column_ortho nodes=0 through=0 near=11 crossings=190 shallow=0 overlaps=0 parallel=67 ends=0 shafts=0 jagged=0 bends=38 corners=210 wavy=38 back=9 detours=15 labels=0 far=0 length=47252 area=2401877 unbalance=4364 score=2572
+graphviz/cluster_column_ortho nodes=0 through=0 near=11 crossings=196 shallow=0 overlaps=0 parallel=2 ends=0 shafts=0 jagged=0 bends=35 corners=216 wavy=35 back=9 detours=14 labels=0 far=0 length=53349 area=3107610 unbalance=4218 score=2489
 graphviz/crazy nodes=0 through=0 near=3 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=8 wavy=0 back=0 detours=0 labels=0 far=0 length=5895 area=852705 unbalance=760 score=37
 graphviz/ctext nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=0 wavy=0 back=0 detours=0 labels=0 far=0 length=293 area=76581 unbalance=88 score=0
 graphviz/dfa nodes=0 through=0 near=0 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=16 wavy=0 back=10 detours=0 labels=0 far=0 length=1625 area=122833 unbalance=94 score=76
@@ -73,7 +73,7 @@ graphviz/neural-network nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=
 graphviz/nhg nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=1 shafts=0 jagged=1 bends=0 corners=5 wavy=1 back=1 detours=0 labels=0 far=0 length=566 area=66373 unbalance=0 score=28
 graphviz/ninja nodes=0 through=8 near=23 crossings=35 shallow=13 overlaps=6 parallel=18 ends=103 shafts=12 jagged=1 bends=4 corners=102 wavy=12 back=0 detours=0 labels=0 far=0 length=25885 area=2957804 unbalance=394 score=2341
 graphviz/oldarrows nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=20 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 detours=0 labels=0 far=0 length=13027 area=719360 unbalance=0 score=202
-graphviz/ortho nodes=0 through=0 near=4 crossings=1 shallow=0 overlaps=0 parallel=1 ends=0 shafts=0 jagged=0 bends=2 corners=14 wavy=2 back=1 detours=0 labels=0 far=0 length=749 area=46944 unbalance=176 score=53
+graphviz/ortho nodes=0 through=0 near=3 crossings=1 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=2 corners=14 wavy=2 back=1 detours=0 labels=0 far=0 length=799 area=49432 unbalance=182 score=48
 graphviz/pgram nodes=0 through=0 near=26 crossings=5 shallow=3 overlaps=19 parallel=50 ends=0 shafts=0 jagged=0 bends=0 corners=30 wavy=0 back=0 detours=0 labels=0 far=0 length=21730 area=978880 unbalance=32 score=653
 graphviz/pm2way nodes=0 through=0 near=1 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=2 wavy=0 back=0 detours=0 labels=0 far=0 length=611 area=155711 unbalance=120 score=5
 graphviz/pmpipe nodes=0 through=0 near=0 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=0 corners=1 wavy=0 back=0 detours=0 labels=0 far=0 length=2229 area=198089 unbalance=636 score=1
@@ -102,4 +102,4 @@ graphviz/unix nodes=0 through=0 near=3 crossings=2 shallow=0 overlaps=0 parallel
 graphviz/unix2 nodes=0 through=0 near=5 crossings=2 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=0 bends=1 corners=15 wavy=1 back=0 detours=0 labels=0 far=0 length=6543 area=974542 unbalance=969 score=55
 graphviz/viewfile nodes=0 through=0 near=4 crossings=0 shallow=0 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=0 corners=11 wavy=0 back=0 detours=0 labels=0 far=0 length=4471 area=396234 unbalance=826 score=28
 graphviz/world nodes=0 through=0 near=10 crossings=50 shallow=2 overlaps=0 parallel=0 ends=0 shafts=0 jagged=1 bends=4 corners=45 wavy=1 back=0 detours=0 labels=0 far=0 length=13807 area=770729 unbalance=1434 score=601
-total        score=24374
+total        score=24286
