@@ -2,9 +2,11 @@ package layout_test
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/loov/layout"
+	"github.com/loov/layout/format/dot"
 )
 
 // TestClusterExcludesPassingEdges checks that an edge between nodes
@@ -197,3 +199,31 @@ func TestClusterBoxesRelayout(t *testing.T) {
 }
 
 type Length = layout.Length
+
+// TestClusterOneRankCrossings checks that a node outside a cluster of one
+// rank moves to the side its edge ends on: the borders of such a cluster
+// have no edges, and transpose used to swap members past them, which put
+// the cluster back on the wrong side.
+func TestClusterOneRankCrossings(t *testing.T) {
+	graphs, err := dot.Parse(strings.NewReader(`digraph {
+		node [shape=record];
+		sw [label="{sw|{<p0> a|<p1> b|<p2> c}}"];
+		out [label="{out|{<p0> in}}"];
+		x [label="{x|{<p0> o}}"];
+		y [label="{y|{<p0> o}}"];
+		sw:p0 -> out:p0;
+		x:p0 -> sw:p1;
+		y:p0 -> sw:p2;
+		subgraph cluster_c { x; }
+	}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	l, err := layout.Hierarchical(graphs[0], layout.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d := layout.Diagnose(l); d.EdgeCrossings != 0 {
+		t.Errorf("crossings = %d, want 0: %v", d.EdgeCrossings, d.Details)
+	}
+}

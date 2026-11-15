@@ -353,6 +353,10 @@ func (flat *flatOrder) fix(layer Nodes) {
 func OrderRanksTranspose(graph *Graph) (swaps int) {
 	flat := flatNeighbors(graph)
 	return graph.swapNeighbors(20, func(i int, left, right *Node) bool {
+		// a swap with a border moves a node into or out of a cluster
+		if left.IsBorder() || right.IsBorder() {
+			return false
+		}
 		before, after := graph.crossingsBothWays(left, right)
 		after -= flatShorter(flat, left, right)
 		if before == after {
