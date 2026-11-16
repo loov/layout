@@ -175,3 +175,68 @@ func (r rect) hitBy(a, b Vector) bool {
 	ax, ay := float64(a.X), float64(a.Y)
 	return clip(-dx, ax-x0) && clip(dx, x1-ax) && clip(-dy, ay-y0) && clip(dy, y1-ay) && t0 <= t1
 }
+
+// clearCorners moves the corners whose rounding, of radius, cuts within
+// pad of a node out by as much as the curve cuts in, so that the curve runs
+// where the corner was; a corner stays when moving it would bring a segment
+// within pad of a node or cross more edges. Each corner scans all nodes and
+// segments by their bounds; a spatial index would help on huge graphs.
+func clearCorners(edges []*ledge, nodes []*lnode, radius, pad Length) {
+	hits := func(edge *ledge, a, b Vector, pad Length) bool {
+		for _, node := range nodes {
+			if max(a.X, b.X) < node.Left()-pad || min(a.X, b.X) > node.Right()+pad ||
+				max(a.Y, b.Y) < node.Top()-pad || min(a.Y, b.Y) > node.Bottom()+pad {
+				continue
+			}
+			if !node.Invisible && node != edge.From && node != edge.To && segmentHitsNode(a, b, node, pad) {
+				return true
+			}
+		}
+		return false
+	}
+	// crossings counts the other edges' segments that a→b→c crosses,
+	// skipping those outside its bounds
+	crossings := func(edge *ledge, a, b, c Vector) (n int) {
+		lo := Vector{min(a.X, b.X, c.X), min(a.Y, b.Y, c.Y)}
+		hi := Vector{max(a.X, b.X, c.X), max(a.Y, b.Y, c.Y)}
+		for _, other := range edges {
+			if other == edge {
+				continue
+			}
+			for q, r := range other.Path.Segments() {
+				if max(q.X, r.X) < lo.X || min(q.X, r.X) > hi.X || max(q.Y, r.Y) < lo.Y || min(q.Y, r.Y) > hi.Y {
+					continue
+				}
+				for _, s := range [...]segment{{a: a, b: b}, {a: b, b: c}} {
+					if crosses, _ := cross(s, segment{a: q, b: r}); crosses {
+						n++
+					}
+				}
+			}
+		}
+		return n
+	}
+	for _, edge := range edges {
+		path := edge.Path
+		for i := 1; i+1 < len(path); i++ {
+			for range 3 {
+				flat := flattenPath(path[i-1:i+2], radius, pad)
+				in, mid, exit := flat[1], flat[2], flat[3]
+				if !hits(edge, in, mid, pad) && !hits(edge, mid, exit, pad) {
+					break
+				}
+				out := path[i].Sub(mid)
+				d := out.Len()
+				if d < diagEps {
+					break
+				}
+				p := path[i].Add(out.Scale((d + 0.5) / d))
+				if hits(edge, path[i-1], p, pad-0.01) || hits(edge, p, path[i+1], pad-0.01) ||
+					crossings(edge, path[i-1], p, path[i+1]) > crossings(edge, path[i-1], path[i], path[i+1]) {
+					break
+				}
+				path[i] = p
+			}
+		}
+	}
+}

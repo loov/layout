@@ -1657,6 +1657,9 @@ func (c *hierComponent) shapePaths() {
 		spreadWaypoints(c.graphdef.Edges, c.graphdef.Nodes, c.graphdef.EdgePadding)
 		spreadEnds(c.graphdef, endSpacing)
 	}
+	if c.graphdef.Splines == SplinesRounded {
+		clearCorners(c.graphdef.Edges, c.graphdef.Nodes, 2*c.graphdef.RowPadding, c.graphdef.EdgePadding)
+	}
 	if c.graphdef.Splines == SplinesLine {
 		for _, edge := range c.graphdef.Edges {
 			if !edge.loop() && len(edge.Path) > 2 {
