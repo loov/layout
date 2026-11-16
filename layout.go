@@ -1608,13 +1608,12 @@ func (c *hierComponent) crossLabelBands() {
 		y := Length(node.Center.Y)
 		band[y] = max(band[y], Length(node.Radius.Y))
 	}
-	pad := c.graphdef.EdgePadding / 2
-	cuts := func(edge *ledge, a, b Vector) bool {
+	// along the rank as far as nudgeLabels keeps lines from a label
+	pad := Vector{X: c.graphdef.EdgePadding, Y: c.graphdef.EdgePadding / 2}
+	cuts := func(edge *ledge, a, b Vector, own bool) bool {
 		for _, other := range c.graphdef.Edges {
-			if other != edge && other.Label != "" {
-				if other.labelRect().grow(pad).hitBy(a, b) {
-					return true
-				}
+			if (other != edge || own) && other.Label != "" && centeredRect(other.LabelPos, other.LabelRadius.Add(pad)).hitBy(a, b) {
+				return true
 			}
 		}
 
@@ -1623,14 +1622,28 @@ func (c *hierComponent) crossLabelBands() {
 
 	for _, edge := range c.graphdef.Edges {
 		for i := len(edge.Path) - 2; i >= 1; i-- {
-			p := edge.Path[i]
+			prev, p, next := edge.Path[i-1], edge.Path[i], edge.Path[i+1]
 			h, ok := band[p.Y]
-			if ok && (cuts(edge, edge.Path[i-1], p) || cuts(edge, p, edge.Path[i+1])) {
-				if edge.Path[i-1].Y > p.Y {
-					h = -h // reversed edges run up
-				}
-				edge.Path = slices.Replace(edge.Path, i, i+1, Vector{X: p.X, Y: p.Y - h}, Vector{X: p.X, Y: p.Y + h})
+			in, out := cuts(edge, prev, p, false), cuts(edge, p, next, false)
+			if !ok || !in && !out {
+				continue
 			}
+			// straight only across the halves of the band where it cuts a
+			// label, its own too once it runs straight, so that the other
+			// half keeps to its neighbors
+			in = in || cuts(edge, prev, p, true)
+			out = out || cuts(edge, p, next, true)
+			if prev.Y > p.Y {
+				h = -h // reversed edges run up
+			}
+			a, b := Vector{X: p.X, Y: p.Y - h}, Vector{X: p.X, Y: p.Y + h}
+			if !in {
+				a = p
+			}
+			if !out {
+				b = p
+			}
+			edge.Path = slices.Replace(edge.Path, i, i+1, a, b)
 		}
 	}
 }
