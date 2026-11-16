@@ -234,20 +234,12 @@ func TestClusterOneRankCrossings(t *testing.T) {
 // around a node inside such a cluster would hook into the box and out
 // again.
 func TestEdgesStayOutOfOtherClusters(t *testing.T) {
-	// known bad, by file; remove an entry with its fix
-	known := map[string]string{
-		"cluster_column_ortho": "orthogonal edges run down through sierra",
-	}
 	files, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, file := range files {
-		name := strings.TrimSuffix(filepath.Base(file), ".gv")
-		t.Run(name, func(t *testing.T) {
-			if reason, ok := known[name]; ok {
-				t.Skip("known bad: " + reason)
-			}
+		t.Run(strings.TrimSuffix(filepath.Base(file), ".gv"), func(t *testing.T) {
 			graphs, err := dot.ParseFile(file)
 			if err != nil {
 				t.Fatal(err)
