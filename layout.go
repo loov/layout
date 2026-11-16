@@ -1067,12 +1067,14 @@ func (c *hierComponent) position() {
 // flat to tell apart where they fan out of a node, as a taller box would
 // space them: every edge between neighboring ranks rises at least tan 25°
 // over its run, but no rank moves more than two lines further, which
-// keeps wide fans from stretching the drawing (shallow angles between
+// keeps wide fans from stretching the drawing, or eight where edges
+// cross between the ranks, to cross at crossAngle (shallow angles between
 // edges are hard to tell apart, see Huang et al., "Effects of Crossing
 // Angles", 2008)
 func (c *hierComponent) steepenRanks() {
 	const steepness = 0.47
 	most := float32(2 * c.graphdef.LineHeight)
+	crossMost := float32(8 * c.graphdef.LineHeight)
 	// hierarchical rows reach their padding; the gap is between boxes
 	half := func(node *hier.Node) float32 {
 		if node.Virtual {
@@ -1080,9 +1082,12 @@ func (c *hierComponent) steepenRanks() {
 		}
 		return float32(c.reverse[node.ID].Radius.Y)
 	}
+	type segment struct{ from, dx, gap float32 }
+	var segments []segment
 	shift := float32(0)
 	for r := 1; r < len(c.graph.ByRank); r++ {
 		need := float32(0)
+		segments = segments[:0]
 		for _, v := range c.graph.ByRank[r] {
 			v.Center.Y += shift
 			for _, u := range v.In {
@@ -1090,14 +1095,65 @@ func (c *hierComponent) steepenRanks() {
 				dx := v.Center.X + v.Anchor - u.Center.X - u.Anchor
 				// float32 rounds the product, blocking FMA fusion on arm64
 				need = max(need, float32(steepness*max(dx, -dx))-gap)
+				segments = append(segments, segment{u.Center.X + u.Anchor, dx, gap})
 			}
 		}
 		need = min(need, most)
+		// every pair of segments; a sweep over the rank order if wide
+		// ranks make this slow
+		for i, a := range segments {
+			for _, b := range segments[i+1:] {
+				if (a.from-b.from)*(a.from+a.dx-b.from-b.dx) < 0 {
+					need = max(need, steeperCrossing(a.dx, a.gap, b.dx, b.gap, need, crossMost))
+				}
+			}
+		}
 		shift += need
 		for _, v := range c.graph.ByRank[r] {
 			v.Center.Y += need
 		}
 	}
+}
+
+// crossAngle is the angle under which crossings read as shallow, see
+// Huang et al., "Larger crossing angles make graphs easier to read", 2014
+const crossAngle = 30 * math.Pi / 180
+
+// steeperCrossing returns how much further apart, between lo and hi, two
+// ranks move for segments running dx sideways over gap to cross at
+// crossAngle, or lo when no such move makes them
+func steeperCrossing(adx, agap, bdx, bgap, lo, hi float32) float32 {
+	angle := func(extra float32) float64 {
+		d := math.Abs(math.Atan2(float64(adx), float64(agap+extra)) - math.Atan2(float64(bdx), float64(bgap+extra)))
+		return min(d, math.Pi-d)
+	}
+	if angle(lo) >= crossAngle {
+		return lo
+	}
+	// the angle grows as the ranks move apart until the segments turn
+	// alike, past a right angle or towards parallel, and then shrinks
+	a, b := lo, hi
+	for b-a > 0.5 {
+		m1, m2 := a+(b-a)/3, b-(b-a)/3
+		if angle(m1) < angle(m2) {
+			a = m1
+		} else {
+			b = m2
+		}
+	}
+	hi = b
+	if angle(hi) < crossAngle {
+		return lo
+	}
+	for range 16 {
+		mid := (lo + hi) / 2
+		if angle(mid) >= crossAngle {
+			hi = mid
+		} else {
+			lo = mid
+		}
+	}
+	return hi
 }
 
 // clearClusterLabels moves ranks apart where the box of a cluster, reaching

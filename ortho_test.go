@@ -102,3 +102,12 @@ func TestDetour(t *testing.T) {
 		}
 	}
 }
+
+func TestSteeperCrossingPastPeak(t *testing.T) {
+	// segments heading the same way cross steepest at a moderate gap and
+	// flatten again beyond it, so hi alone says nothing about reaching it
+	got := steeperCrossing(-150, 40, -42, 40, 0, 128)
+	if got <= 0 || got >= 128 {
+		t.Errorf("got %v, want a move between 0 and 128", got)
+	}
+}
