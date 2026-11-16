@@ -358,6 +358,7 @@ type hierComponent struct {
 	labelUp   map[*hier.Cluster]float32
 	labelNode map[*hier.Node][]*ledge // the labels the middle virtual node of an edge carries
 	parallel  map[*ledge]int          // which of the parallel hierarchical edges an edge runs as, see build
+	added     map[[2]hier.ID]int      // how many hierarchical edges build added by (src, dst)
 	flatBelow map[*lnode]Length       // room below a node for the labels of edges along its rank
 	align     hier.Align
 
@@ -495,6 +496,7 @@ func (c *hierComponent) build() {
 	}
 	seen := map[ends]int{} // the parallel edge of the first with those ends
 	added := map[[2]hier.ID]int{}
+	c.added = added
 	drawn := map[[2]hier.ID]bool{}
 	for _, edge := range c.graphdef.Edges {
 		from, to := c.hends(edge)
@@ -560,9 +562,39 @@ func (c *hierComponent) rank() {
 		edge.flat = c.hnode(edge.From).Rank == c.hnode(edge.To).Rank
 	}
 
+	c.unmergeReversed()
+
 	// create virtual nodes
 	hier.AddVirtuals(c.graph)
 	hier.TraceEdges(c.graph)
+}
+
+// unmergeReversed gives the edges that decycling merged back their own
+// chains: an edge reversed to break a cycle merges into the edges the
+// other way between its nodes, but it starts and ends elsewhere on them,
+// at its own fields, so it runs and is ordered on its own; parallel edges
+// to different fields likewise. The reversed come after the others, see
+// hierEdge.
+func (c *hierComponent) unmergeReversed() {
+	for _, src := range c.graph.Nodes {
+		for _, dst := range slices.Clone(src.Out) {
+			want := c.added[[2]hier.ID{src.ID, dst.ID}] + c.added[[2]hier.ID{dst.ID, src.ID}]
+			for have := countOf(src.Out, dst); have < want; have++ {
+				c.graph.AddEdge(src, dst)
+			}
+		}
+	}
+}
+
+// countOf returns how many times node is in nodes
+func countOf(nodes hier.Nodes, node *hier.Node) int {
+	n := 0
+	for _, x := range nodes {
+		if x == node {
+			n++
+		}
+	}
+	return n
 }
 
 // hnode returns the hierarchical node of node
@@ -587,7 +619,12 @@ func posApart(a, b *hier.Node) int {
 // it runs backward, see hier.Graph.EdgeBetween
 func (c *hierComponent) hierEdge(edge *ledge) (*hier.Edge, bool) {
 	from, to := c.hends(edge)
-	return c.graph.EdgeBetween(from, to, c.parallel[edge])
+	e, reversed := c.graph.EdgeBetween(from, to, c.parallel[edge])
+	if reversed {
+		// after the edges that run the other way, see unmergeReversed
+		e, _ = c.graph.EdgeBetween(from, to, c.added[[2]hier.ID{to.ID, from.ID}]+c.parallel[edge])
+	}
+	return e, reversed
 }
 
 // addClusters adds the borders of the clusters
@@ -1415,15 +1452,15 @@ func (c *hierComponent) flatPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lno
 }
 
 // assignPaths gives every edge its path, self-loops their own; edges
-// between the same pair of nodes share one route, so they are spread out
+// that run as one hierarchical edge share one route, so they are spread out
 func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*lnode) {
 	obstacles := newObstacles(byRank, c.graphdef.EdgePadding)
-	pairKey := func(edge *ledge) [2]hier.ID { return unorderedPair(c.nodes[edge.From], c.nodes[edge.To]) }
-	pairCount := make(map[[2]hier.ID]int, len(c.graphdef.Edges))
+	pairKey := func(edge *ledge) *hier.Edge { e, _ := c.hierEdge(edge); return e }
+	pairCount := make(map[*hier.Edge]int, len(c.graphdef.Edges))
 	for _, edge := range c.graphdef.Edges {
 		pairCount[pairKey(edge)]++
 	}
-	pairIndex := map[[2]hier.ID]int{}
+	pairIndex := map[*hier.Edge]int{}
 	loops := countLoops(c.graphdef.Edges)
 
 	for _, edge := range c.graphdef.Edges {

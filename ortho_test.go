@@ -5,6 +5,23 @@ import (
 	"testing"
 )
 
+// TestReversedEdgeRunsOnItsOwnChain checks that an edge reversed to
+// break a cycle keeps a chain of its own instead of merging into the
+// edge the other way, so that it can leave and enter at its own ends.
+func TestReversedEdgeRunsOnItsOwnChain(t *testing.T) {
+	def := NewDigraph()
+	def.Edge("a", "b").Label = "down"
+	def.Edge("b", "a").Label = "up"
+	c := newHierComponent(newWorkGraph(def), Options{})
+	c.build()
+	c.rank()
+	down, _ := c.hierEdge(c.graphdef.Edges[0])
+	up, reversed := c.hierEdge(c.graphdef.Edges[1])
+	if !reversed || down == up || len(up.Chain) == 0 || up.Chain[0] == down.Chain[0] {
+		t.Errorf("reversed edge shares the chain of the other: %v %v", down.Chain, up.Chain)
+	}
+}
+
 func TestSeparate(t *testing.T) {
 	for _, tc := range []struct {
 		want   []Length
