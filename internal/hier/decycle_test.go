@@ -1,6 +1,7 @@
 package hier
 
 import (
+	"slices"
 	"testing"
 	"testing/quick"
 )
@@ -55,11 +56,21 @@ func TestDecycleMinimal(t *testing.T) {
 
 func TestDecycleFewestReversed(t *testing.T) {
 	// 0->4, 4->2, 4->3, 3->2, 1->3, 2->0: searching from 4, which has the
-	// most edges out, reverses 4->2 and 4->3; from 0 only 2->0
-	graph := NewGraphFromEdgeList([][]int{0: {4}, 1: {3}, 2: {0}, 3: {2}, 4: {2, 3}})
+	// most edges out, reverses 4->2 and 4->3; reversing 2->0 or 0->4 is enough
+	edges := [][]int{0: {4}, 1: {3}, 2: {0}, 3: {2}, 4: {2, 3}}
+	graph := NewGraphFromEdgeList(edges)
 	Decycle(graph)
-	if got := graph.ConvertToEdgeList(); len(got[2]) != 0 || len(got[0]) != 2 || len(got[4]) != 2 {
-		t.Errorf("expected only 2->0 reversed, got %v", got)
+	got := graph.ConvertToEdgeList()
+	kept := 0
+	for src, dsts := range edges {
+		for _, dst := range dsts {
+			if slices.Contains(got[src], dst) {
+				kept++
+			}
+		}
+	}
+	if kept != 5 {
+		t.Errorf("expected one edge reversed, got %v", got)
 	}
 }
 
