@@ -44,11 +44,14 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 
 	if straighten {
 		StraightenChains(graph)
-	} else {
-		alignChains(graph)
 	}
 	flushLeft(graph)
 	AlignClusterBorders(graph)
+	if !straighten {
+		// lining borders up pushes nodes beside them aside, which
+		// would leave the chains out of line again
+		alignChains(graph)
+	}
 }
 
 // StraightenChains moves virtual nodes towards the midpoint of their

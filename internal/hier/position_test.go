@@ -1,6 +1,9 @@
 package hier
 
-import "testing"
+import (
+	"math/rand"
+	"testing"
+)
 
 // TestPositionAlignPorts checks that with AlignPorts the ends Ports puts
 // on two nodes line up, rather than the nodes. The lower node fits under
@@ -98,5 +101,47 @@ func TestAlignChainsKeepsPackedEnds(t *testing.T) {
 	alignChains(graph)
 	if v.Center.X != slot {
 		t.Errorf("virtual node moved to %v, want kept in line with its packed end at %v", v.Center.X, slot)
+	}
+}
+
+// TestAlignChainsAfterClusterBorders checks on random clustered graphs
+// that Position leaves chains lined up: borders lining up push the nodes
+// beside them, which alignChains has to see.
+func TestAlignChainsAfterClusterBorders(t *testing.T) {
+	rng := rand.New(rand.NewSource(1))
+	for i := range 400 {
+		graph := GenerateRandomGraph(6+i%15, 0.2, rng)
+		perm := rng.Perm(len(graph.Nodes))
+		for _, members := range [][]int{perm[:3], perm[3:6]} {
+			cluster := &Cluster{}
+			for _, id := range members {
+				cluster.Members.Append(graph.Nodes[id])
+			}
+			graph.Clusters = append(graph.Clusters, cluster)
+		}
+
+		Decycle(graph)
+		Rank(graph)
+		AddVirtuals(graph)
+		AddClusterBorders(graph)
+		OrderRanks(graph)
+		for _, node := range graph.Nodes {
+			node.Radius = Vector{X: 20, Y: 5}
+			if node.IsBorder() {
+				node.Radius.X = 4
+			}
+		}
+		Position(graph, false, false, Balanced)
+
+		xs := make([]float32, len(graph.Nodes))
+		for k, node := range graph.Nodes {
+			xs[k] = node.Center.X
+		}
+		alignChains(graph)
+		for k, node := range graph.Nodes {
+			if node.Center.X != xs[k] {
+				t.Errorf("graph %d: chain node %d moved from %v to %v", i, node.ID, xs[k], node.Center.X)
+			}
+		}
 	}
 }
