@@ -1080,6 +1080,10 @@ func (p *compactPass) need(a, b rigid) int {
 		}
 		return p.grid.trackSpace
 	case a.kind == nodeKind && b.kind == runKind:
+		// a line keeps twice the room from the nodes it passes
+		if node, edge := p.l.Graph.Nodes[a.index], p.l.Graph.Edges[b.index]; edge.From != node && edge.To != node {
+			return 2 * p.grid.lineSpace
+		}
 		return p.grid.lineSpace
 	case a.kind == runKind && b.kind == labelKind && a.index == b.index:
 		return p.grid.lineSpace
@@ -1209,7 +1213,7 @@ func (p *compactPass) separations() ([]constraint, [][2]rowSpan) {
 	grid := p.grid
 
 	// the most cells two objects need, see need
-	most := max(grid.space, grid.lineSpace, grid.trackSpace) + grid.lineSpace
+	most := max(grid.space, 2*grid.lineSpace, grid.trackSpace) + grid.lineSpace
 
 	// objects in the order their pairs are oriented: by middle, then index
 	byRank := make([]int, len(objs))
