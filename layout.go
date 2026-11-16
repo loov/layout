@@ -1598,7 +1598,7 @@ func (c *hierComponent) shapePaths() {
 		orthoEdges(c.graphdef, rows, c.graphdef.EdgePadding, c.pack)
 	}
 	if c.graphdef.Splines != SplinesOrtho {
-		spreadWaypoints(c.graphdef.Edges, c.graphdef.EdgePadding)
+		spreadWaypoints(c.graphdef.Edges, c.graphdef.Nodes, c.graphdef.EdgePadding)
 		spreadEnds(c.graphdef, endSpacing)
 	}
 	if c.graphdef.Splines == SplinesLine {

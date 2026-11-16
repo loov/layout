@@ -8,8 +8,9 @@ import (
 
 // spreadWaypoints moves interior path points that several edges share
 // (detours around the same node) sideways so that the edges don't run on
-// top of each other, in the order they head so that they don't cross.
-func spreadWaypoints(edges []*ledge, pad Length) {
+// top of each other, in the order they head so that they don't cross. A
+// detour beside a node spreads away from it.
+func spreadWaypoints(edges []*ledge, nodes []*lnode, pad Length) {
 	type at struct {
 		edge  *ledge
 		index int
@@ -38,11 +39,40 @@ func spreadWaypoints(edges []*ledge, pad Length) {
 		// spread along x, so the order of the following points' x keeps
 		// the edges from crossing
 		slices.SortStableFunc(list, func(a, b at) int { return cmp.Compare(a.next.X, b.next.X) })
+		// beside a node the lanes move away from it, out to the farthest
+		// point next to them, so that they neither cut into the node nor
+		// swing out and back
+		side := besideNode(point, nodes, pad)
+		reach := Length(0)
+		for _, a := range list {
+			for _, q := range []Vector{a.edge.Path[a.index-1], a.next} {
+				reach = max(reach, side*(q.X-point.X))
+			}
+		}
+		half := Length(len(list)-1) * pad
+		shift := side * min(max(reach-half, 0), half)
 		for i, a := range list {
-			offset := centeredOffset(i, len(list), 2*pad)
+			offset := centeredOffset(i, len(list), 2*pad) + shift
 			a.edge.Path[a.index] = point.Add(Vector{offset, 0})
 		}
 	}
+}
+
+// besideNode returns -1 or 1 when point is a detour pad left or right of a
+// node, else 0
+func besideNode(point Vector, nodes []*lnode, pad Length) Length {
+	for _, node := range nodes {
+		if point.Y < node.Top()-pad || point.Y > node.Bottom()+pad {
+			continue
+		}
+		if (point.X - (node.Left() - pad)).Abs() < diagEps {
+			return -1
+		}
+		if (point.X - (node.Right() + pad)).Abs() < diagEps {
+			return 1
+		}
+	}
+	return 0
 }
 
 // spreadEnds keeps the attachment points on every node at least minSep
