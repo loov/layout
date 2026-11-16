@@ -31,3 +31,72 @@ func TestPositionAlignPorts(t *testing.T) {
 		}
 	}
 }
+
+// TestAlignChains checks that a virtual node between two nodes that
+// don't line up moves in line with one of them, so that an orthogonal
+// edge through it jogs once.
+func TestAlignChains(t *testing.T) {
+	graph := NewGraph()
+	a, b, c := graph.AddNode(), graph.AddNode(), graph.AddNode()
+	graph.AddEdge(a, b)
+	graph.AddEdge(a, c)
+	graph.AddEdge(c, b)
+	for _, node := range graph.Nodes {
+		node.Radius = Vector{X: 20, Y: 10}
+	}
+
+	Rank(graph)
+	AddVirtuals(graph)
+	PositionInitial(graph)
+	v := a.Out[0]
+	if !v.IsChainLink() {
+		t.Fatal("no virtual node between a and b")
+	}
+	// c out of the way, the chain bent at v
+	c.Center.X = -1000
+	a.Center.X, v.Center.X, b.Center.X = 0, 50, 100
+
+	alignChains(graph)
+	if v.Center.X != a.Center.X && v.Center.X != b.Center.X {
+		t.Errorf("virtual node at %v, want in line with 0 or 100", v.Center.X)
+	}
+}
+
+func TestAlignChainsKeepsPackedEnds(t *testing.T) {
+	graph := NewGraph()
+	a, b, c := graph.AddNode(), graph.AddNode(), graph.AddNode()
+	graph.AddEdge(a, c)
+	graph.AddEdge(a, b)
+	graph.AddEdge(c, b)
+	graph.EndGap = 10
+	for _, node := range graph.Nodes {
+		node.Radius = Vector{X: 20, Y: 10}
+		node.EndRoom = 30
+	}
+
+	Rank(graph)
+	AddVirtuals(graph)
+	PositionInitial(graph)
+	var v *Node
+	for _, dst := range a.Out {
+		if dst.IsChainLink() {
+			v = dst
+		}
+	}
+	if v == nil {
+		t.Fatal("no virtual node between a and b")
+	}
+	from, _ := endOffsets(graph)
+	slot := from[[2]ID{a.ID, v.ID}]
+	if slot == 0 {
+		t.Fatal("chain end not packed away from the anchor")
+	}
+	// v in line with its packed end on a, b elsewhere
+	a.Center.X, b.Center.X = 0, 200
+	v.Center.X = slot
+
+	alignChains(graph)
+	if v.Center.X != slot {
+		t.Errorf("virtual node moved to %v, want kept in line with its packed end at %v", v.Center.X, slot)
+	}
+}

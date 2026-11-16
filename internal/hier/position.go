@@ -44,6 +44,8 @@ func Position(graph *Graph, straighten, fans bool, align Align) {
 
 	if straighten {
 		StraightenChains(graph)
+	} else {
+		alignChains(graph)
 	}
 	flushLeft(graph)
 	AlignClusterBorders(graph)
@@ -85,6 +87,96 @@ func StraightenChains(graph *Graph) {
 			break
 		}
 	}
+}
+
+// alignChains moves a virtual node in line with where its edge ends on
+// the node before or after it, the nearer one that the room between the
+// nodes beside it allows, so that an orthogonal edge jogs once there
+// rather than on both sides of it. In line means as positioning measures
+// it, from where the edge attaches, see endOffsets. Nodes stay within the
+// drawing, so it keeps its width.
+func alignChains(graph *Graph) {
+	lo, hi := float32(math.Inf(1)), float32(math.Inf(-1))
+	for _, node := range graph.Nodes {
+		lo, hi = min(lo, node.Center.X-node.Radius.X), max(hi, node.Center.X+node.Radius.X)
+	}
+	// where node is in line with the edge from in, or the edge to out,
+	// measured as positioning does, see endOffsets
+	from, to := endOffsets(graph)
+	lineUp := func(node, in, out *Node) (a, b float32) {
+		kin, kout := [2]ID{in.ID, node.ID}, [2]ID{node.ID, out.ID}
+		a = in.Center.X + in.Anchor + from[kin] - to[kin]
+		b = out.Center.X + out.Anchor + to[kout] - from[kout]
+		return a, b
+	}
+	for range 10 {
+		moved := false
+		for _, layer := range graph.ByRank {
+			for i, node := range layer {
+				if !node.IsChainLink() || node.IsBorder() {
+					continue
+				}
+				in, out := node.In[0], node.Out[0]
+				x := node.Center.X + node.Anchor
+				a, b := lineUp(node, in, out)
+				if abs(x-a) < 0.5 || abs(x-b) < 0.5 {
+					continue
+				}
+				left, right := lo+node.Radius.X+node.Anchor, hi-node.Radius.X+node.Anchor
+				if i > 0 {
+					l := layer[i-1]
+					left = l.Center.X + l.Radius.X + node.Radius.X + node.Anchor + graph.Apart(l, node)
+				}
+				if i+1 < len(layer) {
+					r := layer[i+1]
+					right = r.Center.X - r.Radius.X - node.Radius.X + node.Anchor - graph.Apart(node, r)
+				}
+				if abs(b-x) < abs(a-x) {
+					a, b = b, a
+				}
+				for _, want := range [2]float32{a, b} {
+					if want >= left && want <= right {
+						node.Center.X = want - node.Anchor
+						moved = true
+						break
+					}
+				}
+			}
+		}
+		if !moved {
+			break
+		}
+	}
+}
+
+// endOffsets returns where, from the anchors of its ends, an edge
+// attaches on them: packed ends of edges on a side of a node line up from
+// its anchor on, in the order of the nodes they head to, see
+// Graph.EndGap; with AlignPorts, an edge with Ports ends where they say,
+// such as at a field of a record, rather than packed
+func endOffsets(graph *Graph) (from, to map[[2]ID]float32) {
+	from, to = map[[2]ID]float32{}, map[[2]ID]float32{}
+	spread := func(node *Node, ends Nodes, at map[[2]ID]float32, key func(other *Node) [2]ID) {
+		if graph.EndGap == 0 || node.Virtual || len(ends) < 2 {
+			return
+		}
+		ends = slices.Clone(ends)
+		slices.SortStableFunc(ends, func(a, b *Node) int { return a.Pos - b.Pos })
+		gap := min(graph.EndGap, node.EndRoom/float32(len(ends)-1))
+		for i, other := range ends {
+			at[key(other)] = float32(i) * gap
+		}
+	}
+	for _, node := range graph.Nodes {
+		spread(node, node.Out, from, func(dst *Node) [2]ID { return [2]ID{node.ID, dst.ID} })
+		spread(node, node.In, to, func(src *Node) [2]ID { return [2]ID{src.ID, node.ID} })
+	}
+	if graph.AlignPorts {
+		for k, p := range graph.Ports {
+			from[k], to[k] = p[0]*2*graph.Nodes[k[0]].Radius.X, p[1]*2*graph.Nodes[k[1]].Radius.X
+		}
+	}
+	return from, to
 }
 
 // PositionInitial assigns rows and packs nodes left to right
@@ -337,37 +429,17 @@ func positionGraph(graph *Graph) (s *simplex, lft, rgt int32) {
 		case src.Virtual || dst.Virtual:
 			omega = 2
 		}
+		// orthogonally, a label carrier between two nodes goes anywhere
+		// between them at the same cost and jogs on both sides; in line
+		// with the node below, the edge jogs once, above the label
+		if graph.AlignPorts && src.Carrier && !dst.Virtual {
+			omega *= 2
+		}
 
 		return omega * graph.Weight(src, dst)
 	}
 
-	// packed ends of edges on a side of a node line up from its anchor
-	// on, in the order of the nodes they head to, see Graph.EndGap; an
-	// edge measures from where its ends attach
-	from, to := map[[2]ID]float32{}, map[[2]ID]float32{}
-	spread := func(node *Node, ends Nodes, at map[[2]ID]float32, key func(other *Node) [2]ID) {
-		if graph.EndGap == 0 || node.Virtual || len(ends) < 2 {
-			return
-		}
-		ends = slices.Clone(ends)
-		slices.SortStableFunc(ends, func(a, b *Node) int { return a.Pos - b.Pos })
-		gap := min(graph.EndGap, node.EndRoom/float32(len(ends)-1))
-		for i, other := range ends {
-			at[key(other)] = float32(i) * gap
-		}
-	}
-
-	for _, node := range graph.Nodes {
-		spread(node, node.Out, from, func(dst *Node) [2]ID { return [2]ID{node.ID, dst.ID} })
-		spread(node, node.In, to, func(src *Node) [2]ID { return [2]ID{src.ID, node.ID} })
-	}
-	// with AlignPorts, an edge with Ports ends where they say, such as at
-	// a field of a record, rather than packed
-	if graph.AlignPorts {
-		for k, p := range graph.Ports {
-			from[k], to[k] = p[0]*2*graph.Nodes[k[0]].Radius.X, p[1]*2*graph.Nodes[k[1]].Radius.X
-		}
-	}
+	from, to := endOffsets(graph)
 	v := int32(n)
 	for _, src := range graph.Nodes {
 		for _, dst := range src.Out {
