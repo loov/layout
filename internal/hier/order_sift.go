@@ -1,5 +1,7 @@
 package hier
 
+import "math"
+
 // maxSiftLayer bounds the O(n²) pairwise crossing matrix per layer;
 // larger layers are left to median+transpose.
 const maxSiftLayer = 400
@@ -7,7 +9,10 @@ const maxSiftLayer = 400
 // OrderRanksSift moves every node to the position within its layer that
 // minimizes crossings with both neighbor layers, using a pairwise crossing
 // matrix (c[u][v] = crossings with u left of v); it repeats while a layer
-// improves.
+// improves. Borders stay, and a node only lands inside its own cluster,
+// so that orderClusters doesn't undo the move: a node that sat among
+// another cluster's nodes would be put back beside them, not where it
+// crossed least.
 func OrderRanksSift(graph *Graph) (moves int) {
 	graph.assignPos()
 	var buf struct {
@@ -44,15 +49,31 @@ func OrderRanksSift(graph *Graph) (moves int) {
 		for i := range order {
 			order[i] = i
 		}
+		var inside []*Cluster // the clusters around a slot, innermost last
 		for range 4 {
 			improved := false
 			for i := range n {
 				v := order[i]
+				if layer[v].IsBorder() {
+					continue
+				}
 				row := d[v*n : v*n+n]
 				// cost of v at the leftmost slot, then sliding right past
-				// each of the others; ties keep the current slot
+				// each of the others; ties keep the current slot; a slot
+				// counts only in v's own cluster, outside the others,
+				// which v can still jump over whole
+				inside = inside[:0]
+				fits := func() bool {
+					if len(inside) == 0 {
+						return layer[v].Cluster == nil
+					}
+					return inside[len(inside)-1] == layer[v].Cluster
+				}
 				cost := left[v]
-				best, bestCost := 0, cost
+				best, bestCost := i, float32(math.Inf(1))
+				if fits() {
+					best, bestCost = 0, cost
+				}
 				slot := 0
 				for j, u := range order {
 					if j == i {
@@ -60,6 +81,15 @@ func OrderRanksSift(graph *Graph) (moves int) {
 					}
 					slot++
 					cost += row[u]
+					switch w := layer[u]; {
+					case w.BorderLeft:
+						inside = append(inside, w.Cluster)
+					case w.BorderRight && len(inside) > 0:
+						inside = inside[:len(inside)-1]
+					}
+					if !fits() {
+						continue
+					}
 					if cost < bestCost || (cost == bestCost && slot == i) {
 						best, bestCost = slot, cost
 					}
