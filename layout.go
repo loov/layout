@@ -1589,8 +1589,8 @@ func (c *hierComponent) assignPaths(edgePaths map[*hier.Edge]Path, byRank [][]*l
 			// around nodes once the ends are final, ports and fields
 			// included; orthogonal edges run on virtual node columns and
 			// rank channels, which are free of nodes by construction
-			path = routeAround(path, obstacles, edge.From, edge.To, c.graphdef.EdgePadding)
 			path = routeAroundClusters(path, c.graphdef.Clusters, edge.From, edge.To, c.graphdef.EdgePadding)
+			path = routeAround(path, obstacles, edge.From, edge.To, c.graphdef.EdgePadding)
 		}
 		edge.Path = path
 	}

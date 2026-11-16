@@ -1,6 +1,7 @@
 package layout_test
 
 import (
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -225,5 +226,50 @@ func TestClusterOneRankCrossings(t *testing.T) {
 	}
 	if d := layout.Diagnose(l); d.EdgeCrossings != 0 {
 		t.Errorf("crossings = %d, want 0: %v", d.EdgeCrossings, d.Details)
+	}
+}
+
+// TestEdgesStayOutOfOtherClusters checks that no bend of an edge lies
+// inside the box of a cluster that neither of its nodes is in: a detour
+// around a node inside such a cluster would hook into the box and out
+// again.
+func TestEdgesStayOutOfOtherClusters(t *testing.T) {
+	// known bad, by file; remove an entry with its fix
+	known := map[string]string{
+		"cluster_column_ortho": "orthogonal edges run down through sierra",
+	}
+	files, err := filepath.Glob(filepath.Join("testdata", "graphviz", "*.gv"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		name := strings.TrimSuffix(filepath.Base(file), ".gv")
+		t.Run(name, func(t *testing.T) {
+			if reason, ok := known[name]; ok {
+				t.Skip("known bad: " + reason)
+			}
+			graphs, err := dot.ParseFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			l, err := layout.Hierarchical(graphs[0], layout.Options{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for c, cluster := range l.Graph.Clusters {
+				box := l.Clusters[c]
+				for e, edge := range l.Graph.Edges {
+					if slices.Contains(cluster.Nodes, edge.From) || slices.Contains(cluster.Nodes, edge.To) {
+						continue
+					}
+					path := l.Edges[e].Path
+					for _, p := range path[1 : len(path)-1] {
+						if p.X > box.TopLeft.X && p.X < box.BottomRight.X && p.Y > box.TopLeft.Y && p.Y < box.BottomRight.Y {
+							t.Errorf("edge %s -> %s bends at %v inside cluster %q", edge.From.ID, edge.To.ID, p, cluster.Label)
+						}
+					}
+				}
+			}
+		})
 	}
 }
